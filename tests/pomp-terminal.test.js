@@ -65,7 +65,7 @@ test('Pomp filter validation blocks reversed ranges and applies valid cap and vo
 test('Pomp live mode never invents public callouts or trader rankings and keeps missing holders unknown', () => {
   const h = harness(true); assert.deepEqual(pompCallouts(h.market), []);
   assert.match(byClass(h.root, 'pomp-call-list').textContent, /not included/);
-  assert.match(byClass(h.root, 'pomp-leader-list').textContent, /not included/);
+  assert.match(byClass(h.root, 'pomp-leader-list').textContent, /Verified profiles will appear/);
   assert.doesNotMatch(h.view.el.textContent, /Trader 1|Launchpad/);
   byLabel(h.root, 'Explore').click(); const row = byClass(h.root, 'pomp-coin-table').lastChild.firstChild;
   assert.equal(row.$.cells[7].textContent, '—');

@@ -35,7 +35,8 @@ export function mountReplay(host, record) {
   const priceCanvas = el('canvas', { class: 'ts-rp-candles', role: 'img', 'aria-label': 'Recorded token market cap in dollars' });
   const equityCanvas = el('canvas', { class: 'ts-rp-equity', role: 'img', 'aria-label': 'Recorded play portfolio value in dollars' });
   const coverage = el('p', { class: 'ts-rp-note' });
-  const source = record.practice ? 'Practice recording · simulated prices and volume' : record.live ? 'Live recording' : 'Simulated recording';
+  const source = (record.practice ? 'Practice recording · simulated prices and volume' : record.live ? 'Live recording' : 'Simulated recording')
+    + (record.paperPerps ? ' · paper perpetuals at observed public marks' : '');
   const intro = el('div', { class: 'ts-rp-heading' }, el('div', {}, el('h3', {}, 'Watch your run'),
     el('p', {}, `${source} · Read only · Play money`)), el('span', { class: 'ts-rp-badge' }, 'REPLAY'));
   const priceBlock = el('section', { class: 'ts-rp-chart' }, el('div', { class: 'ts-rp-chart-title' }, el('h4', {}, 'Token market cap'), choice, interval), priceCanvas, coverage);
@@ -50,14 +51,28 @@ export function mountReplay(host, record) {
     }, 'ts-rp-order');
     const item = el('li', {}, row); list.append(item); return { order: o, row, detail };
   });
-  if (!record.orders.length) list.append(el('li', { class: 'ts-rp-empty' }, 'No orders were placed in this run.'));
+  if (!record.orders.length) list.append(el('li', { class: 'ts-rp-empty' }, record.paperPerps ? 'No spot orders were placed in this run.' : 'No orders were placed in this run.'));
   const orderBlock = el('aside', { class: 'ts-rp-trades' }, el('h4', {}, 'Your recorded orders'),
     el('p', { class: 'ts-rp-note' }, 'Select an order to jump to its result.'), list);
+  const paperNodes = [];
+  if (record.paperPerps) {
+    const paperList = el('ol', { class: 'ts-rp-orders' });
+    for (const fill of record.paperPerps.fills) {
+      const detail = el('small');
+      const row = button([el('b', {}, `${fill.coin} · ${fill.side}`), detail, el('time', {}, timeText(fill.t))], () => {
+        playback.pause(); playback.seek(fill.t); render();
+      }, 'ts-rp-order');
+      paperList.append(el('li', {}, row)); paperNodes.push({ fill, row, detail });
+    }
+    if (!paperNodes.length) paperList.append(el('li', { class: 'ts-rp-empty' }, 'Paper orders were placed but none filled.'));
+    orderBlock.append(el('h4', {}, 'Paper perpetual fills'), el('p', { class: 'ts-rp-note' }, 'Observed marks · USD notional · no real execution'), paperList);
+  }
   const trimmed = record.coverage.ordersTrimmed || record.coverage.coinsTrimmed || record.coverage.candlesTrimmed;
   const note = `${record.live && !record.practice ? 'Only retained live observations are shown. ' : 'Prices and trades are recorded from the same simulated run. '}`
     + 'Playback cannot place trades. Missing history stays blank; moves inside a saved candle are not reconstructed.'
     + (trimmed ? ' This long run contains only the retained portion of some history.' : '')
-    + (record.coverage.equitySampled ? ' Portfolio history is sampled from recorded points.' : '');
+    + (record.coverage.equitySampled ? ' Portfolio history is sampled from recorded points.' : '')
+    + (record.paperPerps ? ' Perpetual orders are recorded separately and cannot be re-simulated from spot candles. Their final open positions and pending orders are retained in the export.' : '');
   root.append(intro, el('div', { class: 'ts-rp-controls' }, play, previous, next, speed, clock),
     scrub, el('div', { class: 'ts-rp-metrics' }, metric('Portfolio', worth), metric('Profit / loss', pnl), metric('Market cap', marketCap)),
     el('div', { class: 'ts-rp-layout' }, el('div', { class: 'ts-rp-charts' }, priceBlock, equityBlock), orderBlock),
@@ -71,7 +86,8 @@ export function mountReplay(host, record) {
   function jump(direction) {
     const o = replayTradeAt(record, playback.time, direction);
     if (!o) return;
-    selected = o.coin; choice.value = String(selected); playback.pause(); playback.seek(o.doneAt); render();
+    if (!o.paper) { selected = o.coin; choice.value = String(selected); }
+    playback.pause(); playback.seek(o.doneAt); render();
   }
   function render() {
     if (dead) return;
@@ -100,6 +116,10 @@ export function mountReplay(host, record) {
       flag(row, 'is-future', !current); flag(row, 'is-current', Math.abs(playback.time - at) < 0.15);
       const amount = order.side === 'buy' ? order.sol * record.solUsd : order.frac * 100;
       setText(detail, `${order.side === 'buy' ? usd(amount) : `${Number(amount.toFixed(1))}%`} · ${!current ? 'Later in run' : current.status === 'failed' ? 'Failed' : current.status === 'filled' ? 'Filled' : 'Pending'}`);
+    }
+    for (const { fill, row, detail } of paperNodes) {
+      const future = fill.t > playback.time; flag(row, 'is-future', future); flag(row, 'is-current', Math.abs(playback.time - fill.t) < .15);
+      setText(detail, future ? 'Later in run' : `${fill.type.replaceAll('_', ' ')} · ${usd(fill.notional)} at ${usdFull(fill.price)} · fee ${usd(fill.fee)}${fill.realized === null ? '' : ` · net ${signed(fill.realized, 'usd')}`}`);
     }
     draw();
   }

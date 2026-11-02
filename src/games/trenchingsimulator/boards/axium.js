@@ -11,6 +11,7 @@ import { pic, samePic, short, num, buyPresets, parseAmount, ORDER_ERRORS, tone, 
 import { chartCredit } from './gchart.js';
 import { createPhomoChart } from './phomo-chart.js';
 import { createAddressSearch } from '../live-search.js';
+import { mountLiveKols } from '../live-kols-panel.js';
 import { AXIUM_FILTERS, axiumPasses, axiumTrigger, axiumFilterCount } from './axium-data.js';
 
 const COLS = [['new', 'New Pairs'], ['stretch', 'Final Stretch'], ['migrated', 'Migrated']];
@@ -319,8 +320,10 @@ export function mountAxium(host, ctx) {
   const trackerWallets = el('div', { class: 'ax-tracker-wallets' }), trackerFeed = el('div', { class: 'ax-tracker-feed' });
   const trackToggle = button('Tracked only', () => { A.trackOnly = !A.trackOnly; trackToggle.setAttribute('aria-pressed', String(A.trackOnly)); renderTrackers(); }, 'ax-button', { 'aria-pressed': 'false' });
   const trackersView = el('section', { class: 'ax-trackers', hidden: true },
-    el('section', {}, el('div', { class: 'ax-panel-title' }, el('h2', {}, 'Wallet Tracker'), el('span', { class: 'ax-muted' }, 'Simulated smart wallets')), trackerWallets),
+    el('section', {}, el('div', { class: 'ax-panel-title' }, el('h2', {}, market.live ? 'KOL Tracker' : 'Wallet Tracker'), el('span', { class: 'ax-muted' }, market.live ? 'Verified public identities' : 'Simulated smart wallets')), trackerWallets),
     el('section', {}, el('div', { class: 'ax-panel-title' }, el('h2', {}, 'Simulated Trades'), trackToggle), trackerFeed));
+  const liveKols = market.live ? mountLiveKols(trackerWallets,{client:ctx.kols,chain:ctx.chain}) : null;
+  trackToggle.hidden = Boolean(market.live);
   const perpsView = el('section', { class: 'ax-perps', hidden: true });
   async function loadPerps() {
     if (A.perps || A.perpsLoading) { A.perps?.setActive(A.coin === null && A.view === 'perpetuals'); return; }
@@ -335,7 +338,8 @@ export function mountAxium(host, ctx) {
     } finally { A.perpsLoading = false; }
   }
   function renderTrackers() {
-    const wallets = market.smartWallets();
+    const wallets = market.live ? [] : market.smartWallets();
+    if (!market.live) {
     clearEmpty(trackerWallets); keyed(trackerWallets, wallets, (w) => w.n, (w) => {
       const label = el('span'), value = el('strong'), follow = button('Track', () => {
         if (A.tracked.has(w.addr)) A.tracked.delete(w.addr); else A.tracked.add(w.addr); renderTrackers();
@@ -346,12 +350,13 @@ export function mountAxium(host, ctx) {
       setText(node.$.label, short(w.addr)); setText(node.$.value, MS(w.pnl + w.upnl)); tone(node.$.value, w.pnl + w.upnl, 0);
       setText(node.$.follow, A.tracked.has(w.addr) ? 'Tracking' : 'Track'); node.$.follow.setAttribute('aria-pressed', String(A.tracked.has(w.addr)));
     });
+    }
     const followed = new Set(wallets.filter((w) => A.tracked.has(w.addr)).map((w) => w.n));
     const rows = market.feed(0).filter((f) => /^(smart|kol|whale)_(buy|sell)$/.test(f.kind) && (!A.trackOnly || (f.smart !== undefined && followed.has(f.smart)))).slice(-50).reverse();
     // The engine feed labels simulated traders; real trades never acquire invented wallet identities here.
     clearEmpty(trackerFeed); keyed(trackerFeed, rows, (f) => f.q, (f) => button('', () => openCoin(f.c), 'ax-tracker-trade'), (node, f) => {
       const r = market.row(f.c), buying = f.kind.endsWith('_buy');
-      setText(node, `${buying ? 'BUY' : 'SELL'}  ${r?.ticker || '—'}  ·  ${M(f.sol)}  ·  ${f.smart !== undefined ? `Wallet ${f.smart + 1}` : f.kind.startsWith('kol') ? 'Caller' : 'Whale'}  ·  ${age(market.t - f.t)}`);
+      setText(node, `${buying ? 'BUY' : 'SELL'}  ${r?.ticker || '—'}  ·  ${M(f.sol)}  ·  ${market.live ? 'Simulated trader' : f.smart !== undefined ? `Wallet ${f.smart + 1}` : f.kind.startsWith('kol') ? 'Caller' : 'Whale'}  ·  ${age(market.t - f.t)}`);
       flag(node, 'is-up', buying); flag(node, 'is-down', !buying);
     });
     if (!rows.length) trackerFeed.replaceChildren(empty(A.trackOnly ? 'Trades from tracked wallets will appear here.' : 'Waiting for the next market trade…'));
@@ -589,6 +594,6 @@ export function mountAxium(host, ctx) {
         if (A.coin !== null) renderData(); else if (A.view === 'portfolio') renderPortfolio(); else if (A.view === 'trackers') renderTrackers(); else renderLists();
       }
     },
-    destroy() { A.dead = true; A.limits = []; candleReader.clear(); A.chart?.destroy(); A.perps?.destroy(); ctx.onCoin?.(null); document.removeEventListener?.('keydown', onKey); if (dialog.open) dialog.close(); root.remove(); },
+    destroy() { A.dead = true; A.limits = []; candleReader.clear(); A.chart?.destroy(); A.perps?.destroy(); liveKols?.destroy(); ctx.onCoin?.(null); document.removeEventListener?.('keydown', onKey); if (dialog.open) dialog.close(); root.remove(); },
   };
 }

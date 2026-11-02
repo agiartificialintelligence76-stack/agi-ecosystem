@@ -1,8 +1,10 @@
-// Phomo's read-only perpetual market preview. Quotes and candles come from the existing relay;
-// this view has no trading/account API and never fabricates a missing price or historical candle.
+// Public perpetual quotes/candles with an optional run-owned paper ledger. This view never sends orders
+// to the relay or fabricates a missing price/candle; isolated positions only use the shared play balance.
 import { el, setText, keyed } from '../ui.js';
 import { usd, pct, price as tinyPrice, compact } from '../format.js';
 import { relayUrl } from '../live-chains.js';
+import { createPaperPerpsTicket } from './phomo-perps-ticket.js';
+import { createPerpsChart } from './phomo-perps-chart.js';
 
 export const PERP_INTERVALS = Object.freeze(['1m', '5m', '15m', '1h', '4h', '1d']);
 const COIN = /^(?:[a-z][a-z0-9-]{0,19}:)?[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/;
@@ -132,90 +134,8 @@ export function perpChartWindow(length, bars = 90, offset = 0) {
   return { start: end - count, end, count };
 }
 
-function marketChart(canvas, colors = {}) {
-  let data = [], pointer = null, dead = false, bars = 90, offset = 0, drag = null, style = 'candles';
-  const g = canvas.getContext('2d');
-  const up = colors.up || '#3ad68a', down = colors.down || '#ff5c6c', muted = colors.muted || '#9a9eaa';
-  function draw() {
-    if (dead || !g) return;
-    const box = canvas.getBoundingClientRect();
-    const w = Math.max(240, box.width || 600), h = Math.max(220, box.height || 300), dpr = Math.min(2, globalThis.devicePixelRatio || 1);
-    canvas.width = Math.round(w * dpr); canvas.height = Math.round(h * dpr);
-    g.setTransform(dpr, 0, 0, dpr, 0, 0); g.clearRect(0, 0, w, h);
-    if (!data.length) return;
-    const left = 10, right = w - 78, top = 30, bottom = h - 28;
-    const view = perpChartWindow(data.length, bars, offset);
-    const shown = data.slice(view.start, view.end);
-    const lo = Math.min(...shown.map((c) => c.l)), hi = Math.max(...shown.map((c) => c.h));
-    const pad = Math.max((hi - lo) * 0.08, hi * 0.001, 1e-10), min = lo - pad, max = hi + pad;
-    const y = (p) => bottom - (p - min) / (max - min) * (bottom - top);
-    const step = (right - left) / shown.length;
-    g.font = '11px system-ui'; g.fillStyle = muted; g.strokeStyle = colors.line || '#292b33'; g.lineWidth = 1;
-    for (let i = 0; i <= 4; i++) {
-      const yy = top + (bottom - top) * i / 4, price = max - (max - min) * i / 4;
-      g.beginPath(); g.moveTo(left, yy); g.lineTo(right, yy); g.stroke(); g.fillText(quote(price), right + 8, yy + 4);
-    }
-    if (style === 'line') {
-      g.strokeStyle = up; g.lineWidth = 1.5; g.beginPath();
-      for (const [i, c] of shown.entries()) { const x = left + step * (i + .5); if (i) g.lineTo(x, y(c.c)); else g.moveTo(x, y(c.c)); }
-      g.stroke(); g.lineWidth = 1;
-    } else for (const [i, c] of shown.entries()) {
-      const x = left + step * (i + 0.5);
-      g.strokeStyle = c.c >= c.o ? up : down; g.fillStyle = g.strokeStyle;
-      g.beginPath(); g.moveTo(x, y(c.h)); g.lineTo(x, y(c.l)); g.stroke();
-      g.fillRect(x - Math.max(1, step * 0.6) / 2, Math.min(y(c.o), y(c.c)), Math.max(1, step * 0.6), Math.max(1, Math.abs(y(c.o) - y(c.c))));
-    }
-    g.fillStyle = muted;
-    for (const i of [0, Math.floor(shown.length / 2), shown.length - 1]) {
-      const label = new Date(shown[i].t).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
-      g.textAlign = i === 0 ? 'left' : i === shown.length - 1 ? 'right' : 'center';
-      g.fillText(label, left + step * (i + 0.5), h - 8);
-    }
-    g.textAlign = 'left';
-    const n = pointer === null ? shown.length - 1 : Math.max(0, Math.min(shown.length - 1, Math.floor((pointer - left) / step)));
-    const c = shown[n];
-    g.fillText(`O ${quote(c.o)}   H ${quote(c.h)}   L ${quote(c.l)}   C ${quote(c.c)}`, left, 16);
-    if (pointer !== null) { const x = left + step * (n + 0.5); g.strokeStyle = muted; g.beginPath(); g.moveTo(x, top); g.lineTo(x, bottom); g.stroke(); }
-  }
-  const zoom = (factor) => { bars = Math.max(15, Math.min(data.length || 180, Math.round(bars * factor))); offset = Math.min(offset, Math.max(0, data.length - bars)); draw(); };
-  const move = (e) => {
-    pointer = e.clientX - canvas.getBoundingClientRect().left;
-    if (drag) {
-      const width = Math.max(200, canvas.getBoundingClientRect().width - 88);
-      offset = Math.max(0, Math.min(data.length - Math.min(data.length, bars), drag.offset + Math.round((e.clientX - drag.x) / width * bars)));
-    }
-    draw();
-  };
-  const leave = () => { pointer = null; draw(); };
-  const downEvent = (e) => { drag = { x: e.clientX, offset }; canvas.setPointerCapture?.(e.pointerId); };
-  const upEvent = () => { drag = null; };
-  const wheel = (e) => { e.preventDefault(); zoom(e.deltaY > 0 ? 1.25 : 0.8); };
-  const key = (e) => {
-    if (['ArrowLeft', 'ArrowRight', '+', '-', '=', 'Home', 'End'].includes(e.key)) e.preventDefault();
-    if (e.key === '+' || e.key === '=') zoom(0.8);
-    else if (e.key === '-') zoom(1.25);
-    else if (e.key === 'ArrowLeft') { offset = Math.min(Math.max(0, data.length - bars), offset + Math.max(1, Math.round(bars / 5))); draw(); }
-    else if (e.key === 'ArrowRight') { offset = Math.max(0, offset - Math.max(1, Math.round(bars / 5))); draw(); }
-    else if (e.key === 'Home') { offset = Math.max(0, data.length - bars); draw(); }
-    else if (e.key === 'End') { offset = 0; draw(); }
-  };
-  canvas.addEventListener('pointermove', move); canvas.addEventListener('pointerleave', leave);
-  canvas.addEventListener('pointerdown', downEvent); canvas.addEventListener('pointerup', upEvent); canvas.addEventListener('pointercancel', upEvent);
-  canvas.addEventListener('wheel', wheel, { passive: false }); canvas.addEventListener('keydown', key);
-  const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(draw) : null;
-  ro?.observe(canvas);
-  return { set(rows) { data = rows; if (!rows.length) { bars = 90; offset = 0; } draw(); }, draw,
-    style(next) { if (['candles', 'line'].includes(next)) { style = next; draw(); } },
-    zoomIn: () => zoom(0.8), zoomOut: () => zoom(1.25), reset: () => { bars = 90; offset = 0; draw(); },
-    destroy() {
-      dead = true; ro?.disconnect(); canvas.removeEventListener('pointermove', move); canvas.removeEventListener('pointerleave', leave);
-      canvas.removeEventListener('pointerdown', downEvent); canvas.removeEventListener('pointerup', upEvent); canvas.removeEventListener('pointercancel', upEvent);
-      canvas.removeEventListener('wheel', wheel); canvas.removeEventListener('keydown', key);
-    } };
-}
-
 export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
-  const client = ctx.perpsClient || createPerpsClient();
+  const client = ctx.paperPerpsSession?.createClient() || ctx.perpsClient || createPerpsClient();
   const S = { active: true, dead: false, dex: '', rows: [], coin: null, interval: '15m', query: '', sort: 'volume',
     marketAt: 0, candleAt: 0, marketBusy: false, candleBusy: false, version: 0, chartVersion: 0 };
   const title = el('h2', { class: 'php-title' }, 'Perpetuals');
@@ -237,25 +157,15 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
   const assetChange = el('span', { class: 'php-change' }, '—');
   const stats = el('dl', { class: 'php-stats' });
   const aboutName = el('p', { class: 'php-about-description' });
-  const canvas = el('canvas', { class: 'php-chart', role: 'img', tabindex: '0',
-    'aria-label': 'Price history. Use plus and minus to zoom, arrow keys to pan, and End to return to latest.' });
   const chartState = el('p', { class: 'php-chart-state', role: 'status' }, 'Select a market to load its price history.');
-  const intervalButtons = PERP_INTERVALS.map((interval) => el('button', { type: 'button', class: 'php-interval',
-    'aria-pressed': String(interval === S.interval), on: { click: () => {
-      S.interval = interval; S.chartVersion++; S.candleBusy = false; chart.set([]);
-      for (const b of intervalButtons) b.setAttribute('aria-pressed', String(b.textContent === interval));
-      loadCandles();
-    } } }, interval));
-  const chart = marketChart(canvas, ctx.colors);
-  const chartStyle = el('select', { class: 'php-chart-style', 'aria-label': 'Perpetual chart style', on: { change: () => chart.style(chartStyle.value) } },
-    el('option', { value: 'candles' }, 'Candles'), el('option', { value: 'line' }, 'Line'));
-  const chartControls = el('div', { class: 'php-chart-controls', role: 'group', 'aria-label': 'Chart view' },
-    el('span', {}, 'Scroll to zoom · drag to pan'),
-    el('button', { type: 'button', 'aria-label': 'Zoom in', on: { click: chart.zoomIn } }, '+'),
-    el('button', { type: 'button', 'aria-label': 'Zoom out', on: { click: chart.zoomOut } }, '−'),
-    el('button', { type: 'button', on: { click: chart.reset } }, 'Latest'));
+  const chart = createPerpsChart({ ledger: ctx.paperPerps, onInterval(interval) {
+    S.interval = interval; S.chartVersion++; S.candleBusy = false; chart.set([], { coin: S.coin, interval }); loadCandles();
+  } });
+  const canvas = chart.plot;
+  const paper = ctx.paperPerps ? createPaperPerpsTicket({ ledger: ctx.paperPerps,
+    market: () => S.rows.find(row => row.coin === S.coin), onTransfer: ctx.openPaperCash }) : null;
   const marketPanel = el('div', { class: 'php-market-panel' },
-    el('div', { class: 'php-heading' }, title, el('span', { class: 'php-badge' }, 'View only')),
+    el('div', { class: 'php-heading' }, title, el('span', { class: 'php-badge' }, paper ? 'Paper trading' : 'View only')),
     el('div', { class: 'php-toolbar' }, search, venue, sort),
     el('div', { class: 'php-columns', 'aria-hidden': 'true' }, el('span', {}, 'Market'), el('span', {}, 'Price / 24h'), el('span', {}, '24h volume')), list);
   const navSlot = el('aside', { class: 'php-nav-slot', 'aria-label': 'Perpetual market discovery' }, marketPanel);
@@ -263,17 +173,17 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
   const blankPositions = el('section', { class: 'php-position-note' }, el('h3', {}, 'Positions'),
     el('p', {}, 'No perpetual positions. This screen shows public market data and does not place derivatives orders.'));
   const sideRail = el('aside', { class: 'php-side-rail' },
-    el('section', { class: 'php-preview-card' }, el('h3', {}, 'Live perpetual markets'),
+    paper?.form || el('section', { class: 'php-preview-card' }, el('h3', {}, 'Live perpetual markets'),
       el('p', {}, 'Explore public prices and charts. Trading is not available in this web preview.'), el('span', { class: 'php-badge' }, 'View only · no wallet connection')),
-    el('section', { class: 'php-about-card' }, el('h3', {}, 'About'), aboutName, stats,
+    el('details', { class: 'php-about-card' }, el('summary', {}, 'About this market'), aboutName, stats,
       el('p', { class: 'php-source' }, 'Market data: Hyperliquid. Maximum leverage is the venue’s limit, not an active position.')),
-    positionsSlot, blankPositions);
-  const root = el('section', { class: 'php', 'aria-label': 'Perpetual markets preview' },
+    positionsSlot, paper ? null : blankPositions);
+  const root = el('section', { class: 'php', 'aria-label': paper ? 'Paper perpetual markets' : 'Perpetual markets preview' },
     el('div', { class: 'php-workspace' }, navSlot, el('div', { class: 'php-layout' },
       el('section', { class: 'php-detail', 'aria-label': 'Selected perpetual market' },
         el('div', { class: 'php-detail-head' }, assetName, assetPrice, assetChange),
-        el('div', { class: 'php-intervals', role: 'group', 'aria-label': 'Chart interval' }, intervalButtons, chartStyle), canvas, chartControls, chartState,
-        el('div', { class: 'php-state' }, status, retry),
+        chart.el, chartState,
+        el('div', { class: 'php-state' }, status, retry), paper?.book,
         el('section', { class: 'php-activity-note' }, el('h3', {}, 'Market activity'),
           el('p', {}, 'Candles and current quotes are available. Trader identities, holders and account activity are not supplied by this public feed.'))), sideRail)));
   host.append(root);
@@ -295,7 +205,7 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
     const items = rows.length ? rows : [{ coin: 'empty', empty: true }];
     keyed(list, items, (r) => r.coin, (r) => {
       if (r.empty) return el('p', { class: 'php-empty' }, S.query ? 'No markets match your search.' : 'No markets to show yet.');
-      const b = el('button', { class: 'php-row', type: 'button', on: { click: () => select(r.coin) } },
+      const b = el('button', { class: 'php-row', type: 'button', on: { click: () => { select(r.coin); hooks.onSelect?.(r.coin); } } },
         el('span', { class: 'php-row-name' }, el('b'), el('small')),
         el('span', { class: 'php-row-price' }, el('b'), el('small')), el('span', { class: 'php-row-vol' }));
       return b;
@@ -321,10 +231,11 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
       ['Open interest', a && a.openInterest !== null ? `${compact(a.openInterest)} ${a.symbol}` : '—'],
       ['Open interest value', usd(a?.openInterestUsd)], ['Maximum leverage', a?.leverage ? `${a.leverage}×` : '—']];
     stats.replaceChildren(...fields.map(([label, text]) => el('div', {}, el('dt', {}, label), el('dd', {}, text))));
+    paper?.update();
   }
   function select(coin) {
     if (coin === S.coin) return;
-    S.coin = coin; S.chartVersion++; S.candleBusy = false; chart.set([]); renderList(); renderAsset(); loadCandles();
+    S.coin = coin; S.chartVersion++; S.candleBusy = false; chart.set([], { coin, interval: S.interval }); renderList(); renderAsset(); loadCandles();
   }
   async function loadMarkets() {
     if (S.dead || !S.active || client.status !== 'live' || S.marketBusy) return;
@@ -334,6 +245,7 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
       const m = await client.request('markets', { dex });
       if (S.dead || !S.active || version !== S.version || m.dex !== S.dex) return;
       S.rows = m.data;
+      if (ctx.paperPerps && !ctx.paperPerpsSession) ctx.paperPerps.observeMarkets(m.data, { at: m.at, stale: m.stale });
       setText(status, m.stale ? 'Updates interrupted · showing the last available quotes.' : `Updated ${new Date(m.at).toLocaleTimeString()} · ${m.data.length} markets`);
       retry.hidden = !m.stale;
       if (!S.rows.some((r) => r.coin === S.coin)) {
@@ -356,7 +268,7 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
     try {
       const m = await client.request('candles', { coin, interval });
       if (S.dead || !S.active || version !== S.chartVersion || m.coin !== S.coin || m.interval !== S.interval) return;
-      chart.set(m.data);
+      chart.set(m.data, { coin, interval });
       setText(chartState, !m.data.length ? 'No price history is available for this interval.' : m.stale ? 'Chart updates interrupted · showing the last available candles.' : '');
       canvas.setAttribute('aria-label', `${coin} ${interval} price chart, ${m.data.length} observed candles. Plus or minus to zoom, arrows to pan, End for latest.`);
     } catch { if (!S.dead && S.active && version === S.chartVersion) { setText(chartState, 'Price history is unavailable. Try another interval or retry.'); retry.hidden = false; } }
@@ -374,18 +286,20 @@ export function mountPhomoPerps(host, ctx = {}, hooks = {}) {
     } else { setText(status, state === 'connecting' ? 'Connecting to live markets…' : 'The market feed is unavailable. Reconnecting…'); retry.hidden = state !== 'down'; }
   });
   client.start();
-  return { el: root, setHosts,
+  return { el: root, setHosts, selectCoin: select,
     update() {
       if (!S.active || S.dead) return;
       if (Date.now() - S.marketAt >= 10000) loadMarkets();
       if (Date.now() - S.candleAt >= 30000) loadCandles();
+      paper?.update();
     },
     setActive(active) {
       if (S.dead || S.active === Boolean(active)) return;
       S.active = Boolean(active); S.version++; S.chartVersion++; S.marketBusy = false; S.candleBusy = false;
+      chart.setActive(S.active); paper?.setActive(S.active);
       if (S.active) { client.start(); chart.draw(); } else client.stop();
     },
-    destroy() { if (S.dead) return; S.dead = true; off(); client.stop(); chart.destroy();
+    destroy() { if (S.dead) return; S.dead = true; off(); client.stop(); client.release?.(); chart.destroy(); paper?.destroy();
       if (externalPositions?.parentNode === positionsSlot) externalPositions.remove(); marketPanel.remove(); root.remove(); },
   };
 }

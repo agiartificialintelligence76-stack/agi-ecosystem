@@ -51,7 +51,7 @@ const ownerContent = () => ({
 const clankPreview = () => {
   const serve = async (req, res, next) => {
     const url = new URL(req.url || '/', 'http://localhost');
-    if (url.pathname !== '/api/checker' || url.searchParams.get('terminal') !== 'clank') return next();
+    if (url.pathname !== '/api/checker' || !['clank', 'kols'].includes(url.searchParams.get('terminal'))) return next();
     if (req.method !== 'GET') {
       res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json' });
       res.end('{"error":"method_not_allowed"}');

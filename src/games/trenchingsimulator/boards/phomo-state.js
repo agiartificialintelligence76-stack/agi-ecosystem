@@ -2,6 +2,7 @@
 // The board calls tick(); copying only happens after an explicit copyTrade() call through the supplied run callback.
 import { PHOMO_CATEGORIES, PHOMO_WINDOWS, PHOMO_LIMITS, PHOMO_SORTS, PHOMO_NETWORKS, coinKey, marketTokenRows, selectTokens,
   tokenMetrics, traderProfiles, selectTraders, socialFeed, copyOrderFor, closedPositionStats } from './phomo-data.js';
+import { cleanProfileImage, cleanProfileX } from './phomo-profile-image.js';
 
 export const PHOMO_SAVE_KEY = 'trench_phomo_v1';
 export const PHOMO_BOUNDS = Object.freeze({ watchlist: 200, hidden: 300, followed: 80, muted: 80, likes: 300,
@@ -10,7 +11,15 @@ const FILTERS = ['minMarketCap', 'maxMarketCap', 'minLiquidity', 'minVolume', 'm
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);
 const text = (v, max = 220) => typeof v === 'string' ? v.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim().slice(0, max) : '';
 const seedOf = (v) => typeof v === 'string' || fin(v) ? text(String(v)) : '';
-const clone = (v) => JSON.parse(JSON.stringify(v));
+const clone = (v) => {
+  // Image strings are immutable. Do not reserialize up to 768 KB on every preferences read.
+  if (v?.profile) {
+    const { avatarImage, bannerImage, ...profile } = v.profile;
+    const copy = JSON.parse(JSON.stringify({ ...v, profile }));
+    copy.profile.avatarImage = avatarImage; copy.profile.bannerImage = bannerImage; return copy;
+  }
+  return JSON.parse(JSON.stringify(v));
+};
 const strings = (v, n) => [...new Set((Array.isArray(v) ? v : []).map((s) => text(s)).filter(Boolean))].slice(-n);
 const category = (v) => PHOMO_CATEGORIES.some(([k]) => k === v) ? v : 'trending';
 const windowOf = (v) => PHOMO_WINDOWS.includes(v) ? v : '1h';
@@ -25,9 +34,9 @@ export function blankPhomoPrefs() {
     network: 'all', launchpad: 'all',
     buyPresets: [10, 100, 500, 1000], sellPresets: [10, 25, 50, 100], slippageMode: 'auto', slippage: 0.2,
     ui: { panels: [{ kind: 'tokens', category: 'trending', window: '1h' }],
-      layout: 'columns', quickBuy: 10, rail: false, navigationKind:'tokens', discoveryWidth: 280, positionsWidth: 320,
+      layout: 'columns', quickBuy: 10, rail: true, navigationKind:'leaderboard', discoveryWidth: 280, positionsWidth: 320,
       positionsCollapsed: false, panelSizes: [] },
-    profile: { displayName: '', handle: '', bio: '', avatar: '🍜', banner: 'violet' },
+    profile: { displayName: '', handle: '', bio: '', avatar: '🍜', banner: 'violet', avatarImage: null, bannerImage: null, twitterUrl: '' },
     traderAlerts: { disabled: [], minTradeUsd: 0, minPortfolioUsd: 0, minMarketCapUsd: 0, maxMarketCapUsd: null },
     watchlist: [], hidden: [], followed: [], muted: [], likes: [], notes: [], alerts: [], notifications: [], seen: [] };
 }
@@ -73,6 +82,9 @@ export function cleanPhomoPrefs(raw) {
     d.profile.bio = text(raw.profile.bio, 160);
     if (['🍜', '🐱', '🐸', '🦊', '🪙', '🚀', '🌙', '🐋'].includes(raw.profile.avatar)) d.profile.avatar = raw.profile.avatar;
     if (['violet', 'ocean', 'forest', 'sunset', 'midnight'].includes(raw.profile.banner)) d.profile.banner = raw.profile.banner;
+    d.profile.avatarImage = cleanProfileImage(raw.profile.avatarImage, 'avatar');
+    d.profile.bannerImage = cleanProfileImage(raw.profile.bannerImage, 'banner');
+    d.profile.twitterUrl = cleanProfileX(raw.profile.twitterUrl);
   }
   if (raw.traderAlerts && typeof raw.traderAlerts === 'object') {
     d.traderAlerts.disabled = strings(raw.traderAlerts.disabled, PHOMO_BOUNDS.followed);
@@ -103,7 +115,7 @@ export function cleanPhomoPrefs(raw) {
 }
 
 export function createPhomoState(market, { storage = null, solUsd = market && market.solUsd, order = null,
-  playerName = null, now = Date.now, onChange = null } = {}) {
+  playerName = null, now = Date.now, onChange = null, kols = null, paperPerps = null } = {}) {
   let prefs;
   try { prefs = cleanPhomoPrefs(JSON.parse(storage && storage.getItem(PHOMO_SAVE_KEY) || 'null')); }
   catch { prefs = blankPhomoPrefs(); }
@@ -112,6 +124,7 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
   let lastFeed = market && market.feedSeq || 0;
   let profiles = null;
   let profilesAt = -Infinity;
+  let publicRevision = null;
   const username = () => prefs.profile.displayName || text(typeof playerName === 'function' ? playerName() : playerName, 40) || 'You';
   const nextId = (kind) => {
     let id;
@@ -132,6 +145,17 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
     return market.find(mint).find((id) => keyOf(id) === key) ?? null;
   };
   const getProfiles = () => {
+    if (market.live) {
+      const rev=kols?.revision ?? Math.floor(now()/1000);
+      if(profiles&&publicRevision===rev)return profiles;
+      const source = kols?.snapshot();
+      publicRevision=rev;
+      profiles=(source?.traders || []).map(p => ({ ...p, kind:'real', simulated:false, paper:false,
+        pnlUsd:null, dailyPnlUsd:fin(p.pnlSol) && source.solUsd > 0 ? p.pnlSol * source.solUsd : null,
+        weekPnlUsd:null, unrealizedUsd:null, volumeUsd:null, weekVolumeUsd:null, followers:null,
+        trades:null, holdings:[], week:null, run:null, last:null, sourceAt:source.asOf }));
+      return profiles;
+    }
     if (!profiles || now() - profilesAt >= 1000) {
       profiles = traderProfiles(market, { solUsd });
       profilesAt = now();
@@ -157,18 +181,21 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
     const p = market.player;
     const positions = market.positions();
     const filled = market.orders(300).filter((o) => o.status === 'filled');
+    const paperFills = (paperPerps?.snapshot()?.fills || []).filter((f) => fin(f.notional) && f.notional > 0);
     const closed = closedPositionStats(positions, solUsd);
     return { key: 'you', kind: 'you', id: 'you', name: username(), handle: prefs.profile.handle || username(), address: p.address,
       bio: prefs.profile.bio, avatar: prefs.profile.avatar, banner: prefs.profile.banner,
+      avatarImage: prefs.profile.avatarImage, bannerImage: prefs.profile.bannerImage, twitterUrl: prefs.profile.twitterUrl,
       simulated: true, paper: true, followers: null, pnlUsd: (p.worth - market.startSol) * solUsd,
       unrealizedUsd: positions.reduce((sum, x) => sum + x.pnl, 0) * solUsd, weekPnlUsd: null,
-      winRate: closed.winRate, closed, weekWinRate: null, volumeUsd: filled.reduce((sum, o) => sum + (o.side === 'buy' ? o.spent : o.got), 0) * solUsd,
-      trades: filled.length, holdings: positions.filter((p0) => p0.open).map((p0) => ({ coin: p0.id, tok: p0.tokens,
+      winRate: closed.winRate, closed, weekWinRate: null, volumeUsd: filled.reduce((sum, o) => sum + (o.side === 'buy' ? o.spent : o.got), 0) * solUsd
+        + paperFills.reduce((sum, f) => sum + f.notional, 0),
+      trades: filled.length + paperFills.length, holdings: positions.filter((p0) => p0.open).map((p0) => ({ coin: p0.id, tok: p0.tokens,
         valueUsd: p0.value * solUsd, pnlUsd: p0.pnl * solUsd })), week: null, run: null, followed: false, muted: false };
   };
 
   const api = {
-    get prefs() { return clone(prefs); },
+    get prefs() { const p=clone(prefs); if(market.live&&kols)p.followed=[...new Set([...p.followed,...getProfiles().filter(t=>t.followed).map(t=>t.id)])];return p; },
     setProfile(patch = {}) { if (dead || !patch || typeof patch !== 'object') return; prefs.profile = { ...prefs.profile, ...patch }; save(); },
     setTraderAlerts(patch = {}) { if (dead || !patch || typeof patch !== 'object') return; prefs.traderAlerts = { ...prefs.traderAlerts, ...patch }; save(); },
     setPrefs(patch = {}) {
@@ -193,19 +220,19 @@ export function createPhomoState(market, { storage = null, solUsd = market && ma
     toggleHide(id) { return toggle('hidden', keyOf(id)); },
     isHidden(id) { return prefs.hidden.includes(keyOf(id)); },
     restoreHidden() { prefs.hidden = []; save(); },
-    traders(options = {}) { return selectTraders(getProfiles(), { ...options, followed: prefs.followed, muted: prefs.muted }); },
+    traders(options = {}) { return selectTraders(getProfiles(), { ...options, followed: api.prefs.followed, muted: prefs.muted }); },
     profile(key) {
       if (key === 'you') return ownProfile();
       const p = getProfiles().find((x) => x.key === key);
-      return p ? { ...p, followed: prefs.followed.includes(key), muted: prefs.muted.includes(key) } : null;
+      return p ? { ...p, followed: api.isFollowing(key), muted: prefs.muted.includes(key) } : null;
     },
     traderForAddress(address) {
       if (address === market.player.address) return 'you';
       const p = getProfiles().find((x) => x.address === address);
       return p ? p.key : null;
     },
-    toggleFollow(key) { return validTrader(key) ? toggle('followed', key) : false; },
-    isFollowing(key) { return prefs.followed.includes(key); },
+    toggleFollow(key) { if(typeof key!=='string')return false;if(market.live&&key.startsWith('kolscan:'))return kols?.toggleFollow(key)||false;return validTrader(key) ? toggle('followed', key) : false; },
+    isFollowing(key) { return typeof key==='string' && (market.live&&key.startsWith('kolscan:') ? !!kols?.isFollowing(key) : prefs.followed.includes(key)); },
     toggleMute(key) { return validTrader(key) ? toggle('muted', key) : false; },
     isMuted(key) { return prefs.muted.includes(key); },
     feed({ following = false, limit = 60, traderKey = null, types = null, replies = true } = {}) {

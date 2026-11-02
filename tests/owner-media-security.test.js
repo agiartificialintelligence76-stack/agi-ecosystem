@@ -98,7 +98,7 @@ test('CSP adds only the exact media bucket and signing path while preserving eve
     'worker-src': ["'self'", 'blob:'],
     'style-src': ["'self'"],
     'font-src': ["'self'"],
-    'img-src': ["'self'", 'data:', 'blob:', 'https://live.agi1.app', MEDIA_PUBLIC_ROOT],
+    'img-src': ["'self'", 'data:', 'blob:', 'https://cdn.kolscan.io', 'https://live.agi1.app', MEDIA_PUBLIC_ROOT],
     'media-src': ["'self'", 'blob:', MEDIA_PUBLIC_ROOT],
     'connect-src': ["'self'", 'blob:', 'https://api.dexscreener.com', 'wss://live.agi1.app', `${MEDIA_ORIGIN}/storage/v1/object/upload/sign/${MEDIA_BUCKET}/`],
     'frame-src': ["'self'", 'https://challenges.cloudflare.com'],

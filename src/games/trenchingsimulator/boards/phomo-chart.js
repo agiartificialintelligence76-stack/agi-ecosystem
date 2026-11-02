@@ -85,10 +85,10 @@ class Drawings {
           g.globalAlpha = 1; g.strokeRect(Math.min(u.x, v.x), Math.min(u.y, v.y), Math.abs(v.x - u.x), Math.abs(v.y - u.y));
           if (row.type === 'measure') {
             const change = (row.points[1].v / row.points[0].v - 1) * 100;
-            g.font = '11px "Geist Mono", monospace'; g.textAlign = 'left';
+            g.font = '11px "Phomo Aeonik", Arial, sans-serif'; g.textAlign = 'left';
             g.fillText(`${change >= 0 ? '+' : ''}${change.toFixed(2)}% · ${Math.round(Math.abs(row.points[1].t - row.points[0].t))}s`, Math.min(u.x, v.x) + 5, Math.min(u.y, v.y) - 7);
           }
-        } else if (row.type === 'text') { g.font = '12px Geist, sans-serif'; g.textAlign = 'left'; g.fillText(row.text || 'Note', u.x, u.y); }
+        } else if (row.type === 'text') { g.font = '12px "Phomo Aeonik", Arial, sans-serif'; g.textAlign = 'left'; g.fillText(row.text || 'Note', u.x, u.y); }
         else if (row.type === 'ray') {
           const dx = v.x - u.x, dy = v.y - u.y;
           if (Math.abs(dx) < 0.01) line(u.x, u.y, u.x, dy < 0 ? 0 : h);
@@ -107,6 +107,7 @@ export function createPhomoChart(host, options = {}) {
   let barsCache = [], barsDirty = true, barsBase = null, barsChange = { reset: true, changed: true, from: 0 };
   const stream = createCandleStream();
   let altRevision = '', markersRevision = '';
+  let levels = [], levelSeries = null, levelLines = [], levelsRevision = '';
   let view = { mode: options.mode || 'mcap', unit: 'usd', per: 1 };
   let chartStyle = 'candles', tool = 'cursor', selected = null, draft = null, visible = true, dragging = null;
   let scale = 'normal', auto = true, grid = true, volume = true, crosshair = true, rangeSeconds = null;
@@ -201,6 +202,7 @@ export function createPhomoChart(host, options = {}) {
   }
   function recreateStyle() {
     if (!chart || !main) return;
+    clearLevels();
     if (primitive) active().detachPrimitive(primitive);
     if (altMarkers) { altMarkers.detach(); altMarkers = null; }
     if (alt) { chart.removeSeries(alt); alt = null; }
@@ -213,7 +215,15 @@ export function createPhomoChart(host, options = {}) {
       altMarkers = L.createSeriesMarkers(alt, []);
     }
     altRevision = ''; markersRevision = '';
-    attachDrawing(); syncAlt(); applySettings();
+    attachDrawing(); syncAlt(); applySettings(); syncLevels();
+  }
+  function clearLevels() { for (const line of levelLines) levelSeries?.removePriceLine?.(line); levelLines = []; levelSeries = null; levelsRevision = ''; }
+  function syncLevels() {
+    const series = active(); if (!series?.createPriceLine) return;
+    const revision = JSON.stringify([levels, factor()]); if (series === levelSeries && revision === levelsRevision) return;
+    clearLevels(); levelSeries = series; levelsRevision = revision;
+    levelLines = levels.map(row => series.createPriceLine({ price: row.value * factor(), title: row.title,
+      color: row.color, lineWidth: 1, lineStyle: 2, axisLabelVisible: true }));
   }
   function syncAlt() {
     if (!alt) return;
@@ -296,9 +306,11 @@ export function createPhomoChart(host, options = {}) {
   host.addEventListener('pointerdown', down, true); host.addEventListener('pointermove', drag, true);
   host.addEventListener('pointerup', up, true); host.addEventListener('pointercancel', cancel, true); host.addEventListener('keydown', keydown);
   const api = {
-    set(next) { data = { ...data, ...next }; barsDirty = true; base?.set(data); times(); syncAlt(); fitInitial(); if (barsChange.changed) primitive?.refresh(); },
-    view(next) { if (Object.entries(next).every(([key, value]) => view[key] === value)) return; view = { ...view, ...next }; base?.view(next); if (alt) alt.applyOptions({ priceFormat: { type: 'custom', formatter: formatterFor(view.mode, 'usd'), minMove: view.mode === 'price' ? 1e-13 : .01 } }); syncAlt(); notify(); },
+    set(next) { data = { ...data, ...next }; barsDirty = true; base?.set(data); times(); syncAlt(); syncLevels(); fitInitial(); if (barsChange.changed) primitive?.refresh(); },
+    view(next) { if (Object.entries(next).every(([key, value]) => view[key] === value)) return; view = { ...view, ...next }; base?.view(next); if (alt) alt.applyOptions({ priceFormat: { type: 'custom', formatter: formatterFor(view.mode, 'usd'), minMove: view.mode === 'price' ? 1e-13 : .01 } }); syncAlt(); syncLevels(); notify(); },
     indicators(next) { indicators = [...next]; base?.indicators(next); notify(); },
+    levels(next) { levels = (Array.isArray(next) ? next : []).filter(row => fin(row?.value) && row.value > 0).slice(0, 100)
+      .map(row => ({ value: row.value, title: textOf(row.title).slice(0, 30), color: /^#[0-9a-f]{6}$/i.test(row.color) ? row.color : colors.axis })); syncLevels(); },
     style(next) { if (PHOMO_CHART_STYLES.includes(next)) { chartStyle = next; recreateStyle(); notify(); } },
     settings(patch) { if (typeof patch.grid === 'boolean') grid = patch.grid; if (typeof patch.volume === 'boolean') volume = patch.volume;
       if (typeof patch.crosshair === 'boolean') crosshair = patch.crosshair; applySettings(); notify(); },
@@ -320,6 +332,7 @@ export function createPhomoChart(host, options = {}) {
     showDrawings(on) { visible = Boolean(on); notify(); }, clearDrawings() { book.clear(); selected = null; notify(); },
     screenshot() { return chart?.takeScreenshot(true, false) || null; }, get state() { return state(); },
     destroy() { if (dead) return; dead = true;
+      clearLevels();
       host.removeEventListener('pointerdown', down, true); host.removeEventListener('pointermove', drag, true);
       host.removeEventListener('pointerup', up, true); host.removeEventListener('pointercancel', cancel, true); host.removeEventListener('keydown', keydown);
       if (chart) { chart.unsubscribeClick(click); chart.unsubscribeCrosshairMove(move); if (primitive) active()?.detachPrimitive(primitive); }

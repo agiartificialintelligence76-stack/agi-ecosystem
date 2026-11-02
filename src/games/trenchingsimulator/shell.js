@@ -23,6 +23,7 @@ import { gameLogo, menuHeader, terminalTile, marketIllustration, modeTile, MENU_
 import { CHALLENGES, TIERS, challengeById, FREE_STARTS, SPEEDS, goalText, timeText, startText, freeStartSol, dailyKey, dailySeed,
   dailyChallenge } from './challenges.js';
 import { createRun } from './run.js';
+import { createTerminalKols } from './terminal-kols.js';
 import { captureRunReplay } from './replay-data.js';
 import { createReplayArchive } from './replay-archive.js';
 import { loadSave, writeSave, recordResult, starsTotal, SLIPPAGES, PRIORITIES } from './save.js';
@@ -815,8 +816,9 @@ export function startShell(root) {
       feed = liveFeed();
       feed.start(live);
     }
-    const [price, , mount, got] = await Promise.all([race ? null : ensurePrice(), feed ? feedReady(feed, 5000) : null, boardFor(t),
-      rankable ? askTicket({ kind: setup.kind, challenge: setup.kind === 'challenge' ? setup.id : null }) : null]);
+    const [price, , mount, got, perps] = await Promise.all([race ? null : ensurePrice(), feed ? feedReady(feed, 5000) : null, boardFor(t),
+      rankable ? askTicket({ kind: setup.kind, challenge: setup.kind === 'challenge' ? setup.id : null }) : null,
+      t.id === 'social' ? import('./paper-perps-session.js').catch(() => null) : null]);
     await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0)));
     if (tok !== S.token) return;
     if (!mount) {
@@ -866,16 +868,20 @@ export function startShell(root) {
     } catch {
       // a run is counted on a best-effort basis: the game never waits for it
     }
-    mountPlay(run, setup, t, mount, ranked);
+    const paperSession = perps?.createPaperPerpsSession({ account: run.paperAccount, isOpen: () => run.mode === 'free' && !run.over });
+    if (paperSession) run.attachPaperPerps(paperSession.ledger);
+    mountPlay(run, setup, t, mount, ranked, paperSession);
   }
 
-  function mountPlay(run, setup, t, mount = mountBoard, ranked = null) {
+  function mountPlay(run, setup, t, mount = mountBoard, ranked = null, paperSession = null) {
     const compactHud = true;
     const cur = run.currency;
     const px = run.solUsd;
     const M = (x) => money(x, cur, px);
     const P = { run, setup, t, dead: false, raf: 0, lastTs: null, hudAt: 0, overAt: null, quick: false, userPaused: false,
-      autoPaused: false, endLine: null, ranked };
+      autoPaused: false, endLine: null, ranked, paperSession };
+    P.kols = run.live && t.id !== 'clank' ? createTerminalKols({ chain: run.live, storage: store }) : null;
+    P.kols?.start();
     S.play = P;
     const voice = createVoice({ currency: cur, solUsd: px, live: Boolean(run.live),
       isReal: run.live ? (id) => run.market.isExt(id) : null });
@@ -954,6 +960,7 @@ export function startShell(root) {
     const defined = (p) => Object.fromEntries(Object.entries(p || {}).filter(([, v]) => v !== undefined));
     P.board = mount(boardHost, {
       run, market: run.market, currency: cur, solUsd: px, start: run.start, colors: t.colors, reduceMotion: reduceMotion(),
+      paperPerps: paperSession?.ledger, paperPerpsSession: paperSession, kols: P.kols,
       settings: () => ({ slippage: S.save.slippage, priority: S.save.priority }),
       order: (p) => run.order({ slippage: S.save.slippage, priority: S.save.priority, ...defined(p) }),
       launchCoin: (p) => {
@@ -1115,6 +1122,8 @@ export function startShell(root) {
       // nothing to keep
     }
     if (P.unwide) P.unwide();
+    P.paperSession?.destroy();
+    P.kols?.destroy();
     if (typeof P.run.market.destroy === 'function') P.run.market.destroy();
     P.agi.destroy();
     S.play = null;
@@ -1320,9 +1329,9 @@ export function startShell(root) {
     const pnlTone = res.pnl > 0 ? 'up' : res.pnl < 0 ? 'down' : '';
     const live = typeof res.live === 'string';
     const localCoins = S.last.replay?.coins.some(c => c.live === false);
-    const provenance = live
+    const provenance = (live
       ? `${localCoins ? 'Live listings + local practice coins' : 'Live listings'} · simulated prices & volume`
-      : 'Simulated coins, prices & volume';
+      : 'Simulated coins, prices & volume') + (res.paperPerps ? ' · paper perpetuals at observed public marks' : '');
     const startValue = money(res.start, res.currency, res.solUsd);
     const endValue = money(res.worth, res.currency, res.solUsd);
     const sp = sparkPath(res.equity, { w: 600, h: 160, pad: 6, base: res.start });

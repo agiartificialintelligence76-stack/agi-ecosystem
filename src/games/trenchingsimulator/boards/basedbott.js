@@ -12,6 +12,7 @@ import { usd, money, moneySigned, pct, share, age, tokens, currencyOf, unitOf, n
 import { buyPresets, parseAmount, pic, num, short, tone, ORDER_ERRORS, waitingForRealCoins } from './common.js';
 import { createGChart, chartCredit } from './gchart.js';
 import { createAddressSearch } from '../live-search.js';
+import { mountLiveKols } from '../live-kols-panel.js';
 import { CHAINS, chainById } from '../live-chains.js';
 import { MIN_BUY } from '../engine.js';
 import { createBasedOrders, basedRows, sparklinePath, basedCsvCell } from './basedbott-data.js';
@@ -120,10 +121,13 @@ export function mountBasedbott(host, ctx) {
   const portfolio = el('section', { class: 'tbb-portfolio', hidden: true }, el('div', { class: 'tbb-view-title' }, el('h2', {}, 'Portfolio'),
     el('span', {}, 'W1 · Practice wallet'), btn('Export trades', exportTrades)), portfolioStats,
     el('div', { class: 'tbb-tabs' }, portfolioTabs), portfolioBody);
-  const trackerBody = el('div'), trackerTabs = ['all', 'smart', 'kol', 'whale', 'me'].map(id => btn(id === 'all' ? 'All activity' : id === 'me' ? 'My trades' : id === 'kol' ? 'KOLs' : id[0].toUpperCase() + id.slice(1),
+  if (market.live) S.tracker = 'kol';
+  const trackerBody = el('div'), trackerTabs = (market.live ? ['kol', 'all', 'me'] : ['all', 'smart', 'kol', 'whale', 'me']).map(id => btn(id === 'all' ? market.live ? 'Practice trades' : 'All activity' : id === 'me' ? 'My trades' : id === 'kol' ? market.live ? 'Real KOLs' : 'KOLs' : id[0].toUpperCase() + id.slice(1),
     () => { S.tracker = id; renderTracker(); }, '', { data: { track: id } }));
+  const liveKolsHost = el('div');
   const trackers = el('section', { class: 'tbb-trackers', hidden: true }, el('div', { class: 'tbb-view-title' }, el('h2', {}, 'Trackers'),
-    el('span', {}, 'Market activity · simulated trader identities')), el('div', { class: 'tbb-tabs' }, trackerTabs), trackerBody);
+    el('span', {}, market.live ? 'Real KOL rankings · separate practice activity' : 'Market activity · simulated trader identities')), el('div', { class: 'tbb-tabs' }, trackerTabs), liveKolsHost, trackerBody);
+  const liveKols = market.live ? mountLiveKols(liveKolsHost,{client:ctx.kols,chain:ctx.chain}) : null;
   const multiGrid = el('div', { class: 'tbb-multi-grid' });
   const multichart = el('section', { class: 'tbb-multichart', hidden: true }, el('div', { class: 'tbb-view-title' }, el('h2', {}, 'Multichart'),
     el('span', {}, 'Your watchlist · up to four charts'), btn('Choose tokens', () => { S.sort = 'watching'; navigate('discover'); })), multiGrid);
@@ -383,9 +387,11 @@ export function mountBasedbott(host, ctx) {
   }
   function renderTracker() {
     for (const b of trackerTabs) b.setAttribute('aria-pressed', String(b.dataset.track === S.tracker));
+    liveKolsHost.hidden = !market.live || S.tracker !== 'kol'; trackerBody.hidden = Boolean(market.live && S.tracker === 'kol');
+    if (trackerBody.hidden) return;
     const tape = S.tracker === 'me' ? market.orders(80).filter(o => o.status === 'filled').map(o => ({ ...o, label: 'me', sol: o.side === 'buy' ? o.spent : o.got }))
       : market.tape(100).filter(t => S.tracker === 'all' || t.label === S.tracker);
-    paintBasedTable(trackerBody, `tracker:${S.tracker}`, ['Age', 'Token', 'Trader', 'Side', 'Value', 'Market cap', 'Action'], tape.slice(0, 60).map(t => ({ id: tradeKey(t), cells: [age(market.t - t.t), { text: t.ticker, action: () => openCoin(t.coin) }, t.label === 'me' ? 'You' : t.label || 'Unknown',
+    paintBasedTable(trackerBody, `tracker:${S.tracker}`, ['Age', 'Token', 'Trader', 'Side', 'Value', 'Market cap', 'Action'], tape.slice(0, 60).map(t => ({ id: tradeKey(t), cells: [age(market.t - t.t), { text: t.ticker, action: () => openCoin(t.coin) }, t.label === 'me' ? 'You' : market.live ? 'Simulated trader' : t.label || 'Unknown',
       { text: t.side, tone: t.side === 'buy' ? 'is-up' : 'is-down' }, M(t.sol), MC(t.mc), { text: 'Buy', action: () => quickBuy(t.coin), className: 'tbb-quick-buy' }] })), 'No activity matches this filter yet.');
   }
   function renderMultichart() {
@@ -471,7 +477,7 @@ export function mountBasedbott(host, ctx) {
     if (now - S.slow >= 700) { S.slow = now; render(); }
     else if (S.coin !== null && now - S.fast >= 250) { S.fast = now; renderCoin(); }
   }, sub: () => S.coin !== null, closeSub: () => closeSub(true), openCoin, destroy() {
-    S.dead = true; closeDialogs(); chart.destroy(); for (const c of S.multi) c.chart.destroy(); automations.clear(); candleReader.clear(); sparkReader.clear();
+    S.dead = true; closeDialogs(); chart.destroy(); liveKols?.destroy(); for (const c of S.multi) c.chart.destroy(); automations.clear(); candleReader.clear(); sparkReader.clear();
     document.removeEventListener('keydown', keydown); root.remove();
   } };
 }

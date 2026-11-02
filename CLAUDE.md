@@ -1,5 +1,34 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Phomo fidelity, paper perpetuals and public KOLs (2026-11-03):** the owner compared Phomo with their
+> logged-in Fomo account and requested its typography, layout and features, then real KOLs in every non-Clank
+> Live terminal. The measured Aeonik desktop workspace now has the persistent social rail, matching token
+> ticket/chart proportions, compact rankings, profile hierarchy and local profile-image editing. Source mobile
+> web is desktop-only; the simulator retains a usable phone adaptation. Source account/security services,
+> external social actions and the proprietary TradingView study library are not reproduced.
+> Phomo free play adds isolated paper perpetuals at fresh observed public marks: Market/Limit/TWAP, leverage,
+> TP/SL, partial/full close and cancellation. Spot and perps share one play balance; collateral cannot be spent
+> twice. Actual paper fees and net equity flow into results and bounded recorded-only replays. The disclosed
+> model uses 0.05% per fill and 0.5% maintenance, without funding; challenges and races cannot trade perps.
+> Live KOL views in Pomp, GNGM, Phomo, Axium and BasedBott read verified public Kolscan Solana profiles,
+> observed avatars and 24h/7d/30d rankings. Following is local. Public trade activity, holdings, clan membership
+> and other-chain KOL directories are explicitly unavailable; no NPC trades are attributed to real people.
+> This is a shared public source, not each original terminal's private account-specific KOL feed. Clank is
+> excluded. Requests are read-only, cached and bounded, with source/stale labels and no credentials.
+> Release is isolated at output/clank-production-20261102, branch codex/phomo-fidelity-20261103, based on e06dcda.
+> Reference measurements and limits: output/fomo-reference-audit-20261103.json.
+> Final isolated Node 24/UTC build with all 79 documented fixture settings passes: 1,585 tests, 1,579 passed,
+> 6 skipped, no failures; bundling, share pages and secret scan pass. Paper/engine/replay checks pass 173/173
+> on Node 20 and 22; final social/KOL fixes 40/40 and navigation 22/22 on both. Seven full date/time-zone
+> runs before the final navigation additions pass 1,577 tests each (6 skips), including midnight/year crossings.
+> Built desktop/360px checks cover real KOL avatars/search/periods/local follows in all five terminals, Clank
+> exclusion, token buys/sells, charts, profile editing, paper Market/Limit/TWAP/TP-SL/partial close, shared cash,
+> cash-out fees and recorded-only replay navigation. Fixed overlapping token controls, stale open KOL detail,
+> mobile resize overlay and exiting perpetual discovery; no final app errors. Measured active token screen
+> uses 1.80 seconds main-thread work over 25.53 seconds (device-specific sample, not a zero-lag guarantee).
+> Evidence: output/phomo-release-browser-verification.json and output/terminal-kols-browser-verification-20261103.json.
+> Production publication authorized by the owner; preview verification follows this release commit.
+
 > **Results-screen refresh (2026-11-03):** the owner flagged the old cash-out screen during release verification.
 > Results now use the new menu's black/lime design, with a session summary, labeled portfolio chart,
 > grouped statistics, prominent play/replay controls and separate sharing/export/navigation actions.
@@ -13377,6 +13406,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 
 | Date | Decision |
 |---|---|
+| 2026-11-03 | Bring Phomo closer to the measured signed-in Fomo interface, add functional local paper perpetuals and profile images, and real public KOL identities in all non-Clank Live terminals. Keep real-source activity distinct from practice fills and disclose unavailable original services. Existing production publication authorization continues. |
 | 2026-11-03 | Refresh the cash-out/results screen to match the new menu design, including clearer performance, chart, statistics and controls. Preserve scoring, currency, race/ranking and replay behavior. |
 | 2026-11-03 | Fix Clank Live free-play launching as a labeled, local practice coin alongside public listings. Creation, optional initial buy, artwork and social links are per-run only; no real on-chain launch or outbound order. Existing production publication authorization applies. |
 | 2026-11-03 | All Live spot terminals use real coin identities/artwork with local practice prices and volume; no fictional fallback during source outages. The owner authorized publication and replacement of the games-page cover with the new menu branding. |

@@ -1,6 +1,7 @@
 // Local recordings only. This archive is never uploaded and cannot execute orders.
 import { REPLAY_LIMITS } from './replay-data.js';
 import { LAUNCH_PAIRS } from './engine.js';
+import { validPaperPerps } from './paper-perps-record.js';
 
 export const REPLAY_ARCHIVE_KEY = 'trench_replays_v1';
 export const REPLAY_ARCHIVE_LIMITS = Object.freeze({ runs: 8, characters: 2_000_000, record: 1_500_000 });
@@ -18,7 +19,7 @@ const id = (v) => Number.isSafeInteger(v) && v >= 0;
 export function validArchivedReplay(r) {
   // Storage is editable JSON. Validate the whole shape rather than retaining arbitrary nested payloads
   // which can later break exporting, copying, or the playback renderer's ordered-history assumptions.
-  if (!fields(r, ['v', 'seed', 'live', 'practice', 'chain', 'terminal', 'duration', 'solUsd', 'startSol', 'until', 'n0', 'config', 'replayable', 'log', 'orders', 'coins', 'equity', 'coverage'])
+  if (!fields(r, ['v', 'seed', 'live', 'practice', 'chain', 'terminal', 'duration', 'solUsd', 'startSol', 'until', 'n0', 'config', 'replayable', 'log', 'orders', 'coins', 'equity', 'coverage', 'paperPerps'])
     || r.v !== 1 || !fin(r.duration) || r.duration < 0 || r.duration > Number.MAX_SAFE_INTEGER || !fin(r.solUsd) || r.solUsd <= 0
     || !fin(r.startSol) || r.startSol < 0 || !fin(r.startSol * r.solUsd) || !word(r.seed, 200)
     || !optional(r.chain, (s) => word(s, 24)) || !optional(r.until, id) || !optional(r.n0, id)
@@ -26,6 +27,7 @@ export function validArchivedReplay(r) {
     || typeof r.replayable !== 'boolean' || !fields(r.coverage, ['ordersTrimmed', 'coinsTrimmed', 'candlesTrimmed', 'equitySampled', 'equityFrom', 'logComplete'])
     || !['ordersTrimmed', 'coinsTrimmed', 'candlesTrimmed', 'equitySampled', 'logComplete'].every((k) => typeof r.coverage[k] === 'boolean')
     || !optional(r.coverage.equityFrom, (n) => fin(n) && n >= 0 && n <= r.duration)) return false;
+  if (r.paperPerps !== undefined && (!validPaperPerps(r.paperPerps, r.duration) || r.replayable || r.coverage.logComplete || r.log?.length)) return false;
   if (!object(r.config) || Object.keys(r.config).length > 64 || !Object.entries(r.config).every(([k, v]) => k.length <= 100
     && (fin(v) || typeof v === 'boolean' || word(v, 200)))) return false;
   if (!array(r.log, REPLAY_LIMITS.log, (o) => o?.kind === 'launch'
@@ -88,7 +90,7 @@ export function createReplayArchive(store, { now = () => Date.now() } = {}) {
   }
   return {
     list() { return rows.map((x) => ({ id: x.id, at: x.at, label: x.label, terminal: x.record.terminal,
-      live: x.record.live, chain: x.record.chain, duration: x.record.duration, trades: x.record.orders.filter((o) => o.status === 'filled').length })); },
+      live: x.record.live, chain: x.record.chain, duration: x.record.duration, trades: x.record.orders.filter((o) => o.status === 'filled').length + (x.record.paperPerps?.filled || 0) })); },
     get(id) { const x = rows.find((r) => r.id === id); return x ? JSON.parse(JSON.stringify(x.record)) : null; },
     save(record, label = 'Practice run') {
       if (!validArchivedReplay(record)) return { ok: false, reason: 'invalid' };

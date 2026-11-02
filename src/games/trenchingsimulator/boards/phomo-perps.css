@@ -67,3 +67,61 @@
 @container phomo-perps (max-width:700px) { .php.is-docked .php-layout { grid-template-columns:minmax(0,1fr); } .php-workspace { grid-template-columns:180px minmax(0,1fr); } }
 @container phomo-perps (max-width:530px) { .php-workspace { grid-template-columns:minmax(0,1fr); } .php:not(.is-docked) .php-list { max-height:200px; } .php:not(.is-docked) .php-side-rail { display:flex; } }
 @media(max-width:600px) { .php { padding:8px; } .php-layout { grid-template-columns:minmax(0,1fr); } .php-chart-controls span { font-size:8px; } .php-interval { padding:4px 5px; } }
+
+/* The reference's isolated ticket, connected only to the run-owned paper ledger. */
+.php-paper-ticket { padding:8px; border:1px solid #24232d; border-radius:17px; background:#090810; min-width:0; font-size:12px; }
+.php-ticket-sides { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.php-ticket-button { border:1px solid #262530; border-radius:7px; padding:6px 9px; background:#14131d; color:#d4d3dd; cursor:pointer; font:inherit; font-size:11px; }
+.php-side { border:0; height:37px; font-size:14px; font-weight:650; }
+.php-side[aria-pressed=true]:first-child { background:#0b3021; color:#24c76e; }
+.php-side[aria-pressed=true]:last-child { background:#362017; color:#ff6736; }
+.php-ticket-type { display:flex; align-items:center; justify-content:space-between; margin:12px 0; color:#91909f; font-size:11px; }
+.php-order-kind { background:#1b1a24; color:#f3f3f6; border:1px solid #272631; border-radius:6px; padding:4px 6px; font:inherit; font-weight:600; }
+.php-position-size { display:flex; align-items:center; justify-content:space-between; gap:8px; min-height:72px; border-radius:18px; background:#14131c; padding:14px; margin-bottom:10px; }
+.php-position-size>span:first-child { display:flex; align-items:center; min-width:0; font-size:28px; font-weight:650; }
+.php-position-size input { width:100%; min-width:0; color:inherit; background:none; border:0; outline:none; font:inherit; }
+.php-position-size>span:last-child { flex:none; text-align:right; display:flex; flex-direction:column; gap:4px; max-width:45%; font-size:12px; color:#a9a8b6; }
+.php-position-size small { font-size:10px; color:#686776; }
+.php-paper-ticket input[type=range] { width:100%; accent-color:#5767eb; margin:3px 0 7px; }
+.php-margin-line { display:flex; justify-content:space-between; gap:8px; padding:2px 6px 14px; border-bottom:1px dashed #24232d; color:#777684; font-size:10px; }
+.php-ticket-options { display:flex; align-items:center; justify-content:space-between; padding:13px 6px; border-bottom:1px dashed #24232d; }
+.php-ticket-options>label { display:flex; align-items:center; gap:5px; font-size:11px; font-weight:650; }
+.php-ticket-options input[type=checkbox] { accent-color:#5767eb; }
+.php-leverage { position:relative; color:#7785ff; }
+.php-leverage summary { cursor:pointer; font-size:12px; font-weight:600; }
+.php-leverage-popover { position:absolute; left:-5px; top:25px; z-index:10; width:220px; padding:14px; background:#171620; border:1px solid #3a384b; border-radius:12px; box-shadow:0 12px 40px #0008; display:grid; gap:10px; }
+.php-leverage-popover small { color:#aaa9b6; font-size:10px; }
+.php-ticket-field { display:grid; gap:5px; min-width:0; margin:7px 0; color:#92919f; font-size:10px; }
+.php-ticket-field input { width:100%; min-width:0; border:1px solid #2c2a39; border-radius:6px; background:#14131c; color:#f4f3f8; padding:8px; font:inherit; font-size:12px; }
+.php-protection-fields { display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:0 5px; }
+.php-ticket-estimates { margin:14px 6px; display:grid; gap:11px; font-size:11px; }
+.php-ticket-estimates>div { display:flex; justify-content:space-between; gap:9px; }
+.php-ticket-estimates dt { color:#a6a5b2; }.php-ticket-estimates dd { margin:0; text-align:right; }
+.php-ticket-submit { display:block; width:100%; min-height:41px; border:1px solid #1e6541; border-radius:13px; background:#0d3826; color:#3dd78d; font:inherit; font-size:13px; font-weight:650; cursor:pointer; }
+.php-paper-ticket[data-side=short] .php-ticket-submit { background:#3a2119; border-color:#7b3e28; color:#ff8c66; }
+.php-ticket-submit:disabled { cursor:not-allowed; background:#14131c!important; border-color:#2b2936!important; color:#8a8998!important; }
+.php-paper-note { margin:10px 5px 2px; color:#7d7c8b; font-size:9px; line-height:1.5; }
+.php-ticket-message { margin:8px 5px; font-size:11px; line-height:1.5; color:#cac9d5; }.php-ticket-message:empty { display:none; }
+.php-paper-book { margin-top:16px; border:1px solid #262430; border-radius:10px; overflow:hidden; background:#090810; }
+.php-book-tabs { display:flex; gap:6px; padding:9px; border-bottom:1px solid #262430; }
+.php-book-tabs [aria-pressed=true] { color:#fff; background:#282537; }
+.php-paper-row { display:grid; grid-template-columns:minmax(0,1fr) auto; gap:9px; align-items:center; padding:12px; border-bottom:1px solid #1d1b28; }
+.php-paper-row b { font-size:12px; }.php-paper-row span { display:block; margin-top:6px; color:#93919f; font-size:10px; line-height:1.6; }
+.php-paper-row>strong { font-size:12px; }.php-position-actions { display:flex; gap:6px; grid-column:1/-1; }
+.php-position-editor { display:flex; align-items:end; gap:8px; flex-wrap:wrap; padding:12px; border-top:1px solid #353047; background:#16131f; }
+.php-position-editor .php-ticket-field { flex:1; min-width:130px; }
+.php-about-card>summary { cursor:pointer; font-size:12px; font-weight:600; }.php-about-card[open]>summary { margin-bottom:13px; }
+.php-paper-ticket :is(button,input,select,summary):focus-visible,.php-paper-book button:focus-visible { outline:2px solid #8290ff; outline-offset:2px; }
+@container phomo-perps (min-width:1400px) { .php.is-docked .php-layout { grid-template-columns:minmax(0,1fr) 364px; } }
+@container phomo-perps (min-width:851px) and (max-width:1399px) { .php.is-docked .php-layout { grid-template-columns:minmax(0,1fr) 312px; } }
+@media(max-width:600px) { .php-paper-row { grid-template-columns:minmax(0,1fr) auto; }.php-ticket-submit { min-height:44px; }.php-position-actions .php-ticket-button { min-height:36px; } }
+.php-rich-chart { --pc-bg:#060510; --pc-panel:#13121c; --pc-line:#25232f; --pc-text:#f7f7f7; --pc-muted:#9997a5; --pc-accent:#818cf8; --pc-up:#21c95e; --pc-down:#ff622e; border:0; background:var(--pc-bg); min-width:0; }
+.php-rich-chart .tspc-chart-tools { display:flex; align-items:center; gap:3px; flex-wrap:wrap; height:auto; min-height:43px; }
+.php-rich-intervals { display:flex; gap:1px; flex:none; }.php-rich-intervals .php-interval { padding:4px; font-size:10px; }
+.php-rich-chart .php-chart { height:clamp(260px,39vh,460px); min-width:0; }
+.php-rich-chart .tspc-overlays { display:flex; gap:10px; flex-wrap:wrap; border-top:1px solid var(--pc-line); }
+.php-rich-chart .tspc-check { display:flex; align-items:center; gap:4px; }.php-rich-chart .tspc-check input { accent-color:#818cf8; }
+.php-rich-chart .tspc-chart-bottom { flex-wrap:wrap; height:auto; min-height:31px; }
+.php-rich-chart .tspc-indicators { position:relative; }.php-rich-chart .tspc-indicator-menu { position:absolute; z-index:8; top:100%; left:0; display:grid; gap:5px; padding:10px; border:1px solid var(--pc-line); border-radius:8px; background:var(--pc-panel); min-width:140px; }
+.php-rich-chart .tspc-chart-disclosure { padding-top:5px; }.php-rich-chart .tspc-plot:focus-visible { outline:2px solid #818cf8; }
+.php-rich-chart.is-expanded { position:fixed;inset:0;z-index:100; }.php-rich-chart.is-expanded .php-chart,.php-rich-chart:fullscreen .php-chart { height:calc(100dvh - 180px); }

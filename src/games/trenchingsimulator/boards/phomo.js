@@ -7,7 +7,7 @@ import { SAFETY_NOTE } from '../terminals.js';
 import { chainById, feedWords } from '../live-chains.js';
 import { createAddressSearch } from '../live-search.js';
 import { pic, samePic, parseAmount, ORDER_ERRORS, short, waitingForRealCoins } from './common.js';
-import { createPhomoState } from './phomo-state.js';
+import { createPhomoState, PHOMO_SAVE_KEY } from './phomo-state.js';
 import { PHOMO_CATEGORIES, PHOMO_WINDOWS, tokenMetrics } from './phomo-data.js';
 import { mountPhomoCoin } from './phomo-coin.js';
 import { mountPhomoSocial, mountPhomoProfile, mountPhomoPosition } from './phomo-social.js';
@@ -15,6 +15,7 @@ import { positionCardWords } from './gngm-card.js';
 import './phomo.css';
 import './phomo-perps.css';
 import './phomo-reference.css';
+import './phomo-social-reference.css';
 
 const TYPES = [['tokens', 'Tokens', 'chart'], ['watchlist', 'Watchlist', 'star'], ['perps', 'Perps', 'arrows'],
   ['leaderboard', 'Leaderboard', 'trophy'], ['feed', 'Feed', 'users'], ['alerts', 'Alerts', 'bolt'], ['clans', 'Clans', 'users']];
@@ -39,13 +40,16 @@ export function mountPhomo(host, ctx) {
   const { market } = ctx;
   let storage = null;
   try { storage = globalThis.localStorage; } catch { /* storage can be blocked */ }
-  const state = createPhomoState(market, { storage, solUsd: ctx.solUsd, order: ctx.order, playerName: ctx.playerName });
+  let hasSavedWorkspace = false;
+  try { hasSavedWorkspace = Boolean(storage?.getItem(PHOMO_SAVE_KEY)); } catch { /* private browsing */ }
+  const state = createPhomoState(market, { storage, solUsd: ctx.solUsd, order: ctx.order, playerName: ctx.playerName, kols:ctx.kols, paperPerps:ctx.paperPerps });
   const chain = ctx.chain ? chainById(ctx.chain).name : 'Simulated market';
   let dead = false, last = -Infinity, subView = null, dialog = null, popover = null, sequence = 0, active = 0, searchTimer;
   let layout = state.prefs.ui?.layout || 'columns';
-  let railOpen = state.prefs.ui?.rail === true, detailNavOpen = !narrowScreen(), navCategory = 'trending', navigationKind = state.prefs.ui?.navigationKind || 'tokens', selectedCoin = null, searchTab = 'tokens';
-  let navigationView = null, navigationViewKind = null;
-  let discoveryWidth = state.prefs.ui?.discoveryWidth || 280, positionsWidth = state.prefs.ui?.positionsWidth || 320;
+  let railOpen = !narrowScreen() && state.prefs.ui?.rail === true, detailNavOpen = !narrowScreen(), navCategory = 'trending', navigationKind = state.prefs.ui?.navigationKind || 'tokens', selectedCoin = null, searchTab = 'tokens';
+  let navigationView = null, navigationViewKind = null, scrolledNavigationKind = null, wasNarrow = narrowScreen();
+  let discoveryWidth = hasSavedWorkspace ? state.prefs.ui?.discoveryWidth || 280
+    : Math.max(280,Math.min(340,Math.round((globalThis.innerWidth || 1280)*.1771))), positionsWidth = state.prefs.ui?.positionsWidth || 320;
   let positionsCollapsed = state.prefs.ui?.positionsCollapsed === true;
   const dragCleanups = new Set();
   let quick = String(state.prefs.ui?.quickBuy || Math.min(100, Math.max(1, Math.round(ctx.start * ctx.solUsd / 10))));
@@ -59,9 +63,12 @@ export function mountPhomo(host, ctx) {
   for (const kind of ['alerts','watchlist','tokens','perps','leaderboard','feed']) {
     const [,label,ic] = TYPES.find(([k]) => k === kind);
     navTabs.append(button(['alerts','watchlist'].includes(kind) ? icon(ic) : label,() => {
-      navigationKind = kind;
       if (kind === 'perps') setMain(kind);
-      else { railOpen = true; detailNavOpen = true; updateGeometry(); refreshNavigator(); saveUI(); }
+      else {
+        // A single perps workspace owns the discovery host. Leave it before selecting a spot/social rail.
+        if (singlePerps()) setMain('tokens');
+        navigationKind = kind; railOpen = true; detailNavOpen = true; updateGeometry(); refreshNavigator(); saveUI();
+      }
     },'ph-rail-button',label));
   }
   const navCategories = el('div',{class:'ph-nav-categories'});
@@ -77,7 +84,7 @@ export function mountPhomo(host, ctx) {
   const balance = el('span');
   const worth = el('span');
   const notices = el('span', { class: 'ph-badge' });
-  const searchIn = input('Search tokens, traders or contract address'); searchIn.type = 'search';
+  const searchIn = input('Search tokens, traders or contract address'); searchIn.type = 'search'; searchIn.placeholder = 'Search for tokens, perps or traders...';
   const found = el('div', { class: 'ph-search-results', hidden: true });
   const addressSearch = createAddressSearch(market, () => { if (!dead) search(); });
   const searchBox = el('form', { class: 'ph-search', role: 'search', on: { submit(e) { e.preventDefault(); search(); found.querySelector('.ph-search-row')?.click(); } } },
@@ -144,6 +151,9 @@ export function mountPhomo(host, ctx) {
   }
   function refreshNavigator() {
     [...navTabs.children].forEach((n,i) => { const on = ['alerts','watchlist','tokens','perps','leaderboard','feed'][i] === navigationKind; flag(n,'is-active',on); n.setAttribute('aria-pressed',String(on)); });
+    if (scrolledNavigationKind !== navigationKind && !root.classList.contains('is-rail-collapsed')) {
+      navTabs.querySelector('.is-active')?.scrollIntoView?.({block:'nearest',inline:'nearest'}); scrolledNavigationKind = navigationKind;
+    }
     if (['feed','alerts','leaderboard'].includes(navigationKind)) {
       if (navigationViewKind !== navigationKind) { navigationView?.destroy(); navigationViewKind = navigationKind;
         navigationView = mountPhomoSocial(navSocial,ctx,{state,kind:navigationKind,onTrader:showProfile,onCoin:openCoin,onPosition:showPosition,quickAmount:() => parseAmount(quick),compact:true}); }
@@ -185,7 +195,7 @@ export function mountPhomo(host, ctx) {
       }
     } else {
       found.append(el('div',{class:'ph-search-columns'},el('span',{},'Simulated trader'),el('span',{},'Profit'),el('span',{},'Win rate')));
-      for (const p of people) found.append(button([el('span',{class:'ph-search-identity'},el('span',{class:'ph-avatar'},p.name[0]),el('span',{},el('b',{},p.name),el('small',{},'Simulated trader'))),el('span',{},signed(p.pnlUsd,'usd')),el('span',{},pct(p.winRate))],() => { showProfile(p.key); searchIn.value = ''; found.hidden = true; },'ph-search-row',`Open trader ${p.name}`));
+      for (const p of people) found.append(button([el('span',{class:'ph-search-identity'},el('span',{class:'ph-avatar'},p.name[0]),el('span',{},el('b',{},p.name),el('small',{},p.simulated === false ? 'Real KOL · Kolscan' : 'Simulated trader'))),el('span',{},signed(p.pnlUsd,'usd')),el('span',{},pct(p.winRate))],() => { showProfile(p.key); searchIn.value = ''; found.hidden = true; },'ph-search-row',`Open trader ${p.name}`));
     }
     const note = addressSearch(q, ids.length > 0);
     if (searchTab === 'tokens' ? !ids.length : !people.length) found.append(el('p', {}, searchTab === 'tokens' ? note || 'No matching tokens in this market.' : 'No matching simulated traders.'));
@@ -201,7 +211,9 @@ export function mountPhomo(host, ctx) {
       showPopover(p.select,'Panel content',el('div',{class:'ph-menu-list'},TYPES.map(([k,label,ic]) => button([icon(ic),label],() => { p.kind = k; closePopover(); renderPanel(p); saveUI(); },p.kind === k ? 'is-active' : ''))));
     },'ph-panel-title','Panel content');
     const menu = button('⋯',() => showPopover(menu,'Panel options',el('div',{class:'ph-menu-list'},button('Split right',() => { closePopover(); split(p,'columns'); }),button('Split bottom',() => { closePopover(); split(p,'rows'); }),button('Close panel',() => { closePopover(); removePanel(p); }))), 'ph-icon','Panel options');
-    p.toolbar.append(p.select,menu,button('⊞', () => split(p, 'columns'), 'ph-icon', 'Split right'), button('⊟', () => split(p, 'rows'), 'ph-icon', 'Split bottom'),button('×', () => removePanel(p), 'ph-icon ph-close-panel', 'Close panel'));
+    const hiddenIcon = icon('info'); hiddenIcon.firstChild.setAttribute('d','M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12zM9 12a3 3 0 1 0 6 0 3 3 0 0 0-6 0M3 3l18 18');
+    const hidden = button(hiddenIcon,() => showHiddenTokens(),'ph-icon ph-hidden-tokens','Hidden tokens');
+    p.toolbar.append(p.select,hidden,menu,button('⊞', () => split(p, 'columns'), 'ph-icon', 'Split right'), button('⊟', () => split(p, 'rows'), 'ph-icon ph-split-bottom', 'Split bottom'),button('×', () => removePanel(p), 'ph-icon ph-close-panel', 'Close panel'));
     p.host = el('div', { class: 'ph-panel-content' }); p.el.append(p.toolbar, p.host); panels.push(p); content.append(p.el); renderPanel(p); rebuildSplitters(); return p;
   }
   function split(p, direction) {
@@ -229,7 +241,7 @@ export function mountPhomo(host, ctx) {
     else if (p.kind === 'perps') {
       const loading = empty('Loading markets', 'Connecting to the read-only market feed…'); p.host.append(loading);
       let cancelled = false; p.dispose = () => { cancelled = true; };
-      import('./phomo-perps.js').then(({ mountPhomoPerps }) => { if (dead || cancelled) return; p.host.replaceChildren(); const v = mountPhomoPerps(p.host,ctx); p.update = v.update; p.setActive = v.setActive; p.setHosts = v.setHosts; if (subView) v.setActive(false); p.dispose = () => { cancelled = true; v.destroy(); }; updateGeometry(); }, () => { if (!cancelled) loading.replaceWith(empty('Markets unavailable', 'Reopen Perps to try again.')); });
+      import('./phomo-perps.js').then(({ mountPhomoPerps }) => { if (dead || cancelled) return; p.host.replaceChildren(); const v = mountPhomoPerps(p.host,{...ctx,openPaperCash:showCash}); p.update = v.update; p.setActive = v.setActive; p.setHosts = v.setHosts; if (subView) v.setActive(false); p.dispose = () => { cancelled = true; v.destroy(); }; updateGeometry(); }, () => { if (!cancelled) loading.replaceWith(empty('Markets unavailable', 'Reopen Perps to try again.')); });
     }
     else if (p.kind === 'clans') {
       const loading = empty('Loading clans','Opening the game’s simulated communities…'); p.host.append(loading);
@@ -241,7 +253,10 @@ export function mountPhomo(host, ctx) {
   function renderTokens(p) {
     p.host.classList.add('ph-token-panel');
     const tabs = el('div', { class: 'ph-tabs ph-categories' });
-    for (const [key,label] of PHOMO_CATEGORIES) tabs.append(button(label, () => { p.options.category = key; p.options.sort = key === 'mostheld' ? 'holders' : key === 'bluechips' ? 'marketCap' : 'volume'; p.kind = key === 'watchlist' ? 'watchlist' : 'tokens'; renderPanel(p); saveUI(); }, key === (p.kind === 'watchlist' ? 'watchlist' : p.options.category) ? 'is-active' : ''));
+    for (const [key,label] of PHOMO_CATEGORIES) { const selected = key === (p.kind === 'watchlist' ? 'watchlist' : p.options.category);
+      const tab = button(label, () => { p.options.category = key; p.options.sort = key === 'mostheld' ? 'holders' : key === 'bluechips' ? 'marketCap' : 'volume'; p.kind = key === 'watchlist' ? 'watchlist' : 'tokens'; renderPanel(p); saveUI(); }, selected ? 'is-active' : '');
+      tab.setAttribute('aria-pressed',String(selected)); tabs.append(tab);
+    }
     const count = el('span', { class: 'ph-count' });
     const qb = input('Quick-buy dollars', quick, 'number'); qb.min = '0.01'; qb.step = 'any';
     qb.addEventListener('change', () => { quick = qb.value; saveUI(); });
@@ -286,7 +301,7 @@ export function mountPhomo(host, ctx) {
       n._phButton = b;
       return el('span',{class:'ph-filter-select'},n,b);
     };
-    const controls = el('div', { class: 'ph-controls' }, count,rowCount,win,windows,filterShortcuts,filters,filterSelect(network,'Network'),filterSelect(launchpad,'Launchpad'));
+    const controls = el('div', { class: 'ph-controls' }, count,rowCount,win,windows,filterShortcuts,filterSelect(network,'Network'),filterSelect(launchpad,'Launchpad'),filters);
     const list = el('tbody');
     const headers = [['Token name',null],['Market cap','marketCap'],['Age','age'],['Change','change'],['Volume','volume'],['Holders','holders'],['Latest thesis',null]];
     const table = el('table', { class: 'ph-table ph-token-table' }, el('thead', {}, el('tr', {}, headers.map(([label,key]) => el('th', {}, key ? button(label, () => { p.options.direction = p.options.sort === key && p.options.direction === 'desc' ? 'asc' : 'desc'; p.options.sort = key; p.update(); saveUI(); }) : label)))),list);
@@ -353,6 +368,11 @@ export function mountPhomo(host, ctx) {
     try { await navigator.clipboard.writeText(address); toast('Contract copied.'); }
     catch { const field = input('Contract address',address); field.readOnly = true; showDialog('Contract address',el('div',{class:'ph-form'},field)); field.focus(); field.select?.(); }
   }
+  function showHiddenTokens() {
+    const count = state.prefs.hidden.length;
+    showDialog('Hidden tokens',el('div',{class:'ph-form'},el('p',{},count ? `${count} token${count === 1 ? ' is' : 's are'} hidden from discovery.` : 'No tokens are hidden. Use a token’s more menu to hide it from your discovery lists.'),
+      button('Restore hidden tokens',() => { state.restoreHidden(); closeDialog(); refresh(); })));
+  }
   function tokenDetails(id) {
     const r = tokenMetrics(market,id,{solUsd:ctx.solUsd,window:'5m'}); if (!r) return;
     showDialog(`${r.ticker} details`,el('div',{class:'ph-form'},stat('Name',r.name),stat('Network',r.live ? chainById(r.chain)?.name || chain : 'Simulated'),stat('Source',r.src || 'Not available'),stat('Age',fin(r.age) ? age(r.age) : 'Not available'),stat('Liquidity',usd(r.liquidityUsd)),button('Copy contract',() => copyContract(id)),button('Open token',() => { closeDialog(); openCoin(id); })));
@@ -389,9 +409,17 @@ export function mountPhomo(host, ctx) {
   function refreshPositions() {
     flag(openButton,'is-active',!closed); flag(closedButton,'is-active',closed);
     [...positionTabs.children].forEach((b,i) => flag(b,'is-active',['all','tokens','perps'][i] === positionType));
+    const paper = ctx.paperPerps?.snapshot();
     const rows = positionType === 'perps' ? [] : market.positions().filter((p) => closed ? !p.open : p.open);
-    keyed(positionList,rows,(p) => p.id,(p) => { const title = button([pic(p,'','ph'),el('b',{},p.ticker)],() => openCoin(p.id),'ph-position-name'); const value = el('strong'); const profit = el('span'); const share = button(icon('share'),() => sharePosition(p.id),'ph-icon','Share position card'); const tr = el('article',{class:'ph-position'},title,el('div',{class:'ph-position-values'},value,profit),el('div',{class:'ph-actions'},button('View',() => showPosition({coin:p.id,traderKey:'you'})),share)); tr._ph = {value,profit}; return tr; },(tr,p) => { setText(tr._ph.value,usdFull((p.open ? p.value : p.sold) * ctx.solUsd)); setText(tr._ph.profit,`${signed(p.total * ctx.solUsd,'usd')} (${pct(p.pnlPct)})`); tint(tr._ph.profit,p.total); });
-    if (!rows.length) positionList.replaceChildren(empty(positionType === 'perps' ? 'Perps are view-only' : `No ${closed ? 'closed' : 'open'} positions`,positionType === 'perps' ? 'Explore live markets from the Perps panel.' : closed ? 'Finished practice trades appear here.' : 'Open a token or use quick buy to begin.'));
+    if (positionType !== 'tokens' && paper) {
+      const source = closed ? paper.fills.filter(f => f.type !== 'open') : paper.positions;
+      rows.push(...source.map(p => ({ id:`paper-${closed ? 'fill' : 'position'}-${p.id}`, paper:true, ticker:`${p.coin} · paper ${closed ? 'close' : p.side}`,
+        value:(p.equity || 0)/ctx.solUsd, sold:(p.returned || 0)/ctx.solUsd, open:!closed,
+        total:(closed ? p.realized : p.realized + p.unrealized)/ctx.solUsd,
+        pnlPct:(closed ? p.realized / Math.max(1e-12,p.returned - p.realized) : (p.realized + p.unrealized)/p.invested) })));
+    }
+    keyed(positionList,rows,(p) => p.id,(p) => { const view = () => p.paper ? setMain('perps') : openCoin(p.id); const title = button([p.paper ? el('span',{},'↕') : pic(p,'','ph'),el('b',{},p.ticker)],view,'ph-position-name'); const value = el('strong'); const profit = el('span'); const share = p.paper ? null : button(icon('share'),() => sharePosition(p.id),'ph-icon','Share position card'); const tr = el('article',{class:'ph-position'},title,el('div',{class:'ph-position-values'},value,profit),el('div',{class:'ph-actions'},button('View',() => p.paper ? setMain('perps') : showPosition({coin:p.id,traderKey:'you'})),share)); tr._ph = {value,profit}; return tr; },(tr,p) => { setText(tr._ph.value,usdFull((p.open ? p.value : p.sold) * ctx.solUsd)); setText(tr._ph.profit,`${signed(p.total * ctx.solUsd,'usd')} (${pct(p.pnlPct)})`); tint(tr._ph.profit,p.total); });
+    if (!rows.length) positionList.replaceChildren(empty(`No ${closed ? 'closed' : 'open'} positions`,positionType === 'perps' ? 'Paper perpetual positions share your play cash. Open Perps to place a free-play order.' : closed ? 'Finished practice trades appear here.' : 'Open a token or use quick buy to begin.'));
   }
   function sharePosition(id) {
     const p = market.positions().find((x) => x.id === id); if (!p) return;
@@ -434,9 +462,9 @@ export function mountPhomo(host, ctx) {
     dialog.view = mountPhomoPosition(box,ctx,selection,{state,onTrader:(key) => { closeDialog(); showProfile(key); },onCoin:(id,options) => { closeDialog(); openCoin(id,options); },onClose:closeDialog,onShare:(p) => sharePosition(p.id)});
     box.focus();
   }
-  function showCash() { showDialog('Your play cash',el('div',{class:'ph-form'},stat('Available',usdFull(market.player.sol * ctx.solUsd)),stat('Portfolio',usdFull(market.netWorth() * ctx.solUsd)),el('p',{},'Your balance belongs to this run. Sell a practice position to free cash, or cash out and start another run with a new starting balance.'),el('p',{class:'ph-muted'},SAFETY_NOTE))); }
+  function showCash() { const paper = ctx.paperPerps?.snapshot(); showDialog('Your play cash',el('div',{class:'ph-form'},stat('Available',usdFull(market.player.sol * ctx.solUsd)),stat('Portfolio',usdFull(market.netWorth() * ctx.solUsd)),paper ? stat('Paper perpetual equity',usdFull(paper.equity)) : null,el('p',{},'Spot and paper perpetual orders share this run’s available play cash. Sell a spot position, close a perpetual position or cancel an unfilled order to free cash. There is no second account to fund.'),el('p',{class:'ph-muted'},SAFETY_NOTE))); }
   function showLayouts() { showDialog('Workspace layout',el('div',{class:'ph-form'},el('p',{},'Open up to four panels. Each keeps its own category and filters. Drag the dividers between panels to resize them.'),button('Columns',() => { layout = 'columns'; content.dataset.layout = layout; rebuildSplitters(); saveUI(); closeDialog(); }),button('Rows',() => { layout = 'rows'; content.dataset.layout = layout; rebuildSplitters(); saveUI(); closeDialog(); }),button('Reset workspace',() => { panels.forEach((p) => { p.dispose?.(); p.el.remove(); }); panels.length = 0; layout = 'columns'; content.dataset.layout = layout; makePanel(); saveUI(); closeDialog(); })) ); }
-  function showHelp() { showDialog('Phomo guide',el('div',{class:'ph-form'},el('p',{},'Search by token name, ticker or contract address. In Live mode, address search can find supported markets beyond the discovery list.'),el('p',{},'Use stars to build a watchlist, filters to narrow the table and split buttons to compare panels. Copy buttons place a single practice trade using your quick-buy amount.'),el('p',{},'Trader characters are simulated. Theses, follows and likes stay on this device. Price alerts run while the game is open. Unknown live metrics are shown as —.'),el('p',{},'Perpetual markets show live quotes and charts only. Spot positions use the game’s fees, slippage and available play balance.'),el('p',{},SAFETY_NOTE))); }
+  function showHelp() { showDialog('Phomo guide',el('div',{class:'ph-form'},el('p',{},'Search by token name, ticker or contract address. In Live mode, address search can find supported markets beyond the discovery list.'),el('p',{},'Use stars to build a watchlist, filters to narrow the table and split buttons to compare panels. Copy buttons place a single practice trade using your quick-buy amount.'),el('p',{},market.live ? 'Live traders are public Kolscan profiles and source rankings. Real trade activity is unavailable. Follows and notes stay on this device. Unknown source metrics are shown as —.' : 'Trader characters are simulated. Theses, follows and likes stay on this device. Price alerts run while the game is open. Unknown metrics are shown as —.'),el('p',{},'Perpetual orders use shared play cash in free play: Market, Limit and TWAP with isolated leverage and TP/SL. Fills use fresh observed public marks; no funding payments or real execution. Spot positions use the game’s fees and slippage.'),el('p',{},SAFETY_NOTE))); }
   function showDialog(title,node) {
     closePopover(); closeDialog(); const previous = document.activeElement; const close = button('×',closeDialog,'ph-icon','Close dialog');
     const box = el('section',{class:'ph-dialog-box',role:'dialog','aria-modal':'true','aria-label':title},el('div',{class:'ph-panel-heading'},el('h2',{},title),close),node);
@@ -456,7 +484,13 @@ export function mountPhomo(host, ctx) {
     popover = {node:layer,previous:anchor}; root.append(layer); box.querySelector('input,button')?.focus();
   }
   function closePopover() { if (!popover) return; const old = popover; popover = null; old.node.remove(); if (old.previous?.isConnected) old.previous.focus(); }
+  function responsiveGeometry() {
+    const narrow = narrowScreen();
+    if (narrow && !wasNarrow) { railOpen = false; detailNavOpen = false; updateGeometry(); }
+    wasNarrow = narrow;
+  }
   function refresh(skipCovered = false) {
+    responsiveGeometry();
     // A modal fully covers the workspace. Keep its live position current without repainting
     // the token chart or discovery panels beneath it; state.tick() still handles alert rules.
     if (skipCovered && dialog) { dialog.view?.update?.(performance.now()); return; }
@@ -498,6 +532,7 @@ export function mountPhomo(host, ctx) {
     if (e.key === 'Escape' && !dialog) { found.hidden = true; if (subView) { e.preventDefault(); e.stopPropagation(); closeSub(); } }
   }
   root.addEventListener('keydown',keydown);
+  globalThis.addEventListener?.('resize',responsiveGeometry);
   const saved = state.prefs.ui?.panels;
   if (saved?.length) for (const p of saved) makePanel(TYPES.some(([k]) => k === p.kind) ? p.kind : 'tokens',p);
   else makePanel();
@@ -507,5 +542,5 @@ export function mountPhomo(host, ctx) {
   refresh();
   return { el: root, update(now) { if (dead || now - last < 650) return; last = now; state.tick(); refresh(true); },
     sub: () => Boolean(subView), closeSub: () => closeSub(false), openCoin,
-    destroy() { dead = true; clearTimeout(searchTimer); closePopover(); closeDialog(); for (const done of [...dragCleanups]) done(); navigationView?.destroy(); subView?.view?.destroy(); if (subView) ctx.onCoin?.(null); panels.forEach((p) => p.dispose?.()); state.destroy(); root.removeEventListener('keydown',keydown); root.remove(); } };
+    destroy() { dead = true; clearTimeout(searchTimer); closePopover(); closeDialog(); for (const done of [...dragCleanups]) done(); navigationView?.destroy(); subView?.view?.destroy(); if (subView) ctx.onCoin?.(null); panels.forEach((p) => p.dispose?.()); state.destroy(); root.removeEventListener('keydown',keydown); globalThis.removeEventListener?.('resize',responsiveGeometry); root.remove(); } };
 }

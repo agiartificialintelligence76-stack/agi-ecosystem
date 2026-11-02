@@ -79,7 +79,7 @@ export function statLines(res) {
     { label: 'Profit', value: moneySigned(r.pnl, c, p), tone: tone(r.pnl) },
     { label: 'Peak', value: money(r.peak, c, p), tone: '' },
     { label: 'Time', value: fin(r.seconds) && r.seconds > 0 ? `${clock(r.timeUsed)} of ${clock(r.seconds)}` : clock(r.timeUsed), tone: '' },
-    { label: 'Orders', value: `${fin(r.filled) ? r.filled : 0} filled${r.failed > 0 ? ` · ${r.failed} failed` : ''}`, tone: '' },
+    { label: r.paperPerps ? 'Fills' : 'Orders', value: `${fin(r.filled) ? r.filled : 0} filled${r.failed > 0 ? ` · ${r.failed} failed` : ''}`, tone: '' },
     { label: 'Coins traded', value: String(fin(r.coins) ? r.coins : 0), tone: '' },
     { label: 'Wins / losses', value: `${fin(r.wins) ? r.wins : 0} / ${fin(r.losses) ? r.losses : 0}`, tone: '' },
     { label: 'Best trade', value: trade(best, c, p), tone: best ? tone(best.total) : '' },
@@ -88,6 +88,7 @@ export function statLines(res) {
     { label: `${unitOf(c, p).id === 'usd' ? 'SOL' : unitOf(c, p).name} price`,
       value: `${usd(isCoinCurrency(c) ? c.usd : p)} (frozen for this run)`, tone: '' },
   ];
+  if (r.paperPerps) out.push({ label: 'Paper perpetuals', value: `${r.paperPerps.open} open · ${r.paperPerps.pending} pending · ${moneySigned((r.paperPerps.realizedUsd + r.paperPerps.unrealizedUsd) / p, c, p)} net P&L`, tone: tone(r.paperPerps.realizedUsd + r.paperPerps.unrealizedUsd) });
   return out;
 }
 

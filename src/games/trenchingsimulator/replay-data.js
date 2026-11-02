@@ -1,4 +1,5 @@
 // A bounded, read-only record of the run. Live playback never re-simulates a real coin or fills missing history.
+import { capturePaperPerps } from './paper-perps-record.js';
 export const REPLAY_LIMITS = Object.freeze({ orders: 300, coins: 100, candles: 2000, totalCandles: 20000, equity: 2000, log: 300 });
 export const REPLAY_SPEEDS = Object.freeze([1, 2, 4]);
 const fin = (n) => typeof n === 'number' && Number.isFinite(n);
@@ -59,7 +60,8 @@ export function captureRunReplay(run) {
   const equity = sampleReplayPoints(equitySource);
   const live = Boolean(run.live || run.realTime || m.live);
   const originalLog = !live && typeof m.log === 'function' ? m.log() : [];
-  const replayable = !live && originalLog.length <= REPLAY_LIMITS.log;
+  const paperPerps = capturePaperPerps(run);
+  const replayable = !live && !paperPerps && originalLog.length <= REPLAY_LIMITS.log;
   const log = replayable ? originalLog.map((o) => o.kind === 'launch'
     ? { kind: 'launch', n: o.n, name: word(o.name, 50), ticker: word(o.ticker, 12), pair: word(o.pair, 10),
       emoji: word(o.emoji, 12), line: word(o.line, 280) }
@@ -73,7 +75,8 @@ export function captureRunReplay(run) {
     terminal: word(run.terminal, 24), duration, solUsd: number(run.solUsd, number(m.solUsd, 150)),
     startSol: number(run.start, number(m.startSol, 0)), until: number(m.n), n0: number(m.n0), config,
     replayable, log, orders, coins, equity,
-    coverage: { ordersTrimmed: placed > orders.length, coinsTrimmed: ids.length > selected.length,
+    ...(paperPerps ? { paperPerps } : {}),
+    coverage: { ordersTrimmed: placed - (paperPerps?.placed || 0) > orders.length, coinsTrimmed: ids.length > selected.length,
       candlesTrimmed: coins.some((c) => c.trimmed), equitySampled: equitySource.length > equity.length,
       equityFrom: equity.length ? equity[0].t : null, logComplete: replayable } });
 }
@@ -92,7 +95,8 @@ export function replayFrame(record, time, coinId = null) {
 }
 
 export function replayTradeAt(record, time, direction = 1) {
-  const rows = record.orders.filter((o) => o.status === 'filled' && fin(o.doneAt)).sort((a, b) => a.doneAt - b.doneAt || a.id - b.id);
+  const rows = [...record.orders.filter((o) => o.status === 'filled' && fin(o.doneAt)),
+    ...(record.paperPerps?.fills || []).map(fill => ({ ...fill, paper: true, doneAt: fill.t }))].sort((a, b) => a.doneAt - b.doneAt || a.id - b.id);
   return direction < 0 ? [...rows].reverse().find((o) => o.doneAt < time - 1e-6) || null
     : rows.find((o) => o.doneAt > time + 1e-6) || null;
 }

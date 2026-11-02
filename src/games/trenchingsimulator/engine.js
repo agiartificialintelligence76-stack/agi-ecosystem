@@ -153,6 +153,28 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     sol: start, held: 0, pos: new Map(), open: new Set(), pending: new Map(), orders: [], log: [], equity: [],
     fees: { terminal: 0, market: 0, priority: 0, failed: 0, mev: 0 },
   };
+  // Non-spendable paper collateral is separate from spot order reservations. Values use SOL internally.
+  const paper = new Map();
+  const paperValue = () => [...paper.values()].reduce((sum, p) => sum + p.equity, 0);
+  const paperNumber = value => Number.isFinite(value) && value >= 0;
+  const paperAccount = Object.freeze({
+    reserve(key, amount) {
+      if (key !== 'phomo-perps' || !paperNumber(amount) || amount <= 0 || amount > P.sol) return false;
+      const old = paper.get(key) || { equity: 0, fees: 0 };
+      P.sol -= amount; paper.set(key, { ...old, equity: old.equity + amount }); return true;
+    },
+    mark(key, value, fees = 0) {
+      if (key !== 'phomo-perps' || !paper.has(key) || !paperNumber(value) || !paperNumber(fees)) return false;
+      const old = paper.get(key); const delta = Math.max(0, fees - old.fees);
+      if (delta) P.fees.paper = (P.fees.paper || 0) + delta;
+      paper.set(key, { equity: value, fees: Math.max(old.fees, fees) }); return true;
+    },
+    settle(key, returned, remaining, fees = 0) {
+      if (!paper.has(key) || !paperNumber(returned) || !paperNumber(remaining) || !paperNumber(fees) || !Number.isFinite(P.sol + returned)) return false;
+      if (!this.mark(key, remaining, fees)) return false;
+      P.sol += returned; return true;
+    },
+  });
   const canLaunchPractice = !M.live || allowLivePracticeLaunch === true;
   const localPractice = (c) => M.live && canLaunchPractice && c.createdByPlayer === true;
 
@@ -864,7 +886,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   }
 
   function netWorth() {
-    let v = P.sol + P.held;
+    let v = P.sol + P.held + paperValue();
     for (const id of P.open) v += exitValue(M.coins[id], P.pos.get(id).tokens);
     return v;
   }
@@ -1881,6 +1903,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   P.equity.push({ t: 0, v: netWorth() });
 
   return {
+    paperAccount,
     get canLaunchPractice() { return canLaunchPractice; },
     get t() {
       return tOf(M.n);
@@ -1897,7 +1920,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     },
     get player() {
       return { sol: P.sol, held: P.held, startSol: start, worth: netWorth(), fees: { ...P.fees }, pending: P.pending.size,
-        address: M.meAddr };
+        address: M.meAddr, ...(paper.size ? { paperEquity: paperValue() } : {}) };
     },
     get meta() {
       return M.meta;
@@ -1961,6 +1984,11 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     orders,
     quote,
     netWorth,
+    recordEquity(at = tOf(M.n)) {
+      const point = { t: Number.isFinite(at) && at >= (P.equity.at(-1)?.t || 0) ? at : tOf(M.n), v: netWorth() };
+      if (P.equity.at(-1)?.t === point.t) P.equity[P.equity.length - 1] = point;
+      else { P.equity.push(point); trim(P.equity, KEEP.equity); }
+    },
     maxBuy,
     equity(since = -Infinity) {
       const s = Number(since);

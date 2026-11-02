@@ -2,6 +2,7 @@ import { el, icon, keyed, setText, flag } from '../ui.js';
 import { usd, pct, age } from '../format.js';
 import { pic, samePic, short, waitingForRealCoins } from './common.js';
 import { POMP_TABS, pompRows, pompRange, pompCallouts } from './pomp-data.js';
+import { mountLiveKols } from '../live-kols-panel.js';
 
 const button = (label, fn, cls = '') => el('button', { type: 'button', class: cls, on: { click: fn } }, label);
 const empty = text => el('p', { class: 'pomp-empty' }, text);
@@ -23,6 +24,7 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
   railItem('Feed', 'flame', () => navigate('feed'));
   railItem('Explore', 'search', () => navigate('explore'));
   railItem('Leaderboard', 'trophy', () => { S.mobile = 'leaders'; navigate('feed'); });
+  if (market.live) railItem('Real KOLs','users',()=>navigate('kols'));
   rail.append(el('hr'));
   railItem('Watchlist', 'star', () => { S.tab = 'watch'; navigate('explore'); });
   railItem('Orders and positions', 'arrows', openBag);
@@ -60,6 +62,8 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
     el('option', { value: 'profit' }, 'Profit'), el('option', { value: 'value' }, 'Holdings'), el('option', { value: 'buys' }, 'Buys'));
   const leaderControls = el('div', { class: 'pomp-panel-controls' }, el('span', { class: 'pomp-segment is-active' }, 'Traders'),
     el('span', { class: 'pomp-muted' }, 'Simulated'), rank);
+  leaderControls.hidden = Boolean(market.live);
+  const liveLeaderKols = market.live ? mountLiveKols(leaderList,{client:ctx.kols,chain:ctx.chain,compact:true}) : null;
   const panels = { trending: panel('Trending', 'flame', 'trending', trendList, trendControls),
     calls: panel('Hot callouts', 'users', 'calls', callList), leaders: panel('Leaderboard', 'trophy', 'leaders', leaderList, leaderControls) };
   const feed = el('div', { class: 'pomp-feed' }, Object.values(panels));
@@ -79,11 +83,13 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
     el('div', { class: 'pomp-explore-controls' }, el('div', { class: 'pomp-explore-tabs', role: 'group', 'aria-label': 'Coin lists' }, tabButtons),
       el('div', { class: 'pomp-explore-options' }, filterButton, ...layoutButtons)), resultNote,
     el('div', { class: 'pomp-table-scroll' }, table), cards);
-  const content = el('div', { class: 'pomp-workspace', data: { mobile: S.mobile } }, mobileTabs, feed, explore);
+  const kolsView = el('section',{class:'pomp-explore',hidden:true,'aria-label':'Real KOL directory'});
+  const liveDirectoryKols = market.live ? mountLiveKols(kolsView,{client:ctx.kols,chain:ctx.chain}) : null;
+  const content = el('div', { class: 'pomp-workspace', data: { mobile: S.mobile } }, mobileTabs, feed, explore,kolsView);
   const foot = el('footer', { class: 'pomp-footer' }, el('span', {}, '© Pomp.fun · Simulator'),
     el('span', {}, market.live ? 'Real coins · simulated prices/volume' : 'Simulated market · play money'));
   const mobileNav = el('nav', { class: 'pomp-mobile-nav', 'aria-label': 'Mobile terminal navigation' },
-    [['Feed', 'flame', () => navigate('feed')], ['Explore', 'search', () => navigate('explore')], ['Create', 'bolt', showLaunch],
+    [['Feed', 'flame', () => navigate('feed')], ['Explore', 'search', () => navigate('explore')], market.live ? ['Real KOLs','users',()=>navigate('kols')] : ['Create', 'bolt', showLaunch],
       ['Portfolio', 'bag', openBag], ['Settings', 'sliders', showSettings]].map(([name, glyph, fn]) => {
       const b = button(icon(glyph), fn); b.setAttribute('aria-label', name); return b;
     }));
@@ -151,8 +157,8 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
   function navigate(view) { closeCoin(); S.view = view; update(); }
   function update() {
     if (S.dead) return;
-    feed.hidden = S.view !== 'feed'; explore.hidden = S.view !== 'explore'; mobileTabs.hidden = S.view !== 'feed';
-    for (const [name, b] of railButtons) b.setAttribute('aria-pressed', String((name === 'Feed' && S.view === 'feed') || (name === 'Explore' && S.view === 'explore')));
+    feed.hidden = S.view !== 'feed'; explore.hidden = S.view !== 'explore'; kolsView.hidden = S.view !== 'kols'; mobileTabs.hidden = S.view !== 'feed';
+    for (const [name, b] of railButtons) b.setAttribute('aria-pressed', String((name === 'Feed' && S.view === 'feed') || (name === 'Explore' && S.view === 'explore') || (name === 'Real KOLs' && S.view === 'kols')));
     applyPanels();
     const watched = [...S.watch].map(id => market.row(id)).filter(Boolean).slice(0, 12);
     if (watched.length && watchItems.firstChild?.classList.contains('pomp-muted')) watchItems.replaceChildren();
@@ -167,11 +173,11 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
       table.parentNode.hidden = S.layout !== 'table'; cards.hidden = S.layout !== 'grid';
       keyed(S.layout === 'table' ? tableBody : cards, rows, r => r.id, r => makeRow(r, S.layout), updateRow);
       setText(resultNote, rows.length ? S.query ? `${rows.length} coins matching “${S.query}”` : '' : waitingForRealCoins(market) ? 'Waiting for real coin listings…' : S.tab === 'watch' ? 'Star a coin to add it to your watchlist.' : 'No coins match these filters.');
-    } else if (!S.paused) {
+    } else if (S.view === 'feed' && !S.paused) {
       const rows = pompRows(market, { tab: trendSort.value || 'movers', limit: 30, per: px });
       if (S.panels.trending) keyed(trendList, rows, r => r.id, r => makeRow(r, 'trend'), updateRow);
       if (S.panels.calls) updateCalls(callList);
-      if (S.panels.leaders) {
+      if (S.panels.leaders && !market.live) {
         const leaders = market.live ? [] : (market.smartWallets?.() || []).slice().sort((a, b) => (S.rank === 'profit' ? b.pnl + b.upnl - a.pnl - a.upnl : (b[S.rank] || 0) - (a[S.rank] || 0))).slice(0, 20);
         if (leaders.length && leaderList.firstChild?.classList.contains('pomp-empty')) leaderList.replaceChildren();
         keyed(leaderList, leaders, r => r.n, r => { const name = el('b'), value = el('b'), position = el('span'); const n = el('div', { class: 'pomp-leader' }, position, el('span', { class: 'pomp-avatar' }, String(r.n + 1)), name, value); n.$ = { name, value, position }; return n; },
@@ -225,6 +231,6 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
     search(query) { if (query !== S.query) { S.query = query; if (query) S.view = 'explore'; } update(); },
     coin(id) { S.coin = id; if (id !== null) S.recent = [id, ...S.recent.filter(x => x !== id)].slice(0, 20); update(); },
     focusCoin(id) { const n = [...(S.layout === 'grid' ? cards : tableBody).children].find(n => n.dataset.key === String(id)); n?.$?.open.focus(); },
-    destroy() { S.dead = true; for (const d of [filterDialog, settings, launch]) if (d.open) d.close(); },
+    destroy() { S.dead = true; liveLeaderKols?.destroy(); liveDirectoryKols?.destroy(); for (const d of [filterDialog, settings, launch]) if (d.open) d.close(); },
   };
 }

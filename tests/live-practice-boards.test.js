@@ -119,7 +119,7 @@ test('Phomo real migrating coin fills practice buys and labels swaps without imp
   try {
     state = createPhomoState(f.market, { solUsd: 200 });
     view = mods[4].mountPhomoCoin(f.host, f.ctx, id, { state });
-    const submit = byClass(f.host, 'tspc-submit'); assert.equal(submit.disabled, false);
+    const submit = byClass(f.host, 'tspc-submit'); assert.equal(submit.disabled, true);
     byLabel(f.host, 'Buy amount in practice dollars').value = '20'; submit.closest('form').fire('submit'); confirmFill(f, id);
     view.update(5000);
     assert.match(byClass(f.host, 'tspc-chart-note').textContent, /prices, market cap, volume and swaps are simulated/);

@@ -34,7 +34,8 @@ function fakeLibrary() {
       const s = { type: def.type, options, pane, data: [], primitives: [], changes: [], priceLines: [], resets:0, updates:0 };
       Object.assign(s, { setData: (rows) => { s.resets++; s.data = rows; }, update: (row) => { s.updates++; if (s.data.at(-1)?.time === row.time) s.data[s.data.length - 1] = row; else s.data.push(row); },
         applyOptions: (o) => { s.changes.push(o); Object.assign(s.options, o); }, priceScale: () => ({ applyOptions() {} }),
-        priceToCoordinate: (v) => v, coordinateToPrice: (v) => v, createPriceLine: (l) => s.priceLines.push(l),
+        priceToCoordinate: (v) => v, coordinateToPrice: (v) => v, createPriceLine: (l) => { s.priceLines.push(l); return l; },
+        removePriceLine: l => { s.priceLines = s.priceLines.filter(line => line !== l); },
         attachPrimitive: (p) => { s.primitives.push(p); p.attached({ chart: api, series: s, requestUpdate() {} }); },
         detachPrimitive: (p) => { s.primitives = s.primitives.filter((x) => x !== p); p.detached(); } });
       c.series.push(s); return s;
@@ -114,6 +115,17 @@ test('Phomo chart styles, intervals, indicators, scales and retained-data ranges
   assert.deepEqual(chart.screenshot(), { screenshot: true, args: [true, false] });
   chart.destroy(); assert.equal(f.c.removed, true); assert.equal(f.c.clicks.size, 0); assert.equal(f.c.cross.size, 0);
   assert.equal(f.listeners.size, 0); assert.equal(f.markers[0].dead, true);
+});
+
+test('paper order levels preserve exact prices through series changes and remove stale or disabled lines', () => {
+  const f = fakeLibrary(), chart = createPhomoChart(f.host, { lib:f.lib, mode:'price' });
+  chart.set({ candles:[{t:100,o:100e9,h:110e9,l:90e9,c:105e9,v:2}], solUsd:1 });
+  const main=f.c.series.find(s=>s.type==='Candlestick');
+  chart.levels([{value:95e9,title:'Paper limit',color:'#818cf8'}]); assert.equal(main.priceLines[0].price,95);
+  chart.levels([{value:95e9,title:'Paper limit',color:'#818cf8'}]); assert.equal(main.priceLines.length,1);
+  chart.style('line'); assert.equal(main.priceLines.length,0); const line=f.c.series.find(s=>s.type==='Line'); assert.equal(line.priceLines[0].price,95);
+  chart.view({mode:'mcap'}); assert.equal(line.priceLines[0].price,95e9);
+  chart.levels([]); assert.equal(line.priceLines.length,0); chart.destroy();
 });
 
 test('Phomo native drawings retain their market coordinates across price mode, dragging, undo and series changes', async () => {

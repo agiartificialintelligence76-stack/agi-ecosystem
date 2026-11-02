@@ -34,6 +34,23 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
   const market = typeof makeMarket === 'function' ? makeMarket(opts) : createMarket(opts);
   const seconds = ch ? ch.seconds : null;
   const real = Boolean(realTime);
+  let paperLedger = null, paperOff = null, paperFinal = null;
+  const paperOrders = new Map(), paperFills = new Map();
+  const paperSnapshot = () => paperFinal || paperLedger?.snapshot() || null;
+  const paperAllowed = () => mode === 'free' && terminal === 'social' && !R.over;
+  const paperMark = () => { market.recordEquity?.(R.clock); checkWorth(); };
+  const paperAccount = Object.freeze({
+    available: () => market.player.sol * px,
+    reserve(key, usd) { return paperAllowed() && Number.isFinite(usd) && market.paperAccount?.reserve(key, usd / px) === true; },
+    mark(key, usd, { feesUsd = 0 } = {}) {
+      if (!paperAllowed() || !Number.isFinite(usd) || !Number.isFinite(feesUsd)) return false;
+      const ok = market.paperAccount?.mark(key, usd / px, feesUsd / px); if (ok) paperMark(); return ok;
+    },
+    settle(key, usd, { remainingEquityUsd, feesUsd = 0 } = {}) {
+      if (!paperAllowed() || ![usd, remainingEquityUsd, feesUsd].every(Number.isFinite)) return false;
+      const ok = market.paperAccount?.settle(key, usd / px, remainingEquityUsd / px, feesUsd / px); if (ok) paperMark(); return ok;
+    },
+  });
 
   const R = {
     clock: 0, us: 0, speed: mode === 'free' && !real ? clampSpeed(speed) : 1, paused: false, over: false, outcome: null,
@@ -68,6 +85,9 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
 
   function finish(outcome, extra = {}) {
     if (R.over) return;
+    paperFinal = paperLedger?.snapshot() || null;
+    paperOff?.(); paperOff = null;
+    if (paperFinal?.placed) market.recordEquity?.(R.clock);
     R.over = true;
     R.outcome = outcome;
     R.reason = extra.reason || null;
@@ -213,6 +233,7 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
 
   function checkBust() {
     const p = market.player;
+    const paper = paperSnapshot(); if (paper?.positions.length || paper?.pending.length) return;
     if (p.pending > 0 || R.pending.size) return;
     if (p.sol >= BUST_SOL) return;
     for (const x of market.positions()) if (x.open) return;
@@ -228,6 +249,22 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
 
   const run = {
     market,
+    paperAccount,
+    attachPaperPerps(ledger) {
+      if (paperLedger || !ledger || typeof ledger.snapshot !== 'function') return false;
+      paperLedger = ledger;
+      paperOff = ledger.on(() => {
+        if (R.over) return;
+        const snapshot = ledger.snapshot();
+        for (const order of snapshot.orders) paperOrders.set(order.id, { ...order, t: paperOrders.get(order.id)?.t ?? R.clock });
+        for (const fill of snapshot.fills) if (!paperFills.has(fill.id)) paperFills.set(fill.id, { ...fill, t: R.clock });
+        while (paperOrders.size > 300) paperOrders.delete(paperOrders.keys().next().value);
+        while (paperFills.size > 300) paperFills.delete(paperFills.keys().next().value);
+        R.lastAction = R.clock;
+      }); return true;
+    },
+    paperPerpsSnapshot: paperSnapshot,
+    paperPerpsRecord() { const snapshot = paperSnapshot(); return snapshot?.placed ? { ...snapshot, orders: [...paperOrders.values()], fills: [...paperFills.values()] } : null; },
     mode,
     challenge: ch,
     seed: market.seed,
@@ -379,9 +416,10 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
       const w = p.worth;
       let open = 0;
       for (const x of market.positions()) if (x.open) open++;
+      const paper = paperSnapshot(); open += paper?.positions.length || 0;
       return {
         clock: R.clock, left: seconds === null ? null : Math.max(0, seconds - R.clock), worth: w, sol: p.sol,
-        held: p.held, pending: p.pending, open, start, multiple: w / start, pnl: w - start, pnlPct: w / start - 1,
+        held: p.held + (p.paperEquity || 0), pending: p.pending + (paper?.pending.length || 0), open, start, multiple: w / start, pnl: w - start, pnlPct: w / start - 1,
         pnlUsd: (w - start) * px, peak: R.peak, over: R.over, outcome: R.outcome,
       };
     },
@@ -401,6 +439,14 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
         if (!best || x.total > best.total) best = x;
         if (!worst || x.total < worst.total) worst = x;
       }
+      const paper = paperSnapshot();
+      if (paper?.placed) {
+        wins += paper.wins; losses += paper.losses;
+        const convert = x => x && ({ ...x, id: `paper-${x.id}`, total: x.total / px, emoji: '↕' });
+        const b = convert(paper.best), s = convert(paper.worst);
+        if (b && (!best || b.total > best.total)) best = b;
+        if (s && (!worst || s.total < worst.total)) worst = s;
+      }
       const timeUsed = R.endedAt !== null ? R.endedAt : R.clock;
       const multiple = w / start;
       const stars = R.outcome === 'won' && ch ? starsFor(ch, { timeUsed, multiple }) : 0;
@@ -409,13 +455,16 @@ export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null,
       // number; what a sandwich bot took isn't a fee (`mev`, its own)
       const f = p.fees || {};
       const num = (x) => (Number.isFinite(x) ? x : 0);
-      const fees = num(f.terminal) + num(f.market) + num(f.priority) + num(f.failed);
+      const fees = num(f.terminal) + num(f.market) + num(f.priority) + num(f.failed) + num(f.paper);
       return {
         mode, challenge: ch ? ch.id : null, daily: ch && ch.daily ? ch.daily : null, outcome: R.outcome || 'playing',
         reason: R.reason, stars, start, worth: w, peak: R.peak, low: R.low, multiple, pnl: w - start, pnlUsd: (w - start) * px,
-        timeUsed, seconds, placed: R.placed, filled: R.filled, failed: R.failed, coins: R.traded.size, wins, losses,
+        timeUsed, seconds, placed: R.placed + (paper?.placed || 0), filled: R.filled + (paper?.filled || 0), failed: R.failed + (paper?.failed || 0), coins: R.traded.size + (paper?.markets || 0), wins, losses,
         best: pick(best), worst: pick(worst), fees, mev: num(f.mev), feeParts: { ...f }, seed: market.seed, solUsd: px,
         currency, terminal, equity: market.equity(0),
+        ...(paper?.placed ? { paperPerps: { filled: paper.filled, failed: paper.failed, feesUsd: paper.fees,
+          realizedUsd: paper.realized, unrealizedUsd: paper.unrealized, equityUsd: paper.equity,
+          open: paper.positions.length, pending: paper.pending.length } } : {}),
         // Live mode: its chain, and how many real coins were traded in it
         ...(live ? { live, liveTraded: typeof market.liveTraded === 'function' ? market.liveTraded() : 0 } : {}),
       };

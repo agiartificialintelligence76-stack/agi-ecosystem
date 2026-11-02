@@ -71,6 +71,10 @@ const visitor = (cfg, request) => { const ip = clientIp(request); return cfg.pas
 
 export async function GET(request) {
   const search = new URL(request.url).search;
+  if (new URL(request.url).searchParams.get('terminal') === 'kols') {
+    const { terminalKolsResponse } = await import('../server/terminal-kols.js');
+    return terminalKolsResponse(request);
+  }
   const cfg = getConfig();
   if (new URL(request.url).searchParams.get('terminal') === 'clank') {
     const image = /^\?terminal=clank&image=(0x[0-9a-f]{40})$/.exec(search);

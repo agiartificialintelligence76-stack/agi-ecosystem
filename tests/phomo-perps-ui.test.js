@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mountPhomoPerps } from '../src/games/trenchingsimulator/boards/phomo-perps.js';
-import { Element, installDom, nodes, byLabel, byClass } from './helpers/phomo-dom.js';
+import { Element, installDom, nodes, byLabel, byClass, viewModule, phomoChartURL } from './helpers/phomo-dom.js';
+const helper = viewModule(new URL('../src/games/trenchingsimulator/boards/phomo-perps-chart.js',import.meta.url), {'./phomo-chart.js':phomoChartURL});
+const { mountPhomoPerps } = await import(viewModule(new URL('../src/games/trenchingsimulator/boards/phomo-perps.js',import.meta.url), {'./phomo-perps-chart.js':helper}));
 
 function fixture() {
   installDom();
@@ -51,10 +52,9 @@ test('perpetual view docks its compact market list and shared positions without 
 test('perpetual line control redraws observed prices and keeps interval requests read-only', async () => {
   const f = fixture(), host = new Element('main');
   const view = mountPhomoPerps(host, { perpsClient: f.client }); await flush();
-  const before = f.operations.filter(([op]) => op === 'fillRect').length;
-  assert.ok(before > 0, 'observed candlesticks draw real bodies');
+  assert.equal(globalThis.__phomoChart.sets.at(-1).candles[0].o,100e9, 'USD prices normalize for the shared price adapter');
   const styles = byLabel(host, 'Perpetual chart style'); styles.value = 'line'; styles.fire('change');
-  assert.equal(f.operations.filter(([op]) => op === 'fillRect').length, before, 'line redraw does not keep painting candle bodies');
+  assert.equal(globalThis.__phomoChart.style,'line');
   const interval = nodes(host).find((n) => n.tagName === 'button' && n.textContent === '1h'); interval.fire('click'); await flush();
   assert.equal(f.calls.filter((c) => c.op === 'candles').at(-1).interval, '1h');
   assert.match(byClass(host, 'php-chart').getAttribute('aria-label'), /2 observed candles/);

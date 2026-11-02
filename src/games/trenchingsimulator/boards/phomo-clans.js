@@ -3,6 +3,7 @@ import { el, setText, keyed, flag, icon } from '../ui.js';
 import { usd, signed, age } from '../format.js';
 import { pic } from './common.js';
 import { traderProfiles } from './phomo-data.js';
+import { mountLiveKols } from '../live-kols-panel.js';
 import './phomo-clans.css';
 
 export const PHOMO_CLANS = Object.freeze([
@@ -56,6 +57,13 @@ const empty = (words) => el('p', { class: 'phc-empty' }, words);
 export function mountPhomoClans(host, ctx, { state, onTrader = () => {}, onCoin = () => {}, onClose = () => {} } = {}) {
   const market = ctx.market;
   const root = el('section', { class: 'phc-clans', 'aria-label': 'Simulated practice clans' }); host.append(root);
+  if(market.live){
+    root.setAttribute('aria-label','Live trader directory');
+    root.append(el('header',{class:'phc-directory-heading'},button([icon('back'),'Discover'],onClose),el('h1',{},'Clans')),
+      el('p',{class:'phc-caption'},'Public clan membership is unavailable. Browse verified KOL profiles below.'));
+    const directory=mountLiveKols(root,{client:ctx.kols,chain:ctx.chain,onTrader});
+    return{el:root,update:directory.update,destroy(){directory.destroy();root.remove();}};
+  }
   let dead = false, last = -Infinity, current = null, tab = 'members', view = null;
   const groups = () => {
     const profiles = traderProfiles(market, { solUsd: ctx.solUsd || market.solUsd });

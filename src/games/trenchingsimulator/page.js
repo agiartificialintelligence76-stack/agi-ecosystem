@@ -4,6 +4,7 @@ import '../intro.js';
 import './trench.css';
 import './menu.css';
 import './boards/pomp.css';
+import './live-kols-panel.css';
 import { startShell } from './shell.js';
 
 const root = document.getElementById('ts-root');

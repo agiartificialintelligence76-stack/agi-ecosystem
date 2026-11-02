@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createMarket } from '../src/games/trenchingsimulator/engine.js';
 import { createPhomoState, cleanPhomoPrefs, blankPhomoPrefs, PHOMO_SAVE_KEY } from '../src/games/trenchingsimulator/boards/phomo-state.js';
 import { closedPositionStats, positionDetail, profileEquity } from '../src/games/trenchingsimulator/boards/phomo-data.js';
+import { cleanProfileImage, cleanProfileX, readProfileImage, PROFILE_IMAGE_LIMITS } from '../src/games/trenchingsimulator/boards/phomo-profile-image.js';
 import { Element, installDom, socialModuleURL, byLabel, byClass, byText, nodes } from './helpers/phomo-dom.js';
 
 const { mountPhomoSocial, mountPhomoProfile, mountPhomoPosition } = await import(socialModuleURL);
@@ -129,7 +130,7 @@ test('Profile editing, real equity and saved replays remain local and share the 
   byText(f.host, 'Saved replays').click(); assert.equal(f.replayOpens(), 1);
   byText(f.host, 'Share').click(); assert.equal(f.cards[0].brand, 'social'); assert.ok(Array.isArray(f.cards[0].rows)); assert.equal(typeof f.cards[0].big, 'string');
   byLabel(f.host, 'Profile position asset type').value = 'perps'; byLabel(f.host, 'Profile position asset type').fire('change');
-  assert.ok(f.host.textContent.includes('Perps are view-only on web')); assert.equal(f.market.orders().length, 0);
+  assert.ok(f.host.textContent.includes('No open positions')); assert.equal(f.market.orders().length, 0);
   view.destroy(); assert.equal(f.host.children.length, 0);
 });
 
@@ -148,4 +149,89 @@ test('Position modal requests only candle tails between quotes and rebuilds hist
     revision++;view.update(true);const corrected=chart.sets.at(-1).candles;
     assert.notEqual(corrected,windowed);assert.equal(corrected[0].c,12345);assert.equal(calls.filter(v=>v==null).length,2);
   } finally {view.destroy();f.market.candles=originalCandles;f.market.stats=originalStats;}
+});
+
+const pixel = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl6lqkAAAAASUVORK5CYII=';
+const imageFile = (data = pixel) => {
+  const bytes = Uint8Array.from(atob(data.split(',')[1]), c => c.charCodeAt(0));
+  return { type: data.slice(5, data.indexOf(';')), size: bytes.length, async arrayBuffer() { return bytes.buffer; } };
+};
+const settleImage = () => new Promise(resolve => setImmediate(resolve));
+
+test('Profile images accept only bounded local raster data and a canonical optional X link', async () => {
+  assert.equal(await readProfileImage(imageFile(), 'avatar'), pixel);
+  assert.equal(cleanProfileImage(pixel, 'banner'), pixel);
+  for (const invalid of ['https://example.com/image.png', 'data:image/svg+xml;base64,PHN2Zz4=',
+    'data:image/png;base64,PHN2Zz4=', 'data:image/png;base64,%%%%', `${pixel}garbage`]) {
+    assert.equal(cleanProfileImage(invalid, 'avatar'), null);
+  }
+  let reads = 0;
+  await assert.rejects(readProfileImage({ type:'image/png',size:PROFILE_IMAGE_LIMITS.avatar + 1,arrayBuffer(){reads++;} },'avatar'), /256 KB/);
+  await assert.rejects(readProfileImage({ type:'image/svg+xml',size:1,arrayBuffer(){reads++;} },'avatar'), /PNG, JPEG, or WebP/);
+  assert.equal(reads, 0, 'reject size and MIME before reading the file');
+  await assert.rejects(readProfileImage({ ...imageFile(), type:'image/jpeg' }, 'avatar'), /not a valid/);
+  assert.equal(cleanProfileX(' https://x.com/Local_Name/ '), 'https://x.com/Local_Name');
+  for (const invalid of ['http://x.com/name','https://x.com/name?q=1','https://x.com/name/status/1','https://x.com.evil/name','https://x.com/a'.padEnd(40,'a')]) assert.equal(cleanProfileX(invalid), '');
+});
+
+test('Profile image input previews, saves and restores artwork without replacing nodes during market updates', async () => {
+  const f = fixture(), view = mountPhomoProfile(f.host, f.ctx, 'you', f.hooks);
+  byText(f.host, 'Edit profile').click();
+  for (const kind of ['avatar','banner']) {
+    const chooser = byLabel(f.host, `Upload ${kind}`); chooser.files = [imageFile()]; chooser.fire('change');
+    assert.equal(byLabel(f.host,'Save profile').disabled, true); await settleImage();
+    assert.equal(byClass(f.host,`phs-editor-${kind}`).querySelector('img').getAttribute('src'), pixel);
+  }
+  fill(f.host,'X profile link','https://x.com/local_name'); form(byClass(f.host,'phs-modal')).fire('submit');
+  const image = byClass(f.host,'phs-profile-avatar').querySelector('img');
+  assert.equal(image.getAttribute('src'),pixel); view.update(true);
+  assert.equal(byClass(f.host,'phs-profile-avatar').querySelector('img'),image, 'market ticks retain the decoded image');
+  assert.equal(byClass(f.host,'phs-profile-x').getAttribute('href'),'https://x.com/local_name');
+  const restored = createPhomoState(f.market, { storage: localStorage });
+  assert.equal(restored.profile('you').avatarImage,pixel); assert.equal(restored.profile('you').bannerImage,pixel);
+  const copy = restored.prefs; copy.profile.avatarImage=null; assert.equal(restored.profile('you').avatarImage,pixel);
+  view.destroy();
+});
+
+test('Removing saved artwork clears persistent image data and restores the emoji and color fallbacks', async () => {
+  const f = fixture(); f.state.setProfile({ avatarImage:pixel,bannerImage:pixel,avatar:'🐱',twitterUrl:'https://x.com/name' });
+  const view=mountPhomoProfile(f.host,f.ctx,'you',f.hooks);
+  byText(f.host,'Edit profile').click();
+  byLabel(f.host,'Remove avatar image').click(); byLabel(f.host,'Remove banner image').click();
+  fill(f.host,'X profile link',''); form(byClass(f.host,'phs-modal')).fire('submit');
+  assert.equal(byClass(f.host,'phs-profile-avatar').querySelector('img'),null);
+  assert.equal(byClass(f.host,'phs-profile-avatar').textContent,'🐱');
+  assert.equal(byClass(f.host,'phs-profile-banner').querySelector('img'),null);
+  assert.equal(byClass(f.host,'phs-profile-x').hidden,true);
+  const stored=JSON.parse(f.store.get(PHOMO_SAVE_KEY));
+  assert.equal(stored.profile.avatarImage,null); assert.equal(stored.profile.bannerImage,null); assert.equal(stored.profile.twitterUrl,'');
+  view.destroy();
+});
+
+test('Invalid artwork and closed or canceled edits never alter saved images or apply late reads', async () => {
+  const f=fixture();f.state.setProfile({avatarImage:pixel});
+  const view=mountPhomoProfile(f.host,f.ctx,'you',f.hooks);byText(f.host,'Edit profile').click();
+  let chooser=byLabel(f.host,'Upload avatar');chooser.files=[{type:'image/svg+xml',size:5}];chooser.fire('change');await settleImage();
+  assert.match(byClass(f.host,'phs-editor-status').textContent,/PNG, JPEG, or WebP/);
+  assert.equal(byClass(f.host,'phs-editor-avatar').querySelector('img').getAttribute('src'),pixel);
+  fill(f.host,'X profile link','https://x.com.evil/name');form(byClass(f.host,'phs-modal')).fire('submit');
+  assert.ok(byClass(f.host,'phs-modal'));assert.equal(f.state.profile('you').twitterUrl,'');
+  let finish; const file=imageFile();chooser.files=[{...file,arrayBuffer:()=>new Promise(resolve=>{finish=resolve;})}];chooser.fire('change');
+  byLabel(f.host,'Close Edit profile').click();finish(await file.arrayBuffer());await settleImage();
+  assert.equal(f.state.profile('you').avatarImage,pixel);assert.equal(byClass(f.host,'phs-modal'),undefined);
+  byText(f.host,'Edit profile').click();byLabel(f.host,'Remove avatar image').click();byLabel(f.host,'Close Edit profile').click();
+  assert.equal(f.state.profile('you').avatarImage,pixel,'canceling removal preserves the saved avatar');view.destroy();
+});
+
+test('Own profile includes recorded paper fills and notional volume without adding P&L twice', () => {
+  const f=fixture(); const fills=[{notional:500,type:'open'},{notional:520,type:'close'}];
+  const state=createPhomoState(f.market,{paperPerps:{snapshot:()=>({fills,realized:20,unrealized:10})}});
+  const own=state.profile('you');assert.equal(own.trades,2);assert.equal(own.volumeUsd,1020);
+  assert.equal(own.pnlUsd,(f.market.player.worth-f.market.startSol)*100);
+  assert.equal(own.unrealizedUsd,0);
+  fills.push({notional:300,type:'open'});assert.equal(state.profile('you').trades,3);assert.equal(state.profile('you').volumeUsd,1320);
+  const paper={fills:[],positions:[],reserved:12.5,realized:0,unrealized:0};
+  const view=mountPhomoProfile(f.host,{...f.ctx,paperPerps:{snapshot:()=>paper}},'you',f.hooks);
+  assert.ok(f.host.textContent.includes('Reserved for pending orders $12.50'));
+  paper.reserved=0;view.update(true);assert.ok(f.host.textContent.includes('Reserved for pending orders $0.00'));view.destroy();
 });

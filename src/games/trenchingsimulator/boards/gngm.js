@@ -35,6 +35,7 @@ import { positionCardWords } from './gngm-card.js';
 import { tradeShareText } from '../share.js';
 import { mountCoin } from './gngm-coin.js';
 import { createAddressSearch } from '../live-search.js';
+import { mountLiveKols } from '../live-kols-panel.js';
 import { scannerRows, toggleScannerItem, scannerFlow, stepScannerDca } from './gngm-workspace.js';
 import './gngm.css';
 
@@ -596,8 +597,15 @@ export function mountGngm(host, ctx) {
     el('div', { class: 'tsg-bar' }, el('h2', { class: 'tsg-h' }, 'Track'), el('div', { class: 'tsg-chips', role: 'group', 'aria-label': 'Whose trades' }, trackBtns)),
     el('p', { class: 'tsg-note' }, 'The made-up KOLs\', smart wallets\' and whales\' trades as they happen. Learn who holds and who dumps on their followers.'),
     trackList);
+  const liveKols = market.live ? mountLiveKols(trackView,{client:ctx.kols,chain:ctx.chain}) : null;
+  if (market.live) {
+    trackList.hidden = true;
+    trackView.querySelector('.tsg-chips').hidden = true;
+    setText(trackView.querySelector('.tsg-note'),'Verified public KOL identities and source rankings. Practice trading is separate from these wallets.');
+  }
   const whoName = (x) => (x.who === 'kol' ? `@${x.kol}` : x.who === 'smart' ? `Smart wallet ${x.smart + 1}` : 'A whale');
   function renderTrack() {
+    if (market.live) return;
     const items = trackItems(market.feed(0), { filter: G.track, max: 60 });
     const list = items.length ? items : [{ q: 'empty', empty: true }];
     keyed(trackList, list, (x) => x.q, (x) => {
@@ -729,6 +737,7 @@ export function mountGngm(host, ctx) {
     el('div', { class: 'tsg-tabs', role: 'group', 'aria-label': 'Its details' }, wtabBtns),
     wList, wNote);
   function openWallet(kind, id) {
+    if (market.live) { setView('track'); return; }
     if (kind !== 'kol' && kind !== 'smart') return;
     if (kind === 'kol' && !kolById(id)) return;
     if (kind === 'smart' && !(Number.isInteger(id) && id >= 0)) return;
@@ -1045,7 +1054,7 @@ export function mountGngm(host, ctx) {
       el('div', { class: 'tsg-rail-labels' }, el('span', {}, 'Time / TXs'), el('span', {}, 'MC / 5m %')), railList),
     el('section', { class: 'tsg-rail-callout' }, el('div', { class: 'tsg-rail-head' }, el('b', {}, 'Callout'),
       el('button', { class: 'tsg-tool', type: 'button', on: { click: () => setView('callout') } }, '↗')),
-    el('p', { class: 'tsg-rail-source' }, 'KOL activity · simulated'), railCalls));
+    el('p', { class: 'tsg-rail-source' }, market.live ? 'Public KOL activity · unavailable' : 'KOL activity · simulated'), railCalls));
   const monitorList = el('div', { class: 'tsg-monitor-list' });
   const monitorView = el('section', { class: 'tsg-view tsg-monitor', hidden: true, 'aria-label': 'Monitor' },
     el('div', { class: 'tsg-bar' }, el('h2', { class: 'tsg-h' }, 'Monitor'), el('span', { class: 'tsg-note' }, 'Your watchlist · this run')),
@@ -1053,8 +1062,16 @@ export function mountGngm(host, ctx) {
   const calloutList = el('div', { class: 'tsg-callout-list' });
   const calloutView = el('section', { class: 'tsg-view tsg-callout', hidden: true, 'aria-label': 'Callout' },
     el('div', { class: 'tsg-bar' }, el('h2', { class: 'tsg-h' }, 'Callout')),
-    el('p', { class: 'tsg-note' }, 'The simulator’s KOL buys and sells. Open a profile to inspect its calls and holdings.'), calloutList);
+    el('p', { class: 'tsg-note' }, market.live ? 'The public source supplies KOL profiles and rankings, without trade activity or holdings.' : 'The simulator’s KOL buys and sells. Open a profile to inspect its calls and holdings.'), calloutList);
   function renderCallouts(list, max) {
+    if (market.live) {
+      if (!list.dataset.publicUnavailable) {
+        list.dataset.publicUnavailable = 'true';
+        list.replaceChildren(el('p',{class:'tsg-empty'},'Real KOL trade activity is unavailable from this source.'),
+          el('button',{class:'tsg-tool',type:'button',on:{click:()=>setView('track')}},'View real KOLs'));
+      }
+      return;
+    }
     const items = trackItems(market.feed(0), { filter: 'kol', max });
     keyed(list, items.length ? items : [{ q: 'empty', empty: true }], (x) => x.q, (x) => {
       if (x.empty) return el('p', { class: 'tsg-empty' }, 'No KOL calls in this run yet.');
@@ -1219,6 +1236,7 @@ export function mountGngm(host, ctx) {
       G.dead = true;
       clearTimeout(searchTimer);
       coin.destroy();
+      liveKols?.destroy();
       phone.removeEventListener('change', onPhone);
       document.removeEventListener('keydown', onKey);
       document.removeEventListener('keyup', onKey);

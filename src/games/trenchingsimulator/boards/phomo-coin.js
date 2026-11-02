@@ -11,9 +11,25 @@ import { createPhomoChart } from './phomo-chart.js';
 import { tokenMetrics } from './phomo-data.js';
 import './phomo-coin.css';
 import './phomo-chart.css';
+import './phomo-coin-reference.css';
 
 const fin = (v) => typeof v === 'number' && Number.isFinite(v);
 const knownPrice = (v) => fin(v) ? `$${price(v)}` : '—';
+// Never relabel the retained tail as a complete activity window. Directional volume is
+// available only on practice candles that actually record it; unique wallets stay unknown.
+export function coinActivityWindow(candles, now, seconds, born) {
+  if (!candles?.length || !fin(now) || !(seconds > 0)) return null;
+  const since = now - seconds, first = candles[0];
+  if (!(first.t <= since || fin(born) && born >= since && first.t <= Math.floor(born))) return null;
+  let buys = 0, sells = 0, buyVolume = 0, sellVolume = 0, volume = 0, directions = true;
+  for (let i = candles.length - 1; i >= 0 && candles[i].t >= since; i--) {
+    const bar = candles[i]; if (bar.t > now) continue;
+    buys += fin(bar.b) ? bar.b : 0; sells += fin(bar.s) ? bar.s : 0; volume += fin(bar.v) ? bar.v : 0;
+    if (fin(bar.buyVol) && fin(bar.sellVol)) { buyVolume += bar.buyVol; sellVolume += bar.sellVol; }
+    else if (bar.v > 0) directions = false;
+  }
+  return { buys, sells, volume, buyVolume: directions ? buyVolume : null, sellVolume: directions ? sellVolume : null };
+}
 const button = (text, click, attrs = {}) => el('button', { type: 'button', class: 'tspc-button', ...attrs, on: { click } }, text);
 const field = (label, value = '—') => {
   const dd = el('dd', {}, value);
@@ -27,6 +43,7 @@ const paths = {
   fullscreen: 'M3 9V3h6M15 3h6v6M21 15v6h-6M9 21H3v-6', camera: 'M3 7h5l2-3h4l2 3h5v13H3zM16 13a4 4 0 1 1-8 0 4 4 0 0 1 8 0',
   eye: 'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12zM15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
   trash: 'M4 6h16M9 6V3h6v3M6 6l1 15h10l1-15M10 10v7M14 10v7',
+  bell: 'M6 9a6 6 0 0 1 12 0c0 6 3 6 3 8H3c0-2 3-2 3-8M10 21h4',
 };
 function chartIcon(name) {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -37,9 +54,10 @@ function chartIcon(name) {
 export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onClose = () => {}, positionsHost = null, initialSide = 'buy' } = {}) {
   const market = ctx.market;
   const px = ctx.solUsd > 0 ? ctx.solUsd : market.solUsd;
-  const base = Date.now() - market.t * 1000;
+  const base = Number.isFinite(market.baseTime) ? market.baseTime : Date.now() - market.t * 1000;
   const C = { side: initialSide === 'sell' ? 'sell' : 'buy', tab: 'holders', tf: 60, mode: 'mcap', marks: true, thesis: true, following: false,
-    indicators: [], dead: false, lastDraw: -Infinity, lastRows: -Infinity, candles: [], cdv: null, chartDirty: true };
+    indicators: [], dead: false, lastDraw: -Infinity, lastRows: -Infinity, candles: [], cdv: null, chartDirty: true,
+    activityWindow: '5m', thesisOnly: false };
   const prefs = () => state && state.prefs || {};
   const current = () => market.stats(id);
   const position = () => market.positions().find((p) => p.id === id) || null;
@@ -59,12 +77,12 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const hide = button('×', () => { state.toggleHide(id); onClose(); }, { 'aria-label': 'Hide token', title: 'Hide token' });
   const statLabels = [['cap', 'Market cap'], ['price', 'Price'], ['change', '24h change'], ['volume', '24h volume'],
     ['liquidity', 'Liquidity'], ['holders', 'Holders'], ['top10', 'Top 10']];
-  const stats = Object.fromEntries(statLabels.map(([key, label]) => [key, field(label)]));
+  const stats = Object.fromEntries(statLabels.map(([key, label]) => { const entry = field(label); entry.el.dataset.stat = key; return [key, entry]; }));
   const header = el('header', { class: 'tspc-header' },
     el('div', { class: 'tspc-heading' }, picture,
-      el('div', { class: 'tspc-identity' }, el('div', { class: 'tspc-title' }, ticker),
-        el('div', { class: 'tspc-meta' }, fullName, coinAge, contract, coinKind)),
-      el('div', { class: 'tspc-actions' }, watch, hide)),
+      el('div', { class: 'tspc-identity' }, el('div', { class: 'tspc-title' }, ticker, coinKind, el('div', { class: 'tspc-actions' }, watch, hide)),
+        el('div', { class: 'tspc-meta' }, fullName, coinAge, contract)),
+      ),
     el('dl', { class: 'tspc-stat-grid' }, Object.values(stats).map((x) => x.el)));
 
   const interval = el('select', { class: 'tspc-chart-select', 'aria-label': 'Candle interval', on: { change: () => {
@@ -91,12 +109,14 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const chartNote = el('p', { class: 'tspc-muted tspc-chart-note' });
   const minimum = el('input', { type: 'text', inputMode: 'decimal', value: '', placeholder: '0',
     'aria-label': 'Minimum swap size in dollars', class: 'tspc-minimum', on: { input: () => refreshRows() } });
+  const checks = [];
   function check(label, key) {
     const input = el('input', { type: 'checkbox', checked: C[key], on: { change: () => {
       C[key] = input.checked;
       C.chartDirty = true;
       refreshRows();
     } } });
+    checks.push({ input, key });
     return el('label', { class: 'tspc-check' }, input, label);
   }
   const noteStrip = el('div', { class: 'tspc-chart-theses', 'aria-label': 'Theses for this coin' });
@@ -127,7 +147,8 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const chartSection = el('section', { class: 'tspc-chart-card', 'aria-label': 'Coin chart' },
     el('div', { class: 'tspc-chart-tools' }, interval, el('label', { class: 'tspc-style-label', title: 'Chart style' }, chartIcon('candles'), styleSelect), indicators,
       el('div', { class: 'tspc-segments', role: 'group', 'aria-label': 'Chart value' }, modes), undo, redo,
-      el('span', { class: 'tspc-tool-spacer' }), drawToggle,
+      el('span', { class: 'tspc-tool-spacer' }), button('Save', () => saveChartLayout(), { class: 'tspc-chart-save', 'aria-label': 'Save chart layout' }), drawToggle,
+      button(chartIcon('bell'), () => openPriceAlert(), { class: 'tspc-icon-button', title: 'Create price alert', 'aria-label': 'Create token price alert' }),
       button(icon('sliders'), () => chartSettings.showModal(), { class: 'tspc-icon-button', title: 'Chart settings', 'aria-label': 'Chart settings' }),
       toolButton('fullscreen', 'Fullscreen chart', () => fullscreen()), toolButton('camera', 'Download chart image', () => snapshot())),
     el('div', { class: 'tspc-chart-body' }, drawingRail, el('div', { class: 'tspc-chart-canvas' }, legend, plot)),
@@ -165,11 +186,14 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     for (const b of tabs) b.setAttribute('aria-pressed', String(b.dataset.tab === key));
     refreshRows();
   }, { class: 'tspc-tab', data: { tab: key }, 'aria-pressed': String(C.tab === key) }));
+  const thesisOnly = el('input', { type: 'checkbox', 'aria-label': 'Show holders with a thesis only', on: { change() { C.thesisOnly = thesisOnly.checked; refreshRows(); } } });
   const details = el('section', { class: 'tspc-details' },
-    el('div', { class: 'tspc-tabs', role: 'group', 'aria-label': 'Coin activity' }, tabs), rowsNote, tableWrap, thesisPane);
+    el('div', { class: 'tspc-activity-top' }, el('div', { class: 'tspc-tabs', role: 'group', 'aria-label': 'Coin activity' }, tabs),
+      el('div', { class: 'tspc-activity-filters' }, el('label', { class: 'tspc-check' }, thesisOnly, 'Thesis only'), check('Following only', 'following'))),
+    el('details', { class: 'tspc-activity-disclosure' }, el('summary', {}, 'Practice activity'), rowsNote), tableWrap, thesisPane);
 
   const amount = el('input', { class: 'tspc-amount', type: 'text', inputMode: 'decimal', autocomplete: 'off', spellcheck: 'false',
-    placeholder: '0', value: '100', 'aria-label': C.side === 'buy' ? 'Buy amount in practice dollars' : 'Percentage of your holding to sell', on: { input: () => { setText(status, ''); renderQuote(); } } });
+    placeholder: '0', value: C.side === 'sell' ? '100' : '', 'aria-label': C.side === 'buy' ? 'Buy amount in practice dollars' : 'Percentage of your holding to sell', on: { input: () => { setText(status, ''); renderQuote(); } } });
   const amountUnit = el('span', { class: 'tspc-amount-unit' }, C.side === 'buy' ? '$' : '%');
   const amountHint = el('span', { class: 'tspc-amount-hint' }, C.side === 'buy' ? 'Enter amount' : 'Percentage to sell');
   const balance = el('p', { class: 'tspc-balance' });
@@ -180,7 +204,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const submit = el('button', { type: 'submit', class: 'tspc-submit' }, 'Buy');
   const sides = [['buy', 'Buy'], ['sell', 'Sell']].map(([side, label]) => button(label, () => {
     C.side = side;
-    amount.value = side === 'buy' ? String((prefs().buyPresets || [10, 100, 500, 1000])[1]) : '100';
+    amount.value = side === 'buy' ? '' : '100';
     amount.setAttribute('aria-label', side === 'buy' ? 'Buy amount in practice dollars' : 'Percentage of your holding to sell');
     setText(amountUnit, side === 'buy' ? '$' : '%');
     setText(amountHint, side === 'buy' ? 'Enter amount' : 'Percentage to sell');
@@ -194,12 +218,15 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     el('div', { class: 'tspc-trade-top' }, el('div', { class: 'tspc-sides', role: 'group', 'aria-label': 'Buy or sell' }, sides),
       button(icon('sliders'), () => openSettings(), { class: 'tspc-settings-button', 'aria-label': 'Swap settings' })),
     el('form', { on: { submit: (e) => { e.preventDefault(); place(); } } },
-      el('label', { class: 'tspc-amount-box' }, el('span', { class: 'tspc-amount-value' }, amountUnit, amount), amountHint), presetRow, balance,
-      el('details', { class: 'tspc-quote-details' }, el('summary', {}, 'Quote & fees'), quoteText, quoteFees), submit, status, pending),
-    el('p', { class: 'tspc-practice' }, 'Practice dollars only. No wallet or real funds.'));
+      el('label', { class: 'tspc-amount-box' }, el('span', { class: 'tspc-amount-value' }, amountUnit, amount), amountHint), presetRow,
+      el('details', { class: 'tspc-quote-details' }, el('summary', { title: 'Available practice balance, quote and fees' }, balance, el('span', { 'aria-hidden': 'true' }, 'ⓘ')), quoteText, quoteFees,
+        el('p', { class: 'tspc-practice' }, 'Practice dollars only. No wallet or real funds.')), submit, status, pending));
   const myPosition = el('section', { class: 'tspc-position-card', hidden: true });
-  const changePeriods = Object.fromEntries([['5m', '5m'], ['1h', '1h'], ['4h', '4h'], ['24h', '1d']].map(([k, label]) => [k, field(label)]));
-  const aboutKeys = [['buys', 'Buys · 5m'], ['sells', 'Sells · 5m'], ['volume', 'Volume · 5m'], ['buyers', 'Buyers'], ['sellers', 'Sellers'],
+  const changePeriods = Object.fromEntries([['5m', '5M'], ['1h', '1H'], ['4h', '4H'], ['24h', '1D']].map(([k, label]) => {
+    const entry = field(label); entry.el = button([el('span', {}, label), entry.dd], () => { C.activityWindow = k; refreshRows(); },
+      { class: 'tspc-period', 'aria-label': `${label} activity`, 'aria-pressed': String(k === C.activityWindow) }); return [k, entry];
+  }));
+  const aboutKeys = [['buys', 'buys'], ['sells', 'sells'], ['buyVolume', 'vol.'], ['sellVolume', 'vol.'], ['volume', 'Volume · 5m'], ['buyers', 'buyers'], ['sellers', 'sellers'],
     ['supply', 'Supply'], ['network', 'Network'], ['created', 'Created'], ['website', 'Website'], ['socials', 'Socials']];
   const aboutFields = Object.fromEntries(aboutKeys.map(([k, label]) => [k, field(label)]));
   const description = el('p', { class: 'tspc-description' });
@@ -208,14 +235,17 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     return { meter, el: el('div', { class: 'tspc-pair' }, el('dl', {}, aboutFields[left].el, aboutFields[right].el), meter) };
   }
   const tradesPair = pair('buys', 'sells');
+  const volumePair = pair('buyVolume', 'sellVolume');
   const tradersPair = pair('buyers', 'sellers');
   const aboutAddress = button('Contract', () => copyContract(), { class: 'tspc-address' });
   const moreAbout = el('details', { class: 'tspc-about-more' }, el('summary', {}, 'View more'),
     el('dl', { class: 'tspc-about-rows' }, ['supply', 'network', 'created', 'website', 'socials'].map((k) => aboutFields[k].el)),
     el('div', { class: 'tspc-contract-row' }, el('span', { class: 'tspc-muted' }, 'Contract'), aboutAddress));
-  const about = el('section', { class: 'tspc-about' }, el('h3', {}, 'About'), description,
+  const aboutTitle = el('h3', {}, 'About');
+  const searchSocial = el('a', { class: 'tspc-social-link', target: '_blank', rel: 'noopener noreferrer' }, 'Search on X');
+  const about = el('section', { class: 'tspc-about' }, aboutTitle, description,
     el('dl', { class: 'tspc-changes' }, Object.values(changePeriods).map((x) => x.el)),
-    tradesPair.el, el('dl', { class: 'tspc-about-rows tspc-about-volume' }, aboutFields.volume.el), tradersPair.el, moreAbout);
+    tradesPair.el, volumePair.el, tradersPair.el, el('div', { class: 'tspc-social-links' }, searchSocial), moreAbout);
   const settings = makeSettings();
   const chartSettings = makeChartSettings();
   const textSettings = makeTextSettings();
@@ -226,7 +256,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const chart = createPhomoChart(plot, { mode: C.mode, unit: 'usd', tf: C.tf,
     colors: { bg: '#060510', border: '#1a1925', axis: '#9899a3', strong: '#f7f7f7', up: '#21c95e', down: '#ff622e',
       label: '#12111a', ma: '#69b8ff', ema: '#c9a6ff' },
-    onHover: (b) => setText(legend, b ? `${b.hovering ? '' : 'Now · '}O ${b.fmt(b.o)}  H ${b.fmt(b.h)}  L ${b.fmt(b.l)}  C ${b.fmt(b.c)}  ${pct(b.ch)}  Volume ${usd(b.vol * px)}` : ''),
+    onHover: (b) => setText(legend, b ? `${ticker.textContent} · ${GTF.find((t) => t.s === C.tf)?.id || C.tf} · Phomo  O ${b.fmt(b.o)} H ${b.fmt(b.h)} L ${b.fmt(b.l)} C ${b.fmt(b.c)} ${pct(b.ch)}\nVolume ${usd(b.vol * px)}` : ''),
     requestText: () => textSettings.ask(),
     onChange: (next) => {
       undo.disabled = !next.canUndo; redo.disabled = !next.canRedo;
@@ -240,6 +270,50 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     },
   });
 
+  function saveChartLayout() {
+    const s = chart.state;
+    try {
+      localStorage.setItem('trench_phomo_chart_v1', JSON.stringify({ v: 1, tf: C.tf, mode: C.mode, style: s.style,
+        scale: s.scale, auto: s.auto, grid: s.grid, volume: s.volume, crosshair: s.crosshair, indicators: C.indicators }));
+      setText(drawHint, 'Chart layout saved on this device. It will apply when you open another token.');
+    } catch { setText(drawHint, 'This browser could not save the chart layout.'); }
+  }
+  function restoreChartLayout() {
+    try {
+      const saved = JSON.parse(localStorage.getItem('trench_phomo_chart_v1') || 'null');
+      if (!saved || saved.v !== 1) return;
+      if (GTF.some((t) => t.s === saved.tf)) { C.tf = saved.tf; interval.value = String(C.tf); }
+      if (['price', 'mcap'].includes(saved.mode)) { C.mode = saved.mode; chart.view({ mode: C.mode, unit: 'usd' }); }
+      if (['candles', 'bars', 'line', 'area'].includes(saved.style)) { styleSelect.value = saved.style; chart.style(saved.style); }
+      chart.scale(saved.scale); if (typeof saved.auto === 'boolean') chart.auto(saved.auto);
+      chart.settings(saved);
+      C.indicators = Array.isArray(saved.indicators) ? [...new Set(saved.indicators.filter((v) => INDICATORS.some(([k]) => k === v)))].slice(0, INDICATORS.length) : [];
+      chart.indicators(C.indicators);
+      for (const b of modes) b.setAttribute('aria-pressed', String(b.dataset.mode === C.mode));
+      for (const b of indicatorButtons) b.setAttribute('aria-pressed', String(C.indicators.includes(b.dataset.indicator)));
+    } catch { /* A stale or unavailable local preference must not prevent trading. */ }
+  }
+  let alertDialog = null;
+  function openPriceAlert() {
+    if (alertDialog) { alertDialog.showModal(); return; }
+    const metric = el('select', { 'aria-label': 'Token alert metric' }, el('option', { value: 'marketCap' }, 'Market cap'), el('option', { value: 'price' }, 'Practice-unit price'));
+    metric.value = C.mode === 'price' ? 'price' : 'marketCap';
+    const direction = el('select', { 'aria-label': 'Token alert direction' }, el('option', { value: 'above' }, 'Above'), el('option', { value: 'below' }, 'Below')); direction.value = 'above';
+    const threshold = el('input', { type: 'text', inputMode: 'decimal', 'aria-label': 'Token alert threshold in dollars', value: String((C.mode === 'price' ? current().price : current().mc) * px * 1.1) });
+    const feedback = el('p', { role: 'status', class: 'tspc-settings-error' });
+    alertDialog = el('dialog', { class: 'tspc-settings tspc-alert-settings', 'aria-label': 'Create token price alert' },
+      el('div', { class: 'tspc-settings-heading' }, el('h2', {}, 'Create alert'), button('×', () => alertDialog.close(), { 'aria-label': 'Close token price alert' })),
+      el('form', { on: { submit(e) { e.preventDefault();
+        const result = state.addAlert({ coin: id, metric: metric.value, direction: direction.value, valueUsd: parseAmount(threshold.value) });
+        if (!result.ok) return setText(feedback, result.error === 'full' ? 'Remove an existing alert before adding another.' : 'Enter a positive dollar threshold.');
+        alertDialog.close(); setText(drawHint, 'Alert created. You can manage it in Alerts. It watches the local practice price.');
+      } } }, el('label', {}, 'Metric', metric), el('label', {}, 'Direction', direction), el('label', {}, 'Threshold $', threshold),
+      el('p', { class: 'tspc-muted' }, 'Notifies while Phomo is open. Does not place an order.'), feedback,
+      el('button', { type: 'submit', class: 'tspc-submit' }, 'Create alert')));
+    alertDialog.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
+    root.append(alertDialog); alertDialog.showModal();
+  }
+
   async function fullscreen() {
     try {
       if (document.fullscreenElement === chartSection) await document.exitFullscreen();
@@ -252,8 +326,8 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     if (!source) { setText(drawHint, 'The chart is still loading.'); return; }
     const image = document.createElement('canvas'); image.width = source.width; image.height = source.height + 36;
     const context = image.getContext('2d'); if (!context) return;
-    context.fillStyle = '#151312'; context.fillRect(0, 0, image.width, image.height); context.drawImage(source, 0, 0);
-    context.fillStyle = '#e5d9d3'; context.font = '12px sans-serif';
+    context.fillStyle = '#060510'; context.fillRect(0, 0, image.width, image.height); context.drawImage(source, 0, 0);
+    context.fillStyle = '#f7f7f7'; context.font = '12px "Phomo Aeonik", Arial, sans-serif';
     context.fillText(`Phomo · ${current()?.ticker || 'Coin'} · Practice market · TradingView Lightweight Charts™`, 10, image.height - 13);
     image.toBlob((blob) => {
       if (!blob || C.dead) return;
@@ -304,7 +378,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   }
   function renderPresets() {
     const values = C.side === 'buy' ? prefs().buyPresets || [10, 100, 500, 1000] : prefs().sellPresets || [10, 25, 50, 100];
-    presetRow.replaceChildren(...values.map((v) => button(C.side === 'buy' ? usd(v) : `${v}%`, () => {
+    presetRow.replaceChildren(...values.map((v) => button(C.side === 'buy' ? `$${v}` : `${v}%`, () => {
       amount.value = String(v);
       setText(status, '');
       renderQuote();
@@ -314,8 +388,8 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     const s = current();
     if (!s) { submit.disabled = true; return; }
     const p = position();
-    setText(balance, C.side === 'buy' ? `Available ${usdFull(market.player.sol * px)}`
-      : `Your position ${usdFull((p?.value || 0) * px)} · ${tokens(p?.tokens || 0)} ${s.live ? 'practice units' : s.ticker}`);
+    setText(balance, C.side === 'buy' ? usdFull(market.player.sol * px) : usdFull((p?.value || 0) * px));
+    balance.title = C.side === 'buy' ? 'Available practice dollars' : `${tokens(p?.tokens || 0)} ${s.live ? 'practice units' : s.ticker} in your practice holding`;
     setText(submit, `${C.side === 'buy' ? 'Buy' : 'Sell'} ${s.ticker}`);
     const req = request();
     const q = req ? market.quote(req) : null;
@@ -361,6 +435,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const coinNotes = () => typeof state.notes === 'function' ? state.notes({ coin: id }) : [];
   function refreshRows() { C.lastRows = -Infinity; C.chartDirty = true; update(undefined, true); }
   function renderRows(s) {
+    for (const item of checks) item.input.checked = C[item.key];
     tableWrap.hidden = C.tab === 'thesis';
     thesisPane.hidden = C.tab !== 'thesis';
     // All notes in this device's practice notebook are authored by you; a referenced trader is not their author.
@@ -393,7 +468,8 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     setText(rowsNote, s.live ? 'Simulated prices, volume and swaps on a real coin. Only your practice holding is known; real holder identities are unavailable.'
       : 'Simulated traders and practice positions. All amounts are in dollars.');
     if (C.tab === 'holders') {
-      const rows = (market.holders(id, 100)?.list || []).filter((h) => (!s.live || h.me) && accepts(h, h.tok * s.price * px));
+      const rows = (market.holders(id, 100)?.list || []).filter((h) => (!s.live || h.me) && accepts(h, h.tok * s.price * px)
+        && (!C.thesisOnly || h.me && notes.length > 0));
       keyed(tableBody, rows, (h) => h.addr, (h) => {
         const value = el('span'), count = el('small',{class:'tspc-muted tspc-token-count'}), pnl = el('td'), entry = el('td'), note = el('td',{class:'tspc-thesis-cell'});
         const tr = el('tr',{},el('td',{},traderCell(h,s.live)),el('td',{},value,count),pnl,entry,note);
@@ -471,6 +547,8 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     if (!s || !info) { setText(status, 'This coin is no longer available.'); submit.disabled = true; return; }
     const day = tokenMetrics(market, id, { solUsd: px, window: '24h' });
     setText(ticker, s.ticker);
+    setText(aboutTitle, `About ${s.ticker}`);
+    searchSocial.href = `https://x.com/search?q=${encodeURIComponent(info.mint || `$${s.ticker}`)}&src=typed_query`;
     setText(fullName, s.name);
     setText(coinAge, age(s.age));
     setText(coinKind, s.live ? CHAIN_NAMES[s.chain] || 'Live' : 'Simulated');
@@ -514,18 +592,27 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
         const m = window === '24h' ? day : tokenMetrics(market, id, { solUsd: px, window });
         setText(entry.dd, pct(m?.change));
         tone(entry.dd, m?.change, 0.0005);
+        entry.el.setAttribute('aria-pressed', String(window === C.activityWindow));
       }
-      const values = { buys: num(s.buys5m), sells: num(s.sells5m), volume: usd(s.vol5m * px), buyers: '—', sellers: '—',
+      const seconds = { '5m': 300, '1h': 3600, '4h': 14400, '24h': 86400 }[C.activityWindow];
+      const activity = coinActivityWindow(C.candles, market.t, seconds, s.born);
+      const buys = C.activityWindow === '5m' ? s.buys5m : activity?.buys, sells = C.activityWindow === '5m' ? s.sells5m : activity?.sells;
+      const values = { buys: num(buys), sells: num(sells), volume: usd(activity?.volume == null ? null : activity.volume * px),
+        buyVolume: usd(activity?.buyVolume == null ? null : activity.buyVolume * px), sellVolume: usd(activity?.sellVolume == null ? null : activity.sellVolume * px), buyers: '—', sellers: '—',
         supply: s.live ? '—' : tokens(SUPPLY), network: s.live ? CHAIN_NAMES[s.chain] || s.chain || '—' : 'Simulated',
         created: fin(s.born) ? new Date(base + s.born * 1000).toLocaleString() : '—',
         website: info.socials?.web ? 'Available · address not supplied' : '—',
         socials: [info.socials?.x && 'X', info.socials?.tg && 'Telegram'].filter(Boolean).join(' · ') || '—' };
       for (const [key, value] of Object.entries(values)) setText(aboutFields[key].dd, value);
-      setText(description, info.line || (s.live ? 'A real coin with locally simulated prices and volume. The coin feed has not supplied a token description.' : 'A simulated token in this practice market.'));
-      const total = s.buys5m + s.sells5m;
-      tradesPair.meter.value = total > 0 ? s.buys5m / total : 0;
+      setText(description, info.line || (s.live ? 'No description found' : 'A simulated token in this practice market.'));
+      const total = buys + sells;
+      tradesPair.meter.value = total > 0 ? buys / total : 0;
       tradesPair.meter.classList.toggle('is-unknown', !(total > 0));
-      tradesPair.meter.setAttribute('aria-valuetext', total > 0 ? `${num(s.buys5m)} buys and ${num(s.sells5m)} sells in five minutes` : 'No observed swaps in five minutes');
+      tradesPair.meter.setAttribute('aria-valuetext', fin(total) ? `${num(buys)} buys and ${num(sells)} sells in ${C.activityWindow}` : 'This activity window is not retained');
+      const directionalVolume = activity?.buyVolume != null && activity?.sellVolume != null ? activity.buyVolume + activity.sellVolume : null;
+      volumePair.meter.value = directionalVolume > 0 ? activity.buyVolume / directionalVolume : 0;
+      volumePair.meter.classList.toggle('is-unknown', !(directionalVolume > 0));
+      volumePair.meter.setAttribute('aria-valuetext', directionalVolume != null ? `${usd(activity.buyVolume * px)} buy volume and ${usd(activity.sellVolume * px)} sell volume in ${C.activityWindow}` : 'Directional volume is not available for this window');
       tradersPair.meter.value = 0; tradersPair.meter.classList.add('is-unknown');
       tradersPair.meter.setAttribute('aria-valuetext', 'Unique buyer and seller counts are unavailable');
     }
@@ -534,10 +621,17 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   function makeSettings() {
     const buy = [0, 1, 2, 3].map((n) => el('input', { type: 'text', inputMode: 'decimal', 'aria-label': `Buy preset ${n + 1} in dollars` }));
     const sell = [0, 1, 2, 3].map((n) => el('input', { type: 'text', inputMode: 'decimal', 'aria-label': `Sell preset ${n + 1} in percent` }));
-    const slipMode = el('select', { 'aria-label': 'Slippage mode' }, el('option', { value: 'auto' }, 'Auto'), el('option', { value: 'custom' }, 'Custom'));
+    const slipMode = el('select', { class: 'tspc-slip-select', 'aria-label': 'Slippage mode', tabIndex: -1, 'aria-hidden': 'true' }, el('option', { value: 'auto' }, 'Auto'), el('option', { value: 'custom' }, 'Custom'));
     const slip = el('input', { type: 'text', inputMode: 'decimal', 'aria-label': 'Custom slippage percentage' });
     const slipLabel = el('label', { class: 'tspc-custom-slip' }, 'Maximum slippage %', slip);
-    slipMode.addEventListener('change', () => { slipLabel.hidden = slipMode.value !== 'custom'; });
+    const slipButtons = [['auto', 'Auto'], ['custom', 'Custom']].map(([value, label]) => button(label, () => {
+      slipMode.value = value; refreshSlippage();
+    }, { data: { mode: value }, 'aria-pressed': String(value === 'auto') }));
+    function refreshSlippage() {
+      slipLabel.hidden = slipMode.value !== 'custom';
+      for (const b of slipButtons) b.setAttribute('aria-pressed', String(b.dataset.mode === slipMode.value));
+    }
+    slipMode.addEventListener('change', refreshSlippage);
     const message = el('p', { class: 'tspc-settings-error', role: 'alert' });
     const dialog = el('dialog', { class: 'tspc-settings', 'aria-label': 'Phomo swap settings' },
       el('div', { class: 'tspc-settings-heading' }, el('h2', {}, 'Swap settings'), button('×', () => dialog.close(), { 'aria-label': 'Close swap settings' })),
@@ -556,20 +650,19 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
         renderQuote();
         dialog.close();
       } } },
-      el('div', { class: 'tspc-settings-section' }, el('div', { class: 'tspc-settings-label' }, el('h3', {}, 'Buy presets · USD'),
+      el('div', { class: 'tspc-settings-section' }, el('div', { class: 'tspc-settings-label' }, el('h3', {}, 'Buy presets'),
         button('Reset', () => buy.forEach((n, i) => { n.value = String([10, 100, 500, 1000][i]); }))),
-      el('div', { class: 'tspc-settings-inputs' }, buy)),
-      el('div', { class: 'tspc-settings-section' }, el('div', { class: 'tspc-settings-label' }, el('h3', {}, 'Sell presets · %'),
+      el('div', { class: 'tspc-settings-inputs' }, buy.map((input) => el('label', { class: 'tspc-preset-input' }, el('span', {}, '$'), input)))),
+      el('div', { class: 'tspc-settings-section' }, el('div', { class: 'tspc-settings-label' }, el('h3', {}, 'Sell presets'),
         button('Reset', () => sell.forEach((n, i) => { n.value = String([10, 25, 50, 100][i]); }))),
-      el('div', { class: 'tspc-settings-inputs' }, sell)),
-      el('div', { class: 'tspc-settings-section' }, el('label', {}, 'Slippage ', slipMode), slipLabel,
-        el('p', { class: 'tspc-muted' }, 'Auto uses your current game slippage setting. Applies to practice swaps only.'),
-        button('Game trading settings', () => { dialog.close(); ctx.openSettings?.(); })), message,
+      el('div', { class: 'tspc-settings-inputs' }, sell.map((input) => el('label', { class: 'tspc-preset-input' }, input, el('span', {}, '%'))))),
+      el('div', { class: 'tspc-settings-section' }, el('div', { class: 'tspc-slip-row' }, el('span', { title: 'Auto follows the game’s trading setting. Presets apply to practice swaps.' }, 'Slippage ⓘ'), slipMode,
+        el('div', { class: 'tspc-slip-switch', role: 'group', 'aria-label': 'Slippage selection' }, slipButtons)), slipLabel), message,
       el('button', { class: 'tspc-submit', type: 'submit' }, 'Save')));
     dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
     // Keep the browser's native Escape-to-close behavior inside this modal; the workspace also handles Escape.
     dialog.addEventListener('keydown', (e) => { if (e.key === 'Escape') e.stopPropagation(); });
-    return { dialog, buy, sell, slipMode, slip, slipLabel, message };
+    return { dialog, buy, sell, slipMode, slip, slipLabel, message, refreshSlippage };
   }
   function openSettings() {
     const p = prefs();
@@ -577,10 +670,11 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     settings.sell.forEach((n, i) => { n.value = String((p.sellPresets || [10, 25, 50, 100])[i]); });
     settings.slipMode.value = p.slippageMode === 'custom' ? 'custom' : 'auto';
     settings.slip.value = String((fin(p.slippage) ? p.slippage : 0.2) * 100);
-    settings.slipLabel.hidden = settings.slipMode.value !== 'custom';
+    settings.refreshSlippage();
     setText(settings.message, '');
     settings.dialog.showModal();
   }
+  restoreChartLayout();
   renderPresets();
   update(undefined, true);
   return { update, destroy() {
@@ -588,6 +682,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     C.dead = true;
     if (settings.dialog.open) settings.dialog.close();
     if (chartSettings.open) chartSettings.close();
+    if (alertDialog?.open) alertDialog.close();
     textSettings.cancel();
     if (positionsHost?.parentNode) positionsHost.remove();
     chart.destroy();

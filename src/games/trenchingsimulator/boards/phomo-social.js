@@ -7,6 +7,8 @@ import { positionDetail, profileEquity, tokenMetrics, createPhomoCandleWindow } 
 import { chartCredit } from './gchart.js';
 import { createPhomoChart } from './phomo-chart.js';
 import { createCandleReader } from './candle-reader.js';
+import { mountLiveKols } from '../live-kols-panel.js';
+import { readProfileImage, cleanProfileX } from './phomo-profile-image.js';
 import './phomo-social.css';
 
 const fin = (x) => typeof x === 'number' && Number.isFinite(x);
@@ -20,7 +22,19 @@ const select = (label, choices, value, change = () => {}) => {
 };
 const tint = (n, v) => { flag(n, 'phs-up', fin(v) && v > 0); flag(n, 'phs-down', fin(v) && v < 0); };
 const field = (label) => { const dd = el('dd'); return { el: el('div', {}, el('dt', {}, label), dd), dd }; };
-const avatar = (p) => el('span', { class: 'phs-avatar', 'aria-hidden': 'true' }, p?.avatar || p?.name?.[0] || '?');
+const avatar = (p) => {
+  const n=el('span', { class: 'phs-avatar', 'aria-hidden': 'true' }, p?.simulated===false ? p?.name?.[0] || '?' : p?.avatar || p?.name?.[0] || '?');
+  if(p?.simulated===false&&p.avatar){const img=el('img',{src:p.avatar,alt:'',loading:'lazy',referrerpolicy:'no-referrer',on:{error:()=>img.remove()}});n.append(img);}return n;
+};
+function localArtwork(host, source, fallback = '') {
+  if (host._profileImage === source && host._profileFallback === fallback) return;
+  host._profileImage = source; host._profileFallback = fallback;
+  host.replaceChildren(el('span', { class: 'phs-art-fallback' }, fallback));
+  if (source) {
+    const img = el('img', { src: source, alt: '', on: { error: () => img.remove() } });
+    host.append(img);
+  }
+}
 const relation = (state, key) => state.isFollowing(key) ? 'Following' : 'Follow';
 const keyed = (host, ...args) => { for (const child of [...host.children]) if (!child.dataset.key) child.remove(); reconcile(host, ...args); };
 
@@ -109,6 +123,7 @@ function eventCard(e, state, market, hooks, host, refresh) {
 }
 
 export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, onCoin, onPosition, quickAmount, compact=false } = {}) {
+  if(kind==='leaderboard'&&ctx.market.live)return mountLiveKols(host,{client:ctx.kols,chain:ctx.chain,compact,onTrader});
   const root = el('section', { class: `phs-social phs-${kind}${compact?' is-compact':''}` }); host.append(root);
   const hooks = { onTrader, onCoin, onPosition, quickAmount }, market = ctx.market;
   let dead = false, last = -Infinity, draw = () => {};
@@ -136,9 +151,9 @@ export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, on
     const recap = el('details', { class: 'phs-recap' }, el('summary', {}, 'Your run recap'));
     const recapText = el('p'); recap.append(recapText);
     const list = el('div', { class: 'phs-feed-list' });
-    const blank = empty('Your feed is quiet', 'Follow a simulated trader, place a practice trade, or write a thesis.');
+    const blank = empty('Your feed is quiet', ctx.market.live ? 'Your practice trades and local theses appear here. Public KOL trade activity is unavailable.' : 'Follow a simulated trader, place a practice trade, or write a thesis.');
     root.append(el('div', { class: 'phs-toolbar' }, all, followingButton, filter),
-      el('p', { class: 'phs-caption' }, 'Your practice activity and simulated traders. Notes and likes stay on this device.'), recap,
+      el('p', { class: 'phs-caption' }, ctx.market.live ? 'Practice activity · Notes and likes stay on this device.' : 'Practice activity · Simulated traders'), ...(compact ? [] : [recap]),
       compact ? el('details',{class:'phs-compose-disclosure'},el('summary',{},'Write a local thesis'),composer) : composer, list, blank);
     draw = () => {
       flag(all, 'is-active', !following); flag(followingButton, 'is-active', following);
@@ -148,6 +163,7 @@ export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, on
     };
   }
   function leaderboard() {
+    if(compact)return compactLeaderboard();
     let only = false;
     const period = select('Trader ranking period', [['run', 'This run'], ['week', '7D · character history'], ['month', '30D · unavailable']], 'run', () => update(true));
     const metric = select('Rank traders by', [['pnl', 'Profit'], ['winRate', 'Win rate'], ['volume', 'Volume'], ['followers', 'Followers (current)']], 'pnl', () => update(true));
@@ -178,6 +194,28 @@ export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, on
         setText(cells[0], signed(pnl, 'usd')); tint(cells[0], pnl); setText(cells[1], pct(week ? p.weekWinRate : p.winRate));
         setText(cells[2], usd(week ? p.weekVolumeUsd : p.volumeUsd)); setText(follow, relation(state, p.key));
       });
+    };
+  }
+  function compactLeaderboard(){
+    let period='run',only=false;
+    const periodButtons=[['run','Run'],['week','7D'],['month','30D'],['all','ALL']].map(([id,label])=>button(label,()=>{period=id;update(true);},'',`${label} trader ranking`));
+    const query=input('Search traders');query.placeholder='Search traders';query.addEventListener('input',()=>update(true));
+    const followed=button('Following',()=>{only=!only;update(true);});
+    const own=el('div',{class:'phs-rank-own'}),list=el('div',{class:'phs-rank-list'}),blank=empty('No matching traders');
+    root.append(el('div',{class:'phs-ranking-controls'},select('Trade type',[['all','All trades']],'all'),followed),
+      el('div',{class:'phs-ranking-periods'},periodButtons),own,query,list,blank,el('p',{class:'phs-caption'},'Simulated traders · 7D is fictional character history'));
+    draw=()=>{
+      const mine=state.profile('you');own.replaceChildren(el('span',{},'Your PnL',el('small',{},'This run')),el('strong',{},signed(mine.pnlUsd,'usd')));
+      periodButtons.forEach((n,i)=>flag(n,'is-active',['run','week','month','all'][i]===period));flag(followed,'is-active',only);
+      const rows=['month','all'].includes(period)?[]:state.traders({sort:period==='week'?'week':'pnl',following:only,query:query.value});
+      blank.hidden=rows.length>0;setText(blank.firstChild,['month','all'].includes(period)?'History unavailable for this period':'No matching traders');
+      keyed(list,rows,p=>p.key,p=>{
+        const rank=el('span',{class:'phs-rank-number'}),name=el('b'),handle=el('small'),profit=el('strong');
+        const identity=button([avatar(p),el('span',{},name,handle)],()=>onTrader?.(p.key),'phs-person');
+        const follow=button('+',()=>{state.toggleFollow(p.key);update(true);},'phs-rank-follow',`Follow ${p.name}`);
+        const row=el('article',{class:'phs-rank-row'},rank,identity,profit,follow);row._parts={rank,name,handle,profit,follow};return row;
+      },(n,p)=>{const x=n._parts;setText(x.rank,p.rank);setText(x.name,p.name);setText(x.handle,`@${p.handle}`);const value=period==='week'?p.weekPnlUsd:p.pnlUsd;
+        setText(x.profit,signed(value,'usd'));tint(x.profit,value);setText(x.follow,state.isFollowing(p.key)?'✓':'+');x.follow.setAttribute('aria-pressed',String(state.isFollowing(p.key)));});
     };
   }
   function alerts() {
@@ -285,20 +323,47 @@ function equitySVG(host, points) {
   path.setAttribute('fill', 'none'); path.setAttribute('stroke', 'currentColor'); path.setAttribute('stroke-width', '2'); svg.append(path); host.append(svg);
 }
 
+function mountPublicProfile(host,ctx,key,{state,onClose}){
+  const root=el('section',{class:'phs-profile phs-public-profile'});host.append(root);
+  const identity=el('div',{class:'phs-public-identity'}),stats=el('dl',{class:'phs-profile-stats'}),links=el('div',{class:'phs-toolbar'});
+  const name=el('h1'),handle=el('span'),av=el('span',{class:'phs-avatar'}),status=el('p',{class:'phs-caption',role:'status'});
+  const fields=['24h source P&L','Wins / losses','Source'].map(field);stats.append(...fields.map(x=>x.el));
+  const wallet=el('code'),profileLink=el('a',{target:'_blank',rel:'noopener noreferrer'},'Public profile ↗'),twitter=el('a',{target:'_blank',rel:'noopener noreferrer'},'X ↗');
+  links.append(wallet,profileLink,twitter);let avatarKey=null;
+  const follow=button('',()=>{state.toggleFollow(key);update();},'phs-primary');
+  identity.append(av,el('div',{},name,handle),follow);
+  root.append(button([icon('back'),'Back'],onClose,'phs-back'),el('div',{class:'phs-profile-banner'}),identity,status,stats,links,
+    empty('Trade activity and holdings unavailable','This public source provides identity and daily rankings. Practice-market activity is never attributed to this person.'));
+  function update(){const p=state.profile(key);
+    setText(status,!p?'Public profile is currently unavailable.':`${ctx.kols?.status==='stale'?'Last available':'Public'} Kolscan profile · Solana`);
+    identity.hidden=stats.hidden=links.hidden=!p;if(!p)return;
+    setText(name,p.name);setText(handle,p.handle?`@${p.handle}`:'Public tracked wallet');
+    const nextAvatar=`${p.avatar||''}:${p.name}`;if(nextAvatar!==avatarKey){avatarKey=nextAvatar;av.replaceChildren(avatar(p));}
+    setText(follow,relation(state,key));follow.setAttribute('aria-pressed',String(state.isFollowing(key)));
+    [fin(p.pnlSol)?`${p.pnlSol>=0?'+':''}${p.pnlSol.toFixed(2)} SOL`:'—',`${p.wins??'—'} / ${p.losses??'—'}`,'Kolscan'].forEach((v,i)=>setText(fields[i].dd,v));
+    setText(wallet,p.address);if(profileLink.getAttribute('href')!==p.url)profileLink.setAttribute('href',p.url);
+    twitter.hidden=!p.twitter;if(p.twitter&&twitter.getAttribute('href')!==p.twitter)twitter.setAttribute('href',p.twitter);
+  }
+  const off=ctx.kols?.on(update);update();return{el:root,update,destroy(){off?.();root.remove();}};
+}
+
 export function mountPhomoProfile(host, ctx, key = 'you', { state, onTrader, onCoin, onPosition, onClose = () => {}, onShare } = {}) {
+  if(key.startsWith('kolscan:'))return mountPublicProfile(host,ctx,key,{state,onClose});
   const market = ctx.market, px = ctx.solUsd > 0 ? ctx.solUsd : market.solUsd;
   let dead = false, last = -Infinity, period = Infinity, positionsTab = 'open', swapFilter = 'all', showDust = false, assetType = 'all', thesisIndex = 0;
   const own = key === 'you', profile = () => state.profile(key);
   const root = el('section', { class: 'phs-profile' }); host.append(root);
   const banner = el('div', { class: 'phs-profile-banner' }), av = el('span', { class: 'phs-profile-avatar' });
   const name = el('h1'), handle = el('span'), bio = el('p', { class: 'phs-bio' }), details = el('p', { class: 'phs-caption' });
+  const profileX = el('a', { class: 'phs-profile-x', target: '_blank', rel: 'noopener noreferrer', hidden: true }, '𝕏');
   const follow = button('', () => { state.toggleFollow(key); update(true); }, 'phs-primary');
   const mute = button('', () => { state.toggleMute(key); update(true); });
   const following = button('', () => relations('followed')), followers = button('Followers —', () => relations('followers'));
   const actions = el('div', { class: 'phs-profile-actions' }, button('Share', shareProfile), own ? button('Edit profile', editProfile) : follow,
     own ? button('Muted traders', () => relations('muted')) : mute, own && ctx.openReplays ? button('Saved replays', () => ctx.openReplays()) : null);
   root.append(button([icon('back'), 'Back'], onClose, 'phs-back'), banner,
-    el('header', { class: 'phs-profile-header' }, av, actions, name, handle, bio, el('div', { class: 'phs-toolbar' }, following, followers), details));
+    el('header', { class: 'phs-profile-header' }, av, el('div',{class:'phs-profile-identity'},name,handle,profileX,bio),
+      el('div', { class: 'phs-toolbar phs-profile-relations' }, following, followers), actions, details));
   const worth = el('strong', { class: 'phs-portfolio-value' }), pnl = el('span', { class: 'phs-portfolio-pnl' }), observed = el('small');
   const plot = el('div', { class: 'phs-equity' });
   const periods = [[86400, '24H'], [604800, '7D'], [2592000, '30D'], [Infinity, 'ALL']];
@@ -312,11 +377,12 @@ export function mountPhomoProfile(host, ctx, key = 'you', { state, onTrader, onC
   const assets = select('Profile position asset type', [['all', 'All assets'], ['tokens', 'Tokens'], ['perps', 'Perps']], 'all', (v) => { assetType = v; update(true); });
   const swaps = el('div', { class: 'phs-profile-swaps' });
   const swapTabs = el('div', { class: 'phs-toolbar' }, ['all', 'buy', 'sell'].map((v) => button(v === 'all' ? 'All swaps' : v === 'buy' ? 'Buys' : 'Sells', () => { swapFilter = v; update(true); })));
-  root.append(el('div', { class: 'phs-profile-grid' }, el('div', { class: 'phs-profile-main' }, el('h2', {}, 'Portfolio'),
-    el('div', { class: 'phs-portfolio-head' }, worth, pnl), tabs, observed, plot,
-    el('dl', { class: 'phs-profile-stats' }, Object.values(statFields).map((f) => f.el)), cash,
-    el('h3', {}, 'Top recorded positions'), best, thesis,
-    el('div', { class: 'phs-toolbar' }, open, closed, positionSort, dust, assets), posList), el('aside', {}, swapTabs, swaps)));
+  root.append(el('div', { class: 'phs-profile-grid' }, el('div', { class: 'phs-profile-main' },
+    el('div', { class: 'phs-portfolio-head' },el('div',{},worth,pnl),tabs), observed, plot,cash,
+    el('section',{class:'phs-profile-positions'},el('header',{},el('strong',{},'Your positions'),el('div', { class: 'phs-toolbar' },open,closed)),
+      el('div',{class:'phs-toolbar'},assets,positionSort,dust),posList),
+    el('details',{class:'phs-profile-more'},el('summary',{},'Trading statistics'),el('dl', { class: 'phs-profile-stats' }, Object.values(statFields).map((f) => f.el)),
+      el('h3', {}, 'Top recorded positions'), best),thesis),el('aside', {}, swapTabs, swaps)));
   function shareProfile() {
     const p = profile(); if (!p) return;
     if (typeof ctx.saveCard === 'function') ctx.saveCard({ brand: 'social', kicker: 'PHOMO · PRACTICE PROFILE', title: p.name, big: signed(p.pnlUsd, 'usd'),
@@ -339,22 +405,75 @@ export function mountPhomoProfile(host, ctx, key = 'you', { state, onTrader, onC
     const p = profile(), nameInput = input('Display name', p.name), username = input('Username', p.handle);
     nameInput.maxLength = 40; username.maxLength = 30;
     const biography = el('textarea', { class: 'phs-input', 'aria-label': 'Bio', maxLength: 160, rows: 3 }); biography.value = p.bio || '';
-    const avChoice = select('Avatar', ['🍜', '🐱', '🐸', '🦊', '🪙', '🚀', '🌙', '🐋'].map((s) => [s, s]), p.avatar);
-    const cover = select('Banner', ['violet', 'ocean', 'forest', 'sunset', 'midnight'].map((s) => [s, s]), p.banner);
+    let images = { avatar: p.avatarImage, banner: p.bannerImage }, versions = { avatar: 0, banner: 0 }, pending = new Set();
+    const status = el('p', { class: 'phs-editor-status', role: 'status', 'aria-live': 'polite' });
+    const saveButton = el('button', { type: 'submit', class: 'phs-button phs-primary phs-editor-save', 'aria-label': 'Save profile' }, 'Save');
+    const avatarPreview = el('span', { class: 'phs-editor-avatar' }), bannerPreview = el('div', { class: 'phs-editor-banner' });
+    const avChoice = select('Avatar', ['🍜', '🐱', '🐸', '🦊', '🪙', '🚀', '🌙', '🐋'].map((s) => [s, s]), p.avatar, paintImages);
+    const cover = select('Banner', ['violet', 'ocean', 'forest', 'sunset', 'midnight'].map((s) => [s, s]), p.banner, paintImages);
+    const imageInputs = {}, removeButtons = {};
+    const imageControls = (kind) => {
+      const title = kind === 'avatar' ? 'avatar' : 'banner';
+      const chooser = el('input', { type: 'file', accept: 'image/png,image/jpeg,image/webp', hidden: true, 'aria-label': `Upload ${title}`,
+        on: { change: async () => {
+          const file = chooser.files?.[0]; chooser.value = ''; if (!file) return;
+          const revision = ++versions[kind]; pending.add(kind); saveButton.disabled = true; setText(status, 'Opening image…');
+          try {
+            const image = await readProfileImage(file, kind);
+            if (revision !== versions[kind] || !editorOpen()) return;
+            images[kind] = image; setText(status, ''); paintImages();
+          } catch (error) {
+            if (revision === versions[kind] && editorOpen()) setText(status, error.message);
+          } finally {
+            if (revision === versions[kind]) { pending.delete(kind); saveButton.disabled = pending.size > 0; }
+          }
+        } } });
+      imageInputs[kind] = chooser;
+      const remove = button('×', () => {
+        versions[kind]++; pending.delete(kind); saveButton.disabled = pending.size > 0;
+        images[kind] = null; setText(status, ''); paintImages();
+      }, `phs-editor-remove phs-editor-${kind}-remove`, `Remove ${title} image`);
+      removeButtons[kind] = remove;
+      return [chooser, button('✎', () => chooser.click(), `phs-editor-upload phs-editor-${kind}-upload`, `Change ${title} image`), remove];
+    };
+    const artwork = el('div', { class: 'phs-editor-artwork' }, bannerPreview, avatarPreview, imageControls('banner'), imageControls('avatar'),
+      el('div', { class: 'phs-editor-fallbacks' }, avChoice, cover));
+    const xlink = input('X profile link', p.twitterUrl || '', 'url'); xlink.placeholder = 'https://x.com/username'; xlink.maxLength = 40;
+    const counter = el('small', { class: 'phs-editor-counter' }, `${biography.value.length}/160`);
+    biography.addEventListener('input', () => setText(counter, `${biography.value.length}/160`));
     let closeEditor;
-    const form = el('form', { class: 'phs-form', on: { submit(e) {
-      e.preventDefault(); state.setProfile({ displayName: nameInput.value, handle: username.value, bio: biography.value, avatar: avChoice.value, banner: cover.value });
+    const form = el('form', { class: 'phs-form phs-editor-form', on: { submit(e) {
+      e.preventDefault(); if (pending.size) return;
+      const twitterUrl = cleanProfileX(xlink.value);
+      if (xlink.value.trim() && !twitterUrl) { setText(status, 'Use https://x.com/ followed by a username (up to 15 letters, numbers, or underscores).'); xlink.focus(); return; }
+      state.setProfile({ displayName: nameInput.value, handle: username.value, bio: biography.value, avatar: avChoice.value, banner: cover.value,
+        avatarImage: images.avatar, bannerImage: images.banner, twitterUrl });
       if (nameInput.value.trim()) ctx.setPlayerName?.(state.profile('you').name); closeEditor(); update(true);
-    } } }, el('label', {}, 'Display name', nameInput), el('label', {}, 'Username', username), el('label', {}, 'Bio · 160 characters', biography),
-      el('div', { class: 'phs-toolbar' }, el('label', {}, 'Avatar', avChoice), el('label', {}, 'Banner', cover)),
-      el('small', {}, 'Profile details stay on this device. No external account is connected.'), el('button', { type: 'submit', class: 'phs-button phs-primary' }, 'Save profile'));
+    } } }, artwork, el('label', { class: 'phs-editor-field' }, 'Username', username),
+      el('label', { class: 'phs-editor-field' }, 'Display name', nameInput),
+      el('label', { class: 'phs-editor-field phs-editor-bio' }, 'Bio', biography, counter),
+      el('label', { class: 'phs-editor-x' }, el('span', {}, '𝕏'), xlink), status, saveButton,
+      el('small', { class: 'phs-editor-local' }, 'Saved on this device. Images stay local. Avatar ≤256 KB · banner ≤512 KB.'));
     closeEditor = modal(root, 'Edit profile', form);
+    const box = form.parentNode; box.classList.add('phs-profile-editor'); box.parentNode.classList.add('phs-profile-editor-overlay');
+    function editorOpen() { return !dead && box.parentNode?.parentNode === root; }
+    function paintImages() {
+      bannerPreview.className = `phs-editor-banner phs-banner-${cover.value}`;
+      localArtwork(bannerPreview, images.banner); localArtwork(avatarPreview, images.avatar, avChoice.value);
+      for (const kind of ['avatar', 'banner']) removeButtons[kind].hidden = !images[kind];
+    }
+    paintImages();
   }
   function update(force = false) {
     if (dead || (force !== true && Date.now() - last < 700)) return; last = Date.now();
     const p = profile(); if (!p) { root.replaceChildren(empty('Trader unavailable'), button('Back', onClose)); return; }
     banner.className = `phs-profile-banner phs-banner-${p.banner || 'violet'}`;
-    setText(av, p.avatar || p.name[0]); setText(name, p.name); setText(handle, `@${p.handle}`); setText(bio, p.bio || (own ? 'Your practice trading profile.' : 'A simulated character in this run.'));
+    if (own) { localArtwork(av, p.avatarImage, p.avatar || p.name[0]); localArtwork(banner, p.bannerImage); }
+    else setText(av, p.avatar || p.name[0]);
+    profileX.hidden = !own || !p.twitterUrl;
+    if (own && p.twitterUrl) { profileX.setAttribute('href', p.twitterUrl); profileX.setAttribute('aria-label', `X profile ${p.twitterUrl.split('/').at(-1)}`); }
+    else profileX.removeAttribute?.('href');
+    setText(name, p.name); setText(handle, `@${p.handle}`); setText(bio, p.bio || (own ? 'Your practice trading profile.' : 'A simulated character in this run.'));
     setText(follow, relation(state, key)); setText(mute, state.isMuted(key) ? 'Unmute' : 'Mute');
     setText(following, own ? `${state.prefs.followed.length} following` : 'Following —'); setText(followers, `${fin(p.followers) ? compact(p.followers, 0) : '—'} followers`);
     setText(details, `${p.trades} recorded trades · ${own ? `Run age ${age(market.t)} · Play money` : 'Simulated trader · Fictional history'}`);
@@ -364,11 +483,12 @@ export function mountPhomoProfile(host, ctx, key = 'you', { state, onTrader, onC
     setText(observed, own ? `Observed ${age(series.observed)} of this run · includes cash and marked holdings` : 'Current held value. Historical equity is not recorded for this simulated trader.');
     for (let i = 0; i < tabs.children.length; i++) flag(tabs.children[i], 'is-active', periods[i][0] === period);
     equitySVG(plot, series.points);
-    const values = [own ? signed(market.positions().reduce((s, x) => s + x.realized, 0) * px, 'usd') : '—', signed(p.unrealizedUsd, 'usd'), pct(own ? p.closed?.winRate : p.winRate),
+    const paper=own?ctx.paperPerps?.snapshot():null;
+    const values = [own ? signed(market.positions().reduce((s, x) => s + x.realized, 0) * px+(paper?.realized||0), 'usd') : '—', signed((p.unrealizedUsd||0)+(paper?.unrealized||0), 'usd'), pct(own ? p.closed?.winRate : p.winRate),
       own ? String(p.closed?.count || 0) : '—', usd(p.volumeUsd), own && fin(p.closed?.averageHold) ? age(p.closed.averageHold) : '—'];
     Object.values(statFields).forEach((f, i) => setText(f.dd, values[i]));
     cash.replaceChildren(own ? el('div', {}, el('strong', {}, `Practice cash ${usdFull(market.player.sol * px)}`),
-      el('small', {}, `Reserved for pending orders ${usdFull((market.player.held || 0) * px)} · No deposits, withdrawals, or real transfers.`)) : el('small', {}, 'Simulated trader cash is not exposed.'));
+      el('small', {}, `Reserved for pending orders ${usdFull((market.player.held || 0) * px + (paper?.reserved || 0))} · No deposits, withdrawals, or real transfers.`)) : el('small', {}, 'Simulated trader cash is not exposed.'));
     const top = own ? market.positions().filter((x) => fin(x.total)).sort((a, b) => b.total - a.total).slice(0, 5) : [];
     keyed(best, top, (p0) => p0.id, (p0) => { const n = button('', () => onPosition?.({ coin: p0.id, traderKey: key }), 'phs-top-trade'); return n; },
       (n, p0) => { setText(n, `$${p0.ticker} · ${signed(p0.total * px, 'usd')} · ${pct(p0.pnlPct)}`); tint(n, p0.total); });
@@ -384,14 +504,20 @@ export function mountPhomoProfile(host, ctx, key = 'you', { state, onTrader, onC
     let positions = own ? market.positions().filter((x) => x.open === (positionsTab === 'open')).map((x) => ({ coin: x.id, valueUsd: x.value * px, pnlUsd: x.total * px, last: x.last, position: x }))
       : positionsTab === 'open' ? p.holdings : [];
     positions = assetType === 'perps' ? [] : positions.filter((x) => positionsTab === 'closed' || showDust || !fin(x.valueUsd) || x.valueUsd >= 1);
+    if(own&&paper&&assetType!=='tokens'){
+      const perpRows=positionsTab==='open'?(paper.positions||[]).map(p=>({key:`perp:${p.id}`,coin:p.coin,perp:true,valueUsd:p.equity,pnlUsd:p.unrealized,last:p.openedAt,side:p.side,leverage:p.leverage}))
+        :(paper.fills||[]).filter(p=>p.type!=='open').map(p=>({key:`perp-fill:${p.id}`,coin:p.coin,perp:true,valueUsd:p.returned,pnlUsd:p.realized,last:p.at,side:p.side}));
+      positions.push(...perpRows);
+    }
     positions = [...positions].sort((a, b) => positionSort.value === 'pnl' ? (b.pnlUsd ?? -Infinity) - (a.pnlUsd ?? -Infinity) : positionSort.value === 'value' ? (b.valueUsd ?? -Infinity) - (a.valueUsd ?? -Infinity) : (b.last || 0) - (a.last || 0));
-    keyed(posList, positions, (x) => x.coin, (x) => {
+    keyed(posList, positions, (x) => x.key||x.coin, (x) => {
+      if(x.perp){const identity=el('span',{class:'phs-person'}),value=el('span'),profit=el('strong');const n=el('article',{class:'phs-profile-position'},identity,value,profit);n._parts={identity,value,profit};return n;}
       const identity = button('', () => onPosition?.({ coin: x.coin, traderKey: key }), 'phs-person'), value = el('span'), profit = el('strong');
       const row = el('article', { class: 'phs-profile-position' }, identity, value, profit,
         button('Trade', () => onCoin?.(x.coin)), own && onShare ? button('Share', () => { const current = market.positions().find((v) => v.id === x.coin); if (current) onShare(current); }) : null);
       row._parts = { identity, value, profit }; return row;
-    }, (n, x) => { const r = market.row(x.coin); setText(n._parts.identity, r ? `$${r.ticker}` : 'Token unavailable'); setText(n._parts.value, usd(x.valueUsd)); setText(n._parts.profit, signed(x.pnlUsd, 'usd')); tint(n._parts.profit, x.pnlUsd); });
-    if (!positions.length) posList.replaceChildren(empty(assetType === 'perps' ? 'Perps are view-only on web' : positionsTab === 'closed' && !own ? 'Individual closed positions are not retained' : 'No positions here yet', !showDust && positionsTab === 'open' && assetType !== 'perps' ? 'Positions worth less than $1 are hidden. Turn on Show dust to include them.' : ''));
+    }, (n, x) => { const r = x.perp?null:market.row(x.coin); setText(n._parts.identity, x.perp?`${x.coin} · ${x.side}${x.leverage?` ${x.leverage}×`:''}`:r ? `$${r.ticker}` : 'Token unavailable'); setText(n._parts.value, usd(x.valueUsd)); setText(n._parts.profit, signed(x.pnlUsd, 'usd')); tint(n._parts.profit, x.pnlUsd); });
+    if (!positions.length) posList.replaceChildren(empty(positionsTab === 'closed' && !own ? 'Individual closed positions are not retained' : `No ${positionsTab} positions`, !showDust && positionsTab === 'open' && assetType !== 'perps' ? 'Positions worth less than $1 are hidden. Turn on Show dust to include them.' : ''));
     const events = state.feed({ traderKey: key, types: ['trade'], limit: 100 }).filter((e) => swapFilter === 'all' || e.side === swapFilter);
     for (let i = 0; i < swapTabs.children.length; i++) flag(swapTabs.children[i], 'is-active', ['all', 'buy', 'sell'][i] === swapFilter);
     keyed(swaps, events, (e) => e.key, (e) => { const coin = button(e.ticker, () => onPosition?.({ coin: e.coin, traderKey: key }), 'phs-coin-link'), side = el('span'), amount = el('strong'), when = el('small');

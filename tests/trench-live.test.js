@@ -2256,7 +2256,7 @@ test("the site's CSP allows the relay feed/pictures and exact owner media paths,
   const csp = vercel.headers[0].headers.find((h) => h.key === 'Content-Security-Policy').value;
   const dir = (name) => csp.split(';').map((s) => s.trim()).find((s) => s.startsWith(`${name} `)).split(/\s+/).slice(1);
   assert.deepEqual(dir('connect-src'), ["'self'", 'blob:', 'https://api.dexscreener.com', 'wss://live.agi1.app', 'https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/upload/sign/agi1-owner-media/']);
-  assert.deepEqual(dir('img-src'), ["'self'", 'data:', 'blob:', 'https://live.agi1.app', 'https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/']);
+  assert.deepEqual(dir('img-src'), ["'self'", 'data:', 'blob:', 'https://cdn.kolscan.io', 'https://live.agi1.app', 'https://vujaxukucukjxzhcxlea.supabase.co/storage/v1/object/public/agi1-owner-media/']);
   assert.deepEqual(dir('script-src'), ["'self'", 'https://challenges.cloudflare.com'], 'no script from the relay, ever');
   assert.deepEqual(dir('style-src'), ["'self'"]);
   assert.ok(!csp.includes('pump.fun') && !csp.includes('ipfs') && !csp.includes('helius'), 'never a coin\'s own host');

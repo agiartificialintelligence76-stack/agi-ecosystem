@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createMarket, PRIORITY } from '../src/games/trenchingsimulator/engine.js';
-import { blankPhomoPrefs, PHOMO_SAVE_KEY } from '../src/games/trenchingsimulator/boards/phomo-state.js';
+import { blankPhomoPrefs, createPhomoState, PHOMO_SAVE_KEY } from '../src/games/trenchingsimulator/boards/phomo-state.js';
 import { usd, signed, pct } from '../src/games/trenchingsimulator/format.js';
 import { Element, installDom, coinModuleURL, socialModuleURL, viewModule, nodes, byClass, byLabel, byText } from './helpers/phomo-dom.js';
 
@@ -9,12 +9,15 @@ const { mountPhomo } = await import(viewModule(new URL('../src/games/trenchingsi
   './phomo-coin.js': coinModuleURL,
   './phomo-social.js': socialModuleURL,
 }));
+const {mountPhomoSocial}=await import(socialModuleURL);
 
-function fixture({ store = new Map(), market = null, chain = null, spotPrices = null } = {}) {
+function fixture({ store = new Map(), market = null, chain = null, spotPrices = null, freshWorkspace = false } = {}) {
   installDom(store);
-  if (!store.has(PHOMO_SAVE_KEY)) {
+  if (!store.has(PHOMO_SAVE_KEY) && !freshWorkspace) {
     const prefs = blankPhomoPrefs();
     prefs.ui.panels = [{ kind: 'tokens', category: 'trending', window: '5m' }];
+    // Existing users retain their explicit collapsed-token-rail workspace after the visual refresh.
+    prefs.ui.rail = false; prefs.ui.navigationKind = 'tokens';
     store.set(PHOMO_SAVE_KEY, JSON.stringify(prefs));
   }
   market ||= createMarket({ seed: 'phomo-terminal-ui', startSol: 100, solUsd: 200 });
@@ -34,6 +37,50 @@ function fixture({ store = new Map(), market = null, chain = null, spotPrices = 
   return { host, market, store, view, orders, focus, nav, label, text, cls, saved, refresh,
     history: () => ({ pushes, pops }) };
 }
+
+test('Phomo new desktop workspaces show the reference social rail and hidden-token recovery without orders', () => {
+  const f = fixture({ freshWorkspace: true });
+  try {
+    assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),false);
+    assert.equal(f.label('Leaderboard').getAttribute('aria-pressed'),'true');
+    const table = f.cls('ph-token-table');
+    const first = table.querySelector('tbody').children[0], id = first.dataset.key;
+    first.querySelectorAll('.ph-row-action').at(-1).click(); f.text('Hide token').click();
+    assert.ok(!table.querySelector('tbody').children.some((row) => row.dataset.key === id));
+    f.label('Hidden tokens').click();
+    assert.match(f.cls('ph-dialog-box').textContent,/1 token is hidden/);
+    f.text('Restore hidden tokens').click();
+    assert.ok(table.querySelector('tbody').children.some((row) => row.dataset.key === id));
+    assert.equal(f.orders.length,0);
+    assert.equal(f.cls('ph-categories').children[0].getAttribute('aria-pressed'),'true');
+  } finally { f.view.destroy(); }
+});
+
+test('Phomo fresh phone workspaces keep discovery available without covering the token list', () => {
+  const previous = globalThis.innerWidth; globalThis.innerWidth = 390;
+  const f = fixture({ freshWorkspace: true });
+  try {
+    assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),true);
+    f.label('Expand discovery panel').click();
+    assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),false);
+    assert.equal(f.label('Leaderboard').getAttribute('aria-pressed'),'true');
+    assert.ok(f.cls('ph-token-table'));
+    assert.equal(f.orders.length,0);
+  } finally { f.view.destroy(); globalThis.innerWidth = previous; }
+});
+
+test('Phomo closes the desktop discovery overlay when the workspace narrows', () => {
+  const previous=globalThis.innerWidth;globalThis.innerWidth=1280;
+  const f=fixture({freshWorkspace:true});
+  try {
+    f.label('Your profile').click();
+    assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),false);
+    globalThis.innerWidth=360;f.view.update(1000);
+    assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),true);
+    f.label('Expand discovery panel').click();f.view.update(2000);
+    assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),false);
+  } finally {f.view.destroy();globalThis.innerWidth=previous;}
+});
 
 test('Phomo table keeps sortable dollar metrics and applies anchored numeric filters immediately', () => {
   const f = fixture();
@@ -119,7 +166,7 @@ test('Phomo quick buy uses practice dollars, fills positions and clears coin foc
 test('Phomo trader follow and profile activity support a single explicit copy order', () => {
   const f = fixture();
   f.nav('Leaderboard');
-  const follow = f.text('Follow');
+  const follow = f.cls('phs-rank-follow');
   assert.ok(follow);
   follow.click();
   assert.equal(f.saved().followed.length, 1);
@@ -186,6 +233,10 @@ test('Phomo leaderboard keeps the selected metric and displayed amounts consiste
   const f = fixture({ market });
   try {
     f.nav('Leaderboard');
+    // A full leaderboard panel retains all comparison metrics; the narrow rail uses compact rank cards.
+    const rail=f.cls('phs-social');
+    rail.remove();
+    const full=mountPhomoSocial(f.host,{market,solUsd:200},{state:createPhomoState(market),kind:'leaderboard'});
     const metric = f.label('Rank traders by'), period = f.label('Trader ranking period');
     const first = () => f.cls('phs-table').querySelector('tbody').children[0];
     const choose = (node, value) => { node.value = value; node.fire('change'); };
@@ -204,6 +255,7 @@ test('Phomo leaderboard keeps the selected metric and displayed amounts consiste
     choose(period, 'run'); check('Smart wallet 1', 4000, .9, 60_000);
     choose(metric, 'followers'); assert.equal(period.disabled, true);
     choose(metric, 'pnl'); assert.equal(period.disabled, false);
+    full.destroy();
   } finally { f.view.destroy(); }
 });
 
@@ -414,6 +466,31 @@ test('Phomo side feed and watchlist preserve the central table and do not refres
     f.market.advance(8); f.refresh();
     assert.equal(table.querySelector('tbody').children[0],first); assert.equal(first.textContent,text,'occluded discovery table receives no updates');
     f.view.closeSub(); f.refresh(); assert.notEqual(first.textContent,text,'discovery refreshes after returning');
+  } finally {f.view.destroy();}
+});
+
+test('Phomo discovery tabs leave a single perpetual workspace and show the selected spot or social rail', () => {
+  const f=fixture();
+  try {
+    for (const [label,kind,social] of [['Tokens','tokens',false],['Leaderboard','leaderboard',true],['Feed','feed',true],['Watchlist','watchlist',false],['Alerts','alerts',true]]) {
+      f.nav('Perps');
+      assert.equal(f.cls('ph-root').classList.contains('is-perps'),true);
+      assert.equal(f.cls('ph-nav-external').hidden,false);
+      f.nav(label);
+      assert.equal(f.cls('ph-root').classList.contains('is-perps'),false,`${label} releases perpetual discovery`);
+      assert.equal(f.cls('ph-nav-external').hidden,true);
+      assert.ok(f.cls('ph-token-table'));
+      assert.equal(f.saved().ui.panels[0].kind,'tokens');
+      assert.equal(f.saved().ui.navigationKind,kind);
+      assert.equal(f.label(label).getAttribute('aria-pressed'),'true');
+      assert.equal(f.cls('ph-nav-social').hidden,!social);
+      assert.equal(f.cls('ph-nav-rows').hidden,social);
+    }
+    const row=f.cls('ph-token-table').querySelector('tbody').children[0];
+    f.view.openCoin(Number(row.dataset.key)); const detail=f.cls('ph-sub').firstChild;
+    f.nav('Leaderboard');
+    assert.equal(f.cls('ph-sub').firstChild,detail,'social discovery tabs keep an existing token detail open');
+    assert.equal(f.orders.length,0,'changing discovery never submits an order');
   } finally {f.view.destroy();}
 });
 

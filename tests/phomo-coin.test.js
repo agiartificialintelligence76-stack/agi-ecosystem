@@ -4,7 +4,7 @@ import { createMarket, PRIORITY } from '../src/games/trenchingsimulator/engine.j
 import { createPhomoState } from '../src/games/trenchingsimulator/boards/phomo-state.js';
 import { Element, installDom, coinModuleURL } from './helpers/phomo-dom.js';
 
-const { mountPhomoCoin } = await import(coinModuleURL);
+const { mountPhomoCoin, coinActivityWindow } = await import(coinModuleURL);
 
 function fixture({ live = false } = {}) {
   installDom();
@@ -29,6 +29,9 @@ function fixture({ live = false } = {}) {
 
 test('Phomo coin converts dollar buys and partial/full sells through the existing practice engine', () => {
   const f = fixture({ live: true });
+  assert.equal(f.label('Buy amount in practice dollars').value, '');
+  assert.equal(f.cls('tspc-submit').disabled, true);
+  f.byText('$100').fire('click');
   f.form().fire('submit');
   assert.equal(f.requests.length, 1);
   assert.equal(f.requests[0].sol, .5);
@@ -83,7 +86,7 @@ test('Phomo coin keeps unknown live holders/liquidity/supply blank and removes e
   assert.equal(dlValue('Supply'), '—');
   assert.ok(f.nodes().some((n) => n.tagName === 'dt' && n.textContent === 'Price · practice unit'));
   assert.ok(f.cls('tspc-table').textContent.includes('No practice positions'));
-  f.form().fire('submit'); f.market.advance(8); f.view.update(10000);
+  f.byText('$100').fire('click'); f.form().fire('submit'); f.market.advance(8); f.view.update(10000);
   assert.ok(!f.cls('tspc-table').textContent.includes('No practice positions'));
   assert.ok(f.cls('tspc-table').textContent.includes('Practice account'));
   assert.ok(!f.cls('tspc-table').textContent.includes('Simulated trader'));
@@ -113,7 +116,7 @@ test('Phomo coin thesis, watch, filtering and chart controls retain functional s
 test('Phomo keeps focused trader controls mounted as holder values and swap ages change', () => {
   const f=fixture({live:true});
   try {
-    f.form().fire('submit'); f.market.advance(8); f.view.update(10000);
+    f.byText('$100').fire('click'); f.form().fire('submit'); f.market.advance(8); f.view.update(10000);
     const table=f.cls('tspc-table'), holder=table.querySelector('tbody').children[0], trader=holder.children[0].children[0];
     f.market.advance(3); f.view.update(14000);
     assert.equal(table.querySelector('tbody').children[0],holder); assert.equal(holder.children[0].children[0],trader);
@@ -123,4 +126,57 @@ test('Phomo keeps focused trader controls mounted as holder values and swap ages
     assert.equal(table.querySelector('tbody').children[0],swap); assert.equal(swap.children[0].children[0],swapTrader);
     assert.notEqual(swap.children[4].textContent,oldAge); assert.equal(f.requests.length,1);
   } finally {f.view.destroy();}
+});
+
+test('Phomo token alert and saved chart layout work without submitting a trade', () => {
+  const f = fixture();
+  try {
+    f.label('Candle interval').value = '300'; f.label('Candle interval').fire('change');
+    f.byText('Price').fire('click'); f.label('Chart style').value = 'line'; f.label('Chart style').fire('change');
+    f.byText('RSI 14').fire('click'); f.label('Save chart layout').fire('click');
+    const saved = JSON.parse(localStorage.getItem('trench_phomo_chart_v1'));
+    assert.equal(saved.tf, 300); assert.equal(saved.mode, 'price'); assert.equal(saved.style, 'line');
+    assert.deepEqual(saved.indicators, ['rsi']);
+    f.label('Create token price alert').fire('click');
+    f.label('Token alert threshold in dollars').value = '-1';
+    const dialog = f.cls('tspc-alert-settings'), form = dialog.querySelector('form');
+    form.fire('submit'); assert.equal(f.state.alerts().length, 0); assert.equal(dialog.open, true);
+    f.label('Token alert threshold in dollars').value = String(f.market.stats(f.id).price * 220);
+    form.fire('submit'); assert.equal(f.state.alerts().length, 1); assert.equal(dialog.open, false);
+    assert.equal(f.state.alerts()[0].metric, 'price'); assert.equal(f.requests.length, 0);
+    f.view.destroy();
+    const host = new Element('main'), reopened = mountPhomoCoin(host, f.ctx, f.id, { state: f.state });
+    assert.equal(globalThis.__phomoChart.sets.at(-1).tf, 300);
+    assert.equal(globalThis.__phomoChart.style, 'line'); assert.deepEqual(globalThis.__phomoChart.indicators, ['rsi']);
+    reopened.destroy();
+  } finally { f.view.destroy(); }
+});
+
+test('Phomo activity windows never invent directional volume or fill unavailable history', () => {
+  const cd = [
+    { t: 0, b: 2, s: 1, v: 8, buyVol: 5, sellVol: 3 },
+    { t: 100, b: 1, s: 2, v: 7, buyVol: 4, sellVol: 3 },
+    { t: 200, b: 1, s: 0, v: 2, buyVol: 2, sellVol: 0 },
+  ];
+  assert.deepEqual(coinActivityWindow(cd, 200, 300, 0), { buys: 4, sells: 3, volume: 17, buyVolume: 11, sellVolume: 6 });
+  assert.deepEqual(coinActivityWindow(cd, 200, 150, 0), { buys: 2, sells: 2, volume: 9, buyVolume: 6, sellVolume: 3 });
+  assert.equal(coinActivityWindow(cd.slice(1), 200, 300, 0), null, 'trimmed history does not become a complete longer window');
+  const undirected = cd.map(({ buyVol, sellVol, ...bar }) => bar);
+  assert.equal(coinActivityWindow(undirected, 200, 300, 0).buyVolume, null);
+  assert.equal(coinActivityWindow(undirected, 200, 300, 0).volume, 17);
+  assert.equal(coinActivityWindow(cd, 100, 300, 0).volume, 15, 'future bars are excluded');
+});
+
+test('Phomo thesis-only holder filter stays local and both following toggles stay synchronized', () => {
+  const f = fixture({ live: true });
+  try {
+    f.byText('$100').fire('click'); f.form().fire('submit'); f.market.advance(8); f.view.update(10000);
+    const filter = f.label('Show holders with a thesis only'); filter.checked = true; filter.fire('change');
+    assert.ok(f.cls('tspc-table').textContent.includes('No practice positions'));
+    f.state.addNote({ coin: f.id, text: 'Local conviction' }); f.view.update(12000);
+    assert.ok(f.cls('tspc-table').textContent.includes('Local conviction'));
+    const following = f.nodes().filter((n) => n.tagName === 'label' && n.textContent === 'Following only').map((n) => n.firstChild);
+    following[0].checked = true; following[0].fire('change');
+    assert.equal(following.length, 2); assert.equal(following[1].checked, true); assert.equal(f.requests.length, 1);
+  } finally { f.view.destroy(); }
 });
