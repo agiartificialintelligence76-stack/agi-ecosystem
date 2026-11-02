@@ -913,7 +913,7 @@ test('every game\'s page: its overlay right after <body>, once, before the game;
   // Ride 'Em, AGI!'s, exactly: the intro, the game's fonts' rules, its styles, its code
   assert.deepEqual(importsOf(read('src/games/rideemagi/page.js')), ['../intro.js', './fonts.css', './game.css', './game.js']);
   // TRENCHING SIMULATOR's (2026-10-20): the intro, its styles, its screens
-  assert.deepEqual(importsOf(read('src/games/trenchingsimulator/page.js')), ['../intro.js', './trench.css', './shell.js']);
+  assert.deepEqual(importsOf(read('src/games/trenchingsimulator/page.js')), ['../intro.js', './trench.css', './menu.css', './boards/pomp.css', './shell.js']);
   // VLAD RUNNER 2049's (2026-10-23): the intro, then its styles before anything of the game
   assert.deepEqual(importsOf(read('src/games/vladrunner2049/page.js')).slice(0, 2), ['../intro.js', './style.css']);
   // AGI games' own page lists the games: it isn't one

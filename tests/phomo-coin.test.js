@@ -109,3 +109,18 @@ test('Phomo coin thesis, watch, filtering and chart controls retain functional s
   assert.deepEqual(globalThis.__phomoChart.indicators, ['rsi']);
   f.view.destroy();
 });
+
+test('Phomo keeps focused trader controls mounted as holder values and swap ages change', () => {
+  const f=fixture({live:true});
+  try {
+    f.form().fire('submit'); f.market.advance(8); f.view.update(10000);
+    const table=f.cls('tspc-table'), holder=table.querySelector('tbody').children[0], trader=holder.children[0].children[0];
+    f.market.advance(3); f.view.update(14000);
+    assert.equal(table.querySelector('tbody').children[0],holder); assert.equal(holder.children[0].children[0],trader);
+    f.byText('Swaps').fire('click');
+    const swap=table.querySelector('tbody').children[0], swapTrader=swap.children[0].children[0], oldAge=swap.children[4].textContent;
+    f.market.advance(3); f.view.update(18000);
+    assert.equal(table.querySelector('tbody').children[0],swap); assert.equal(swap.children[0].children[0],swapTrader);
+    assert.notEqual(swap.children[4].textContent,oldAge); assert.equal(f.requests.length,1);
+  } finally {f.view.destroy();}
+});

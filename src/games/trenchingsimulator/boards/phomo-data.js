@@ -286,3 +286,22 @@ export function profileEquity(market, seconds = Infinity, solUsd = market?.solUs
   return { points, observed: points.length ? Math.max(0, market.t - points[0].t) : 0,
     changeUsd: points.length > 1 ? points.at(-1).v - points[0].v : null };
 }
+// Keep a selected history window stable between quotes. A replaced reader array represents
+// corrected history, retention or a rewind and must invalidate the entire selected history.
+export function createPhomoCandleWindow() {
+  let source = null, duration = null, selected = [];
+  const lower = (rows, time) => { let lo=0,hi=rows.length;while(lo<hi){const mid=(lo+hi)>>>1;if(rows[mid].t<time)lo=mid+1;else hi=mid;}return lo; };
+  return (rows, seconds, now) => {
+    const cutoff = Number.isFinite(seconds) ? Math.max(rows[0]?.t ?? 0,now-seconds) : -Infinity;
+    if (source !== rows || duration !== seconds) {
+      source=rows;duration=seconds;selected=Number.isFinite(seconds)?rows.slice(lower(rows,cutoff)):rows;
+      return selected;
+    }
+    if (!Number.isFinite(seconds)) return rows;
+    const last=selected.at(-1)?.t, start=lower(rows,last ?? cutoff);
+    if(last !== undefined)selected.pop();
+    for(let i=start;i<rows.length;i++)selected.push(rows[i]);
+    const trim=lower(selected,cutoff);if(trim)selected.splice(0,trim);
+    return selected;
+  };
+}

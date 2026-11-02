@@ -2,6 +2,8 @@
 // while it loads, like every game's), then the game's styles and its screens (shell.js).
 import '../intro.js';
 import './trench.css';
+import './menu.css';
+import './boards/pomp.css';
 import { startShell } from './shell.js';
 
 const root = document.getElementById('ts-root');

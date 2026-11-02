@@ -35,11 +35,13 @@ import { positionCardWords } from './gngm-card.js';
 import { tradeShareText } from '../share.js';
 import { mountCoin } from './gngm-coin.js';
 import { createAddressSearch } from '../live-search.js';
+import { scannerRows, toggleScannerItem, scannerFlow, stepScannerDca } from './gngm-workspace.js';
+import './gngm.css';
 
 const FAST_MS = 250;
 const SLOW_MS = 650;
 const COL_MAX = 30;
-const VIEWS = Object.freeze([['trenches', 'Trenches'], ['trending', 'Trending'], ['track', 'Track'], ['holding', 'Holding']]);
+const VIEWS = Object.freeze([['trenches', 'Trenches'], ['trending', 'Trending'], ['callout', 'Callout'], ['monitor', 'Monitor'], ['track', 'Track'], ['holding', 'Portfolio']]);
 const COLS = Object.freeze([['new', 'New'], ['stretch', 'Almost bonded'], ['migrated', 'Migrated']]);
 const WINS = Object.freeze([['1m', '1m'], ['5m', '5m'], ['1h', '1h']]);
 const DIST_TONES = Object.freeze(['is-up', 'is-up', 'is-up', 'is-down', 'is-down']);
@@ -68,6 +70,8 @@ export function mountGngm(host, ctx) {
     keys: { z: false, space: false, col: null, over: null }, filter: { new: 'all', stretch: 'all', migrated: 'all' },
     qb: { new: qbStart, stretch: qbStart, migrated: qbStart }, win: '5m', track: 'all', wallet: null, wtab: 'holdings',
     wrange: 'week', limits: [], limitSeq: 0, autos: new Map(), stats: new Map(), infos: new Map(), smartN: null, query: '',
+    watched: new Set(), hidden: new Set(), showHidden: false, keywords: { new: '', stretch: '', migrated: '' },
+    rail: true, railTab: 'picks',
   };
   const info = (id) => {
     let x = G.infos.get(id);
@@ -203,15 +207,15 @@ export function mountGngm(host, ctx) {
     if (G.query) found.hidden = false;
   });
   const liveChain = ctx.chain ? chainById(ctx.chain) : null;
-  const chainPill = el('span', { class: ['tsg-chain', liveChain && 'is-live'] }, el('i', { 'aria-hidden': 'true' }),
-    liveChain ? `${liveChain.name} · live` : 'Simulated');
+  const chainPill = el('span', { class: ['tsg-chain', liveChain && 'is-live'], title: liveChain ? `${liveChain.name} live source` : 'Simulated market' }, el('i', { 'aria-hidden': 'true' }),
+    liveChain ? liveChain.native || liveChain.name : 'SOL');
   const balN = el('b', { class: 'tsg-bal-n' }, '—');
   const balBtn = el('button', { class: 'tsg-bal', type: 'button', title: 'Your coins', on: { click: () => setView('holding') } },
     icon('bag', 'ts-icon tsg-bal-ic'), el('span', { class: 'tsg-sr' }, 'Balance '), balN, isUsd ? null : el('span', { class: 'tsg-bal-u' }, ` ${U.name}`));
   const gearBtn = el('button', { class: 'tsg-gear', type: 'button', 'aria-label': 'GNGM settings', on: { click: () => openGSettings() } },
     icon('sliders', 'ts-icon'));
   const head = el('header', { class: 'tsg-head' },
-    el('div', { class: 'tsg-brand' }, markEl('scan', 'tsg-logo'), wordEl('scan', 'tsg-brand-t')),
+    el('button', { class: 'tsg-brand', type: 'button', 'aria-label': 'GNGM Trenches', on: { click: () => setView('trenches') } }, markEl('scan', 'tsg-logo'), wordEl('scan', 'tsg-brand-t')),
     el('nav', { class: 'tsg-nav', 'aria-label': 'GNGM' }, navBtns),
     searchForm, chainPill, balBtn, gearBtn);
 
@@ -241,16 +245,25 @@ export function mountGngm(host, ctx) {
       renderTrenches(market.lists({ limit: COL_MAX }), true);
     });
     const paused = el('span', { class: 'tsg-paused', hidden: true }, 'Paused');
+    const keyword = el('input', { class: 'tsg-col-query', type: 'search', placeholder: 'Keyword1, Keyword2…',
+      'aria-label': `${label} keywords`, autocomplete: 'off', spellcheck: 'false', on: { input: (e) => {
+        G.keywords[id] = e.target.value; renderTrenches(market.lists({ limit: COL_MAX }), true);
+      } } });
+    const colPresets = [0, 1, 2].map((i) => el('button', { class: 'tsg-col-preset', type: 'button',
+      'aria-label': `${label} preset ${i + 1}`, data: { preset: i }, on: { click: () => {
+        ctx.pickPreset(i); syncColumnPresets(); coin.refresh();
+      } } }, `P${i + 1}`));
     const list = el('div', { class: 'tsg-list', role: 'list', 'aria-label': label });
     const empty = el('p', { class: 'tsg-empty', hidden: true });
     const keyNo = el('span', { class: 'tsg-colkey', 'aria-hidden': 'true' }, String(COLS.findIndex(([c]) => c === id) + 1));
     const colEl = el('section', { class: 'tsg-col', data: { col: id }, 'aria-label': label },
       el('div', { class: 'tsg-col-head' }, keyNo, el('h2', { class: 'tsg-col-t' }, label, ' ', count),
+        keyword,
         el('label', { class: 'tsg-qb', title: 'Quick-buy amount' }, icon('bolt', 'ts-icon tsg-qb-ic'), qbIn,
           isUsd ? null : el('span', { class: 'tsg-qb-u' }, U.name)),
-        filterSel, paused),
+        el('div', { class: 'tsg-col-presets', role: 'group', 'aria-label': `${label} presets` }, colPresets), filterSel, paused),
       list, empty);
-    const C = { id, label, el: colEl, list, count, paused, empty, hover: false };
+    const C = { id, label, el: colEl, list, count, paused, empty, hover: false, colPresets };
     list.addEventListener('pointerenter', (e) => {
       G.keys.over = id;
       if (e.pointerType !== 'mouse') return;
@@ -266,9 +279,20 @@ export function mountGngm(host, ctx) {
     cols[id] = C;
     colsEl.append(colEl);
   }
+  const hiddenBtn = el('button', { class: 'tsg-tool', type: 'button', 'aria-pressed': 'false', 'aria-label': 'Show hidden tokens', on: { click: () => {
+    G.showHidden = !G.showHidden; hiddenBtn.setAttribute('aria-pressed', String(G.showHidden));
+    renderTrenches(market.lists({ limit: COL_MAX }), true);
+  } } }, '◉');
   const trenchesView = el('section', { class: 'tsg-view tsg-trenches', 'aria-label': 'Trenches' },
-    el('div', { class: 'tsg-bar' }, el('div', { class: 'tsg-coltabs', role: 'group', 'aria-label': 'Column' }, colTabs), hotBtn),
+    el('div', { class: 'tsg-bar tsg-trenches-bar' }, el('h2', { class: 'tsg-h' }, '🪖 Trenches'),
+      el('span', { class: 'tsg-chain-tag' }, liveChain ? liveChain.name : 'SOL'),
+      el('div', { class: 'tsg-trench-tools' }, el('button', { class: 'tsg-tool', type: 'button', on: { click: openGSettings } }, '☷ Customize'), hiddenBtn, hotBtn)),
+    el('div', { class: 'tsg-coltabs', role: 'group', 'aria-label': 'Column' }, colTabs),
     hotNote, colsEl);
+  function syncColumnPresets() {
+    const selected = typeof ctx.presets === 'function' ? ctx.presets().preset : 0;
+    for (const c of Object.values(cols)) for (const b of c.colPresets) b.setAttribute('aria-pressed', String(Number(b.dataset.preset) === selected));
+  }
 
   function setCol(id) {
     G.col = id;
@@ -296,6 +320,8 @@ export function mountGngm(host, ctx) {
       nm: el('span', { class: 'tsg-nm' }), age: el('span', { class: 'tsg-age' }), socs: el('span', { class: 'tsg-socs' }),
       tags: el('span', { class: 'tsg-tags' }), mcv: el('b', { class: 'tsg-mcv' }), vol: el('span', { class: 'tsg-c-v' }),
       tx: el('span', { class: 'tsg-c-tx' }), prog: el('span', { class: 'tsg-c-prog' }), qbv: el('span', { class: 'tsg-qbv' }),
+      ca: el('span', { class: 'tsg-card-ca' }), fee: el('span', { class: 'tsg-card-fee' }), pair: el('span', { class: 'tsg-card-pair' }),
+      people: el('span', { class: 'tsg-card-people' }), flow: el('i'),
       met: {}, socKey: null, tagKey: null, label: '',
     };
     $.ring.append($.pic);
@@ -305,15 +331,25 @@ export function mountGngm(host, ctx) {
       return el('span', { class: 'tsg-m', title: long }, el('span', { class: 'tsg-m-k' }, short2), v);
     });
     const open = el('button', { class: 'tsg-card-open', type: 'button', on: { click: () => openCoin(r.id) } },
-      $.ring,
+      el('span', { class: 'tsg-card-media' }, $.ring, $.ca),
       el('span', { class: 'tsg-card-txt' },
-        el('span', { class: 'tsg-c-top' }, $.tk, $.nm, $.age, $.socs, $.tags),
+        el('span', { class: 'tsg-c-top' }, $.tk, $.nm),
+        el('span', { class: 'tsg-card-fees' }, $.fee, $.pair),
+        el('span', { class: 'tsg-card-meta' }, $.age, $.socs, $.people), $.tags,
         el('span', { class: 'tsg-c-mets' }, mets),
-        el('span', { class: 'tsg-c-low' }, el('span', { class: 'tsg-c-mc' }, el('span', { class: 'tsg-c-l' }, 'MC'), $.mcv), $.vol, $.tx, $.prog)));
+        el('span', { class: 'tsg-c-low' }, el('span', { class: 'tsg-c-mc' }, el('span', { class: 'tsg-c-l' }, 'MC'), $.mcv), $.vol, $.tx,
+          el('span', { class: 'tsg-card-flow' }, $.flow), $.prog)));
     const qb = el('button', { class: 'tsg-qbtn', type: 'button', on: { click: () => quickBuy(r.id, colId, qb) } },
       icon('bolt', 'ts-icon tsg-qbtn-ic'), $.qbv);
     qb.addEventListener('animationend', () => qb.classList.remove('is-sent'));
-    const n = el('div', { class: 'tsg-card', role: 'listitem' }, open, qb);
+    const star = el('button', { class: 'tsg-card-star', type: 'button', 'aria-label': `Watch ${r.ticker}`, on: { click: () => {
+      toggleScannerItem(G.watched, r.id); updateCard(n, market.row(r.id) || r, colId); renderRail();
+    } } }, '☆');
+    const hide = el('button', { class: 'tsg-card-hide', type: 'button', 'aria-label': `Hide ${r.ticker}`, on: { click: () => {
+      toggleScannerItem(G.hidden, r.id); renderTrenches(market.lists({ limit: COL_MAX }), true);
+    } } }, '×');
+    const n = el('div', { class: 'tsg-card', role: 'listitem' }, open, qb, star, hide);
+    $.star = star; $.hide = hide;
     n.$ = $;
     n.$open = open;
     n.$qb = qb;
@@ -331,6 +367,14 @@ export function mountGngm(host, ctx) {
     const m = cardMetrics(r, s);
     setText($.tk, r.ticker);
     setText($.nm, r.name);
+    const detail = info(r.id);
+    setText($.ca, detail && detail.mint ? short(detail.mint, 4) : '—');
+    setText($.fee, `Fee ${share(market.config.terminalFee, 2)}`);
+    setText($.pair, liveChain ? U.name : 'SOL');
+    setText($.people, `♙ ${num(m.holders)}  ◉ ${num(m.smart)}`);
+    setText($.star, G.watched.has(r.id) ? '★' : '☆');
+    $.star.setAttribute('aria-pressed', String(G.watched.has(r.id)));
+    $.hide.setAttribute('aria-label', `${G.hidden.has(r.id) ? 'Unhide' : 'Hide'} ${r.ticker}`);
     setText($.age, age(r.age));
     setP($.ring, r.phase === 'curve' ? r.progress : 1);
     flag($.ring, 'is-done', r.phase === 'pool');
@@ -351,6 +395,7 @@ export function mountGngm(host, ctx) {
     setText($.mcv, mc(r.mc));
     setText($.vol, `V ${usd(r.vol * px)}`);
     setText($.tx, `TX ${num(r.txns)}`);
+    const flow = scannerFlow(s); setP($.flow, flow.fraction ?? .5); flag($.flow.parentNode, 'is-unknown', flow.fraction === null);
     setText($.prog, r.phase === 'pool' ? (Number.isFinite(r.migratedAt) ? `Migrated ${ago(market.t - r.migratedAt)}` : 'Migrated')
       : r.phase === 'migrating' ? 'Migrating' : share(r.progress, 0));
     setText($.qbv, qbLabel(colId));
@@ -386,7 +431,8 @@ export function mountGngm(host, ctx) {
       if (frozen) {
         rows = [...C.list.children].map((n) => market.row(Number(n.dataset.key))).filter(Boolean);
       } else {
-        rows = (L[id] || []).filter((r) => G.filter[id] === 'all' || passes(cardMetrics(r, statsOf(r.id)), G.filter[id], px)).slice(0, COL_MAX);
+        rows = scannerRows(L[id], { query: G.keywords[id], hidden: G.hidden, watched: G.watched, showHidden: G.showHidden })
+          .filter((r) => G.filter[id] === 'all' || passes(cardMetrics(r, statsOf(r.id)), G.filter[id], px)).slice(0, COL_MAX);
       }
       keyed(C.list, rows, (r) => r.id, (r) => makeCard(r, id), (n, r) => updateCard(n, r, id));
       [...C.list.children].forEach((n, i) => {
@@ -837,6 +883,13 @@ export function mountGngm(host, ctx) {
         limitsApi.cancel(o.id);
         continue;
       }
+      if (o.kind === 'dca') {
+        const next = stepScannerDca(o, market.t, ctx.order);
+        Object.assign(o, next);
+        if (!o.remaining) limitsApi.cancel(o.id);
+        if (o.error) toast(`DCA stopped: ${orderError(o.error) || 'the next order could not be placed'}`, 'down');
+        continue;
+      }
       if (!limitHit(o, r.mc)) continue;
       limitsApi.cancel(o.id);
       const res = o.side === 'buy' ? ctx.order({ coin: o.coin, side: 'buy', sol: o.sol }) : ctx.order({ coin: o.coin, side: 'sell', frac: o.frac });
@@ -974,15 +1027,99 @@ export function mountGngm(host, ctx) {
     gSheet.showModal();
   }
 
+  // GMGN's workspace rails. The data stays inside this practice run: the watchlist is the player's selection,
+  // Picks uses its market rankings and Callout shows the simulator's existing KOL events.
+  const railList = el('div', { class: 'tsg-rail-list', 'aria-label': 'Picks' });
+  const railCalls = el('div', { class: 'tsg-rail-calls', 'aria-label': 'Callouts' });
+  const pinned = el('div', { class: 'tsg-pinned', 'aria-label': 'Watched coins' });
+  const railToggle = el('button', { class: 'tsg-tool', type: 'button', 'aria-label': 'Toggle market sidebar',
+    'aria-pressed': 'true', on: { click: () => {
+      G.rail = !G.rail; root.dataset.rail = String(G.rail); railToggle.setAttribute('aria-pressed', String(G.rail)); renderRail();
+    } } }, '☷');
+  const railTabs = [['picks', 'Picks'], ['trending', 'Trending'], ['watch', 'Tracking']].map(([id, label]) =>
+    el('button', { class: 'tsg-rail-tab', type: 'button', data: { tab: id }, 'aria-pressed': String(id === G.railTab), on: { click: () => {
+      G.railTab = id; for (const b of railTabs) b.setAttribute('aria-pressed', String(b.dataset.tab === id)); renderRail();
+    } } }, label));
+  const rail = el('aside', { class: 'tsg-rail', 'aria-label': 'Market sidebar' },
+    el('section', { class: 'tsg-rail-picks' }, el('div', { class: 'tsg-rail-head' }, el('span', { class: 'tsg-chain-tag' }, U.name), railTabs),
+      el('div', { class: 'tsg-rail-labels' }, el('span', {}, 'Time / TXs'), el('span', {}, 'MC / 5m %')), railList),
+    el('section', { class: 'tsg-rail-callout' }, el('div', { class: 'tsg-rail-head' }, el('b', {}, 'Callout'),
+      el('button', { class: 'tsg-tool', type: 'button', on: { click: () => setView('callout') } }, '↗')),
+    el('p', { class: 'tsg-rail-source' }, 'KOL activity · simulated'), railCalls));
+  const monitorList = el('div', { class: 'tsg-monitor-list' });
+  const monitorView = el('section', { class: 'tsg-view tsg-monitor', hidden: true, 'aria-label': 'Monitor' },
+    el('div', { class: 'tsg-bar' }, el('h2', { class: 'tsg-h' }, 'Monitor'), el('span', { class: 'tsg-note' }, 'Your watchlist · this run')),
+    monitorList);
+  const calloutList = el('div', { class: 'tsg-callout-list' });
+  const calloutView = el('section', { class: 'tsg-view tsg-callout', hidden: true, 'aria-label': 'Callout' },
+    el('div', { class: 'tsg-bar' }, el('h2', { class: 'tsg-h' }, 'Callout')),
+    el('p', { class: 'tsg-note' }, 'The simulator’s KOL buys and sells. Open a profile to inspect its calls and holdings.'), calloutList);
+  function renderCallouts(list, max) {
+    const items = trackItems(market.feed(0), { filter: 'kol', max });
+    keyed(list, items.length ? items : [{ q: 'empty', empty: true }], (x) => x.q, (x) => {
+      if (x.empty) return el('p', { class: 'tsg-empty' }, 'No KOL calls in this run yet.');
+      const when = el('span', { class: 'tsg-call-when' }), value = el('span', { class: 'tsg-call-value' });
+      const card = el('article', { class: 'tsg-call-card' },
+        el('div', { class: 'tsg-call-head' }, el('button', { class: 'tsg-call-author', type: 'button', on: { click: () => openWallet('kol', x.kol) } },
+          el('span', { class: 'tsg-av', vars: { '--h': hueOf(x.kol) } }, initial(x.kol)), el('b', {}, `@${x.kol}`)), when),
+        el('p', {}, x.side === 'buy' ? 'Opened a position.' : x.frac >= .999 ? 'Closed the position.' : 'Sold part of the position.'),
+        el('button', { class: 'tsg-call-token', type: 'button', on: { click: () => openCoin(x.coin) } },
+          pic(market.row(x.coin) || {}, 'is-xs', 'tsg'), el('b', {}, x.ticker), value));
+      card.$ = { when, value }; return card;
+    }, (node, x) => {
+      if (x.empty) return; setText(node.$.when, age(market.t - x.t));
+      const r = market.row(x.coin); setText(node.$.value, r ? mc(r.mc) : '—');
+    });
+  }
+  function renderMonitor() {
+    const rows = [...G.watched].map((id) => market.row(id)).filter(Boolean);
+    keyed(monitorList, rows.length ? rows : [{ id: 'empty', empty: true }], (r) => r.id,
+      (r) => r.empty ? el('p', { class: 'tsg-empty' }, 'Tap ☆ on a token to add it to your watchlist.') : makeCard(r, 'new'),
+      (node, r) => { if (!r.empty) updateCard(node, r, 'new'); });
+  }
+  function renderRail() {
+    const watched = [...G.watched].map((id) => market.row(id)).filter(Boolean);
+    keyed(pinned, watched, (r) => r.id, (r) => el('button', { class: 'tsg-pin', type: 'button', on: { click: () => openCoin(r.id) } }),
+      (node, r) => setText(node, `★ ${r.ticker} ${mc(r.mc)}`));
+    if (phone.matches || !G.rail) return;
+    const L = market.lists({ limit: 16 });
+    const rows = (G.railTab === 'watch' ? watched : G.railTab === 'trending' ? L.trending : L.bump.length ? L.bump : L.trending).slice(0, 12);
+    keyed(railList, rows.length ? rows : [{ id: 'empty', empty: true }], (r) => r.id, (r) => {
+      if (r.empty) return el('p', { class: 'tsg-empty' }, G.railTab === 'watch' ? 'Watch a token with ☆.' : 'Waiting for market activity…');
+      const image = pic(r, 'is-xs', 'tsg'), ticker = el('b'), note = el('span'), cap = el('b'), change = el('span');
+      const b = el('button', { class: 'tsg-rail-row', type: 'button', on: { click: () => openCoin(r.id) } }, image,
+        el('span', { class: 'tsg-rail-token' }, ticker, note), el('span', { class: 'tsg-rail-price' }, cap, change));
+      b.$ = { image, ticker, note, cap, change }; return b;
+    }, (node, r) => {
+      if (r.empty) return; const $ = node.$;
+      setText($.ticker, r.ticker); setText($.note, `${num(r.txns)} TXs · ${age(r.age)}`); setText($.cap, mc(r.mc));
+      setText($.change, pct(r.ch5m)); tone($.change, r.ch5m, .0005);
+      if (!samePic($.image, r)) { const p = pic(r, 'is-xs', 'tsg'); $.image.replaceWith(p); $.image = p; }
+    });
+    renderCallouts(railCalls, 3);
+  }
+  const utility = el('div', { class: 'tsg-utility' }, railToggle,
+    el('button', { class: 'tsg-tool', type: 'button', title: 'Watchlist', on: { click: () => setView('monitor') } }, '★'),
+    el('button', { class: 'tsg-tool', type: 'button', title: 'Trending', on: { click: () => setView('trending') } }, '⌁'),
+    el('span', { class: 'tsg-utility-divider' }), el('span', { class: 'tsg-chain-tag' }, U.name),
+    el('button', { class: 'tsg-tool', type: 'button', on: { click: () => setView('trenches') } }, 'All ⌄'), pinned);
+  const dockStatus = el('span', { class: 'tsg-dock-status' });
+  const dock = el('footer', { class: 'tsg-dock' },
+    el('button', { class: 'tsg-dock-b is-primary', type: 'button', on: { click: () => setView('trenches') } }, '✦ Trenches'),
+    [['track', '♙ Wallet Tracker'], ['callout', '◀ Callout'], ['holding', '▥ Holding'], ['monitor', '★ Watchlist'],
+      ['trending', '♨ Trending'], ['holding', '▥ PnL']].map(([viewId, label]) => el('button', { class: 'tsg-dock-b', type: 'button',
+      on: { click: () => setView(viewId) } }, label)),
+    dockStatus, el('button', { class: 'tsg-dock-b', type: 'button', on: { click: openGSettings } }, '⚙'));
+
   // ---------- phones: the tab bar ----------
   const tabBtns = [...VIEWS, ['settings', 'Settings']].map(([id, label]) => el('button', { class: 'tsg-tabbar-b', type: 'button',
     data: { view: id }, on: { click: () => (id === 'settings' ? openGSettings() : setView(id)) } },
-  icon({ trenches: 'shovel', trending: 'flame', track: 'users', holding: 'bag', settings: 'sliders' }[id], 'ts-icon tsg-tabbar-ic'),
+  icon({ trenches: 'shovel', trending: 'flame', callout: 'bolt', monitor: 'search', track: 'users', holding: 'bag', settings: 'sliders' }[id], 'ts-icon tsg-tabbar-ic'),
   el('span', {}, label)));
   const tabbar = el('nav', { class: 'tsg-tabbar', 'aria-label': 'GNGM' }, tabBtns);
 
   // ---------- views ----------
-  const views = { trenches: trenchesView, trending: trendingView, track: trackView, holding: holdingView };
+  const views = { trenches: trenchesView, trending: trendingView, callout: calloutView, monitor: monitorView, track: trackView, holding: holdingView };
   function syncViews() {
     for (const [id, v] of Object.entries(views)) v.hidden = Boolean(G.sub) || id !== G.view;
     coin.el.hidden = G.sub !== 'coin';
@@ -1024,9 +1161,9 @@ export function mountGngm(host, ctx) {
     slow(true);
   }
 
-  const root = el('div', { class: 'tsg', data: { view: G.view } }, head,
-    el('main', { class: 'tsg-main' }, trenchesView, trendingView, trackView, holdingView, coin.el, walletView),
-    tabbar, gSheet);
+  const root = el('div', { class: 'tsg', data: { view: G.view, rail: G.rail } }, head, utility,
+    el('div', { class: 'tsg-workspace' }, rail, el('main', { class: 'tsg-main' }, trenchesView, trendingView, calloutView, monitorView, trackView, holdingView, coin.el, walletView)),
+    dock, tabbar, gSheet);
   host.append(root);
   syncViews();
 
@@ -1034,6 +1171,8 @@ export function mountGngm(host, ctx) {
     const p = market.player;
     setText(balN, isUsd ? usd(p.sol * px) : MN(p.sol));
     checkTriggers();
+    const state = typeof market.liveState === 'function' ? market.liveState() : null;
+    setText(dockStatus, state ? state.feed === 'live' ? '● Live feed · practice account' : '○ Feed reconnecting · practice account' : '● Simulated market · practice account');
     if (G.sub === 'coin') coin.fast(force);
   }
   function slow(force) {
@@ -1045,6 +1184,9 @@ export function mountGngm(host, ctx) {
     else if (G.view === 'trending') renderTrending(L);
     else if (G.view === 'track') renderTrack();
     else if (G.view === 'holding') renderHolding();
+    else if (G.view === 'monitor') renderMonitor();
+    else if (G.view === 'callout') renderCallouts(calloutList, 30);
+    renderRail(); syncColumnPresets();
     if (G.query && !found.hidden) runSearch();
   }
   fast(true);

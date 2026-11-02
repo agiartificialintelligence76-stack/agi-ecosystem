@@ -3,6 +3,8 @@
 // Orders, token metrics, holder lists and candles are simulator data; no wallet connection or external transactions.
 import './axium.css';
 import { el, setText, flag, keyed, icon, toast } from '../ui.js';
+import { updateStats } from './stable-ui.js';
+import { createCandleReader } from './candle-reader.js';
 import { markEl, wordEl } from '../brands.js';
 import { usd, money, moneySigned, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
 import { pic, samePic, short, num, buyPresets, parseAmount, ORDER_ERRORS, tone } from './common.js';
@@ -25,6 +27,7 @@ export function mountAxium(host, ctx) {
   const M = (v) => money(v, cur, px), MS = (v) => moneySigned(v, cur, px);
   const MC = (v) => usd(v * px);
   const base = Date.now() - market.t * 1000;
+  const candleReader = createCandleReader(market, { maxEntries: 1 });
   const A = { view: 'pulse', coin: null, query: '', paused: false, density: false, mobileCol: 'new',
     filters: { new: {}, stretch: {}, migrated: {}, discover: {} }, watch: new Set(), hidden: new Set(),
     quick: String(nice(buyPresets(ctx.start)[1] * U.per)), tf: 1, indicators: [], chartMode: 'mcap', chartUnit: 'usd',
@@ -265,8 +268,8 @@ export function mountAxium(host, ctx) {
   const statBlock = (label, value, cls = '') => el('div', {}, el('span', {}, label), el('strong', { class: cls }, value));
   function renderPortfolio() {
     const p = market.player, pnl = p.worth - market.startSol;
-    portfolioStats.replaceChildren(statBlock('Portfolio value', M(p.worth)), statBlock('Available balance', M(p.sol)),
-      statBlock('Total P&L', MS(pnl), pnl >= 0 ? 'is-up' : 'is-down'), statBlock('Open positions', market.positions().filter((x) => x.open).length));
+    updateStats(portfolioStats, [['Portfolio value', M(p.worth)], ['Available balance', M(p.sol)],
+      ['Total P&L', MS(pnl), pnl >= 0 ? 'is-up' : 'is-down'], ['Open positions', market.positions().filter((x) => x.open).length]]);
     [...portfolioTabs.children].forEach((b) => flag(b, 'is-active', b.dataset.tab === A.portfolioTab));
     if (portfolioBody.dataset.tab !== A.portfolioTab) portfolioBody.replaceChildren();
     portfolioBody.dataset.tab = A.portfolioTab;
@@ -464,19 +467,19 @@ export function mountAxium(host, ctx) {
     setText(coinName, r.ticker); setText(coinFullName, r.name);
     if (!samePic(coinPic.firstChild, r)) coinPic.replaceChildren(pic(r, '', 'ax'));
     flag(coinStar, 'is-starred', A.watch.has(r.id)); coinStar.setAttribute('aria-pressed', String(A.watch.has(r.id)));
-    coinStats.replaceChildren(statBlock('Market Cap', MC(r.mc)), statBlock('Liquidity', usd(s.liqUsd)),
-      statBlock('5m Volume', MC(s.vol5m)), statBlock('5m Change', pct(s.change5m), s.change5m >= 0 ? 'is-up' : 'is-down'));
+    updateStats(coinStats, [['Market Cap', MC(r.mc)], ['Liquidity', usd(s.liqUsd)],
+      ['5m Volume', MC(s.vol5m)], ['5m Change', pct(s.change5m), s.change5m >= 0 ? 'is-up' : 'is-down']]);
     setText(chartLabel, `${r.ticker} / ${U.name} · ${A.chartMode === 'mcap' ? 'Market Cap' : 'Price'} · ${r.live ? 'Real coin · play money' : 'Simulated market'}`);
     syncChartTools();
-    A.chart?.set({ candles: market.candles(r.id) || [], solUsd: px, tf: A.tf, base, migratedAt: s.migratedAt,
+    A.chart?.set({ candles: candleReader.read(r.id, s.cdv), solUsd: px, tf: A.tf, base, migratedAt: s.migratedAt,
       marks: market.orders(120).filter((o) => o.coin === r.id && o.status === 'filled').map((o) => ({ t: o.doneAt, side: o.side })) });
     setText(tradeBalance, `Balance: ${M(market.player.sol)}`);
     setText(submit, `${A.orderType === 'market' ? A.side === 'buy' ? 'Buy' : 'Sell' : A.orderType === 'limit' ? 'Create Limit' : 'Start DCA'} ${r.ticker}`);
     submit.disabled = r.phase === 'migrating' || (r.live && r.tracked === false);
     const settings = ctx.settings(); setText(tradeSettings, `Slippage ${share(settings.slippage, 0)}   ·   ${settings.priority} priority   ⚙`);
     const p = market.positions().find((p) => p.id === r.id);
-    tradePosition.replaceChildren(statBlock('Bought', M(p?.invested || 0)), statBlock('Sold', M(p?.sold || 0)),
-      statBlock('Holding', M(p?.value || 0)), statBlock('PnL', MS(p?.total || 0), p?.total < 0 ? 'is-down' : 'is-up'));
+    updateStats(tradePosition, [['Bought', M(p?.invested || 0)], ['Sold', M(p?.sold || 0)],
+      ['Holding', M(p?.value || 0)], ['PnL', MS(p?.total || 0), p?.total < 0 ? 'is-down' : 'is-up']]);
     const info = market.info(r.id);
     tokenInfo.replaceChildren(...[el('h3', {}, 'Token Info'), el('div', { class: 'ax-info-stats' },
       statBlock('Holders', num(r.holders)), statBlock('Top 10', share(r.top10)), statBlock('Dev holding', share(r.dev)),
@@ -586,6 +589,6 @@ export function mountAxium(host, ctx) {
         if (A.coin !== null) renderData(); else if (A.view === 'portfolio') renderPortfolio(); else if (A.view === 'trackers') renderTrackers(); else renderLists();
       }
     },
-    destroy() { A.dead = true; A.limits = []; A.chart?.destroy(); A.perps?.destroy(); ctx.onCoin?.(null); document.removeEventListener?.('keydown', onKey); if (dialog.open) dialog.close(); root.remove(); },
+    destroy() { A.dead = true; A.limits = []; candleReader.clear(); A.chart?.destroy(); A.perps?.destroy(); ctx.onCoin?.(null); document.removeEventListener?.('keydown', onKey); if (dialog.open) dialog.close(); root.remove(); },
   };
 }

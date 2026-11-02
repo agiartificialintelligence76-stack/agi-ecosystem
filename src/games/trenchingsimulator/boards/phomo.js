@@ -14,6 +14,7 @@ import { mountPhomoSocial, mountPhomoProfile, mountPhomoPosition } from './phomo
 import { positionCardWords } from './gngm-card.js';
 import './phomo.css';
 import './phomo-perps.css';
+import './phomo-reference.css';
 
 const TYPES = [['tokens', 'Tokens', 'chart'], ['watchlist', 'Watchlist', 'star'], ['perps', 'Perps', 'arrows'],
   ['leaderboard', 'Leaderboard', 'trophy'], ['feed', 'Feed', 'users'], ['alerts', 'Alerts', 'bolt'], ['clans', 'Clans', 'users']];
@@ -42,7 +43,8 @@ export function mountPhomo(host, ctx) {
   const chain = ctx.chain ? chainById(ctx.chain).name : 'Simulated market';
   let dead = false, last = -Infinity, subView = null, dialog = null, popover = null, sequence = 0, active = 0, searchTimer;
   let layout = state.prefs.ui?.layout || 'columns';
-  let railOpen = state.prefs.ui?.rail === true, detailNavOpen = !narrowScreen(), navCategory = 'trending', navigationKind = 'tokens', selectedCoin = null, searchTab = 'tokens';
+  let railOpen = state.prefs.ui?.rail === true, detailNavOpen = !narrowScreen(), navCategory = 'trending', navigationKind = state.prefs.ui?.navigationKind || 'tokens', selectedCoin = null, searchTab = 'tokens';
+  let navigationView = null, navigationViewKind = null;
   let discoveryWidth = state.prefs.ui?.discoveryWidth || 280, positionsWidth = state.prefs.ui?.positionsWidth || 320;
   let positionsCollapsed = state.prefs.ui?.positionsCollapsed === true;
   const dragCleanups = new Set();
@@ -52,13 +54,14 @@ export function mountPhomo(host, ctx) {
   const content = el('div', { class: 'ph-workspace', data: { layout } });
   const subHost = el('div', { class: 'ph-sub', hidden: true });
   const rail = el('nav', { class: 'ph-rail', 'aria-label': 'Discovery' });
-  const railToggle = button('»', () => { if (subView || singlePerps()) detailNavOpen = !detailNavOpen; else railOpen = !railOpen; updateGeometry(); saveUI(); },'ph-rail-toggle','Expand discovery panel');
+  const railToggle = button('»', () => { if (subView || singlePerps()) detailNavOpen = !detailNavOpen; else railOpen = !railOpen; updateGeometry(); refreshNavigator(); saveUI(); },'ph-rail-toggle','Expand discovery panel');
   const navTabs = el('div',{class:'ph-nav-tabs'});
   for (const kind of ['alerts','watchlist','tokens','perps','leaderboard','feed']) {
     const [,label,ic] = TYPES.find(([k]) => k === kind);
     navTabs.append(button(['alerts','watchlist'].includes(kind) ? icon(ic) : label,() => {
       navigationKind = kind;
-      if (subView && ['tokens','watchlist'].includes(kind)) refreshNavigator(); else setMain(kind);
+      if (kind === 'perps') setMain(kind);
+      else { railOpen = true; detailNavOpen = true; updateGeometry(); refreshNavigator(); saveUI(); }
     },'ph-rail-button',label));
   }
   const navCategories = el('div',{class:'ph-nav-categories'});
@@ -66,9 +69,10 @@ export function mountPhomo(host, ctx) {
     navCategories.append(button(label,() => { navCategory = key; refreshNavigator(); },'',`${label} in discovery list`));
   }
   const navRows = el('div',{class:'ph-nav-rows','aria-label':'Discovery token list'});
+  const navSocial = el('div',{class:'ph-nav-social',hidden:true,'aria-label':'Discovery activity panel'});
   const navExternal = el('div',{class:'ph-nav-external',hidden:true,'aria-label':'Perpetual market discovery'});
   const navFooter = el('div',{class:'ph-nav-footer'},button('Split bottom',() => { const p = panels[active] || panels[0]; if (p) split(p,'rows'); },'','Split discovery bottom'),button('Split right',() => { const p = panels[active] || panels[0]; if (p) split(p,'columns'); },'','Split discovery right'));
-  rail.append(el('div',{class:'ph-nav-heading'},navTabs,railToggle),navCategories,navRows,navExternal,navFooter);
+  rail.append(el('div',{class:'ph-nav-heading'},navTabs,railToggle),navCategories,navRows,navSocial,navExternal,navFooter);
   const watchstrip = el('div', { class: 'ph-watchstrip', 'aria-label': 'Watched tokens' });
   const balance = el('span');
   const worth = el('span');
@@ -108,7 +112,7 @@ export function mountPhomo(host, ctx) {
   updateGeometry();
 
   function saveUI() {
-    state.setPrefs({ ui: { layout, quickBuy: parseAmount(quick) || 100, rail: railOpen, discoveryWidth, positionsWidth, positionsCollapsed, panelSizes: panels.map((p) => p.size || 0),
+    state.setPrefs({ ui: { layout, quickBuy: parseAmount(quick) || 100, rail: railOpen, navigationKind, discoveryWidth, positionsWidth, positionsCollapsed, panelSizes: panels.map((p) => p.size || 0),
       panels: panels.map((p) => ({ ...p.options, kind: p.kind })) } });
   }
   function singlePerps() { return !subView && panels.length === 1 && panels[0].kind === 'perps' ? panels[0] : null; }
@@ -119,7 +123,8 @@ export function mountPhomo(host, ctx) {
     if (!subView && !perps && positions.parentNode !== body) body.append(positions);
     flag(root,'is-rail-collapsed',!expanded); flag(root,'is-detail',Boolean(subView || perps)); flag(root,'is-perps',Boolean(perps)); flag(root,'is-positions-collapsed',positionsCollapsed);
     positions.hidden = subView?.kind === 'profile'; positionsSplitter.hidden = Boolean(subView || perps);
-    watchstrip.hidden = Boolean(subView || perps); navRows.hidden = navCategories.hidden = Boolean(perps); navExternal.hidden = !perps;
+    const social = ['feed','alerts','leaderboard'].includes(navigationKind);
+    watchstrip.hidden = Boolean(subView || perps); navRows.hidden = navCategories.hidden = Boolean(perps || social); navExternal.hidden = !perps; navSocial.hidden = Boolean(perps || !social);
     flag(positions,'is-collapsed',positionsCollapsed);
     root.style.setProperty('--ph-discovery-width',`${discoveryWidth}px`); root.style.setProperty('--ph-positions-width',`${positionsWidth}px`);
     setText(railToggle,expanded ? '«' : '»'); railToggle.setAttribute('aria-expanded',String(expanded)); railToggle.setAttribute('aria-label',`${expanded ? 'Collapse' : 'Expand'} discovery panel`);
@@ -138,6 +143,15 @@ export function mountPhomo(host, ctx) {
     return handle;
   }
   function refreshNavigator() {
+    [...navTabs.children].forEach((n,i) => { const on = ['alerts','watchlist','tokens','perps','leaderboard','feed'][i] === navigationKind; flag(n,'is-active',on); n.setAttribute('aria-pressed',String(on)); });
+    if (['feed','alerts','leaderboard'].includes(navigationKind)) {
+      if (navigationViewKind !== navigationKind) { navigationView?.destroy(); navigationViewKind = navigationKind;
+        navigationView = mountPhomoSocial(navSocial,ctx,{state,kind:navigationKind,onTrader:showProfile,onCoin:openCoin,onPosition:showPosition,quickAmount:() => parseAmount(quick),compact:true}); }
+      if (!root.classList.contains('is-rail-collapsed')) navigationView.update();
+      return;
+    }
+    if (navigationView) { navigationView.destroy(); navigationView = null; navigationViewKind = null; }
+    if (root.classList.contains('is-rail-collapsed') || singlePerps()) return;
     const rows = state.tokens({category:navigationKind === 'watchlist' ? 'watchlist' : navCategory,window:'5m',limit:100,filters:{}}).rows;
     keyed(navRows,rows,(r) => r.id,(r) => {
       const name = el('b'),price = el('small'),cap = el('b'),change = el('small');
@@ -146,7 +160,6 @@ export function mountPhomo(host, ctx) {
     },(n,r) => { setText(n._ph.name,r.ticker); setText(n._ph.price,fin(r.priceUsd) ? `$${priceWords(r.priceUsd,4)}` : '—'); n._ph.price.title = r.practicePrice ? 'Price per practice unit' : 'Practice token price'; setText(n._ph.cap,usd(r.marketCapUsd)); setText(n._ph.change,pct(r.change)); tint(n._ph.change,r.change); flag(n,'is-active',r.id === selectedCoin); n.setAttribute('aria-pressed',String(r.id === selectedCoin)); });
     if (!rows.length) navRows.replaceChildren(empty('No tokens here','Change category or star a token to add it to your watchlist.'));
     [...navCategories.children].forEach((n,i) => flag(n,'is-active',['trending','mostheld','graduated','bonding','bluechips'][i] === navCategory));
-    [...navTabs.children].forEach((n,i) => { const on = ['alerts','watchlist','tokens','perps','leaderboard','feed'][i] === navigationKind; flag(n,'is-active',on); n.setAttribute('aria-pressed',String(on)); });
   }
   function error(res) { toast(res?.error === 'min_buy' ? `Minimum buy: ${usd(0.001 * ctx.solUsd)}.`
     : (ORDER_ERRORS[res?.error] || 'The order could not be placed.').replaceAll('SOL', 'play cash'), 'down'); }
@@ -275,16 +288,19 @@ export function mountPhomo(host, ctx) {
     };
     const controls = el('div', { class: 'ph-controls' }, count,rowCount,win,windows,filterShortcuts,filters,filterSelect(network,'Network'),filterSelect(launchpad,'Launchpad'));
     const list = el('tbody');
-    const headers = [['Token name',null],['Quick buy',null],['Market cap','marketCap'],['Change','change'],['Volume','volume'],['Holders','holders'],['Latest thesis',null]];
+    const headers = [['Token name',null],['Market cap','marketCap'],['Age','age'],['Change','change'],['Volume','volume'],['Holders','holders'],['Latest thesis',null]];
     const table = el('table', { class: 'ph-table ph-token-table' }, el('thead', {}, el('tr', {}, headers.map(([label,key]) => el('th', {}, key ? button(label, () => { p.options.direction = p.options.sort === key && p.options.direction === 'desc' ? 'asc' : 'desc'; p.options.sort = key; p.update(); saveUI(); }) : label)))),list);
-    table.style.setProperty('--ph-token-name-width',`${p.options.tokenNameWidth || 210}px`);
-    const nameResize = makeSplitter('Resize token name column','vertical',() => p.options.tokenNameWidth || 210,(n) => { p.options.tokenNameWidth = Math.max(160,Math.min(420,n)); table.style.setProperty('--ph-token-name-width',`${p.options.tokenNameWidth}px`); });
+    table.style.setProperty('--ph-token-name-width',`${p.options.tokenNameWidth || 300}px`);
+    const nameResize = makeSplitter('Resize token name column','vertical',() => p.options.tokenNameWidth || 300,(n) => { p.options.tokenNameWidth = Math.max(220,Math.min(420,n)); table.style.setProperty('--ph-token-name-width',`${p.options.tokenNameWidth}px`); });
     nameResize.classList.add('ph-name-splitter'); table.querySelectorAll('th')[0].append(nameResize);
-    table.querySelectorAll('th')[1].replaceChildren(el('label',{class:'ph-quick'},'Quick buy',el('span',{},'$'),qb));
+    table.querySelectorAll('th')[0].append(el('label',{class:'ph-quick'},'Quick buy',el('span',{},'$'),qb));
     const blank = empty('No matching tokens', 'Try another category or reset the filters.');
     p.host.append(tabs,controls,el('div',{class:'ph-table-scroll'},table,blank));
+    let sourceSize = -1, sourceView = '', sourceAt = -Infinity;
     p.update = () => {
-      const nextSources = sourceOptions();
+      const size = market.size?.coins, shown = JSON.stringify(market.ext?.shown), now = market.t;
+      const nextSources = size !== sourceSize || shown !== sourceView || now-sourceAt >= 5 || now<sourceAt ? sourceOptions() : sources;
+      if(nextSources!==sources){sourceSize=size;sourceView=shown;sourceAt=now;}
       if (nextSources.length !== sources.length || nextSources.some((s,i) => s !== sources[i])) {
         sources = nextSources;
         const selected = p.options.launchpad || 'all';
@@ -310,16 +326,17 @@ export function mountPhomo(host, ctx) {
         const more = button('⋯',() => showPopover(more,r.ticker,el('div',{class:'ph-menu-list'},button('Open token',() => { closePopover(); openCoin(r.id); }),button('Copy contract',() => { closePopover(); copyContract(r.id); }),button('Hide token',() => { state.toggleHide(r.id); closePopover(); refresh(); }),button('Token details',() => { closePopover(); tokenDetails(r.id); }))), 'ph-row-action',`More actions for ${r.ticker}`);
         const meta = el('span',{class:'ph-token-actions'},copy,searchCoin,more);
         const buy = button('',() => quickBuy(r.id),'ph-quickbuy',`Quick buy ${r.ticker}`);
-        const cells = Array.from({length:4},() => el('td'));
+        const cells = Array.from({length:5},() => el('td'));
+        const holders = el('b'),holderNote=el('small',{class:'ph-cell-secondary'});cells[4].append(holders,holderNote);
         const thesis = el('td',{class:'ph-thesis-cell'});
-        const tr = el('tr',{},el('td',{},el('div',{class:'ph-token-cell'},star,el('div',{class:'ph-token-main'},name,meta))),el('td',{},buy),cells,thesis);
-        tr._ph = {star,name,meta,buy,cells,thesis,noteId:null}; return tr;
+        const tr = el('tr',{},el('td',{},el('div',{class:'ph-token-cell'},star,el('div',{class:'ph-token-main'},name,meta),buy)),cells,thesis);
+        tr._ph = {star,name,meta,buy,cells,holders,holderNote,thesis,noteId:null}; return tr;
       },(tr,r) => {
         const n = tr._ph; setText(n.star,state.isWatched(r.id) ? '★' : '☆'); n.star.setAttribute('aria-pressed',String(state.isWatched(r.id)));
         n.name.title = `${r.name} · ${fin(r.age) ? age(r.age) : 'Age unavailable'} · ${r.live ? chain : 'Simulated'}${r.phase === 'pool' ? ' · Graduated' : ''}`;
         const old = n.name.querySelector('.ph-pic'); if (!samePic(old,r)) old?.replaceWith(pic(r,'','ph'));
-        setText(n.buy,`↗ ${usd(parseAmount(quick))}`); setText(n.cells[0],usd(r.marketCapUsd)); setText(n.cells[1],pct(r.change)); tint(n.cells[1],r.change); setText(n.cells[2],usd(r.volumeUsd));
-        n.cells[3].replaceChildren(el('b',{},fin(r.holders) ? compact(r.holders,0) : '—'),el('small',{class:'ph-cell-secondary'},fin(r.holders) ? 'total holders' : 'not available'));
+        setText(n.buy,`Buy ${usd(parseAmount(quick))}`); setText(n.cells[0],usd(r.marketCapUsd)); setText(n.cells[1],age(r.age)); setText(n.cells[2],pct(r.change)); tint(n.cells[2],r.change); setText(n.cells[3],usd(r.volumeUsd));
+        setText(n.holders,fin(r.holders) ? compact(r.holders,0) : '—');setText(n.holderNote,fin(r.holders) ? 'total holders' : 'not available');
         const note = notes.find((v) => v.coin === r.id);
         if ((note?.id || null) !== n.noteId || !n.thesis.firstChild) {
           n.noteId = note?.id || null;
@@ -437,17 +454,22 @@ export function mountPhomo(host, ctx) {
     popover = {node:layer,previous:anchor}; root.append(layer); box.querySelector('input,button')?.focus();
   }
   function closePopover() { if (!popover) return; const old = popover; popover = null; old.node.remove(); if (old.previous?.isConnected) old.previous.focus(); }
-  function refresh() {
+  function refresh(skipCovered = false) {
+    // A modal fully covers the workspace. Keep its live position current without repainting
+    // the token chart or discovery panels beneath it; state.tick() still handles alert rules.
+    if (skipCovered && dialog) { dialog.view?.update?.(performance.now()); return; }
     setText(balance,usdFull(market.player.sol * ctx.solUsd)); setText(worth,usd(market.netWorth() * ctx.solUsd));
     const news = state.notifications({unreadOnly:true}); setText(notices,news.length ? String(news.length) : '');
     refreshPositions();
-    const watched = state.tokens({category:'watchlist',window:'5m',limit:25,filters:{}}).rows;
+    const watched = watchstrip.hidden ? [] : state.tokens({category:'watchlist',window:'5m',limit:25,filters:{}}).rows;
+    if(!watchstrip.hidden){
     keyed(watchstrip,watched,(r) => r.id,(r) => {
       const cap = el('span'), change = el('span');
       const b = button([el('span',{class:'ph-watch-name'},pic(r,'','ph'),el('b',{},r.ticker),el('span',{},'★')),el('span',{class:'ph-watch-values'},cap,change)],() => openCoin(r.id),'ph-watch-chip',`Open watched ${r.ticker}`);
       b._ph = {cap,change}; return b;
     },(b,r) => { setText(b._ph.cap,`${usd(r.marketCapUsd)} MC`); setText(b._ph.change,pct(r.change)); tint(b._ph.change,r.change); });
     if (!watched.length) watchstrip.replaceChildren(el('span',{class:'ph-muted'},'☆ Star tokens to pin them here'));
+    }
     const quotes = ctx.spotPrices?.() || {};
     const assets = [['btc','BTC'],['eth','ETH'],['sol','SOL'],['hype','HYPE']];
     keyed(ticker,assets,([key]) => key,() => el('span',{class:'ph-spot-quote'}),(n,[key,symbol]) => {
@@ -465,7 +487,7 @@ export function mountPhomo(host, ctx) {
       flag(status,'is-down',words.tone !== 'live');
     } else { setText(status,'● Simulated · play money'); status.title = 'Simulated market · practice money'; flag(status,'is-down',false); }
     refreshNavigator();
-    for (const p of panels) p.update?.(performance.now()); subView?.view?.update?.(performance.now()); dialog?.view?.update?.(performance.now());
+    if (!subView) for (const p of panels) p.update?.(performance.now()); subView?.view?.update?.(performance.now());
   }
   function keydown(e) {
     if (e.target.closest?.('input,textarea,select,[contenteditable="true"]')) return;
@@ -477,11 +499,11 @@ export function mountPhomo(host, ctx) {
   const saved = state.prefs.ui?.panels;
   if (saved?.length) for (const p of saved) makePanel(TYPES.some(([k]) => k === p.kind) ? p.kind : 'tokens',p);
   else makePanel();
-  navigationKind = panels[0]?.kind || 'tokens';
+  navigationKind = state.prefs.ui?.navigationKind || (panels[0]?.kind === 'perps' ? 'perps' : 'tokens');
   const sizes = state.prefs.ui?.panelSizes || [];
   panels.forEach((p,i) => { if (sizes[i] > 0) { p.size = sizes[i]; p.el.style.setProperty('flex-basis',`${p.size}px`); p.el.style.setProperty('flex-grow','0'); } });
   refresh();
-  return { el: root, update(now) { if (dead || now - last < 650) return; last = now; state.tick(); refresh(); },
+  return { el: root, update(now) { if (dead || now - last < 650) return; last = now; state.tick(); refresh(true); },
     sub: () => Boolean(subView), closeSub: () => closeSub(false), openCoin,
-    destroy() { dead = true; clearTimeout(searchTimer); closePopover(); closeDialog(); for (const done of [...dragCleanups]) done(); subView?.view?.destroy(); if (subView) ctx.onCoin?.(null); panels.forEach((p) => p.dispose?.()); state.destroy(); root.removeEventListener('keydown',keydown); root.remove(); } };
+    destroy() { dead = true; clearTimeout(searchTimer); closePopover(); closeDialog(); for (const done of [...dragCleanups]) done(); navigationView?.destroy(); subView?.view?.destroy(); if (subView) ctx.onCoin?.(null); panels.forEach((p) => p.dispose?.()); state.destroy(); root.removeEventListener('keydown',keydown); root.remove(); } };
 }

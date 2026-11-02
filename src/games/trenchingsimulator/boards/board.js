@@ -20,7 +20,9 @@
 // now, "Not live". Never a link anywhere, and a real coin's address only ever as its first 6 characters.
 import { el, setText, flag, keyed, icon } from '../ui.js';
 import { markEl, wordEl } from '../brands.js';
-import { createChart, TIMEFRAMES } from '../chart.js';
+import { TIMEFRAMES } from '../chart.js';
+import { createGChart, chartCredit } from './gchart.js';
+import { createPompWorkspace } from './pomp-view.js';
 import { usd, money, signed, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
 import { MIN_BUY } from '../engine.js';
 import { createAddressSearch } from '../live-search.js';
@@ -95,6 +97,7 @@ export function mountBoard(host, ctx) {
     win: '5m', cd: { id: null, arr: [] }, fastAt: 0, slowAt: 0, top: null, infos: new Map(), trade: null, launch: null,
     coinRender: null, kothId: null, tagKey: null, socKey: null, dead: false,
   };
+  let workspace = null;
   const quiet = { matches: false, addEventListener() {}, removeEventListener() {} };
   const mq = (q) => (typeof matchMedia === 'function' ? matchMedia(q) : quiet);
   const phone = mq('(max-width: 719px)');
@@ -348,7 +351,9 @@ export function mountBoard(host, ctx) {
     if (kothBtn.getAttribute('aria-label') !== label) kothBtn.setAttribute('aria-label', label);
   }
 
-  function renderBoard(L = market.lists({ limit: 30 })) {
+  function renderBoard(L) {
+    if (workspace) { workspace.search(B.query); return; }
+    L ||= market.lists({ limit: 30 });
     renderKoth(L.koth);
     // the list (or what the search found)
     let rows;
@@ -405,15 +410,20 @@ export function mountBoard(host, ctx) {
   const chCurve = el('div', { class: 'tsb-ch-curve' }, chCurveT, chCurveBar);
   const tfBtns = TIMEFRAMES.map((x) => el('button', { class: 'tsb-tf', type: 'button', 'aria-pressed': String(x.s === B.tf),
     data: { tf: x.s }, on: { click: () => setTf(x.s) } }, x.id));
-  const canvas = el('canvas', { class: 'tsb-canvas', role: 'img', 'aria-label': 'Market cap chart' });
+  const canvas = el('div', { class: 'tsb-canvas', role: 'img', 'aria-label': 'Market cap chart' });
+  let chartMode = 'mcap';
+  const chartView = el('button', { class: 'pomp-chart-mode', type: 'button', on: { click: () => {
+    chartMode = chartMode === 'mcap' ? 'price' : 'mcap'; chart.view({ mode: chartMode, unit: 'usd' });
+    setText(chartView, chartMode === 'mcap' ? 'Price / MCap' : 'Price / MCap'); chartView.setAttribute('aria-pressed', String(chartMode === 'price'));
+  } } }, 'Price / MCap');
   const chartBox = el('div', { class: 'tsb-chartbox' },
     el('div', { class: 'tsb-chart-tools' },
       el('div', { class: 'tsb-tfs', role: 'group', 'aria-label': 'Candle size' }, tfBtns),
-      el('span', { class: 'tsb-chart-lbl' }, 'Market cap · USD')),
-    canvas);
-  const chart = createChart(canvas, { colors: { ...(ctx.colors || {}) }, tf: B.tf });
+      chartView, el('button', { type: 'button', class: 'pomp-chart-fit', on: { click: () => chart.fit() } }, 'Reset')),
+    canvas, chartCredit());
+  const chart = createGChart(canvas, { colors: { bg: '#000000', grid: '#171717', up: '#43d98b', down: '#f87171', border: '#252525', axis: '#888888' }, tf: B.tf });
   const tabN = { holders: el('span', { class: 'tsb-tab-n' }), thread: el('span', { class: 'tsb-tab-n' }) };
-  const tabBtns = [['holders', 'Holders'], ['thread', 'Thread'], ['trades', 'Trades'], ['info', 'Info']].map(([id, label]) =>
+  const tabBtns = [['holders', 'Holders'], ['thread', 'Callouts'], ['trades', 'Trades'], ['info', 'About']].map(([id, label]) =>
     el('button', { class: ['tsb-tab', id === 'info' && 'is-phone'], type: 'button', 'aria-pressed': String(id === B.tab),
       data: { tab: id }, on: { click: () => setTab(id) } }, label, tabN[id] ? [' ', tabN[id]] : null));
   const th = (t, cls) => el('th', { scope: 'col', class: cls }, t);
@@ -433,12 +443,13 @@ export function mountBoard(host, ctx) {
       el('thead', {}, el('tr', {}, th('Account'), th('Type'), th(unitName, 'tsb-num'), th('Amount', 'tsb-num tsb-c-amt'),
         th('MC', 'tsb-num tsb-c-mc'), th('Time', 'tsb-num'))),
       tradesBody));
+  const aboutPane = el('div', { class: 'pomp-about-pane', hidden: true });
   const coinL = el('div', { class: 'tsb-coin-l' },
     el('div', { class: 'tsb-coinbar' }, backBtn),
-    el('div', { class: 'tsb-ch' }, chPic, el('div', { class: 'tsb-ch-t' }, chName, chChips)),
-    chRow, chCurve, chartBox,
+    el('div', { class: 'pomp-token-header' }, el('div', { class: 'tsb-ch' }, chPic, el('div', { class: 'tsb-ch-t' }, chName, chChips)), chRow),
+    chCurve, chartBox,
     el('div', { class: 'tsb-tabs', role: 'group', 'aria-label': 'Coin details' }, tabBtns),
-    el('div', { class: 'tsb-panes' }, holdPane, thread, tradesPane));
+    el('div', { class: 'tsb-panes' }, holdPane, thread, tradesPane, aboutPane));
 
   // ---------- the trade panel ----------
   const sideBtns = [['buy', 'Buy'], ['sell', 'Sell']].map(([s, label]) => el('button', { class: ['tsb-side', `is-${s}`],
@@ -529,13 +540,16 @@ export function mountBoard(host, ctx) {
     el('div', { class: 'tsb-coin' }, coinL, coinR), buyBar);
 
   function setTab(id) {
-    const want = id === 'info' && !phone.matches ? 'holders' : id;
+    const want = id;
     B.tab = want;
     root.dataset.tab = want;
     for (const b of tabBtns) b.setAttribute('aria-pressed', String(b.dataset.tab === want));
     holdPane.hidden = want !== 'holders';
     thread.hidden = want !== 'thread';
     tradesPane.hidden = want !== 'trades';
+    aboutPane.hidden = want !== 'info';
+    if (want === 'info') aboutPane.append(aboutEl);
+    else aboutBox.lastChild.append(aboutEl);
     if (B.coin !== null) {
       renderCoinFast(false);
       renderCoinSlow();
@@ -564,7 +578,7 @@ export function mountBoard(host, ctx) {
     const r = B.coin !== null ? market.row(B.coin) : null;
     const verb = B.side === 'buy' ? 'Buy' : 'Sell';
     // a real coin: the button says it's play money (it never buys or sells anything for real)
-    setText(placeBtn, r ? `${verb} $${r.ticker}${r.live ? ' · play money' : ''}` : verb);
+    setText(placeBtn, r ? `${verb} $${r.ticker} · play money` : verb);
   }
   function setSide(s) {
     B.side = s;
@@ -686,6 +700,7 @@ export function mountBoard(host, ctx) {
     boardView.hidden = true;
     coinView.hidden = false;
     root.dataset.view = 'coin';
+    workspace?.coin(id);
     if (first) ctx.pushSub();
     if (changed) {
       B.cd = { id: null, arr: [] };
@@ -717,6 +732,7 @@ export function mountBoard(host, ctx) {
     coinView.hidden = true;
     boardView.hidden = false;
     root.dataset.view = 'board';
+    workspace?.coin(null);
     if (typeof ctx.onCoin === 'function') ctx.onCoin(null);
     if (!fromPop) ctx.popSub();
     renderBoard();
@@ -726,6 +742,7 @@ export function mountBoard(host, ctx) {
       // the keyboard back on the coin it came from (or the board's first heading)
       const card = [...grid.children].find((n) => n.dataset.key === String(was));
       if (card) card.focus();
+      else if (workspace) workspace.focusCoin(was);
       else kothH.focus({ preventScroll: true });
     }
   }
@@ -1101,7 +1118,7 @@ export function mountBoard(host, ctx) {
     if (e.target === bagSheet) bagSheet.close();
   });
   function openBag() {
-    if (wide.matches) {
+    if (wide.matches && !workspace) {
       bagH.focus();
       return;
     }
@@ -1215,8 +1232,16 @@ export function mountBoard(host, ctx) {
   }
 
   // ---------- the whole terminal ----------
-  const root = el('div', { class: 'tsb', data: { view: 'board', tab: B.tab } }, head,
+  const root = el('div', { class: 'tsb pomp', data: { view: 'board', tab: B.tab } }, head,
     el('div', { class: 'tsb-body' }, el('div', { class: 'tsb-main' }, boardView, coinView), side), nav, tradeSheet, bagSheet);
+  workspace = createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin, searchForm, walletBtn, brand: head.firstChild });
+  boardView.replaceChildren(workspace.el);
+  head.replaceChildren(workspace.promo, workspace.header, workspace.watchStrip);
+  workspace.header.prepend(backBtn);
+  coinView.prepend(workspace.coinCalls);
+  root.prepend(workspace.rail);
+  root.append(workspace.foot, workspace.mobileNav, ...workspace.dialogs);
+  searchIn.placeholder = 'Search for coins…';
   host.append(root);
   setSide('buy');
 
@@ -1224,13 +1249,11 @@ export function mountBoard(host, ctx) {
     const p = market.player;
     setText(walletAmt, isUsd ? usd(p.sol * px) : MN(p.sol));
     if (B.view === 'coin') renderCoinFast(force);
-    if (wide.matches || bagSheet.open || phone.matches) renderBag();
+    if (bagSheet.open) renderBag();
   }
   function slow() {
-    const L = market.lists({ limit: 30 });
-    renderFlashes(L);
-    if (B.view === 'board') renderBoard(L);
-    else renderCoinSlow();
+    if (B.view === 'board') renderBoard();
+    else { renderCoinSlow(); workspace.update(); }
   }
   fast(true);
   slow(true);
@@ -1269,6 +1292,7 @@ export function mountBoard(host, ctx) {
       B.dead = true;
       clearTimeout(searchTimer);
       chart.destroy();
+      workspace.destroy();
       wide.removeEventListener('change', onWide);
       phone.removeEventListener('change', onPhone);
       document.removeEventListener('keydown', onSlash);

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createMarket } from '../src/games/trenchingsimulator/engine.js';
 import { PHOMO_LIMITS, BLUE_CHIP_FILTER, coinKey, historyWindow, tokenMetrics, marketTokenRows, selectTokens,
-  traderProfiles, selectTraders, socialFeed, copyOrderFor, clearPhomoCache } from '../src/games/trenchingsimulator/boards/phomo-data.js';
+  traderProfiles, selectTraders, socialFeed, copyOrderFor, clearPhomoCache, createPhomoCandleWindow } from '../src/games/trenchingsimulator/boards/phomo-data.js';
 import { PHOMO_SAVE_KEY, PHOMO_BOUNDS, blankPhomoPrefs, cleanPhomoPrefs,
   createPhomoState } from '../src/games/trenchingsimulator/boards/phomo-state.js';
 
@@ -300,4 +300,17 @@ test('Phomo one-tap copy converts the chosen dollars and uses the player holding
   s.destroy();
   assert.equal(s.copyTrade({ coin: 0, side: 'buy' }, 25).error, 'unavailable');
   assert.equal(sent.length, 2);
+});
+
+test('Phomo position windows preserve streaming identity and accept corrected or retained history', () => {
+  const pick=createPhomoCandleWindow(); let rows=Array.from({length:700},(_,t)=>({t,c:t+1}));
+  assert.equal(pick(rows,Infinity,699),rows);
+  const selected=pick(rows,300,699); assert.deepEqual(selected,rows.filter(r=>r.t>=399));
+  rows[699]={t:699,c:900}; rows.push({t:700,c:800});
+  assert.equal(pick(rows,300,700),selected); assert.deepEqual(selected,rows.filter(r=>r.t>=400));
+  rows.splice(0,600); assert.equal(pick(rows,300,700),selected); assert.deepEqual(selected,rows,'retention does not leave a disconnected historical prefix');
+  const correction=rows.map(r=>({...r,c:r.c+10})); const corrected=pick(correction,300,700);
+  assert.notEqual(corrected,selected); assert.deepEqual(corrected,correction,'an older closed candle correction is not lost');
+  const rewind=[{t:1,c:4},{t:2,c:5}]; assert.deepEqual(pick(rewind,300,2),rewind);
+  assert.deepEqual(pick(rewind,300,999),[]); rewind.push({t:1000,c:6}); assert.deepEqual(pick(rewind,300,1000),[{t:1000,c:6}]);
 });

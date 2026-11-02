@@ -41,13 +41,13 @@ test('Phomo table keeps sortable dollar metrics and applies anchored numeric fil
     const table = f.cls('ph-token-table');
     const headers = table.querySelectorAll('th');
     assert.equal(headers.length, 7);
-    assert.equal(headers[2].textContent, 'Market cap');
+    assert.equal(headers[1].textContent, 'Market cap');
     const check = (direction) => {
       const rows = table.querySelector('tbody').children;
       const caps = rows.map((r) => f.market.row(Number(r.dataset.key)).mc);
       assert.deepEqual(caps, [...caps].sort((a,b) => direction === 'asc' ? a - b : b - a));
-      for (const row of rows) assert.equal(row.children[2].textContent, usd(f.market.row(Number(row.dataset.key)).mc*200));
-      assert.equal(headers[2].getAttribute('aria-sort'), direction === 'asc' ? 'ascending' : 'descending');
+      for (const row of rows) assert.equal(row.children[1].textContent, usd(f.market.row(Number(row.dataset.key)).mc*200));
+      assert.equal(headers[1].getAttribute('aria-sort'), direction === 'asc' ? 'ascending' : 'descending');
       assert.equal(f.saved().ui.panels[0].sort, 'marketCap');
       assert.equal(f.saved().ui.panels[0].direction, direction);
     };
@@ -72,7 +72,8 @@ test('Phomo workspace persists watchlist, category and filters while panels spli
   assert.equal(f.saved().watchlist.length, 1);
   assert.ok(!f.cls('ph-watchstrip').textContent.includes('Star tokens'));
   f.nav('Watchlist');
-  assert.equal(f.cls('ph-table').querySelector('tbody').children.length, 1);
+  assert.equal(f.cls('ph-nav-rows').children.length, 1);
+  assert.equal(f.cls('ph-table').querySelector('tbody').children.length, 25, 'watchlist rail preserves main discovery');
   f.nav('Tokens');
   byText(f.cls('ph-categories'),'Graduated').click();
   assert.equal(f.saved().ui.panels[0].category, 'graduated');
@@ -292,7 +293,7 @@ test('Phomo keyboard dividers persist dimensions and automatic panels across reo
   const saved = f.saved().ui;
   assert.equal(saved.discoveryWidth,292);
   assert.equal(saved.positionsWidth,332);
-  assert.equal(saved.panels[0].tokenNameWidth,222);
+  assert.equal(saved.panels[0].tokenNameWidth,312);
   assert.equal(saved.positionsCollapsed,true);
   assert.deepEqual(saved.panelSizes,[312,0]);
   f.view.destroy();
@@ -396,4 +397,36 @@ test('Phomo selecting a token on a phone closes the discovery drawer', () => {
     assert.equal(f.cls('ph-root').classList.contains('is-rail-collapsed'),true);
     assert.equal(f.label('Your positions').hidden,true);
   } finally { f.view.destroy(); if (before === undefined) delete globalThis.innerWidth; else globalThis.innerWidth = before; }
+});
+
+test('Phomo side feed and watchlist preserve the central table and do not refresh its hidden rows', () => {
+  const f=fixture();
+  try {
+    const table=f.cls('ph-token-table'), row=table.querySelector('tbody').children[0], holder=row.children[5].children[0];
+    f.nav('Feed');
+    assert.equal(f.cls('ph-token-table'),table); assert.equal(f.saved().ui.panels[0].kind,'tokens');
+    assert.equal(f.saved().ui.navigationKind,'feed');
+    assert.equal(f.cls('ph-nav-social').querySelector('.phs-social').classList.contains('is-compact'),true);
+    f.refresh(); assert.equal(row.children[5].children[0],holder,'holder nodes remain stable across updates');
+    f.nav('Tokens'); f.label('Collapse discovery panel').click();
+    const id=Number(row.dataset.key); f.view.openCoin(id);
+    const first=table.querySelector('tbody').children[0]; const text=first.textContent;
+    f.market.advance(8); f.refresh();
+    assert.equal(table.querySelector('tbody').children[0],first); assert.equal(first.textContent,text,'occluded discovery table receives no updates');
+    f.view.closeSub(); f.refresh(); assert.notEqual(first.textContent,text,'discovery refreshes after returning');
+  } finally {f.view.destroy();}
+});
+
+test('Phomo position modal pauses the covered token chart and resumes it when closed', () => {
+  const clock=globalThis.performance;let now=1000;globalThis.performance={now:()=>now};
+  const f=fixture();
+  try {
+    f.cls('ph-quickbuy').click();f.market.advance(8);now+=1000;f.refresh();
+    f.view.openCoin(f.orders[0].coin);const coinChart=globalThis.__phomoChart;
+    byText(f.cls('ph-position-list'),'View').click();const modalChart=globalThis.__phomoChart;
+    assert.notEqual(modalChart,coinChart);const before=coinChart.sets.length;
+    f.market.advance(3);now+=1000;f.refresh();assert.equal(coinChart.sets.length,before,'covered token chart is not painted');
+    f.label('Close position').click();f.market.advance(3);now+=1000;f.refresh();
+    assert.ok(coinChart.sets.length>before,'chart resumes with current market after closing');assert.equal(modalChart.destroyed,true);
+  } finally {f.view.destroy();globalThis.performance=clock;}
 });

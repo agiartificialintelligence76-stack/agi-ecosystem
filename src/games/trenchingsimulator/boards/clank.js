@@ -2,6 +2,8 @@
 import { el, setText, flag, keyed, icon } from '../ui.js';
 import { createClankChart } from './clank-chart.js';
 import { createClankImageQueue } from './clank-images.js';
+import { createClankTicker } from './clank-ticker.js';
+import { updateStats } from './stable-ui.js';
 import { createClankPracticeSeries } from './clank-chart-data.js';
 import { usd, usdFull, compact, pct, share, age, tokens, signed } from '../format.js';
 import { START_MC } from '../curve.js';
@@ -76,6 +78,8 @@ export function mountClank(host, ctx) {
   const latest = el('div', { class: 'tsc-tape', 'aria-label': practice?'Practice market trades':'Latest Clank trades' });
   root.append(header, el('div', { class: 'tsc-layout' }, sidebar, main), latest);
   host.append(root);
+  const tape=createClankTicker(latest,{makeItem:tapeItem,keyOf:r=>r.key,label:market.live&&!practice?'Live trades':'Practice trades',
+    empty:market.live&&!practice?'Loading latest Clank trades…':'Market trades appear here as they happen.'});
 
   const pairRail = el('div', { class: 'tsc-pairs', 'aria-label': 'Filter by paired asset' });
   const pairButtons = new Map();
@@ -381,9 +385,8 @@ export function mountClank(host, ctx) {
     setText(profileName, `@${ctx.playerName?.() || 'trencher'}`);
     const player = market.player;
     const positions = market.positions();
-    profileCards.replaceChildren(...[['Portfolio', M(player.worth)], ['Available', M(player.sol)],
-      ['Total P&L', signed((player.worth - ctx.start) * px, 'usd')], ['Positions', positions.filter((p) => p.open).length]].map(([label, value]) =>
-      el('div', {}, el('span', {}, label), el('strong', {}, value))));
+    updateStats(profileCards, [['Portfolio', M(player.worth)], ['Available', M(player.sol)],
+      ['Total P&L', signed((player.worth - ctx.start) * px, 'usd')], ['Positions', positions.filter((p) => p.open).length]]);
     for (const b of profileTabs.children) { flag(b, 'is-active', b.dataset.tab === state.profileTab); b.setAttribute('aria-pressed', String(b.dataset.tab === state.profileTab)); }
     if (state.profileTab === 'created') {
       const rows = state.owned.map((id) => market.row(id)).filter(Boolean);
@@ -493,6 +496,7 @@ export function mountClank(host, ctx) {
     const hadStep = state.historyStep;
     if (leavingCoin && view !== 'coin') { state.coin = null; ctx.onCoin?.(null); }
     state.view = view;
+    latest.hidden=view!=='explore';tape.visible(!latest.hidden);
     root.classList.remove('is-trade-open');
     flag(exploreButton, 'is-active', view === 'explore'); flag(profileButton, 'is-active', view === 'profile');
     if (view !== 'explore' && !hadStep && !fromPop) { ctx.pushSub?.(); state.historyStep = true; }
@@ -541,31 +545,23 @@ export function mountClank(host, ctx) {
       if (!rows.length) sideContent.replaceChildren(empty('Your trade notifications appear here.'));
     }
   }
+  function tapeItem(r) {
+    const picture=el('span',{class:'tsc-tape-art','aria-hidden':'true'},r.emoji||r.ticker?.slice(0,1)||'');
+    if(r.pic){const img=el('img',{class:'tsc-tape-pic',alt:'',decoding:'async'});picture.append(img);
+      images.add(img,r.pic,{onLoad:()=>{img.hidden=false;},onError:()=>{img.hidden=true;}});}
+    const amount=r.source?`${Number.isFinite(r.quote)?new Intl.NumberFormat('en-US',{maximumSignificantDigits:4}).format(r.quote):'—'} ${r.quoteAsset||'—'}`:M(r.sol);
+    const node=button([el('span',{class:`tsc-tape-amount ${r.side==='buy'?'is-up':'is-down'}`},`${amount} ${r.side==='buy'?'bought':'sold'}`),picture,el('b',{},r.ticker)],
+      async()=>{let id=r.coin;if(!Number.isInteger(id)){try{const found=await market.lookup?.(r.address);id=found?.id??found;}catch{return;}}if(Number.isInteger(id)&&!state.dead)openCoin(id);},'tsc-tape-item');
+    node.title=`${r.ticker} · ${amount} ${r.side==='buy'?'bought':'sold'}`;return node;
+  }
   function renderTape() {
-    if(market.live&&!practice){
-      latest.hidden=state.view!=='explore';if(latest.hidden)return;
-      const trades=(market.clankRecentTrades?.()||[]).slice(0,20);
-      if(!trades.length){if(!latest.querySelector('.tsc-tape-status'))latest.replaceChildren(el('span',{class:'tsc-tape-status'},'Loading latest Clank trades…'));return;}
-      let track=latest.querySelector('.tsc-tape-track');if(!track){track=el('div',{class:'tsc-tape-track'});latest.replaceChildren(track);}
-      const rows=[...trades.map(r=>({...r,copy:0})),...trades.map(r=>({...r,copy:1}))];
-      keyed(track,rows,r=>`${r.copy}:${r.id}`,(r)=>{
-        const amount=el('span',{class:'tsc-tape-amount'}),picture=el('img',{class:'tsc-tape-pic',alt:''});picture.hidden=!r.pic;if(r.pic)images.add(picture,r.pic,{onLoad:()=>{picture.hidden=false;},onError:()=>{picture.hidden=true;}});
-        const node=button([amount,picture,el('b',{},r.ticker)],async()=>{let id=r.coin;if(!Number.isInteger(id)){try{const found=await market.lookup?.(r.address);id=found?.id??found;}catch{return;}}if(Number.isInteger(id)&&!state.dead)openCoin(id);},'tsc-tape-item');node.$={amount};if(r.copy)node.setAttribute('aria-hidden','true');return node;
-      },(n,r)=>{setText(n.$.amount,`${Number.isFinite(r.quote)?new Intl.NumberFormat('en-US',{maximumSignificantDigits:4}).format(r.quote):'—'} ${r.quoteAsset||'—'} ${r.side==='buy'?'bought':'sold'}`);n.$.amount.className=`tsc-tape-amount ${r.side==='buy'?'is-up':'is-down'}`;});
-      track.style.setProperty('--cl-tape-duration',`${Math.max(20,trades.reduce((n,r)=>n+110+7*((r.ticker?.length||0)+(r.quoteAsset?.length||0)+10),0)/75)}s`);return;
-    }
-    latest.hidden=state.view!=='explore';if(latest.hidden)return;
-    const occurrences = new Map();
-    const rows = (market.tape(10) || []).map((r) => {
-      const key = `${r.coin}:${r.t}:${r.side}:${r.sol}:${r.mc}`;
-      const count = (occurrences.get(key) || 0) + 1; occurrences.set(key, count);
-      return { ...r, key: `${key}:${count}` };
-    });
-    clearEmpty(latest);
-    keyed(latest, rows, (r) => r.key, (r) => button([
-      el('span', { class: r.side === 'buy' ? 'is-up' : 'is-down' }, `${practice?'Practice · ':''}${M(r.sol)} ${r.side === 'buy' ? 'bought' : 'sold'}`),
-      el('b', {}, r.ticker)], () => openCoin(r.coin), 'tsc-tape-item'));
-    if (!rows.length) latest.replaceChildren(el('span', { class: 'tsc-muted' }, 'Market trades appear here as they happen.'));
+    if(state.view!=='explore')return;
+    if(market.live&&!practice){tape.update((market.clankRecentTrades?.()||[]).slice(0,20).map(r=>({...r,key:r.id,source:true})));return;}
+    const occurrences=new Map();
+    tape.update((market.tape(20)||[]).map(r=>{
+      const key=`${r.coin}:${r.t}:${r.side}:${r.sol}:${r.mc}`,count=(occurrences.get(key)||0)+1;occurrences.set(key,count);
+      const coin=market.row(r.coin);return {...r,key:`${key}:${count}`,pic:coin?.pic,emoji:coin?.emoji};
+    }));
   }
   function onKey(e) {
     if (state.dead || e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
@@ -591,7 +587,7 @@ export function mountClank(host, ctx) {
     closeSub: () => go('explore', true),
     openCoin,
     destroy() {
-      state.dead = true; chart.destroy();images.destroy();heroObserver.disconnect();layoutObserver.disconnect();destroyModel?.();clearTimeout(state.searchTimer);clearInterval(speechTimer); document.removeEventListener('keydown', onKey);
+      state.dead = true; tape.destroy();chart.destroy();images.destroy();heroObserver.disconnect();layoutObserver.disconnect();destroyModel?.();clearTimeout(state.searchTimer);clearInterval(speechTimer); document.removeEventListener('keydown', onKey);
       const urls = new Set([...state.pictures.values(), state.uploadUrl].filter(Boolean));
       for (const url of urls) URL.revokeObjectURL(url);
       root.remove();

@@ -1,7 +1,8 @@
 // Phomo's chart controls and original drawing tools. The underlying chart is the existing public Lightweight Charts
 // adapter; no third-party chart UI, private API, network data or external trading action is used here.
 import { createGChart, PALETTE } from './gchart.js';
-import { aggregate, valueOf, formatterFor } from './gngm-data.js';
+import { valueOf, formatterFor } from './gngm-data.js';
+import { createCandleStream } from './chart-stream.js';
 
 export const PHOMO_CHART_STYLES = Object.freeze(['candles', 'bars', 'line', 'area']);
 export const PHOMO_DRAW_TOOLS = Object.freeze(['cursor', 'trend', 'horizontal', 'vertical', 'ray', 'rectangle', 'text', 'measure']);
@@ -103,7 +104,9 @@ class Drawings {
 export function createPhomoChart(host, options = {}) {
   let L = null, chart = null, main = null, alt = null, altMarkers = null, base = null, primitive = null, dead = false;
   let data = { candles: [], solUsd: 150, tf: options.tf || 60, marks: [], base: 0 };
-  let barsCache = null;
+  let barsCache = [], barsDirty = true, barsBase = null, barsChange = { reset: true, changed: true, from: 0 };
+  const stream = createCandleStream();
+  let altRevision = '', markersRevision = '';
   let view = { mode: options.mode || 'mcap', unit: 'usd', per: 1 };
   let chartStyle = 'candles', tool = 'cursor', selected = null, draft = null, visible = true, dragging = null;
   let scale = 'normal', auto = true, grid = true, volume = true, crosshair = true, rangeSeconds = null;
@@ -113,7 +116,18 @@ export function createPhomoChart(host, options = {}) {
   const waiting = host.ownerDocument?.createElement('p');
   if (waiting) { waiting.className = 'tsg-chart-wait'; waiting.textContent = 'Loading chart…'; host.append(waiting); }
   const factor = () => valueOf(1, { ...view, solUsd: data.solUsd });
-  const times = () => barsCache ||= aggregate(data.candles, data.tf).map((b) => ({ ...b, time: Math.round((data.base || 0) / 1000) + b.t }));
+  const times = () => {
+    if (!barsDirty) return barsCache;
+    const next = stream.update(data.candles, data.tf), epoch = Math.round((data.base || 0) / 1000);
+    const reset = next.reset || epoch !== barsBase, from = reset ? 0 : next.from;
+    barsChange = { changed: next.changed || reset, reset, from };
+    if (barsChange.changed) {
+      barsCache.length = from;
+      for (let i = from; i < next.bars.length; i++) barsCache.push({ ...next.bars[i], time: epoch + next.bars[i].t });
+    }
+    barsDirty = false; barsBase = epoch;
+    return barsCache;
+  };
   const active = () => alt || main;
   const state = () => ({ ready: Boolean(base?.state.ready), style: chartStyle, tool, selected, visible, scale, auto, grid, volume,
     crosshair, canUndo: book.canUndo, canRedo: book.canRedo, drawings: book.rows, indicators: [...indicators], rangeSeconds });
@@ -198,13 +212,19 @@ export function createPhomoChart(host, options = {}) {
         priceFormat: { type: 'custom', formatter: formatterFor(view.mode, 'usd'), minMove: view.mode === 'price' ? 1e-13 : 0.01 } });
       altMarkers = L.createSeriesMarkers(alt, []);
     }
+    altRevision = ''; markersRevision = '';
     attachDrawing(); syncAlt(); applySettings();
   }
   function syncAlt() {
     if (!alt) return;
-    const bars = times();
-    alt.setData(bars.map((b) => chartStyle === 'bars' ? { time: b.time, open: b.o * factor(), high: b.h * factor(), low: b.l * factor(), close: b.c * factor() }
-      : { time: b.time, value: b.c * factor() }));
+    const bars = times(), f = factor(), revision = `${chartStyle}|${f}|${data.tf}|${barsBase}`;
+    const convert = (b) => chartStyle === 'bars' ? { time: b.time, open: b.o * f, high: b.h * f, low: b.l * f, close: b.c * f } : { time: b.time, value: b.c * f };
+    if (revision !== altRevision || barsChange.reset) alt.setData(bars.map(convert));
+    else if (barsChange.changed) for (let i = barsChange.from; i < bars.length; i++) alt.update(convert(bars[i]));
+    altRevision = revision;
+    const nextMarkers = JSON.stringify([data.marks, data.tf, barsBase, bars[0]?.time, bars.at(-1)?.time]);
+    if (nextMarkers === markersRevision) return;
+    markersRevision = nextMarkers;
     const available = new Set(bars.map((b) => b.time));
     const marks = (data.marks || []).filter((m) => fin(m.t) && ['buy', 'sell'].includes(m.side)).slice(-200).map((m) => ({
       time: Math.round((data.base || 0) / 1000) + Math.floor(m.t / data.tf) * data.tf,
@@ -227,6 +247,7 @@ export function createPhomoChart(host, options = {}) {
     if (dead) return;
     L = lib;
     const wrapped = { ...lib, createChart(...args) {
+      args[1] = { ...args[1], layout: { ...args[1]?.layout, fontFamily: 'Phomo Aeonik, Arial, sans-serif', fontSize: 12 } };
       chart = lib.createChart(...args);
       return new Proxy(chart, { get(target, key) {
         if (key === 'addSeries') return (definition, ...rest) => {
@@ -275,8 +296,8 @@ export function createPhomoChart(host, options = {}) {
   host.addEventListener('pointerdown', down, true); host.addEventListener('pointermove', drag, true);
   host.addEventListener('pointerup', up, true); host.addEventListener('pointercancel', cancel, true); host.addEventListener('keydown', keydown);
   const api = {
-    set(next) { data = { ...data, ...next }; barsCache = null; base?.set(data); syncAlt(); fitInitial(); primitive?.refresh(); },
-    view(next) { view = { ...view, ...next }; base?.view(next); if (alt) alt.applyOptions({ priceFormat: { type: 'custom', formatter: formatterFor(view.mode, 'usd'), minMove: view.mode === 'price' ? 1e-13 : .01 } }); syncAlt(); notify(); },
+    set(next) { data = { ...data, ...next }; barsDirty = true; base?.set(data); times(); syncAlt(); fitInitial(); if (barsChange.changed) primitive?.refresh(); },
+    view(next) { if (Object.entries(next).every(([key, value]) => view[key] === value)) return; view = { ...view, ...next }; base?.view(next); if (alt) alt.applyOptions({ priceFormat: { type: 'custom', formatter: formatterFor(view.mode, 'usd'), minMove: view.mode === 'price' ? 1e-13 : .01 } }); syncAlt(); notify(); },
     indicators(next) { indicators = [...next]; base?.indicators(next); notify(); },
     style(next) { if (PHOMO_CHART_STYLES.includes(next)) { chartStyle = next; recreateStyle(); notify(); } },
     settings(patch) { if (typeof patch.grid === 'boolean') grid = patch.grid; if (typeof patch.volume === 'boolean') volume = patch.volume;

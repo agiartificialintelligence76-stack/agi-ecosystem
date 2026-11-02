@@ -1,0 +1,13 @@
+Pomp.fun simulator presentation
+
+Layout reference inspected in the user's browser on 2026-11-02:
+https://pump.fun/ (feed)
+https://pump.fun/explore (coin explorer and filters)
+https://pump.fun/coin/9rZR9nCQbaiBvotWVpifN8z1vckVFshnsATuAJrXpump (coin chart, ticket and holders)
+
+The interface is an original HTML/CSS implementation under the simulator's Pomp.fun parody name.
+No reference-site scripts, proprietary chart package, user avatars, coin images or account data are bundled.
+Geist is the repository's existing /fonts/Geist-Variable.woff2, under its existing SIL Open Font License.
+Icons and the parody pill/crown mark are repository SVG shapes.
+Interactive charts use TradingView Lightweight Charts (Apache-2.0) with the shared visible chart credit and build license notice.
+Simulated coin art comes from the existing simulator. Live coin pictures remain supplied by the existing market relay.

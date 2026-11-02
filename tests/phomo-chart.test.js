@@ -31,8 +31,8 @@ function fakeLibrary() {
   const ts = { barSpacing: 7 };
   const api = {
     addSeries(def, options = {}, pane = 0) {
-      const s = { type: def.type, options, pane, data: [], primitives: [], changes: [], priceLines: [] };
-      Object.assign(s, { setData: (rows) => { s.data = rows; }, update: (row) => { if (s.data.at(-1)?.time === row.time) s.data[s.data.length - 1] = row; else s.data.push(row); },
+      const s = { type: def.type, options, pane, data: [], primitives: [], changes: [], priceLines: [], resets:0, updates:0 };
+      Object.assign(s, { setData: (rows) => { s.resets++; s.data = rows; }, update: (row) => { s.updates++; if (s.data.at(-1)?.time === row.time) s.data[s.data.length - 1] = row; else s.data.push(row); },
         applyOptions: (o) => { s.changes.push(o); Object.assign(s.options, o); }, priceScale: () => ({ applyOptions() {} }),
         priceToCoordinate: (v) => v, coordinateToPrice: (v) => v, createPriceLine: (l) => s.priceLines.push(l),
         attachPrimitive: (p) => { s.primitives.push(p); p.attached({ chart: api, series: s, requestUpdate() {} }); },
@@ -135,4 +135,22 @@ test('Phomo native drawings retain their market coordinates across price mode, d
   chart.showDrawings(false); assert.equal(chart.state.visible, false);
   chart.clearDrawings(); assert.equal(chart.state.drawings.length, 1, 'locked annotation survives clear');
   chart.destroy();
+});
+
+test('Phomo alternate series updates only the open bucket and preserves full history across interval, unit and retention changes', () => {
+  const f = fakeLibrary(), chart = createPhomoChart(f.host, {lib:f.lib,tf:60});
+  const candles = Array.from({length:10000},(_,t)=>({t,o:10+t/100,h:12+t/100,l:9+t/100,c:11+t/100,v:1}));
+  chart.set({candles,solUsd:200,base:1000000}); chart.style('line');
+  const line = f.c.series.find(s=>s.type==='Line'), initial = line.resets, first = line.data[0];
+  for(let i=0;i<500;i++) { candles.at(-1).c+=.01; candles.at(-1).h=Math.max(candles.at(-1).h,candles.at(-1).c); chart.set({candles}); chart.view({mode:'mcap',unit:'usd'}); }
+  assert.equal(line.resets,initial,'streaming ticks never replace the complete alternative series');
+  assert.equal(line.updates,500); assert.equal(line.data[0],first);
+  const updates = line.updates; chart.set({candles}); assert.equal(line.updates,updates,'unchanged ticks do no series work');
+  const newTime=10020; candles.push({t:newTime,o:120,h:125,l:119,c:124,v:3}); chart.set({candles});
+  assert.equal(line.data.at(-1).time,11020); assert.equal(line.data.at(-1).value,24800);
+  chart.view({mode:'price'}); assert.equal(line.resets,initial+1); assert.equal(line.data.at(-1).value,24800/1e9);
+  chart.set({tf:300}); assert.equal(line.data.at(-1).time,10900); assert.equal(line.data.at(-1).value,24800/1e9);
+  candles.splice(0,9000); chart.set({candles}); assert.equal(line.data[0].time,10000); assert.equal(line.data.length,4);
+  const replacement=[{t:0,o:3,h:4,l:2,c:3.5,v:2}]; chart.set({candles:replacement,base:2000000});
+  assert.deepEqual(line.data,[{time:2000,value:700/1e9}]); chart.destroy();
 });

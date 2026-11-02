@@ -15,7 +15,8 @@
 // own ResizeObserver, `autoSize`). `lib`: the library itself (the tests' stand-in); else it's loaded when first needed.
 // The same set({ candles, solUsd, marks, tf, migratedAt, base }) as Pomp.fun's chart (../chart.js).
 import { el } from '../ui.js';
-import { aggregate, valueOf, formatterFor, sma, ema, rsi, macd } from './gngm-data.js';
+import { valueOf, formatterFor, sma, ema, rsi, macd } from './gngm-data.js';
+import { createCandleStream } from './chart-stream.js';
 
 export const PALETTE = Object.freeze({
   bg: '#0d0d0f', grid: 'rgba(255,255,255,0.04)', border: '#1f2024', axis: '#8a8d93', strong: '#eaecef', up: '#16c47f',
@@ -121,6 +122,9 @@ export function createGChart(host, { mode = 'mcap', unit = 'usd', per = 1, tf = 
   let markers = null;
   const fx = {}; // the indicators' series: ma, ema (over the candles), rsi { line }, macd { hist, line, signal }
   let bars = [];
+  const stream = createCandleStream();
+  let calculatedKey = '';
+  let indexBase = null;
   let calc = {}; // the indicators' values, candle by candle
   let at = new Map(); // a candle's time on the axis → its index
   let sent = null; // what the series have: { key, first, t, n }
@@ -283,21 +287,28 @@ export function createGChart(host, { mode = 'mcap', unit = 'usd', per = 1, tf = 
       setWait(true);
       return;
     }
-    bars = aggregate(cd, data.tf);
+    const changed = stream.update(cd, data.tf);
+    bars = changed.bars;
     const s0 = sec0();
-    at = new Map(bars.map((b, i) => [s0 + b.t, i]));
-    const closes = bars.map((b) => val(b.c));
-    calc = { ma: fx.ma ? sma(closes, 20) : null, ema: fx.ema ? ema(closes, 9) : null, rsi: fx.rsi ? rsi(closes, 14) : null,
-      macd: fx.macd ? macd(closes) : null };
     const key = `${view.mode}|${view.unit}|${view.per}|${data.tf}|${px()}|${s0}|${fxSeries().map(([n]) => n).join(',')}`;
+    const resetIndex = changed.reset || indexBase !== s0;
+    if (resetIndex) at.clear();
+    for (let i = resetIndex ? 0 : changed.from; i < bars.length; i++) at.set(s0 + bars[i].t, i);
+    indexBase = s0;
+    if (changed.changed || calculatedKey !== key) {
+      const closes = fxSeries().length ? bars.map((b) => val(b.c)) : [];
+      calc = { ma: fx.ma ? sma(closes, 20) : null, ema: fx.ema ? ema(closes, 9) : null, rsi: fx.rsi ? rsi(closes, 14) : null,
+        macd: fx.macd ? macd(closes) : null };
+      calculatedKey = key;
+    }
     const first = bars.length ? bars[0].t : null;
     // (another coin's candles come as another array: always all of them again)
-    if (!sent || sent.arr !== cd || sent.key !== key || sent.first !== first || bars.length < sent.n) {
+    if (changed.reset || !sent || sent.arr !== cd || sent.key !== key || sent.first !== first || bars.length < sent.n) {
       candles.setData(bars.map(candleOf));
       volume.setData(bars.map(volOf));
       for (const [name, s] of fxSeries()) s.setData(bars.map((b, i) => pointOf(name, b, i)));
       sent = { arr: cd, key, first, t: bars.length ? bars[bars.length - 1].t : -Infinity, n: bars.length };
-    } else if (bars.length) {
+    } else if (bars.length && changed.changed) {
       let i = bars.length - 1;
       while (i > 0 && bars[i].t > sent.t) i--;
       for (let j = i; j < bars.length; j++) {

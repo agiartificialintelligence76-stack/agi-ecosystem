@@ -4,6 +4,9 @@
 // https://docs.basedbot.app/web-app/webapp/{discover,pulse,token-page,trading,portfolio,trackers}
 // The simulator owns funds and execution. There is no account connection, private key, deposit or external trading.
 import { el, setText, flag, keyed, icon, toast } from '../ui.js';
+import { updateStats, updateLabels } from './stable-ui.js';
+import { createCandleReader } from './candle-reader.js';
+import { paintBasedTable, paintBasedInfo } from './basedbott-table.js';
 import { markEl, wordEl } from '../brands.js';
 import { usd, money, moneySigned, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
 import { buyPresets, parseAmount, pic, num, short, tone, ORDER_ERRORS } from './common.js';
@@ -24,6 +27,8 @@ export function mountBasedbott(host, ctx) {
   const { market } = ctx, cur = currencyOf(ctx.currency), px = ctx.solUsd, U = unitOf(cur, px);
   const M = v => money(v, cur, px), MS = v => moneySigned(v, cur, px), MC = v => finite(v, x => usd(x * px));
   const base = Date.now() - market.t * 1000;
+  const candleReader = createCandleReader(market, { maxEntries: 5 });
+  const sparkReader = createCandleReader(market, { maxEntries: 96, limit: 32 });
   const S = { view: 'discover', sort: 'top', coin: null, side: 'buy', type: 'market', tf: 5, tab: 'trades',
     query: '', chain: 'all', source: 'all', watched: new Set(), blacklist: new Set(), viewed: new Map(),
     filters: { minimum: 0, maximum: Infinity, minHolders: 0 }, window: '5m', fast: -Infinity, slow: -Infinity,
@@ -205,11 +210,12 @@ export function mountBasedbott(host, ctx) {
     x.star.setAttribute('aria-pressed', String(S.watched.has(r.id)));
     const change = S.window === '1m' ? st.change1m : S.window === '1h' ? st.change1h : S.window === '24h' ? st.changeAll : st.change5m;
     setText(x.trend.lastChild, pct(change)); tone(x.trend, change, 0);
-    x.path.setAttribute('d', sparklinePath(market.candles(r.id) || []));
+    const path = sparklinePath(sparkReader.read(r.id, st.cdv));
+    if (x.path.getAttribute('d') !== path) x.path.setAttribute('d', path);
     setText(x.mc, MC(r.mc)); setText(x.liq, MC(st.liq));
     setText(x.vol, MC(S.window === '1m' ? st.vol1m : S.window === '1h' ? st.vol1h : S.window === '24h' ? st.vol : st.vol5m));
     setText(x.txns, num(S.window === '1h' ? st.txns1h : S.window === '24h' ? st.txns : st.txns5m));
-    x.intel.replaceChildren(el('span', {}, `Holders ${num(r.holders)}`), el('span', {}, `Top 10 ${share(r.top10)}`), el('span', {}, `Dev ${share(r.dev)}`));
+    updateLabels(x.intel, [`Holders ${num(r.holders)}`, `Top 10 ${share(r.top10)}`, `Dev ${share(r.dev)}`]);
     x.buy.disabled = r.phase === 'migrating' || r.live && r.tracked === false;
   }
   function makePulseCard(r) {
@@ -222,7 +228,7 @@ export function mountBasedbott(host, ctx) {
   function updatePulseCard(node, r) {
     const x = node.$;
     setText(x.meta, `${age(r.age)} · ${r.live ? 'Real coin · play money' : 'Simulated'} · ${num(r.holders)} holders`);
-    x.stats.replaceChildren(stat('MC', MC(r.mc)), stat('V 5m', MC(r.vol5m)), stat('Change', pct(r.ch5m), r.ch5m >= 0 ? 'is-up' : 'is-down'));
+    updateStats(x.stats, [['MC', MC(r.mc)], ['V 5m', MC(r.vol5m)], ['Change', pct(r.ch5m), r.ch5m >= 0 ? 'is-up' : 'is-down']], 'strong', 'tbb-stat');
     x.bar.style.setProperty('--progress', `${Math.max(0, Math.min(100, (r.progress || 0) * 100))}%`);
     x.bar.title = `Bonding curve ${share(r.progress)}`;
     setText(x.buy, `ϟ ${quick.value} ${U.name}`); x.buy.disabled = r.phase === 'migrating' || r.live && r.tracked === false;
@@ -315,18 +321,18 @@ export function mountBasedbott(host, ctx) {
     if (S.coin === null || S.dead) return;
     const r = market.row(S.coin), st = market.stats(S.coin); if (!r || !st) return;
     setText(coinSubtitle, `${r.name} · ${age(r.age)} · ${r.live ? 'Real coin · play money' : 'Simulated'}${r.live && !r.tracked ? ' · Not live' : ''}`);
-    coinStats.replaceChildren(stat('Market Cap', MC(r.mc)), stat('Liquidity', MC(st.liq)), stat('Volume 5m', MC(st.vol5m)), stat('Holders', num(st.holders)), stat('5m', pct(st.change5m), st.change5m >= 0 ? 'is-up' : 'is-down'));
+    updateStats(coinStats, [['Market Cap', MC(r.mc)], ['Liquidity', MC(st.liq)], ['Volume 5m', MC(st.vol5m)], ['Holders', num(st.holders)], ['5m', pct(st.change5m), st.change5m >= 0 ? 'is-up' : 'is-down']], 'strong', 'tbb-stat');
     watchCoin.setAttribute('aria-pressed', String(S.watched.has(S.coin)));
     for (const b of tfBtns) b.setAttribute('aria-pressed', String(Number(b.dataset.tf) === S.tf));
     for (const b of fxBtns) b.setAttribute('aria-pressed', String(S.indicators.has(b.dataset.fx)));
-    chart.set({ candles: market.candles(S.coin) || [], solUsd: px, tf: S.tf, migratedAt: st.migratedAt, base,
+    chart.set({ candles: candleReader.read(S.coin, st.cdv), solUsd: px, tf: S.tf, migratedAt: st.migratedAt, base,
       marks: market.orders(120).filter(o => o.coin === S.coin && o.status === 'filled').map(o => ({ t: o.doneAt, side: o.side })) });
     setText(holdLine, S.side === 'buy' ? `Balance ${M(market.player.sol)}` : `Holding ${tokens(st.me?.tokens || 0)} ${r.ticker}`);
     const settings = ctx.settings(); setText(tradeSettings, `Slippage ${share(settings.slippage)}  ·  Priority ${settings.priority}  ⚙`);
     orderBtn.disabled = S.type === 'market' && (r.phase === 'migrating' || r.live && !r.tracked);
     const p = market.positions().find(p => p.id === S.coin);
-    positionInfo.replaceChildren(el('h3', {}, 'My Position'), infoRows([['Bought', M(p?.invested || 0)], ['Sold', M(p?.sold || 0)], ['Current holding', M(p?.value || 0)], ['PnL', p ? `${MS(p.total)} (${pct(p.pnlPct)})` : '—']]));
-    riskInfo.replaceChildren(el('h3', {}, 'Token Info'), infoRows([['Top 10', share(st.top10)], ['Dev holding', share(st.dev)], ['Snipers', share(st.snipers)], ['Bundlers', share(st.bundlers)], ['Bonding curve', share(st.progress)], ['DEX paid', r.live ? '—' : st.dexPaid ? 'Yes' : 'No']]));
+    paintBasedInfo(positionInfo, 'position', 'My Position', [['Bought', M(p?.invested || 0)], ['Sold', M(p?.sold || 0)], ['Current holding', M(p?.value || 0)], ['PnL', p ? `${MS(p.total)} (${pct(p.pnlPct)})` : '—']]);
+    paintBasedInfo(riskInfo, 'risk', 'Token Info', [['Top 10', share(st.top10)], ['Dev holding', share(st.dev)], ['Snipers', share(st.snipers)], ['Bundlers', share(st.bundlers)], ['Bonding curve', share(st.progress)], ['DEX paid', r.live ? '—' : st.dexPaid ? 'Yes' : 'No']]);
     renderCoinTables();
   }
   function table(labels, rows, cls = '') {
@@ -334,52 +340,53 @@ export function mountBasedbott(host, ctx) {
       el('tbody', {}, rows.map(row => el('tr', {}, row.map(v => el('td', {}, v)))))));
   }
   function orderRows(coin = null) {
-    return automations.list().filter(o => coin === null || o.coin === coin).map(o => [btn(market.row(o.coin)?.ticker || 'Token', () => openCoin(o.coin)),
+    return automations.list().filter(o => coin === null || o.coin === coin).map(o => ({ id: o.id, cells: [{ text: market.row(o.coin)?.ticker || 'Token', action: () => openCoin(o.coin) },
       `${o.side} · ${o.mode}`, o.mode === 'limit' ? MC(o.target) : o.mode === 'dca' ? `${o.remaining} × every ${o.interval}s` : o.mode === 'trail' ? `${share(o.drop)} below high` : 'On migration',
-      o.side === 'alert' ? 'Alert' : o.side === 'buy' ? M(o.sol) : share(o.frac), btn('Cancel', () => { automations.cancel(o.id); render(); }, 'tbb-cancel')]);
+      o.side === 'alert' ? 'Alert' : o.side === 'buy' ? M(o.sol) : share(o.frac), { text: 'Cancel', action: () => { automations.cancel(o.id); render(); }, className: 'tbb-cancel' }] }));
   }
+  const tradeKey = t => `${t.id ?? ''}|${t.t}|${t.coin ?? ''}|${t.addr ?? ''}|${t.side}|${t.sol}|${t.tok ?? ''}`;
   function renderCoinTables() {
     if (S.coin === null) return;
     for (const b of coinTabs) b.setAttribute('aria-pressed', String(b.dataset.ctab === S.tab));
     const st = market.stats(S.coin);
     if (S.tab === 'trades') {
       const trades = market.trades(S.coin, 40) || [];
-      coinTable.replaceChildren(trades.length ? table(['Time', 'Type', 'Value', 'Tokens', 'Market Cap', 'Trader'], trades.map(t => [age(market.t - t.t),
-        el('span', { class: t.side === 'buy' ? 'is-up' : 'is-down' }, t.side.toUpperCase()), M(t.sol), tokens(t.tok), MC(t.mc), t.me ? 'You' : t.kol || (t.addr ? short(t.addr) : '—')])) : empty('No trades yet.'));
+      paintBasedTable(coinTable, `trades:${S.coin}`, ['Time', 'Type', 'Value', 'Tokens', 'Market Cap', 'Trader'], trades.map(t => ({ id: tradeKey(t), cells: [age(market.t - t.t),
+        { text: t.side.toUpperCase(), tone: t.side === 'buy' ? 'is-up' : 'is-down' }, M(t.sol), tokens(t.tok), MC(t.mc), t.me ? 'You' : t.kol || (t.addr ? short(t.addr) : '—')] })), 'No trades yet.');
     } else if (S.tab === 'holders') {
       const holders = market.holders(S.coin, 40);
-      coinTable.replaceChildren(st.live ? empty('Holder identities are not provided by this live feed.') : table(['#', 'Holder', 'Share', 'Tokens', 'Bought', 'Sold'], (holders?.list || []).map(h => [h.rank, h.me ? 'You' : short(h.addr), share(h.pct), tokens(h.tok), M(h.in), M(h.out)])));
+      paintBasedTable(coinTable, `holders:${S.coin}`, ['#', 'Holder', 'Share', 'Tokens', 'Bought', 'Sold'], (st.live ? [] : holders?.list || []).map(h => ({ id: h.addr, cells: [h.rank, h.me ? 'You' : short(h.addr), share(h.pct), tokens(h.tok), M(h.in), M(h.out)] })), st.live ? 'Holder identities are not provided by this live feed.' : 'No holders yet.');
     } else if (S.tab === 'orders') {
       const rows = orderRows(S.coin);
-      coinTable.replaceChildren(rows.length ? table(['Token', 'Type', 'Trigger', 'Amount', ''], rows) : empty('No active conditional orders for this token.'));
+      paintBasedTable(coinTable, `orders:${S.coin}`, ['Token', 'Type', 'Trigger', 'Amount', ''], rows, 'No active conditional orders for this token.');
     } else if (S.tab === 'position') {
       const p = market.positions().find(p => p.id === S.coin);
-      coinTable.replaceChildren(p ? infoRows([['Tokens', tokens(p.tokens)], ['Invested', M(p.invested)], ['Sold', M(p.sold)], ['Value', M(p.value)], ['Total profit', `${MS(p.total)} · ${pct(p.pnlPct)}`], ['Fees', M(p.fees)]]) : empty('Buy this token to open a practice position.'));
+      paintBasedInfo(coinTable, `position:${S.coin}`, '', p ? [['Tokens', tokens(p.tokens)], ['Invested', M(p.invested)], ['Sold', M(p.sold)], ['Value', M(p.value)], ['Total profit', `${MS(p.total)} · ${pct(p.pnlPct)}`], ['Fees', M(p.fees)]] : [['Position', 'Buy this token to open a practice position.']]);
     } else {
       const i = market.info(S.coin), r = market.row(S.coin);
-      coinTable.replaceChildren(infoRows([['Name', i?.name || r.name], ['Ticker', r.ticker], ['Contract', i?.mint ? `${i.mint.slice(0, 6)}…` : 'Simulated token'],
-        ['Source', r.src || 'Simulated market'], ['Phase', r.phase], ['All-time high', MC(st.ath)], ['Age', age(st.age)], ['Transactions', num(st.txns)]]));
+      paintBasedInfo(coinTable, `info:${S.coin}`, '', [['Name', i?.name || r.name], ['Ticker', r.ticker], ['Contract', i?.mint ? `${i.mint.slice(0, 6)}…` : 'Simulated token'],
+        ['Source', r.src || 'Simulated market'], ['Phase', r.phase], ['All-time high', MC(st.ath)], ['Age', age(st.age)], ['Transactions', num(st.txns)]]);
     }
   }
   function renderPortfolio() {
     const p = market.player, pos = market.positions();
-    portfolioStats.replaceChildren(stat('Total Value', M(p.worth)), stat('Available Balance', M(p.sol)), stat('Total PnL', MS(p.worth - market.startSol), p.worth >= market.startSol ? 'is-up' : 'is-down'), stat('Open Positions', pos.filter(x => x.open).length));
+    updateStats(portfolioStats, [['Total Value', M(p.worth)], ['Available Balance', M(p.sol)], ['Total PnL', MS(p.worth - market.startSol), p.worth >= market.startSol ? 'is-up' : 'is-down'], ['Open Positions', pos.filter(x => x.open).length]], 'strong', 'tbb-stat');
     for (const b of portfolioTabs) b.setAttribute('aria-pressed', String(b.dataset.ptab === S.portfolio));
     if (S.portfolio === 'orders') {
-      const rows = orderRows(); portfolioBody.replaceChildren(rows.length ? table(['Token', 'Type', 'Trigger', 'Amount', ''], rows) : empty('No active conditional orders. Open a token and select Limit, DCA or a stop.'));
+      paintBasedTable(portfolioBody, 'orders', ['Token', 'Type', 'Trigger', 'Amount', ''], orderRows(), 'No active conditional orders. Open a token and select Limit, DCA or a stop.');
     } else if (S.portfolio === 'history') {
-      const orders = market.orders(100); portfolioBody.replaceChildren(orders.length ? table(['Token', 'Side', 'Amount', 'Status', 'Time'], orders.map(o => [btn(o.ticker, () => openCoin(o.coin)), o.side, o.side === 'buy' ? M(o.sol) : share(o.frac), o.reason ? `${o.status} · ${o.reason}` : o.status, age(market.t - o.t)])) : empty('Your trade history will appear here.'));
+      const orders = market.orders(100); paintBasedTable(portfolioBody, 'history', ['Token', 'Side', 'Amount', 'Status', 'Time'], orders.map(o => ({ id: o.id, cells: [{ text: o.ticker, action: () => openCoin(o.coin) }, o.side, o.side === 'buy' ? M(o.sol) : share(o.frac), o.reason ? `${o.status} · ${o.reason}` : o.status, age(market.t - o.t)] })), 'Your trade history will appear here.');
     } else {
-      portfolioBody.replaceChildren(pos.length ? table(['Token', 'Holding', 'Invested', 'Value', 'PnL', 'Action'], pos.map(p => [btn([pic(p, '', 'tbb'), p.ticker], () => openCoin(p.id), 'tbb-position-token'), tokens(p.tokens), M(p.invested), M(p.value),
-        el('span', { class: p.total >= 0 ? 'is-up' : 'is-down' }, `${MS(p.total)} (${pct(p.pnlPct)})`), p.open ? btn('Sell 100%', () => { const r = ctx.order({ coin: p.id, side: 'sell', frac: 1 }); toast(r?.ok ? 'Sell order submitted.' : errorWords(r?.error), r?.ok ? 'up' : 'down'); renderPortfolio(); }, 'tbb-sell-small') : 'Closed'])) : empty('No positions yet. Discover a token and make your first practice trade.'));
+      paintBasedTable(portfolioBody, 'positions', ['Token', 'Holding', 'Invested', 'Value', 'PnL', 'Action'], pos.map(p => ({ id: p.id, cells: [{ text: p.ticker, token: p, action: () => openCoin(p.id), className: 'tbb-position-token' }, tokens(p.tokens), M(p.invested), M(p.value),
+        { text: `${MS(p.total)} (${pct(p.pnlPct)})`, tone: p.total >= 0 ? 'is-up' : 'is-down' }, p.open ? { text: 'Sell 100%', action: () => { const r = ctx.order({ coin: p.id, side: 'sell', frac: 1 }); toast(r?.ok ? 'Sell order submitted.' : errorWords(r?.error), r?.ok ? 'up' : 'down'); renderPortfolio(); }, className: 'tbb-sell-small' } : 'Closed'] })), 'No positions yet. Discover a token and make your first practice trade.');
     }
   }
   function renderTracker() {
     for (const b of trackerTabs) b.setAttribute('aria-pressed', String(b.dataset.track === S.tracker));
     const tape = S.tracker === 'me' ? market.orders(80).filter(o => o.status === 'filled').map(o => ({ ...o, label: 'me', sol: o.side === 'buy' ? o.spent : o.got }))
       : market.tape(100).filter(t => S.tracker === 'all' || t.label === S.tracker);
-    trackerBody.replaceChildren(tape.length ? table(['Age', 'Token', 'Trader', 'Side', 'Value', 'Market cap', 'Action'], tape.slice(0, 60).map(t => [age(market.t - t.t), btn(t.ticker, () => openCoin(t.coin)), t.label === 'me' ? 'You' : t.label || 'Unknown',
-      el('span', { class: t.side === 'buy' ? 'is-up' : 'is-down' }, t.side), M(t.sol), MC(t.mc), btn('Buy', () => quickBuy(t.coin), 'tbb-quick-buy')])) : empty('No activity matches this filter yet.'));
+    paintBasedTable(trackerBody, `tracker:${S.tracker}`, ['Age', 'Token', 'Trader', 'Side', 'Value', 'Market cap', 'Action'], tape.slice(0, 60).map(t => ({ id: tradeKey(t), cells: [age(market.t - t.t), { text: t.ticker, action: () => openCoin(t.coin) }, t.label === 'me' ? 'You' : t.label || 'Unknown',
+      { text: t.side, tone: t.side === 'buy' ? 'is-up' : 'is-down' }, M(t.sol), MC(t.mc), { text: 'Buy', action: () => quickBuy(t.coin), className: 'tbb-quick-buy' }] })), 'No activity matches this filter yet.');
   }
   function renderMultichart() {
     const ids = [...S.watched].filter(id => market.row(id)).slice(0, 4), key = ids.join(',');
@@ -392,7 +399,7 @@ export function mountBasedbott(host, ctx) {
       }
     }
     if (!ids.length && !multiGrid.children.length) multiGrid.append(empty('Star tokens in Discover to add them to this multichart workspace.'));
-    for (const c of S.multi) c.chart.set({ candles: market.candles(c.id) || [], solUsd: px, tf: 5, base });
+    for (const c of S.multi) c.chart.set({ candles: candleReader.read(c.id, market.stats(c.id)?.cdv), solUsd: px, tf: 5, base });
   }
   function dialog(title, children) {
     const d = el('dialog', { class: 'tbb-dialog ts-sheet', 'aria-label': title }, el('header', {}, el('h2', {}, title), ibtn('close', 'Close', () => d.close())), el('div', { class: 'tbb-dialog-body' }, children));
@@ -464,7 +471,7 @@ export function mountBasedbott(host, ctx) {
     if (now - S.slow >= 700) { S.slow = now; render(); }
     else if (S.coin !== null && now - S.fast >= 250) { S.fast = now; renderCoin(); }
   }, sub: () => S.coin !== null, closeSub: () => closeSub(true), openCoin, destroy() {
-    S.dead = true; closeDialogs(); chart.destroy(); for (const c of S.multi) c.chart.destroy(); automations.clear();
+    S.dead = true; closeDialogs(); chart.destroy(); for (const c of S.multi) c.chart.destroy(); automations.clear(); candleReader.clear(); sparkReader.clear();
     document.removeEventListener('keydown', keydown); root.remove();
   } };
 }

@@ -3,9 +3,10 @@
 import { el, setText, keyed as reconcile, flag, icon } from '../ui.js';
 import { usd, usdFull, signed, pct, age, tokens, compact } from '../format.js';
 import { pic } from './common.js';
-import { positionDetail, profileEquity, tokenMetrics } from './phomo-data.js';
+import { positionDetail, profileEquity, tokenMetrics, createPhomoCandleWindow } from './phomo-data.js';
 import { chartCredit } from './gchart.js';
 import { createPhomoChart } from './phomo-chart.js';
+import { createCandleReader } from './candle-reader.js';
 import './phomo-social.css';
 
 const fin = (x) => typeof x === 'number' && Number.isFinite(x);
@@ -107,8 +108,8 @@ function eventCard(e, state, market, hooks, host, refresh) {
   row._refresh(e); return row;
 }
 
-export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, onCoin, onPosition, quickAmount } = {}) {
-  const root = el('section', { class: `phs-social phs-${kind}` }); host.append(root);
+export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, onCoin, onPosition, quickAmount, compact=false } = {}) {
+  const root = el('section', { class: `phs-social phs-${kind}${compact?' is-compact':''}` }); host.append(root);
   const hooks = { onTrader, onCoin, onPosition, quickAmount }, market = ctx.market;
   let dead = false, last = -Infinity, draw = () => {};
   function update(force = false) { if (dead || (force !== true && Date.now() - last < 500)) return; last = Date.now(); draw(); }
@@ -137,7 +138,8 @@ export function mountPhomoSocial(host, ctx, { state, kind = 'feed', onTrader, on
     const list = el('div', { class: 'phs-feed-list' });
     const blank = empty('Your feed is quiet', 'Follow a simulated trader, place a practice trade, or write a thesis.');
     root.append(el('div', { class: 'phs-toolbar' }, all, followingButton, filter),
-      el('p', { class: 'phs-caption' }, 'Your practice activity and simulated traders. Notes and likes stay on this device.'), recap, composer, list, blank);
+      el('p', { class: 'phs-caption' }, 'Your practice activity and simulated traders. Notes and likes stay on this device.'), recap,
+      compact ? el('details',{class:'phs-compose-disclosure'},el('summary',{},'Write a local thesis'),composer) : composer, list, blank);
     draw = () => {
       flag(all, 'is-active', !following); flag(followingButton, 'is-active', following);
       const p = state.profile('you'); setText(recapText, `${p.trades} recorded fills · ${signed(p.pnlUsd, 'usd')} run P&L · ${p.closed?.count || 0} closed token positions`);
@@ -402,6 +404,7 @@ export function mountPhomoProfile(host, ctx, key = 'you', { state, onTrader, onC
 
 export function mountPhomoPosition(host, ctx, { coin, traderKey = 'you' } = {}, { state, onTrader, onCoin, onClose = () => {}, onShare } = {}) {
   const market = ctx.market, px = ctx.solUsd > 0 ? ctx.solUsd : market.solUsd, base = Date.now() - market.t * 1000;
+  const candleReader = createCandleReader(market,{maxEntries:1}), candleWindow = createPhomoCandleWindow();
   let dead = false, last = -Infinity, window = Infinity, marks = true, theses = false, page = 0, shape = 'candles';
   const root = el('section', { class: 'phs-position-detail', role: 'dialog', 'aria-label': 'Position details' }); host.append(root);
   const trader = state.profile(traderKey), identity = button([avatar(trader), trader?.name || 'Trader'], () => onTrader?.(traderKey), 'phs-person');
@@ -438,7 +441,7 @@ export function mountPhomoPosition(host, ctx, { coin, traderKey = 'you' } = {}, 
     setText(follow, relation(state, traderKey));
     const values = [usd(d.valueUsd), signed(d.pnlUsd, 'usd'), tokens(d.quantity), usd(d.averageEntryUsd), usd(d.investedUsd), signed(d.realizedUsd, 'usd')];
     Object.values(fields).forEach((f, i) => setText(f.dd, values[i])); tint(fields['Total P&L'].dd, d.pnlUsd);
-    const candles = market.candles(coin, Number.isFinite(window) ? Math.max(0, market.t - window) : 0);
+    const candles = candleWindow(candleReader.read(coin,market.stats(coin)?.cdv),window,market.t);
     // ALL is a window choice, not an interval. A short retained run still needs individual candles.
     const span = candles.length > 1 ? Math.max(0, candles.at(-1).t - candles[0].t) : 0;
     chart.set({ candles, solUsd: px, marks: marks ? d.history.map((t) => ({ t: t.t, side: t.side })) : [], tf: span > 3600 ? 60 : span > 300 ? 15 : 1, migratedAt: market.stats(coin)?.poolAt, base });
@@ -459,5 +462,5 @@ export function mountPhomoPosition(host, ctx, { coin, traderKey = 'you' } = {}, 
     if (!history.length) body.replaceChildren(el('tr', {}, el('td', { colSpan: 3 }, 'No matching retained transactions')));
     setText(counter, `${page + 1} / ${count} · ${history.length} swaps`); prev.disabled = page === 0; next.disabled = page + 1 >= count;
   }
-  update(true); return { el: root, update, destroy() { dead = true; chart.destroy(); root.remove(); } };
+  update(true); return { el: root, update, destroy() { dead = true; candleReader.clear(); chart.destroy(); root.remove(); } };
 }

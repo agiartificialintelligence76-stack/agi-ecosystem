@@ -31,7 +31,7 @@ test('Phomo state validates local identity and saved dimensions without losing a
   assert.deepEqual(restored.prefs.ui.panelSizes, [0, 600, 220, 1800]);
   assert.equal(restored.prefs.ui.discoveryWidth, 420); assert.equal(restored.prefs.ui.positionsWidth, 240);
   assert.equal(restored.prefs.ui.panels[0].tokenNameWidth, 420); assert.equal(restored.prefs.ui.positionsCollapsed, true);
-  assert.ok(f.store.has(PHOMO_SAVE_KEY)); assert.equal(cleanPhomoPrefs(blankPhomoPrefs()).ui.panels[0].tokenNameWidth, 210);
+  assert.ok(f.store.has(PHOMO_SAVE_KEY)); assert.equal(cleanPhomoPrefs(blankPhomoPrefs()).ui.panels[0].tokenNameWidth, 300);
 });
 
 test('Closed token statistics exclude open or unknown positions; observed equity never manufactures a full period', () => {
@@ -131,4 +131,21 @@ test('Profile editing, real equity and saved replays remain local and share the 
   byLabel(f.host, 'Profile position asset type').value = 'perps'; byLabel(f.host, 'Profile position asset type').fire('change');
   assert.ok(f.host.textContent.includes('Perps are view-only on web')); assert.equal(f.market.orders().length, 0);
   view.destroy(); assert.equal(f.host.children.length, 0);
+});
+
+test('Position modal requests only candle tails between quotes and rebuilds historical corrections', () => {
+  const f=fixture(); f.market.order({coin:f.coin,side:'buy',sol:.25,slippage:.99}); f.market.advance(5);
+  const originalCandles=f.market.candles, originalStats=f.market.stats, calls=[]; let revision=0;
+  f.market.stats=(id)=>({...originalStats(id),cdv:revision});
+  f.market.candles=(id,since)=>{calls.push(since);const rows=originalCandles(id,since);if(revision&&since==null&&rows.length)rows[0]={...rows[0],c:12345,h:12345};return rows;};
+  const view=mountPhomoPosition(f.host,f.ctx,{coin:f.coin},f.hooks), chart=globalThis.__phomoChart;
+  try {
+    const initial=chart.sets.at(-1).candles;
+    for(let i=0;i<5;i++){f.market.advance(1);view.update(true);assert.equal(chart.sets.at(-1).candles,initial);}
+    assert.equal(calls.filter(v=>v==null).length,1); assert.ok(calls.slice(1).every(Number.isFinite));
+    byText(f.host,'LIVE').click(); const windowed=chart.sets.at(-1).candles;
+    f.market.advance(1);view.update(true);assert.equal(chart.sets.at(-1).candles,windowed);
+    revision++;view.update(true);const corrected=chart.sets.at(-1).candles;
+    assert.notEqual(corrected,windowed);assert.equal(corrected[0].c,12345);assert.equal(calls.filter(v=>v==null).length,2);
+  } finally {view.destroy();f.market.candles=originalCandles;f.market.stats=originalStats;}
 });

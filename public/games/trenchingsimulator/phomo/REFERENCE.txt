@@ -1,0 +1,11 @@
+Phomo visual reference
+Observed 2026-11-02: https://fomo.family/discover and its signed-in token view.
+The simulator layout is independently implemented. No original application scripts or private APIs are included.
+
+Aeonik font files are the public font resources used by the reference application:
+https://fomo.family/fonts/Aeonik-Regular.woff2
+https://fomo.family/fonts/Aeonik-Medium.woff2
+https://fomo.family/fonts/Aeonik-Bold.woff2
+Font copyright remains with its original rights holders. Public availability does not itself grant a font redistribution license.
+
+Phomo retains play-money trading and local social data. It does not connect a wallet or publish to Fomo.

@@ -62,8 +62,8 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
   const stats = Object.fromEntries(statLabels.map(([key, label]) => [key, field(label)]));
   const header = el('header', { class: 'tspc-header' },
     el('div', { class: 'tspc-heading' }, picture,
-      el('div', { class: 'tspc-identity' }, el('div', { class: 'tspc-title' }, ticker, fullName),
-        el('div', { class: 'tspc-meta' }, coinAge, contract, coinKind)),
+      el('div', { class: 'tspc-identity' }, el('div', { class: 'tspc-title' }, ticker),
+        el('div', { class: 'tspc-meta' }, fullName, coinAge, contract, coinKind)),
       el('div', { class: 'tspc-actions' }, watch, hide)),
     el('dl', { class: 'tspc-stat-grid' }, Object.values(stats).map((x) => x.el)));
 
@@ -223,11 +223,9 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     el('div', { class: 'tspc-layout' }, el('div', { class: 'tspc-main' }, header, chartSection, details),
       el('aside', { class: 'tspc-sidebar' }, orderCard, about, positionsHost || myPosition)), settings.dialog, chartSettings, textSettings.dialog);
   host.append(root);
-  const palette = ctx.colors || {};
   const chart = createPhomoChart(plot, { mode: C.mode, unit: 'usd', tf: C.tf,
-    colors: { bg: palette.bg || '#121010', border: palette.line || '#302727', axis: palette.muted || '#a49b98',
-      strong: palette.text || '#f6f2ef', up: palette.up || '#6be2ac', down: palette.down || '#ff8b9a',
-      label: palette.panel || '#211b19', ma: '#69b8ff', ema: '#c9a6ff' },
+    colors: { bg: '#060510', border: '#1a1925', axis: '#9899a3', strong: '#f7f7f7', up: '#21c95e', down: '#ff622e',
+      label: '#12111a', ma: '#69b8ff', ema: '#c9a6ff' },
     onHover: (b) => setText(legend, b ? `${b.hovering ? '' : 'Now · '}O ${b.fmt(b.o)}  H ${b.fmt(b.h)}  L ${b.fmt(b.l)}  C ${b.fmt(b.c)}  ${pct(b.ch)}  Volume ${usd(b.vol * px)}` : ''),
     requestText: () => textSettings.ask(),
     onChange: (next) => {
@@ -396,7 +394,11 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
       : 'Simulated traders and practice positions. All amounts are in dollars.');
     if (C.tab === 'holders') {
       const rows = (market.holders(id, 100)?.list || []).filter((h) => (!s.live || h.me) && accepts(h, h.tok * s.price * px));
-      keyed(tableBody, rows, (h) => h.addr, () => el('tr'), (tr, h) => {
+      keyed(tableBody, rows, (h) => h.addr, (h) => {
+        const value = el('span'), count = el('small',{class:'tspc-muted tspc-token-count'}), pnl = el('td'), entry = el('td'), note = el('td',{class:'tspc-thesis-cell'});
+        const tr = el('tr',{},el('td',{},traderCell(h,s.live)),el('td',{},value,count),pnl,entry,note);
+        tr._ph = {value,count,pnl,entry,note}; return tr;
+      }, (tr, h) => {
         const p = h.me ? position() : null;
         const value = h.tok * s.price * px;
         const pnl = p ? p.total * px : ((h.out || 0) + h.tok * s.price - (h.in || 0)) * px;
@@ -406,21 +408,22 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
         const key = `${value}:${pnl}:${entry}:${note}:${C.following}`;
         if (tr.dataset.content === key) return;
         tr.dataset.content = key;
-        const pnlCell = el('td', {}, signed(pnl, 'usd'));
-        tone(pnlCell, pnl, 0.005);
-        tr.replaceChildren(el('td', {}, traderCell(h, s.live)), el('td', {}, usd(p?.value != null ? p.value * px : value),
-          el('small', { class: 'tspc-muted tspc-token-count' }, `${tokens(h.tok)} ${s.live ? 'practice units' : s.ticker}`)),
-          pnlCell, el('td', {}, knownPrice(entry)), el('td', { class: 'tspc-thesis-cell', title: note }, note));
+        setText(tr._ph.value,usd(p?.value != null ? p.value * px : value));
+        setText(tr._ph.count,`${tokens(h.tok)} ${s.live ? 'practice units' : s.ticker}`);
+        setText(tr._ph.pnl,signed(pnl,'usd')); tone(tr._ph.pnl,pnl,0.005);
+        setText(tr._ph.entry,knownPrice(entry)); setText(tr._ph.note,note); tr._ph.note.title=note;
       });
     } else {
       const rows = (market.trades(id, 100) || []).filter((t) => accepts(t, t.sol * px));
-      keyed(tableBody, rows, (t) => `${t.t}:${t.addr}:${t.side}:${t.tok}`, () => el('tr'), (tr, t) => {
+      keyed(tableBody, rows, (t) => `${t.t}:${t.addr}:${t.side}:${t.tok}`, (t) => {
+        const size = el('td'), price = el('td'), time = el('td');
+        const tr = el('tr',{},el('td',{},traderCell(t,s.live)),el('td',{class:t.side === 'buy' ? 'is-up' : 'is-down'},t.side === 'buy' ? 'Buy' : 'Sell'),size,price,time);
+        tr._ph = {size,price,time}; return tr;
+      }, (tr, t) => {
         const key = `${Math.floor(market.t - t.t)}:${t.sol}:${t.tok}`;
         if (tr.dataset.content === key) return;
         tr.dataset.content = key;
-        const side = el('td', { class: t.side === 'buy' ? 'is-up' : 'is-down' }, t.side === 'buy' ? 'Buy' : 'Sell');
-        tr.replaceChildren(el('td', {}, traderCell(t, s.live)), side, el('td', {}, usd(t.sol * px)),
-          el('td', {}, knownPrice(t.tok > 0 ? t.sol / t.tok * px : null)), el('td', {}, `${age(market.t - t.t)} ago`));
+        setText(tr._ph.size,usd(t.sol*px)); setText(tr._ph.price,knownPrice(t.tok>0 ? t.sol/t.tok*px : null)); setText(tr._ph.time,`${age(market.t-t.t)} ago`);
       });
     }
     if (!tableBody.children.length) tableBody.append(el('tr', { data: { key: 'empty' } }, el('td', { colSpan: 5, class: 'tspc-empty' },

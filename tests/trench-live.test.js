@@ -1416,7 +1416,8 @@ test('Live mode is open on the site since its relay runs (LIVE_OPEN), always wit
   assert.match(shell, /el\('span', \{ class: 'ts-chip-soon', text: 'Soon', 'aria-hidden': 'true' \}\)/);
   assert.match(shell, /\] : LIVE \? null : el\('p', \{ class: 'ts-live-about', text: LIVE_SOON \}\)/);
   assert.match(shell, /text: LIVE \? 'Live mode \(on the modes screen\)[^']*'\s*: LIVE_SOON_HOW \}/);
-  assert.equal((shell.match(/S\.save\.live = /g) || []).length, 2, 'only the closed switch and the Market switch set it');
+  assert.equal((shell.match(/S\.save\.live = /g) || []).length, 3, 'the availability gate, Market switch and beginner simulated challenge set it');
+  assert.match(shell, /const learn = \(\) => \{\s*S\.save\.terminal = 'board';\s*S\.save\.live = false;/);
   const css = readFileSync('src/games/trenchingsimulator/trench.css', 'utf8');
   assert.match(css, /\.ts-chip:disabled \{[^}]*border-style: dashed;[^}]*color: var\(--t-muted\);[^}]*cursor: not-allowed;/);
   assert.match(css, /\.ts-chip:disabled:hover \{\s*border-color: var\(--t-line\);/, 'no hover on a choice that can\'t be picked');
@@ -2544,7 +2545,7 @@ test('race rooms in the browser: an invite link, what the relay sends checked, a
 
 test('race rooms in the game: Race a friend on the home screen, an invite link opens its room, a race is simulated, never ranked, counted once', () => {
   const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
-  assert.match(shell, /btn\('Race a friend', \{ ic: 'users', on: \(\) => go\('race'\) \}\)/);
+  assert.match(shell, /modeTile\(\{ title: 'Race a friend',[\s\S]*?icon: 'users', on: \(\) => go\('race'\)/);
   assert.doesNotMatch(shell, /Multiplayer · coming soon/, 'not "coming soon" any more');
   // an invite link: its room's screen, the code out of the address (never a reload), the room left with its screens
   assert.match(shell, /const code = roomOfHash\(location\.hash\);/);

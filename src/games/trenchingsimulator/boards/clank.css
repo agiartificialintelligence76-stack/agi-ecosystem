@@ -318,12 +318,22 @@
 .tsc .tsc-card-body>div>small.tsc-muted{color:#aaa;margin-top:6px;line-height:20px}
 .tsc .tsc-progress>i{background:linear-gradient(to right,#c4b5fd,#17a5f8)}
 .tsc .tsc-tape{height:48px;min-height:48px;padding:8px 0;gap:0;background:#131313;overflow:hidden;border-top:1px solid #ffffff0d}
-.tsc .tsc-tape-track{display:flex;width:max-content;flex:none;gap:16px;animation:clank-trade-tape var(--cl-tape-duration,60s) linear infinite;will-change:transform}
-.tsc .tsc-tape:hover .tsc-tape-track,.tsc .tsc-tape:focus-within .tsc-tape-track{animation-play-state:paused}
-.tsc .tsc-tape-item{font-size:14px;line-height:20px;padding:0;gap:8px;font-weight:350;border-radius:0;flex:none}
-.tsc .tsc-tape-item b{font-weight:350}.tsc .tsc-tape-amount{padding:4px 6px;border-radius:4px;background:#c4b5fd14;color:#ededed}.tsc .tsc-tape-amount.is-down{background:#e12f7014;color:#e12f70}.tsc .tsc-tape-pic{height:28px;width:28px;object-fit:cover;border-radius:3px}.tsc .tsc-tape-status{font-size:13px;color:#888;padding:0 16px}
-@keyframes clank-trade-tape{to{transform:translateX(calc(-50% - 8px))}}
-@media(prefers-reduced-motion:reduce){.tsc .tsc-tape-track{animation:none}.tsc .tsc-tape{overflow-x:auto}}
+.tsc .tsc-tape-label{flex:none;padding:0 14px;border-right:1px solid #ffffff14;font-size:11px;color:#a3a3a3;white-space:nowrap;z-index:1;background:#131313}
+.tsc .tsc-tape-window{flex:1;min-width:0;overflow:hidden;padding-left:14px}
+.tsc .tsc-tape-track{display:flex;width:max-content;gap:0;will-change:transform}
+.tsc .tsc-tape-cell{box-sizing:border-box;display:flex;align-items:center;flex:none;gap:14px;padding-right:14px;max-width:300px}
+.tsc .tsc-tape-separator{flex:none;color:#656565;font-size:16px}
+.tsc .tsc-tape-item{font-size:14px;line-height:20px;padding:0;gap:8px;font-weight:350;border-radius:3px;flex:0 1 auto;max-width:266px;white-space:nowrap}
+.tsc .tsc-tape-item b{font-weight:350;min-width:0;overflow:hidden;text-overflow:ellipsis;max-width:100px}
+.tsc .tsc-tape-amount{padding:4px 6px;border-radius:4px;background:#c4b5fd14;color:#ededed;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tsc .tsc-tape-amount.is-down{background:#e12f7014;color:#e12f70}
+.tsc .tsc-tape-art{position:relative;display:grid;place-items:center;flex:none;width:28px;height:28px;border-radius:3px;background:#282828;color:#a3a3a3;font-size:14px;overflow:hidden}
+.tsc .tsc-tape-pic{position:absolute;inset:0;height:28px;width:28px;object-fit:cover;border-radius:3px}
+.tsc .tsc-tape-status{font-size:13px;color:#888;padding:0 16px}
+.tsc .tsc-tape-refresh{flex:none;color:#c4b5fd;font-size:11px;padding:5px 12px;border-left:1px solid #ffffff14;border-radius:0}
+.tsc .tsc-tape.is-reduced-motion .tsc-tape-window{overflow-x:auto;scrollbar-width:thin}
+.tsc .tsc-tape.is-reduced-motion .tsc-tape-track{will-change:auto}
+@media(max-width:650px){.tsc .tsc-tape-label{padding:0 9px;font-size:10px}.tsc .tsc-tape-window{padding-left:9px}}
 .tsc .tsc-coin,.tsc .tsc-profile,.tsc .tsc-launch{margin:24px auto;padding:0 24px;max-width:1280px}
 .tsc .tsc-launch{display:grid;grid-template-columns:1fr 480px 1fr;gap:48px;max-width:1120px;padding:48px 24px 80px;margin:0 auto}
 .tsc .tsc-launch-form{grid-column:2}.tsc .tsc-launch>aside{grid-column:3;width:192px}

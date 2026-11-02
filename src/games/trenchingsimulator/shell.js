@@ -18,7 +18,8 @@
 // the results. Leaving its screens leaves the room.
 import { el, setText, flag, icon, toast, clearToasts, paintTerminal } from './ui.js';
 import { TERMINALS, terminalById, SAFETY_NOTE } from './terminals.js';
-import { markEl, wordEl } from './brands.js';
+import { markEl } from './brands.js';
+import { gameLogo, menuHeader, terminalTile, marketIllustration, modeTile, MENU_TERMINAL_ORDER, TERMINAL_GUIDES } from './menu.js';
 import { CHALLENGES, TIERS, challengeById, FREE_STARTS, SPEEDS, goalText, timeText, startText, freeStartSol, dailyKey, dailySeed,
   dailyChallenge } from './challenges.js';
 import { createRun } from './run.js';
@@ -238,7 +239,7 @@ export function startShell(root) {
       backTo === 'games'
         ? el('a', { class: 'ts-back', href: '/games' }, icon('back'), el('span', { text: 'Games' }))
         : btn('Back', { kind: 'ghost', ic: 'back', cls: 'ts-back', on: () => back(backTo) }),
-      el('span', { class: 'ts-brand', text: GAME_NAME }));
+      gameLogo({ compact: true }));
   }
   const note = () => el('p', { class: 'ts-note' }, icon('info'), el('span', { text: `${SAFETY_NOTE} Not financial advice.` }));
   // the player's optional name (2026-10-22, the owner: "they can enter their custom name before playing just like in the
@@ -273,25 +274,50 @@ export function startShell(root) {
     const day = today();
     const dch = dailyChallenge(day);
     const dd = S.save.daily[day];
-    const stat = (v, l) => el('div', { class: 'ts-stat' }, el('b', { text: v }), el('span', { text: l }));
-    return el('section', { class: 'ts-screen ts-home' },
-      header('games'),
-      el('p', { class: 'ts-kicker', text: 'AGI GAMES · BETA' }),
-      el('h1', { class: 'ts-title', text: 'TRENCHING SIMULATOR' }),
-      el('p', { class: 'ts-lede', text: 'Trade made-up coins with play money on the terminals you know. Ape in early, sell the top, dodge the rugs.' }),
-      el('div', { class: 'ts-actions' },
-        btn('Play', { kind: 'primary', ic: 'play', on: () => go('terminals') }),
-        btn(dd && dd.won ? `Daily market · won ${starsRow(dd.stars)}` : `Daily market · ${dch.name}`,
-          { ic: 'flame', on: () => go('brief', { kind: 'daily' }) })),
-      el('div', { class: 'ts-stats' }, stat(String(st.runs), 'runs'), stat(String(st.wins), 'wins'),
-        stat(`${starsTotal(S.save)}/${STARS_MAX}`, 'stars'), stat(st.bestX > 0 ? times(st.bestX) : '—', 'best')),
-      el('div', { class: 'ts-actions' },
-        btn('Race a friend', { ic: 'users', on: () => go('race') }),
-        btn('Saved replays', { ic: 'replay', on: openReplayLibrary })),
-      el('details', { class: 'ts-how' }, el('summary', { text: 'How to play' }), ...howTo()),
-      note(),
-      el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ',
-        el('a', { href: '/games', text: 'All games' })));
+    const t = terminal();
+    const first = st.runs === 0;
+    const stat = (v, l) => el('div', { class: 'tsm-stat' }, el('b', { text: v }), el('span', { text: l }));
+    const learn = () => {
+      S.save.terminal = 'board';
+      S.save.live = false;
+      if (S.feed) S.feed.stop();
+      save();
+      go('brief', { kind: 'challenge', id: 'first-blood' });
+    };
+    return el('section', { class: 'ts-screen tsm-screen ts-home' },
+      gameMenuHeader('home'),
+      el('div', { class: 'tsm-hero' },
+        el('div', { class: 'tsm-hero-copy' },
+          el('p', { class: 'tsm-eyebrow' }, el('i', { class: 'tsm-status-dot' }), 'SIX TERMINALS. YOUR PLAYGROUND.'),
+          el('h1', { class: 'tsm-title' }, 'ENTER THE', el('br'), el('em', { text: 'TRENCHES.' })),
+          el('p', { class: 'tsm-intro', text: 'Catch the next runner. Learn when to get out. Practice on the terminals you know, with play money and nothing to lose.' }),
+          el('div', { class: 'tsm-hero-actions' },
+            btn(first ? 'Learn the basics' : `Play on ${t.name}`, { kind: 'primary', ic: 'play', on: first ? learn : () => go('modes') }),
+            btn('Choose a terminal', { ic: 'sliders', on: () => go('terminals') })),
+          el('p', { class: 'tsm-hero-foot', text: first ? 'Start with a 5-minute challenge · No wallet needed' : 'Your progress stays in this browser · Play money only' })),
+        marketIllustration()),
+      el('div', { class: 'tsm-section-head' }, el('div', {}, el('h2', { text: 'Find your next session' }),
+        el('p', { text: 'A little practice or a proper challenge. You choose.' })),
+        el('button', { type: 'button', class: 'tsm-text-button', on: { click: () => go('challenges') } }, 'All challenges', icon('back', 'ts-icon tsm-forward'))),
+      el('div', { class: 'tsm-mode-grid' },
+        modeTile({ title: 'Free play', description: 'Explore the market at your own pace. No timer. No target.',
+          meta: `${t.name} · ${S.save.live ? 'Live coins' : 'Simulated market'}`, icon: 'chart', on: () => go('brief', { kind: 'free' }), featured: true }),
+        modeTile({ title: 'Daily market', description: `${dch.name}. The same market for everyone today.`,
+          meta: dd?.won ? `Completed ${starsRow(dd.stars)}` : `${timeText(dch.seconds)} · New every day`, icon: 'flame', on: () => go('brief', { kind: 'daily' }) }),
+        modeTile({ title: 'Race a friend', description: 'One market. The same starting balance. Who comes out ahead?',
+          meta: 'Private room · Share an invite', icon: 'users', on: () => go('race') })),
+      el('div', { class: 'tsm-current' }, markEl(t.id), el('div', { class: 'tsm-current-copy' },
+        el('small', { text: 'YOUR TERMINAL' }), el('b', { text: t.name }), el('p', { text: TERMINAL_GUIDES[t.id].detail })),
+        btn('Browse all 6 terminals', { ic: 'sliders', on: () => go('terminals') })),
+      el('div', { class: 'tsm-bottom' },
+        el('div', { class: 'tsm-stats', 'aria-label': 'Your progress' }, stat(String(st.runs), 'Sessions played'), stat(String(st.wins), 'Challenges won'),
+          stat(`${starsTotal(S.save)}/${STARS_MAX}`, 'Stars earned'), stat(st.bestX > 0 ? times(st.bestX) : '—', 'Best return')),
+        el('details', { class: 'tsm-help' }, el('summary', { text: 'New to the trenches? Here’s how it works.' }), ...howTo())), note(),
+      el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' })));
+  }
+
+  function gameMenuHeader(active = '') {
+    return menuHeader({ active, onHome: () => go('home'), onTerminals: () => go('terminals'), onReplays: openReplayLibrary });
   }
   function howTo() {
     return [
@@ -306,28 +332,17 @@ export function startShell(root) {
 
   function terminalsScreen() {
     const cur = terminal();
-    const cards = TERMINALS.map((t) => {
-      const card = el('article', { class: ['ts-term', t.ready ? '' : 'is-soon', t.id === cur.id && 'is-on'] },
-        el('h2', { class: 'ts-term-name' }, markEl(t.id), wordEl(t.id)),
-        el('p', { class: 'ts-term-tag', text: t.tagline }),
-        el('ul', { class: 'ts-term-feats' }, t.features.map((f) => el('li', { text: f }))),
-        el('p', { class: 'ts-term-cur', text: S.save.live ? `Live: play money in ${UNIT_NAMES[liveCurrency(t.id, S.save.chain)]}`
-          : t.currency === 'usd' ? 'Play money in dollars' : `Play money in ${unitOf(t.currency, priceUsd()).name}` }),
-        t.ready
-          ? btn(`Play on ${t.name}`, { kind: 'primary', ic: 'play', on: () => {
-            S.save.terminal = t.id;
-            if (t.id === 'clank') S.save.chain = 'robinhood';
-            save();
-            go('modes');
-          } })
-          : btn('Coming soon', { ic: 'lock', disabled: true }));
-      paintTerminal(card, t);
-      return card;
-    });
-    return el('section', { class: 'ts-screen ts-terminals' }, header('home'),
-      el('h1', { class: 'ts-h', text: 'Pick your terminal' }),
-      el('p', { class: 'ts-lede', text: 'Six familiar trading layouts, one play-money market. Pick your workspace.' }),
-      el('div', { class: 'ts-terms' }, cards), note());
+    const cards = MENU_TERMINAL_ORDER.map((id) => terminalTile(terminalById(id), { selected: id === cur.id, onSelect: (picked) => {
+      S.save.terminal = picked;
+      S.save.chain = terminalLiveChain(picked, S.save.chain);
+      save();
+      go('modes');
+    } }));
+    return el('section', { class: 'ts-screen tsm-screen ts-terminals' }, gameMenuHeader('terminals'),
+      el('div', { class: 'tsm-page-heading' }, el('div', {}, el('h1', { text: 'Find your trading style.' }),
+        el('p', { text: 'Six familiar workspaces. One play-money market. Pick a layout that feels right — you can switch any time between sessions.' })),
+        el('span', { class: 'tsm-step' }, el('b', { text: '01 TERMINAL' }), ' / 02 MODE / 03 PLAY')),
+      el('div', { class: 'tsm-terminal-grid' }, cards), note());
   }
 
   // the Market switch (Simulated or Live coins) and, for Live, the chain and how the feed is doing; while Live mode isn't
@@ -375,8 +390,8 @@ export function startShell(root) {
     const dd = S.save.daily[day];
     const t = terminal();
     const live = S.save.live;
-    const card = (title, line, sub, onClick, ic) => el('button', { type: 'button', class: 'ts-mode', on: { click: onClick } },
-      icon(ic), el('b', { text: title }), el('span', { text: line }), sub ? el('small', { text: sub }) : null);
+    const card = (title, line, sub, onClick, ic) => modeTile({ title, description: line, meta: sub,
+      on: onClick, icon: ic, featured: title === 'Free play' });
     // Free play's starts in the run's money (a live run's coin once the relay's price for it is in)
     const freeSub = () => {
       const c = live ? runCur(t, true) : t.currency;
@@ -387,20 +402,21 @@ export function startShell(root) {
       const sm = freeCard && freeCard.querySelector('small');
       if (sm && sm.textContent !== freeSub()) setText(sm, freeSub());
     };
-    return el('section', { class: 'ts-screen ts-modes' }, header('terminals'),
+    return el('section', { class: 'ts-screen tsm-screen ts-modes' }, gameMenuHeader('terminals'),
+      el('p', { class: 'tsm-step' }, '01 TERMINAL / ', el('b', { text: '02 MODE' }), ' / 03 PLAY'),
       el('p', { class: 'ts-kicker', text: t.name }),
       el('h1', { class: 'ts-h', text: 'Pick a mode' }),
       marketPicker(onNews),
-      el('div', { class: 'ts-mode-list' },
+      el('div', { class: 'tsm-mode-grid' },
+        freeCard = card('Free play', live ? t.id === 'clank' ? 'Real Clank.trade coins with simulated prices and volume. Your trades move the practice market.' : `Real ${chainNow().name} coins as they come. No clock and no goal.`
+          : 'No clock and no goal. Trade as long as you like.', freeSub(), () => go('brief', { kind: 'free' }), 'chart'),
         card('Daily market', `${dch.name}: ${goalText(dch, t.currency, priceUsd())}`,
           live ? `Always simulated in ${unitOf(t.currency, priceUsd()).name}: the same coins for everyone today`
             : dd ? (dd.won ? `Won today ${starsRow(dd.stars)}` : `${dd.tries} ${dd.tries === 1 ? 'try' : 'tries'} today`)
               : 'The same market for everyone today', () => go('brief', { kind: 'daily' }), 'flame'),
         card('Challenges', live ? `${CHALLENGES.length} goals against a clock that never stops` : `${CHALLENGES.length} goals against the clock`,
           live ? `${starsTotal(S.save, { live: true })} of ${STARS_MAX} ★ in Live mode` : `${starsTotal(S.save)} of ${STARS_MAX} ★`,
-          () => go('challenges'), 'trophy'),
-        freeCard = card('Free play', live ? t.id === 'clank' ? 'Real Clank.trade coins with simulated prices and volume. Your trades move the practice market.' : `Real ${chainNow().name} coins as they come. No clock and no goal.`
-          : 'No clock and no goal. Trade as long as you like.', freeSub(), () => go('brief', { kind: 'free' }), 'chart')),
+          () => go('challenges'), 'trophy')),
       note());
   }
 
@@ -437,7 +453,7 @@ export function startShell(root) {
             ? `${starsRow(b.stars)}${b.time != null ? ` · best ${clock(b.time)}` : ''}` : starsRow(0) }));
         }));
     });
-    return el('section', { class: 'ts-screen ts-challenges' }, header('modes'),
+    return el('section', { class: 'ts-screen tsm-screen tsm-setup ts-challenges' }, header('modes'),
       el('h1', { class: 'ts-h', text: 'Challenges' }),
       el('p', { class: 'ts-lede', text: live
         ? `Live mode: real ${chainNow().name} coins on a clock that never stops, not even for the menu. Its stars are kept apart from the simulated ones. Rug dodger stays simulated: a real coin is never called a rug here.`
@@ -525,12 +541,16 @@ export function startShell(root) {
       }));
     const best = ch && setup.kind === 'challenge' ? (live ? S.save.liveBest[ch.id] : S.save.best[ch.id]) : null;
     const dd = setup.kind === 'daily' ? S.save.daily[setup.day] : null;
-    return el('section', { class: 'ts-screen ts-brief' }, header(setup.kind === 'challenge' ? 'challenges' : 'modes'),
+    return el('section', { class: 'ts-screen tsm-screen tsm-setup ts-brief' }, header(setup.kind === 'challenge' ? 'challenges' : 'modes'),
       el('p', { class: 'ts-kicker', text: setup.kind === 'daily' ? `Daily market · ${setup.day}`
         : ch ? `Challenge · ${TIER_NAMES[ch.tier] || ch.tier}` : 'Free play' }),
       el('h1', { class: 'ts-h', text: ch ? ch.name : 'Free play' }),
       el('p', { class: 'ts-lede', text: ch ? ch.blurb : live ? t.id === 'clank' ? 'Real Clank.trade coins in your own simulated market. Your play-money buys and sells affect prices and volume.' : 'Real coins as they come, traded with play money. No clock and no goal: cash out whenever you like.'
         : 'Your own market, no clock and no goal. Cash out whenever you like.' }),
+      ch?.id === 'first-blood' ? el('ol', { class: 'tsm-first-steps', 'aria-label': 'Your first session' },
+        el('li', {}, el('b', { text: 'Find a coin' }), el('span', { text: 'Open any coin from the feed to see its chart.' })),
+        el('li', {}, el('b', { text: 'Make a small buy' }), el('span', { text: 'Choose an amount in the trade panel. All funds are play money.' })),
+        el('li', {}, el('b', { text: 'Watch your return' }), el('span', { text: 'Use Sell to take profits. Reach 5% growth within 5 minutes to win.' }))) : null,
       facts,
       setup.kind === 'free' ? [
         chips('Start with', FREE_STARTS, S.save.freeStart, (v) => cur() === null ? `— ${liveUnit(t)}`
@@ -595,7 +615,7 @@ export function startShell(root) {
     const h = el('h1', { class: 'ts-h', text: 'Race a friend' });
     const line = el('p', { class: 'ts-race-state', role: 'status', 'aria-live': 'polite' });
     const body = el('div', { class: 'ts-race-body' });
-    const node = el('section', { class: 'ts-screen ts-race', data: { race: '1' } }, header('home'),
+    const node = el('section', { class: 'ts-screen tsm-screen tsm-setup ts-race', data: { race: '1' } }, header('home'),
       el('p', { class: 'ts-kicker', text: 'Race a friend · play money' }), h,
       el('p', { class: 'ts-lede', text: 'Everyone in a room trades the same made-up market from the same moment, each with their own play money. Invite friends with a link: no wallet, no sign-in. The standings are just for fun.' }),
       body, line, note());
@@ -849,7 +869,7 @@ export function startShell(root) {
   }
 
   function mountPlay(run, setup, t, mount = mountBoard, ranked = null) {
-    const compactHud = ['social', 'pro', 'chat', 'clank'].includes(t.id);
+    const compactHud = true;
     const cur = run.currency;
     const px = run.solUsd;
     const M = (x) => money(x, cur, px);

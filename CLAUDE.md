@@ -1,5 +1,25 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Terminal refresh and smoother charts (2026-11-03):** the owner asked for Clank's ticker to run smoothly,
+> a closer Pump.fun / GMGN / Fomo match, a beginner-friendly menu and new logo, and production publication.
+> Pomp now has Pump's compact rail/header, three-column feed, Explore layouts and coin workspace. GNGM has
+> GMGN's discovery rail, trenches, dense metrics, token chart/ticket, mobile trade sheet and local DCA buys.
+> Phomo uses the observed Aeonik typography, navigation, independent Feed rail, token rows and trading layout.
+> These are independent simulator interfaces: wallets, original accounts, external social services and proprietary
+> charting libraries are not reproduced. All orders remain play money. Clank Live retains actual Robinhood
+> Clank coins/artwork with locally simulated prices/volume as explicitly selected by the owner.
+> The neutral menu has a new mark, terminal previews, beginner First Blood entry, clearer mode cards and briefing.
+> Clank's trade ticker now keeps a constant speed, bounded queue and stable cells; hover/focus/hidden pauses and
+> reduced-motion behavior work. Shared charts reuse candle windows, aggregate only changing buckets and retain
+> correct OHLC/volume after history trimming; Axium/BasedBott stats and tables preserve nodes and focused controls.
+> Desktop/phone comparison and play-throughs cover navigation, charts, watchlists and practice fills. Found and
+> fixed the GNGM DCA-to-mobile-Sell transition and desktop focus scrolling. Final Node 24/UTC release build:
+> 1,512 tests, 1,506 passed, 6 skipped, no failures; bundling, share pages and secret scan passed. The 271 focused
+> checks passed on Node 20 and 22, then the final 54 trading/chart checks passed again on both runtimes.
+> Release is isolated under `output/clank-production-20261102`, branch `codex/trench-terminal-refresh`, based on
+> production `d3be80b`; unrelated workspace changes are excluded. Publish only after full build and preview pass.
+
+
 > **Trenching Simulator terminal release (2026-11-02):** the owner requested production publication of Axium,
 > BasedBott and Clank.trade. All six terminals are playable. Clank uses the original public fonts, branding and
 > credited CC BY-SA Vladcat model, measured desktop/phone layouts and a dedicated Robinhood-only public feed.

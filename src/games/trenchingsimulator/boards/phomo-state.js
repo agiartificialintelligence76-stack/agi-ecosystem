@@ -25,7 +25,7 @@ export function blankPhomoPrefs() {
     network: 'all', launchpad: 'all',
     buyPresets: [10, 100, 500, 1000], sellPresets: [10, 25, 50, 100], slippageMode: 'auto', slippage: 0.2,
     ui: { panels: [{ kind: 'tokens', category: 'trending', window: '1h' }],
-      layout: 'columns', quickBuy: 10, rail: false, discoveryWidth: 280, positionsWidth: 320,
+      layout: 'columns', quickBuy: 10, rail: false, navigationKind:'tokens', discoveryWidth: 280, positionsWidth: 320,
       positionsCollapsed: false, panelSizes: [] },
     profile: { displayName: '', handle: '', bio: '', avatar: '🍜', banner: 'violet' },
     traderAlerts: { disabled: [], minTradeUsd: 0, minPortfolioUsd: 0, minMarketCapUsd: 0, maxMarketCapUsd: null },
@@ -53,6 +53,7 @@ export function cleanPhomoPrefs(raw) {
     if (u.layout === 'rows') d.ui.layout = 'rows';
     if (fin(u.quickBuy) && u.quickBuy > 0 && u.quickBuy <= 1_000_000) d.ui.quickBuy = u.quickBuy;
     if (typeof u.rail === 'boolean') d.ui.rail = u.rail;
+    if (['tokens','watchlist','perps','feed','leaderboard','alerts'].includes(u.navigationKind)) d.ui.navigationKind=u.navigationKind;
     if (fin(u.discoveryWidth)) d.ui.discoveryWidth = Math.max(220, Math.min(420, u.discoveryWidth));
     if (fin(u.positionsWidth)) d.ui.positionsWidth = Math.max(240, Math.min(480, u.positionsWidth));
     if (typeof u.positionsCollapsed === 'boolean') d.ui.positionsCollapsed = u.positionsCollapsed;
@@ -63,7 +64,7 @@ export function cleanPhomoPrefs(raw) {
         sort: PHOMO_SORTS.includes(p.sort) ? p.sort : 'volume', direction: p.direction === 'asc' ? 'asc' : 'desc',
         limit: PHOMO_LIMITS.includes(p.limit) ? p.limit : 25, query: text(p.query, 100), filters: filtersOf(p.filters),
         network: networkOf(p.network), launchpad: launchpadOf(p.launchpad),
-        tokenNameWidth: fin(p.tokenNameWidth) ? Math.max(160, Math.min(420, p.tokenNameWidth)) : 210 }));
+        tokenNameWidth: fin(p.tokenNameWidth) ? Math.max(220, Math.min(420, p.tokenNameWidth)) : 300 }));
     }
   }
   if (raw.profile && typeof raw.profile === 'object') {

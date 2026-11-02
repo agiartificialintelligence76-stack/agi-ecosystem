@@ -21,9 +21,10 @@ import { buyPresets, parseAmount, num, ago, short, setP, tone, pic, samePic, fro
 import { GTF, INDICATORS, MAKER_FILTERS, makerOk, makerTag, activityLabels, topTraders, securityChecks, firstSummary,
   FIRST_STATES, initialFrac, makeLimit, limitName, entryMcOf, pnlOf, fxText } from './gngm-data.js';
 import { createGChart, chartCredit } from './gchart.js';
+import { makeScannerDca, scannerFlow } from './gngm-workspace.js';
 
-const TABS = Object.freeze([['activity', 'Activity'], ['traders', 'Traders'], ['holders', 'Holders'], ['dev', 'Dev token'],
-  ['orders', 'Position / Orders'], ['info', 'Info']]);
+const TABS = Object.freeze([['activity', 'Trades'], ['orders', 'Positions / Orders'], ['holders', 'Holders'], ['traders', 'Top Traders'],
+  ['dev', 'Dev Token'], ['info', 'Info']]);
 const STATE_MARK = Object.freeze({ ok: '✓', warn: '!', bad: '✗', na: '—' });
 const STATE_WORD = Object.freeze({ ok: 'fine', warn: 'worth a look', bad: 'a red flag', na: 'not known' });
 
@@ -100,7 +101,7 @@ export function mountCoin(kit) {
   const col = ctx.colors || {};
   const chart = createGChart(plot, {
     tf: C.tf, mode: view().mode, unit: view().unit, per: perCoin,
-    colors: { bg: col.bg, border: col.line, axis: col.dim, strong: col.text, up: col.up, down: col.down, label: col.panel3,
+    colors: { bg: '#111111', border: '#282828', axis: '#8c8c8c', strong: '#eeeeee', up: '#38b78b', down: '#e85e63', label: '#292929',
       mig: col.warn, ma: col.info, ema: col.violet },
     onHover: (b) => {
       if (!b) return setText(legend, '');
@@ -177,7 +178,7 @@ export function mountCoin(kit) {
   // ---------- the trade module ----------
   const sideBtns = [['buy', 'Buy'], ['sell', 'Sell']].map(([s, label]) => el('button', { class: ['tsg-side', `is-${s}`], type: 'button',
     data: { side: s }, 'aria-pressed': String(s === C.side), on: { click: () => setSide(s) } }, label));
-  const otBtns = [['market', 'Market'], ['limit', 'Limit'], ['auto', 'Auto']].map(([o, label]) => el('button', { class: 'tsg-otype', type: 'button',
+  const otBtns = [['market', 'Market'], ['limit', 'Limit'], ['dca', 'DCA'], ['auto', 'Auto']].map(([o, label]) => el('button', { class: 'tsg-otype', type: 'button',
     data: { o }, 'aria-pressed': String(o === C.otype), on: { click: () => setOtype(o) } }, label));
   const holdLine = el('p', { class: 'tsg-holdline' });
   const trigIn = el('input', { class: 'tsg-amt', type: 'text', inputMode: 'decimal', autocomplete: 'off', spellcheck: 'false',
@@ -190,6 +191,9 @@ export function mountCoin(kit) {
   const unitEl = el('span', { class: 'tsg-unit' }, isUsd ? 'USD' : U.name);
   const amtBox = el('label', { class: 'tsg-amtbox' }, amountIn, unitEl);
   const presets = el('div', { class: 'tsg-presets' });
+  const dcaCount = el('input', { class: 'tsg-amt is-sm', type: 'number', min: '2', max: '20', step: '1', value: '3', 'aria-label': 'DCA number of buys' });
+  const dcaEvery = el('input', { class: 'tsg-amt is-sm', type: 'number', min: '2', max: '3600', step: '1', value: '10', 'aria-label': 'DCA seconds between buys' });
+  const dcaBox = el('div', { class: 'tsg-dca', hidden: true }, el('label', {}, 'Buys', dcaCount), el('label', {}, 'Every (seconds)', dcaEvery));
   const tpAt = el('input', { class: 'tsg-amt is-sm', type: 'text', inputMode: 'decimal', value: '100', 'aria-label': 'Take profit at, percent up' });
   const tpFrac = el('input', { class: 'tsg-amt is-sm', type: 'text', inputMode: 'decimal', value: '50', 'aria-label': 'Take profit: sell this many percent' });
   const slAt = el('input', { class: 'tsg-amt is-sm', type: 'text', inputMode: 'decimal', value: '50', 'aria-label': 'Stop loss at, percent down' });
@@ -214,11 +218,12 @@ export function mountCoin(kit) {
   const tradePanel = el('div', { class: 'tsg-trade', data: { side: C.side } },
     el('div', { class: 'tsg-sides', role: 'group', 'aria-label': 'Buy or sell' }, sideBtns),
     el('div', { class: 'tsg-otypes', role: 'group', 'aria-label': 'Order type' }, otBtns),
-    holdLine, trigBox, amtBox, presets, autoBox, presetRow, quoteBox, placeBtn, errBox);
+    holdLine, trigBox, amtBox, presets, dcaBox, autoBox, presetRow, quoteBox, placeBtn, errBox);
   amountIn.addEventListener('input', () => {
     setText(errBox, '');
     quote();
   });
+  dcaCount.addEventListener('input', quote); dcaEvery.addEventListener('input', quote);
   trigIn.addEventListener('input', () => {
     setText(errBox, '');
     quote();
@@ -251,12 +256,19 @@ export function mountCoin(kit) {
     el('div', { class: 'tsg-box-h' }, el('h3', { class: 'tsg-box-t' }, 'First 70 buyers')),
     el('div', { class: 'tsg-box-b' }, firstGrid, firstLegend, firstSum, firstNote));
   const tradeSlot = el('div', { class: 'tsg-tradeslot' }, tradePanel);
-  const coinR = el('div', { class: 'tsg-coin-r' }, tradeSlot, posSlot, secBox, poolBox, firstBox);
+  const flowValues = { volume: el('b'), buys: el('b'), sells: el('b') };
+  const flowSummary = el('section', { class: 'tsg-market-summary' }, chChanges,
+    el('dl', { class: 'tsg-flow-summary' }, [['volume', 'Vol (5m)'], ['buys', 'Buys'], ['sells', 'Sells']].map(([key, label]) =>
+      el('div', {}, el('dt', {}, label), el('dd', {}, flowValues[key])))));
+  const mobileChanges = el('div', { class: 'tsg-mobile-changes' });
+  const headlineNumbers = el('dl', { class: 'tsg-headline-numbers' }, st.mc.parentElement, st.price.parentElement);
+  const coinR = el('div', { class: 'tsg-coin-r' }, flowSummary, tradeSlot, posSlot,
+    el('section', { class: 'tsg-overview' }, chStats), secBox, poolBox, firstBox);
   const coinL = el('div', { class: 'tsg-coin-l' },
     el('div', { class: 'tsg-coinbar' }, backBtn),
     el('div', { class: 'tsg-ch' }, chPic, el('div', { class: 'tsg-ch-t' }, chName,
-      el('div', { class: 'tsg-ch-chips' }, el('span', { class: 'tsg-chipx' }, icon('clock', 'ts-icon tsg-chip-ic'), chAge), chReal, chFrom, chCa, chSocs, chTags))),
-    el('div', { class: 'tsg-ch-row' }, chStats, chChanges), curveBox, chartBox,
+      el('div', { class: 'tsg-ch-chips' }, el('span', { class: 'tsg-chipx' }, icon('clock', 'ts-icon tsg-chip-ic'), chAge), chReal, chFrom, chCa, chSocs, chTags)), headlineNumbers),
+    mobileChanges, curveBox, chartBox,
     el('div', { class: 'tsg-tabs', role: 'group', 'aria-label': 'Coin details' }, tabBtns),
     el('div', { class: 'tsg-panes' }, actPane, tradersPane, holdersPane, devPane, ordersPane));
   // phones: Buy and Sell under the coin, opening the trade module as a sheet
@@ -284,6 +296,9 @@ export function mountCoin(kit) {
     if (C.id !== null) slow();
   }
   function setSide(s) {
+    // DCA is buy-only. A phone's persistent Sell action can enter this ticket even
+    // while its desktop DCA tab was selected, so normalize the order type first.
+    if (s === 'sell' && C.otype === 'dca') setOtype('market');
     C.side = s;
     for (const b of sideBtns) b.setAttribute('aria-pressed', String(b.dataset.side === s));
     tradePanel.dataset.side = s;
@@ -294,6 +309,7 @@ export function mountCoin(kit) {
   }
   function setOtype(o) {
     C.otype = o;
+    if (o === 'dca' && C.side !== 'buy') setSide('buy');
     for (const b of otBtns) b.setAttribute('aria-pressed', String(b.dataset.o === o));
     setText(errBox, '');
     syncTrade();
@@ -305,14 +321,16 @@ export function mountCoin(kit) {
     amtBox.hidden = auto;
     presets.hidden = auto;
     autoBox.hidden = !auto;
+    dcaBox.hidden = C.otype !== 'dca';
     sideBtns.forEach((b) => {
-      b.disabled = auto;
+      b.disabled = auto || C.otype === 'dca' && b.dataset.side === 'sell';
     });
     const r = C.id !== null ? market.row(C.id) : null;
     const tk = r ? `$${r.ticker}` : '';
     const play = r && r.live ? ' · play money' : '';
     if (auto) setText(placeBtn, `Set auto${tk ? ` on ${tk}` : ''}${play}`);
     else if (C.otype === 'limit') setText(placeBtn, `Place ${C.side === 'buy' ? 'buy' : 'sell'} limit${play}`);
+    else if (C.otype === 'dca') setText(placeBtn, `Start DCA buy${play}`);
     else setText(placeBtn, `${C.side === 'buy' ? 'Buy' : 'Sell'} ${tk}${play}`.trim());
     renderPresetRow();
     quote();
@@ -374,6 +392,10 @@ export function mountCoin(kit) {
     if (C.id === null) return;
     const r = market.row(C.id);
     if (C.otype === 'auto') return quoteAuto();
+    if (C.otype === 'dca') {
+      const order = makeScannerDca({ coin: C.id, sol: parseAmount(amountIn.value) / U.per, count: Number(dcaCount.value), interval: Number(dcaEvery.value), now: market.t });
+      return setText(quoteBox, order ? `${order.count} buys of ${M(order.sol)}, every ${order.interval}s. Total ${M(order.total)} plus fees. Stops if a slice cannot be placed.` : 'Enter a total amount, 2–20 buys, and an interval of 2–3,600 seconds.');
+    }
     if (C.otype === 'limit') {
       const t = parseAmount(trigIn.value);
       setText(trigNow, r ? `now ${mc(r.mc)}` : '');
@@ -409,6 +431,13 @@ export function mountCoin(kit) {
   function place() {
     if (C.id === null) return;
     const r = market.row(C.id);
+    if (C.otype === 'dca') {
+      const o = makeScannerDca({ coin: C.id, sol: parseAmount(amountIn.value) / U.per, count: Number(dcaCount.value), interval: Number(dcaEvery.value), now: market.t });
+      if (!o) return setText(errBox, `Each buy must be at least ${M(.001)}. Use 2–20 buys and a 2–3,600 second interval.`);
+      if (o.total > market.player.sol) return setText(errBox, 'Not enough balance for that total amount.');
+      limits.add(o); setText(errBox, ''); amountIn.value = ''; toast(`DCA set: ${o.count} buys of $${r.ticker}`, 'up');
+      renderOrders(); return quote();
+    }
     if (C.otype === 'auto') {
       const p = posOf(C.id);
       if (!p || !p.open) return setText(errBox, 'Buy first: auto sells work on coins you hold.');
@@ -692,7 +721,9 @@ export function mountCoin(kit) {
     if (id === null) return;
     const pend = (market.orders(60) || []).filter((o) => o.coin === id && o.status === 'pending')
       .map((o) => ({ key: `p${o.id}`, text: o.side === 'buy' ? `Buying ${M(o.sol)}…` : `Selling ${share(o.frac, 0)}…`, kind: 'pending' }));
-    const lims = limits.of(id).map((o) => ({ key: `l${o.id}`, text: `${limitName(o)} at ${mc(o.mc)} MC: ${o.side === 'buy' ? M(o.sol) : `sell ${share(o.frac, 0)}`}`,
+    const lims = limits.of(id).map((o) => ({ key: `l${o.id}`, text: o.kind === 'dca'
+      ? `DCA: ${o.remaining}/${o.count} buys left · ${M(o.sol)} every ${o.interval}s`
+      : `${limitName(o)} at ${mc(o.mc)} MC: ${o.side === 'buy' ? M(o.sol) : `sell ${share(o.frac, 0)}`}`,
       kind: 'limit', cancel: () => limits.cancel(o.id) }));
     const a = limits.autoOf(id);
     const autos = a ? [{ key: 'auto', text: `Auto: ${[a.tp && `take profit at +${Math.round(a.tp.at * 100)}% (sell ${share(a.tp.frac, 0)})${a.tp.done ? ' ✓' : ''}`,
@@ -775,6 +806,9 @@ export function mountCoin(kit) {
     const s = market.stats(C.id);
     if (!s) return;
     renderHead(s, info(C.id));
+    const flow = scannerFlow(s);
+    setText(flowValues.volume, Number.isFinite(s.vol5m) ? usd(s.vol5m * px) : '—');
+    setText(flowValues.buys, num(flow.buys)); setText(flowValues.sells, num(flow.sells));
     renderChart(s);
     renderHoldLine(s);
     if (force || amountIn.value || C.otype !== 'market') quote();
@@ -796,6 +830,8 @@ export function mountCoin(kit) {
   renderPresets();
   syncToggles();
   syncTrade();
+  const moveChanges = (on) => (on ? mobileChanges : flowSummary).prepend(chChanges);
+  moveChanges(phone.matches);
 
   return {
     el: root,
@@ -842,6 +878,7 @@ export function mountCoin(kit) {
       quote();
     },
     onPhone(on) {
+      moveChanges(on);
       if (on) return;
       if (sheet.open) sheet.close();
       if (C.tab === 'info') setTab('activity');

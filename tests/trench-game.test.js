@@ -1101,7 +1101,8 @@ test("the parody brands: a mark and a wordmark for every terminal, shapes only, 
   // where they're used: the terminal cards and Pomp.fun's header; the name stays text, never a link
   const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
   const board = readFileSync('src/games/trenchingsimulator/boards/board.js', 'utf8');
-  assert.match(shell, /el\('h2', \{ class: 'ts-term-name' \}, markEl\(t\.id\), wordEl\(t\.id\)\)/);
+  const menu = readFileSync('src/games/trenchingsimulator/menu.js', 'utf8');
+  assert.match(menu, /markEl\(t\.id\), wordEl\(t\.id\)/);
   assert.match(board, /markEl\('board', 'tsb-logo'\), wordEl\('board', 'tsb-brand-t'\)/);
   assert.doesNotMatch(shell + board, /Trench (Board|Chat|Scan|Pro|Social)'/, 'the old names are gone from the page');
 });
@@ -1828,6 +1829,70 @@ function standInCharts() {
   };
   return { lib, charts, markers };
 }
+
+test('streamed chart buckets match full aggregation across live updates, rollover, retention, rewind and replacement', async () => {
+  const { createCandleStream } = await import('../src/games/trenchingsimulator/boards/chart-stream.js');
+  const { aggregate } = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  const candle = (t) => ({ t, o: 100 + t, h: 103 + t, l: 98 + t, c: 102 + t, v: 5, b: 2, s: 1 });
+  for (const tf of [1, 5, 60, 900]) {
+    const stream = createCandleStream();
+    let rows = Array.from({ length: 1900 }, (_, i) => candle(i - 120));
+    assert.deepEqual(stream.update(rows, tf).bars, aggregate(rows, tf));
+    assert.equal(stream.update(rows, tf).changed, false, 'unchanged data does no chart work');
+    for (let i = 0; i < 50; i++) {
+      rows.at(-1).h += 2; rows.at(-1).c += 1; rows.at(-1).v += 3;
+      assert.deepEqual(stream.update(rows, tf).bars, aggregate(rows, tf), 'the open candle is replaced, never double-counted');
+      rows.push(candle(rows.at(-1).t + 1));
+      assert.deepEqual(stream.update(rows, tf).bars, aggregate(rows, tf), 'closing bucket plus new bucket');
+    }
+    rows.splice(0, 100);
+    assert.deepEqual(stream.update(rows, tf).bars, aggregate(rows, tf), 'retention trimming');
+    rows.length = 300;
+    assert.deepEqual(stream.update(rows, tf).bars, aggregate(rows, tf), 'replay rewind');
+    rows = rows.map((c) => ({ ...c, c: c.c + 20 }));
+    assert.deepEqual(stream.update(rows, tf).bars, aggregate(rows, tf), 'historical correction / different coin');
+    assert.deepEqual(stream.update(rows, tf * 2).bars, aggregate(rows, tf * 2), 'timeframe switch');
+    assert.deepEqual(stream.update([], tf).bars, []);
+  }
+});
+
+test('shared chart streams long histories without rereading closed candles or resending unchanged series', async () => {
+  const { createCandleStream } = await import('../src/games/trenchingsimulator/boards/chart-stream.js');
+  const { createGChart } = await import('../src/games/trenchingsimulator/boards/gchart.js');
+  const raw = Array.from({ length: 10000 }, (_, t) => ({ t, o: 30, h: 31, l: 29, c: 30, v: 1 }));
+  let reads = 0;
+  const rows = new Proxy(raw, { get(target, prop) { if (/^\d+$/.test(String(prop))) reads++; return target[prop]; } });
+  const stream = createCandleStream();stream.update(rows, 1);reads = 0;
+  raw.at(-1).c = 30.5;stream.update(rows, 1);
+  assert.ok(reads < 10, `only the open bucket is read, got ${reads}`);
+  const { lib, charts } = standInCharts();const chart = createGChart(null, { lib });
+  chart.set({ candles: raw });const series = charts[0].series[0], sets = series.sets;
+  for (let i = 0; i < 100; i++) chart.set({ candles: raw });
+  assert.equal(series.sets, sets);assert.equal(series.updates.length, 0);
+  raw.at(-1).c = 30.8;chart.set({ candles: raw });
+  assert.equal(series.updates.length, 1);assert.equal(series.updates[0].close, 30.8 * 150);
+  chart.destroy();
+});
+
+test('shared chart replaces a partially retained first bucket even when its timestamp and bar count stay unchanged', async () => {
+  const { createGChart } = await import('../src/games/trenchingsimulator/boards/gchart.js');
+  const { aggregate } = await import('../src/games/trenchingsimulator/boards/gngm-data.js');
+  for (const tf of [60, 300, 900]) {
+    const { lib, charts } = standInCharts(), chart = createGChart(null, { lib, tf });
+    const rows = Array.from({ length: tf * 2 }, (_, t) => ({ t, o: 100+t, h: 103+t, l: 98+t, c: 102+t, v: 5 }));
+    rows[0].h = 100000; rows[0].l = 1; rows[0].v = 50;
+    chart.set({ candles: rows, solUsd: 1 });
+    const candles = charts[0].series[0], volume = charts[0].series[1], sets = candles.sets;
+    rows.splice(0, 1); chart.set({ candles: rows });
+    assert.equal(candles.sets, sets+1, `partial ${tf}s bucket retention replaces stale historical data`);
+    const expected = aggregate(rows, tf);
+    assert.deepEqual(candles.data, expected.map(b=>({time:b.t,open:b.o,high:b.h,low:b.l,close:b.c})));
+    assert.deepEqual(volume.data.map(b=>({time:b.time,value:b.value})), expected.map(b=>({time:b.t,value:b.v})));
+    chart.set({ candles: rows }); assert.equal(candles.sets,sets+1,'unchanged data remains cached after reset');
+    rows.at(-1).c+=1; chart.set({candles:rows}); assert.equal(candles.sets,sets+1,'ordinary tail changes remain incremental');
+    chart.destroy();
+  }
+});
 
 test("GNGM's chart on TradingView Lightweight Charts™ (a stand-in): market cap or price, dollars or the coin, its indicators, crosshair, zoom, back to now", async () => {
   const { createGChart, PALETTE, CREDIT } = await import('../src/games/trenchingsimulator/boards/gchart.js');
