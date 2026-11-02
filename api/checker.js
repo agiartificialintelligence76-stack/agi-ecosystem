@@ -72,6 +72,16 @@ const visitor = (cfg, request) => { const ip = clientIp(request); return cfg.pas
 export async function GET(request) {
   const search = new URL(request.url).search;
   const cfg = getConfig();
+  if (new URL(request.url).searchParams.get('terminal') === 'clank') {
+    const image = /^\?terminal=clank&image=(0x[0-9a-f]{40})$/.exec(search);
+    const { clankTerminalResponse, clankTerminalImage } = await import('../server/clank-live.js');
+    if (image) {
+      if (cfg.checkerHidePictures.has(image[1])) return Response.json({ error: 'no_picture' }, { status: 404, headers: noStore });
+      if (!pictureBurst(visitor(cfg, request))) return Response.json({ error: 'slow_down' }, { status: 429, headers: noStore });
+      return clankTerminalImage(image[1]);
+    }
+    return clankTerminalResponse(request);
+  }
   if (search === '' || search === '?') {
     try {
       const list = await coinList();

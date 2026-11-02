@@ -15,6 +15,15 @@ const B = (o) => Object.freeze({ ...o, word: Object.freeze(o.word.map((w) => Obj
 
 // `word`: the wordmark in parts, each { t: text, k: 'main' | 'accent' }; `view`: the SVG's viewBox; `pixel`: crisp edges
 export const BRANDS = Object.freeze({
+  clank: B({
+    name: 'Clank.trade', view: '0 0 32 32',
+    word: [{ t: 'clank', k: 'main' }, { t: '.trade', k: 'accent' }],
+    shapes: [
+      ['path', { d: 'M22 5H11L4 16l7 11h11l-7-11z', fill: '#c4b5fd' }],
+      ['path', { d: 'M27 8h-7l-5 8 5 8h7l-5-8z', fill: '#f5f5f5' }],
+      ['circle', { cx: 28, cy: 5, r: 2, fill: '#c4b5fd' }],
+    ],
+  }),
   scan: B({
     name: 'GNGM', view: '0 0 12 12', pixel: true,
     word: [{ t: 'GN', k: 'main' }, { t: 'GM', k: 'accent' }],

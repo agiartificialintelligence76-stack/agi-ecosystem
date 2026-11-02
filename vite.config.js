@@ -46,8 +46,34 @@ const ownerContent = () => ({
   },
 });
 
+// The Clank terminal reads the same public-data endpoint in local previews and on Vercel.
+// Restrict this bridge to its read-only route; other site APIs keep their existing setup.
+const clankPreview = () => {
+  const serve = async (req, res, next) => {
+    const url = new URL(req.url || '/', 'http://localhost');
+    if (url.pathname !== '/api/checker' || url.searchParams.get('terminal') !== 'clank') return next();
+    if (req.method !== 'GET') {
+      res.writeHead(405, { Allow: 'GET', 'Content-Type': 'application/json' });
+      res.end('{"error":"method_not_allowed"}');
+      return;
+    }
+    try {
+      const { GET } = await import('./api/checker.js');
+      const result = await GET(new Request(url));
+      res.writeHead(result.status, Object.fromEntries(result.headers));
+      res.end(Buffer.from(await result.arrayBuffer()));
+    } catch {
+      res.writeHead(503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end('{"error":"unavailable"}');
+    }
+  };
+  return { name: 'clank-public-preview',
+    configureServer(server) { server.middlewares.use(serve); },
+    configurePreviewServer(server) { server.middlewares.use(serve); } };
+};
+
 export default defineConfig({
-  plugins: [talkPage(), ownerContent()],
+  plugins: [talkPage(), ownerContent(), clankPreview()],
   // Preserve the splat decoder's relative worker URLs during local development.
   optimizeDeps: { exclude: ['@viggle/splat-engine'] },
   build: {

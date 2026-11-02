@@ -25,11 +25,11 @@ const clampSpeed = (x) => (SPEEDS.includes(x) ? x : 1);
 // createRun({ seed, solUsd, mode: 'challenge'|'daily'|'free', challenge, startSol, speed, currency, config, terminal,
 //   live, makeMarket, realTime })
 export function createRun({ seed, solUsd = 150, mode = 'free', challenge = null, startSol = 1, speed = 1,
-  currency = 'sol', config = {}, terminal = 'board', live = null, makeMarket = null, realTime = false } = {}) {
+  currency = 'sol', config = {}, terminal = 'board', live = null, makeMarket = null, realTime = false, exactStart = false } = {}) {
   const ch = mode === 'free' ? null : challenge;
   const px = Number.isFinite(solUsd) && solUsd > 0 ? solUsd : 150;
   // (in a chain's own coin, a challenge's SOL start is a round amount of it: ./challenges.js)
-  const start = ch ? startSolFor(ch, px, currency) : Number.isFinite(startSol) && startSol > 0 ? startSol : 1;
+  const start = ch ? startSolFor(ch, px, currency, { exactStart }) : Number.isFinite(startSol) && startSol > 0 ? startSol : 1;
   const opts = { seed, solUsd: px, startSol: start, config };
   const market = typeof makeMarket === 'function' ? makeMarket(opts) : createMarket(opts);
   const seconds = ch ? ch.seconds : null;

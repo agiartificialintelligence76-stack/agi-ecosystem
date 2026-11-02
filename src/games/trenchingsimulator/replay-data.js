@@ -60,8 +60,11 @@ export function captureRunReplay(run) {
   const live = Boolean(run.live || run.realTime || m.live);
   const originalLog = !live && typeof m.log === 'function' ? m.log() : [];
   const replayable = !live && originalLog.length <= REPLAY_LIMITS.log;
-  const log = replayable ? originalLog.map((o) => ({ n: o.n, coin: o.coin, side: o.side, sol: o.sol, frac: o.frac,
-    slippage: o.slippage, priority: o.priority })) : [];
+  const log = replayable ? originalLog.map((o) => o.kind === 'launch'
+    ? { kind: 'launch', n: o.n, name: word(o.name, 50), ticker: word(o.ticker, 12), pair: word(o.pair, 10),
+      emoji: word(o.emoji, 12), line: word(o.line, 280) }
+    : { n: o.n, coin: o.coin, side: o.side, sol: o.sol, frac: o.frac,
+      slippage: o.slippage, priority: o.priority }) : [];
   const config = Object.fromEntries(Object.entries(m.config || {}).filter(([, v]) => fin(v) || typeof v === 'boolean' || typeof v === 'string'));
   let placed = rawOrders.length;
   if (typeof run.result === 'function') placed = number(run.result().placed, placed);

@@ -49,6 +49,7 @@ export function liveCurrency(terminalId, chainId) {
     case 'chat':
       return 'eth';
     case 'social':
+    case 'clank':
       return 'usd';
     case 'pro':
     default:

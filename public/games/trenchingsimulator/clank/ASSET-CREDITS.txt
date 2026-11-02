@@ -1,0 +1,11 @@
+Visual reference: https://clank.trade/ (retrieved 2026-11-02)
+Vlad cat model: Copyright Clanktrade. Unmodified public model from
+https://clank.trade/assets/vladcat-hero-CsE94eRh.vrm
+The embedded model metadata licenses redistribution and adaptations under
+Creative Commons Attribution-ShareAlike 4.0:
+https://creativecommons.org/licenses/by-sa/4.0/
+The model's embedded VRM attribution and license metadata are preserved.
+
+Clank mark, wordmark, hot badge and Suisse Intl webfont files are the original
+publicly served reference assets. Their original owners retain their rights.
+This local practice interface is independent of Clank and sends no transactions.

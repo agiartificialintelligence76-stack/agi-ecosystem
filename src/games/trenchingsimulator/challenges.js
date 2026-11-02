@@ -46,12 +46,15 @@ export const SPEEDS = Object.freeze([1, 2, 4]);
 // what a challenge starts with, in SOL (a dollar start at the run's SOL price). In a chain's own coin (`currency`: Live
 // mode's ETH or BNB, since 2026-10-21), a SOL start becomes a round amount of that coin (1 SOL at $150 and ETH at $3,000:
 // 0.05 ETH), and the run starts with what that is in SOL.
-export function startSolFor(ch, solUsd, currency = 'sol') {
+export function startSolFor(ch, solUsd, currency = 'sol', { exactStart = false } = {}) {
   const s = ch && ch.start;
-  if (s && Number.isFinite(s.sol) && s.sol > 0) return inCoin(s.sol, currency, solUsd);
+  // A shared race must give everyone the same underlying funds. Its currency only formats that amount;
+  // ordinary solo runs still round to a convenient amount of the selected native coin.
+  const startCurrency = exactStart ? 'sol' : currency;
+  if (s && Number.isFinite(s.sol) && s.sol > 0) return inCoin(s.sol, startCurrency, solUsd);
   const px = Number.isFinite(solUsd) && solUsd > 0 ? solUsd : 150;
   if (s && Number.isFinite(s.usd) && s.usd > 0) return s.usd / px;
-  return inCoin(1, currency, solUsd);
+  return inCoin(1, startCurrency, solUsd);
 }
 // Free play's start (`v`: one of FREE_STARTS, in SOL), the same way
 export const freeStartSol = (v, currency = 'sol', solUsd = 150) => inCoin(v, currency, solUsd);
@@ -149,9 +152,9 @@ export function dailyChallenge(key) {
 const times = (x) => `${x}x`;
 
 // "Turn 1 SOL into 2 SOL", "Make $500 profit (about 3.33 SOL)"…: what to do; and the time it gives
-export function goalText(ch, currency, solUsd) {
+export function goalText(ch, currency, solUsd, options) {
   if (!ch) return '';
-  const start = startSolFor(ch, solUsd, currency);
+  const start = startSolFor(ch, solUsd, currency, options);
   const g = ch.goal;
   switch (g.kind) {
     case 'worth': {
@@ -184,7 +187,7 @@ export function timeText(seconds) {
 }
 
 // what a challenge starts with, as the terminal shows money: "1 SOL", "$1,000"
-export function startText(ch, currency, solUsd) {
+export function startText(ch, currency, solUsd, options) {
   if (ch && ch.start && Number.isFinite(ch.start.usd) && currency === 'usd') return `$${grouped(ch.start.usd, 0)}`;
-  return money(startSolFor(ch, solUsd, currency), currency, solUsd);
+  return money(startSolFor(ch, solUsd, currency, options), currency, solUsd);
 }

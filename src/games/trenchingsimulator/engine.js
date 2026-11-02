@@ -21,6 +21,8 @@
 // curve). Real coins never get a plan, made-up trades, holders, a thread or flags (rug, dev sell, caller…): what isn't
 // known about them is null. The made-up coins stay as stand-ins: shown when the feed is down or quiet, and paused
 // (no launches, no trades but the player's) while it's live. Without `live`, nothing here changes.
+// Clank's explicit `practice` opt-in keeps the source identity but seeds a separate local pool: simulated crowd
+// trades and player orders move it together, while later source prices cannot replace its practice history.
 import { makeRng, seedOf, hash32 } from './rng.js';
 import { SUPPLY, RESERVED, FLOOR_TOK, K, START_MC, FEES, newCurve, newPool, buy, sell, buyQuote, sellQuote, mOf, mcOf,
   priceOf, curveProgress, curveSol } from './curve.js';
@@ -34,6 +36,18 @@ export const STEPS_PER_S = 10;
 export const DT = 1 / STEPS_PER_S;
 export const BASE_FEE = 0.000005; // the network's own fee for a transaction, in SOL
 export const MIN_BUY = 0.001; // the smallest buy, in SOL
+export const LAUNCH_PAIRS = Object.freeze(['ETH', 'AMC', 'RDDT', 'SPCX', 'TTWO', 'PLTR', 'AAPL', 'META', 'HIMS', 'NVDA']);
+export const MAX_PRACTICE_LAUNCHES = 20;
+const launchText = (v, cap) => typeof v === 'string'
+  ? v.replace(/[\u0000-\u001f\u007f-\u009f\u202a-\u202e\u2066-\u2069]/g, '').trim().slice(0, cap) : '';
+export function cleanLaunch(input) {
+  if (!input || typeof input !== 'object') return null;
+  const name = launchText(input.name, 50);
+  const ticker = launchText(input.ticker, 12).toUpperCase();
+  const pair = input.pair || 'ETH';
+  if (!name || !/^[A-Z0-9]{1,12}$/.test(ticker) || !LAUNCH_PAIRS.includes(pair)) return null;
+  return { name, ticker, pair, emoji: launchText(input.emoji, 12) || '🪙', line: launchText(input.line, 280) };
+}
 // How fast an order lands and what it costs (a priority fee): its delay is drawn between lo and hi seconds
 export const PRIORITY = Object.freeze({
   fast: Object.freeze({ fee: 0.001, lo: 0.35, hi: 0.9 }),
@@ -130,7 +144,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   const M = {
     n: 0, coins: [], awake: [], byMint: new Map(), famous: [], heat: heat0, meta: meta0, metaUntil: metaUntil0,
     koth: null, kothAt: null, tape: [], feed: [], fseq: 0, oseq: 0, counts: { launched: 0, migrated: 0, rugged: 0 },
-    meAddr: addressFrom(hash32(`${seedStr}␟me`)), lc: null,
+    meAddr: addressFrom(hash32(`${seedStr}␟me`)), lc: null, practiceLaunches: 0,
     // Live mode: real coins (ext), which kinds the lists show, and the made-up ones paused
     live: Boolean(live), ext: [], showSim: true, showExt: true, simPaused: false, extSeq: 0,
     // each smart wallet's record: its buys and sells, the SOL in and out, its closed positions won and lost, the
@@ -190,6 +204,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     const ouA = Math.exp(-DT / plan.tau);
     const c = {
       id, born, fate, plan, theme: ident.theme, name: ident.name, ticker: ident.ticker, emoji: ident.emoji,
+      // Fictional pairing metadata for the practice launchpad; no real stock quote is implied.
+      pair: LAUNCH_PAIRS[hash32(`${seedStr}␟pair␟${id}`) % LAUNCH_PAIRS.length],
       copyOf: ident.copyOf ?? null, line, mint, devUser,
       mk: { phase: 'curve', curve: newCurve(), pool: null },
       holders: new Map(), hlist: [],
@@ -213,6 +229,21 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     M.counts.launched++;
     pushFeed('launch', c, born);
     return c;
+  }
+
+  // Practice launches use the same market mechanics as every simulated coin. The log records the complete
+  // metadata before subsequent orders, so replay creates the same IDs, random streams and price paths.
+  function launchCoin(input) {
+    if (M.live) return { ok: false, error: 'free_only' };
+    if (M.practiceLaunches >= MAX_PRACTICE_LAUNCHES) return { ok: false, error: 'launch_limit' };
+    const data = cleanLaunch(input);
+    if (!data) return { ok: false, error: 'bad_launch' };
+    const c = launch(tOf(M.n));
+    Object.assign(c, data, { createdByPlayer: true, devUser: 'Practice creator' });
+    M.practiceLaunches++;
+    M.lc = null;
+    P.log.push({ kind: 'launch', n: M.n, ...data });
+    return { ok: true, id: c.id, coin: info(c.id) };
   }
 
   // ---------- reading a coin's plan (pointers: a coin's age only grows) ----------
@@ -426,6 +457,10 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
         c.cdTrim = true;
       }
     }
+    if (c.ext && c.ext.practice) {
+      const bar = cd[cd.length - 1], key = side > 0 ? 'buyVol' : 'sellVol';
+      bar[key] = (bar[key] || 0) + sol;
+    }
     c.lastMc = mc;
     c.lastTrade = t;
     c.vol += sol;
@@ -537,6 +572,34 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     }
     if (nq) c.q.splice(0, nq);
     if (!c.ext && c.mk.phase === 'migrating' && c.migrateAt < t1) openPool(c, c.migrateAt);
+  }
+
+  // Opt-in practice on a real identity. The imported quote seeds one local pool; simulated crowd trades and
+  // the player's fills subsequently share those reserves. Source refreshes never reset this practice path.
+  function simExtPractice(c, t0, t1) {
+    const p = c.ext.practice, tr = p.rng, span = t1 - t0;
+    const a = Math.exp(-span / 45);
+    p.noise = p.noise * a + .45 * Math.sqrt(1 - a * a) * tr.normal();
+    const acts = [];
+    let nq = 0;
+    while (nq < c.q.length && c.q[nq].landAt < t1) { acts.push({ t: c.q[nq].landAt, k: 1, o: c.q[nq] }); nq++; }
+    const count = tr.poisson(1.8 * span);
+    for (let i = 0; i < count; i++) acts.push({ t: t0 + span * tr.f(), k: 3 });
+    acts.sort(byTime);
+    for (const act of acts) {
+      if (act.o) { land(c, act.o, act.t); continue; }
+      const gap = Math.log(c.mc0 / mcOf(c.mk)) + p.noise;
+      const amount = c.mk.pool.sol * clamp(tr.logn(.008, .65), .001, .045);
+      if (tr.f() < 1 / (1 + Math.exp(-4 * gap))) {
+        const r = buy(c.mk, amount);
+        if (r.out > 0) record(c, act.t, 1, r.used, r.out, PRACTICE_TRADER);
+      } else {
+        const tokens = Math.max(1, Math.floor(amount / priceOf(c.mk)));
+        const r = sell(c.mk, tokens);
+        if (r.back > 0) record(c, act.t, -1, r.gross, r.back, PRACTICE_TRADER);
+      }
+    }
+    if (nq) c.q.splice(0, nq);
   }
 
   function coinOf(id) {
@@ -876,6 +939,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     let slept = false;
     for (let i = 0; i < aw.length; i++) {
       const c = aw[i];
+      if (c.ext && c.ext.practice) { simExtPractice(c, t0, t1); continue; }
       if (c.ext || M.simPaused) {
         // a live coin (and a made-up one while they're paused): only the player's orders land
         landOnly(c, t1);
@@ -969,7 +1033,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     const cd = c.cd;
     if (!cd.length || ts < cd[0].t) {
       // Real coins have no simulated launch floor. A window before the first observed quote is unknown.
-      if (c.ext) return null;
+      if (c.ext) return c.ext.practice ? c.mc0 : null;
       return c.cdTrim && cd.length ? cd[0].o : START_MC;
     }
     let lo = 0;
@@ -1079,8 +1143,9 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       bundlersN: hs.bundlers.n, insiders: hs.insiders.pct, replies: c.replies, txns: c.nTx, vol: c.vol, vol5m: v5.v,
       txns5m: v5.b + v5.s, ch5m: mc / mcAt(c, t - 300) - 1, rugged: c.rugged !== null, dexPaid: c.dexPaid !== null,
       cto: c.cto !== null, calls: c.calls.length, socials: { ...c.socials }, migratedAt: c.poolAt,
-      lastTrade: c.lastTrade, copyOf: c.copyOf, koth: M.koth === c.id,
+      lastTrade: c.lastTrade, copyOf: c.copyOf, koth: M.koth === c.id, pair: c.pair,
     };
+    if (c.createdByPlayer) Object.assign(r, { pair: c.pair, createdByPlayer: true });
     if (M.live) r.standIn = true;
     return r;
   }
@@ -1200,7 +1265,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     const mk = c.mk;
     const mc = mcOf(mk);
     const price = priceOf(mk);
-    const liq = Number.isFinite(x.liq) ? x.liq : 2 * mk.pool.sol;
+    const liq = x.practice ? 2 * mk.pool.sol : Number.isFinite(x.liq) ? x.liq : 2 * mk.pool.sol;
     const v1m = volSince(c, t - 60);
     const v5m = volSince(c, t - 300);
     const v1h = volSince(c, t - 3600);
@@ -1250,7 +1315,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     return {
       id: c.id, name: c.name, ticker: c.ticker, emoji: c.emoji, theme: c.theme, line: c.line, mint: c.mint,
       dev: c.devUser, devAddr: addrOf(c, 'dev', null), born: c.born, copyOf: c.copyOf, socials: { ...c.socials },
-      devCoins: c.plan.intel.devCoins, devMigrated: c.plan.intel.devMigrated,
+      devCoins: c.plan.intel.devCoins, devMigrated: c.plan.intel.devMigrated, pair: c.pair,
+      ...(c.createdByPlayer ? { pair: c.pair, createdByPlayer: true } : {}),
     };
   }
 
@@ -1455,6 +1521,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
 
   // who trades a live coin out there: nobody we know (never an address, never a made-up label)
   const TRADER = Object.freeze({ key: null, label: 'trader', kol: null });
+  const PRACTICE_TRADER = Object.freeze({ key: null, label: 'practice', kol: null });
   const realMc = (r) => (r && r.tok > 0 ? (r.sol / r.tok) * SUPPLY : NaN);
 
   // A live coin's market in the player's view: its real reserves (a constant product), with the player's own tokens
@@ -1530,12 +1597,18 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       asleep: true, addr: new Map(), hs: null, compacted: false, cdv: 0, mc0: 0,
       ext: { chain: o.chain || null, src: o.src || null, pic: o.pic || null, by, pair: o.pair || 'SOL', live: o.live !== false,
         me: 0, real: r0, gap: false, phase: r0.phase, progress: r0.progress, realSol: r0.realSol, liq: r0.liq, dx: null,
-        estimated: Boolean(r0.estimated), exactPool: r0.exactPool === true, since: t, histDone: false },
+        estimated: Boolean(r0.estimated), exactPool: r0.exactPool === true, since: t, histDone: false,
+        practice: o.practice === true ? { rng: makeRng(seedOf(seedStr, 'external-practice', o.key)), noise: 0 } : null },
     };
     M.coins.push(c);
     M.ext.push(c);
     M.byMint.set(o.key, id);
     extSet(c, r0);
+    if (c.ext.practice) {
+      // Source bonding/migration metadata is informational; this local practice pool remains tradeable.
+      c.mk.cap = null; c.mk.closed = false; c.ext.live = true; c.ext.dx = null;
+      c.asleep = false; M.awake.push(c);
+    }
     const mc0 = mcOf(c.mk);
     c.mc0 = mc0;
     // A current quote is only known now. Keep its actual launch age without backdating that price into history.
@@ -1557,7 +1630,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   // move on (sold out → its pool)
   function extState(id, r) {
     const c = coinOf(id);
-    if (!c || !c.ext || !r || !(r.tok > 0) || !(r.sol > 0)) return false;
+    if (!c || !c.ext || c.ext.practice || !r || !(r.tok > 0) || !(r.sol > 0)) return false;
     const x = c.ext;
     const t = tOf(M.n);
     const prev = x.gap ? null : x.real;
@@ -1597,7 +1670,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   // candles and the trades in it, put in their places
   function extHistory(id, points) {
     const c = coinOf(id);
-    if (!c || !c.ext || c.ext.histDone || !Array.isArray(points) || points.length < 2) return false;
+    if (!c || !c.ext || c.ext.practice || c.ext.histDone || !Array.isArray(points) || points.length < 2) return false;
     const from = Math.floor(c.born);
     const until = Math.floor(c.ext.since);
     const cds = [];
@@ -1674,10 +1747,28 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     add: extAdd,
     state: extState,
     history: extHistory,
+    practiceWindows(id) {
+      const c = coinOf(id);
+      if (!c || !c.ext || !c.ext.practice) return null;
+      const out = {}, now = tOf(M.n), mc = mcOf(c.mk);
+      for (const [key, seconds] of Object.entries({ '5m': 300, '1h': 3600, '4h': 14400, '1d': 86400 })) {
+        const since = Math.floor(now - seconds);
+        // Once retained history no longer covers a window, report it unknown rather than a partial total.
+        if (c.cdTrim && c.cd.length && since < c.cd[0].t) { out[key] = null; continue; }
+        let buys = 0, sells = 0, buyVolume = 0, sellVolume = 0;
+        for (let i = c.cd.length - 1; i >= 0 && c.cd[i].t >= since; i--) {
+          const bar = c.cd[i]; buys += bar.b; sells += bar.s;
+          buyVolume += bar.buyVol || 0; sellVolume += bar.sellVol || 0;
+        }
+        out[key] = { buys, sells, buyers: null, sellers: null, buyVolume, sellVolume,
+          volume: buyVolume + sellVolume, change: changeSince(c, since, mc) };
+      }
+      return out;
+    },
     // its market followed live (true), or not right now (false: its trades wait; its next state is a price point)
     track(id, on) {
       const c = coinOf(id);
-      if (!c || !c.ext) return;
+      if (!c || !c.ext || c.ext.practice) return;
       const v = Boolean(on);
       if (c.ext.live === v) return;
       c.ext.live = v;
@@ -1809,6 +1900,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     log() {
       return P.log.map((e) => ({ ...e }));
     },
+    launchCoin,
     order,
     // for tests and the balance harness only: a coin's fate and plan are its future, never shown in the game
     debug: {
@@ -1826,7 +1918,7 @@ export function replay({ seed, solUsd, startSol, config, log = [], until } = {})
   for (const e of log) {
     if (!(Number.isInteger(e.n) && e.n >= m.n)) throw new Error('replay: the log is out of order');
     while (m.n < e.n) m.step();
-    const r = m.order(e);
+    const r = e.kind === 'launch' ? m.launchCoin(e) : m.order(e);
     if (!r.ok) throw new Error(`replay: an order failed (${r.error})`);
   }
   if (Number.isInteger(until)) while (m.n < until) m.step();

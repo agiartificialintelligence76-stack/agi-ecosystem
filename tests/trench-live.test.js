@@ -1536,7 +1536,7 @@ test('a quiet chain with enough real coins live plays them alone (no stand-ins);
   }
   // the modes screen counts the feed's coins followed live for the same rule
   const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
-  assert.match(shell, /const liveCoins = f\.chain === S\.save\.chain \? f\.coins\(\)\.filter\(\(c\) => c\.tracked\)\.length : 0;\s*const w = feedWords\(f\.status, playState\(f\.chainState\(S\.save\.chain\), liveCoins\), S\.save\.chain, when\);/);
+  assert.match(shell, /const liveCoins = f\.chain === S\.save\.chain \? f\.coins\(\)\.filter\(\(c\) => c\.tracked\)\.length : 0;\s*const w = terminalFeedWords\(S\.save\.terminal, f\.status, playState\(f\.chainState\(S\.save\.chain\), liveCoins\), S\.save\.chain, when\);/);
 });
 
 test('newest-first live snapshots stay newest-first before the display limit and update without animation frames', () => {
@@ -2554,7 +2554,7 @@ test('race rooms in the game: Race a friend on the home screen, an invite link o
   // a race: the room's seed and SOL price, simulated (never Live mode), on a clock that never stops, never ranked
   assert.match(shell, /const live = !race && liveRun\(setup\) \? S\.save\.chain : null;/);
   assert.match(shell, /const rankable = !race && !live &&/);
-  assert.match(shell, /run = createRun\(\{ seed: race\.seed, challenge: challengeById\(setup\.id\), mode: 'challenge', solUsd: race\.solUsd, currency: t\.currency,\s*terminal: t\.id, realTime: true \}\);/);
+  assert.match(shell, /run = createRun\(\{ seed: race\.seed, challenge: challengeById\(setup\.id\), mode: 'challenge', solUsd: race\.solUsd, currency: t\.currency,\s*terminal: t\.id, realTime: true, exactStart: true \}\);/);
   assert.match(shell, /let ranked = race \? \{ why: 'race' \}/);
   assert.equal((shell.match(/Site\.play\(\)/g) || []).length, 1, 'a race is counted like any run, in the same one place');
   // how it's going, to the room (at most once a second: race.js), its end once

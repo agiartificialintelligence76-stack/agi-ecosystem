@@ -1,5 +1,6 @@
 // Local recordings only. This archive is never uploaded and cannot execute orders.
 import { REPLAY_LIMITS } from './replay-data.js';
+import { LAUNCH_PAIRS } from './engine.js';
 
 export const REPLAY_ARCHIVE_KEY = 'trench_replays_v1';
 export const REPLAY_ARCHIVE_LIMITS = Object.freeze({ runs: 8, characters: 2_000_000, record: 1_500_000 });
@@ -26,7 +27,11 @@ export function validArchivedReplay(r) {
     || !optional(r.coverage.equityFrom, (n) => fin(n) && n >= 0 && n <= r.duration)) return false;
   if (!object(r.config) || Object.keys(r.config).length > 64 || !Object.entries(r.config).every(([k, v]) => k.length <= 100
     && (fin(v) || typeof v === 'boolean' || word(v, 200)))) return false;
-  if (!array(r.log, REPLAY_LIMITS.log, (o) => fields(o, ['n', 'coin', 'side', 'sol', 'frac', 'slippage', 'priority'])
+  if (!array(r.log, REPLAY_LIMITS.log, (o) => o?.kind === 'launch'
+    ? fields(o, ['kind', 'n', 'name', 'ticker', 'pair', 'emoji', 'line']) && id(o.n)
+      && word(o.name, 50) && o.name.trim().length > 0 && word(o.ticker, 12) && /^[A-Z0-9]{1,12}$/.test(o.ticker)
+      && LAUNCH_PAIRS.includes(o.pair) && word(o.emoji, 12) && word(o.line, 280)
+    : fields(o, ['n', 'coin', 'side', 'sol', 'frac', 'slippage', 'priority'])
     && id(o.n) && id(o.coin) && ['buy', 'sell'].includes(o.side)
     && ['sol', 'frac', 'slippage'].every((k) => optional(o[k], (n) => fin(n) && n >= 0))
     && optional(o.priority, (s) => word(s, 40)))) return false;

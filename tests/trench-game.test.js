@@ -1013,14 +1013,14 @@ const contrast = (a, b) => {
   return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
 };
 
-test("the five terminals: the owner's order, our own names, the safety note, their money and readable colors", () => {
+test("the six terminals: the owner's order, the safety note, their money and readable colors", () => {
   assert.equal(SAFETY_NOTE, 'Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet.');
-  assert.deepEqual(TERMINALS.map((t) => t.id), ['chat', 'scan', 'board', 'pro', 'social']);
-  assert.deepEqual([...TERMINAL_IDS], ['chat', 'scan', 'board', 'pro', 'social']);
+  assert.deepEqual(TERMINALS.map((t) => t.id), ['chat', 'scan', 'board', 'pro', 'social', 'clank']);
+  assert.deepEqual([...TERMINAL_IDS], ['chat', 'scan', 'board', 'pro', 'social', 'clank']);
   // 2026-10-21: parody names (the owner's "use a parody names … instead of their current names like trench board"; the
   // owner's pick: sound-alikes), never a real terminal's own name (the check below)
-  assert.deepEqual(TERMINALS.map((t) => t.name), ['BasedBott', 'GNGM', 'Pomp.fun', 'Axium', 'Phomo']);
-  assert.deepEqual(TERMINALS.map((t) => t.currency), ['sol', 'sol', 'sol', 'sol', 'usd']);
+  assert.deepEqual(TERMINALS.map((t) => t.name), ['BasedBott', 'GNGM', 'Pomp.fun', 'Axium', 'Phomo', 'Clank.trade']);
+  assert.deepEqual(TERMINALS.map((t) => t.currency), [{ coin: 'eth', usd: 3000 }, 'sol', 'sol', 'sol', 'usd', 'usd']);
   assert.equal(DEFAULT_TERMINAL, 'board');
   assert.equal(terminalById('board').ready, true, 'Pomp.fun first');
   assert.equal(terminalById('nope'), null);
@@ -1509,6 +1509,41 @@ test("a chain's own coin as a terminal's money (Live mode, the owner's \"Each ch
   assert.match(shareText(res), /0\.04 ETH → 0\.08 ETH/);
   // a result's currency as saved: nonsense is SOL
   assert.equal(resultLine({ start: 1, worth: 2, currency: { coin: 'doge', usd: 1 } }), '1 SOL → 2 SOL');
+});
+
+test('races preserve identical underlying funds and fills across display currencies without changing solo rounding', () => {
+  const px = 94.32, eth = { coin: 'eth', usd: 3000 }, challenge = challengeById('double-up');
+  const options = { seed: 'race-native-fairness', challenge, mode: 'challenge', solUsd: px, realTime: true,
+    exactStart: true, config: { warmup: 60 } };
+  const runs = ['sol', 'usd', eth, { coin: 'bnb', usd: 643.27 }].map(currency => createRun({ ...options, currency }));
+  for (const run of runs) {
+    assert.equal(run.start, 1);
+    assert.equal(run.market.player.sol, 1);
+    const coin = run.market.lists({ limit: 1 }).new[0].id;
+    assert.equal(run.order({ coin, side: 'buy', sol: 0.1, slippage: 0.5 }).ok, true);
+    for (let i = 0; i < 12; i++) run.tick(0.5);
+  }
+  for (const run of runs.slice(1)) {
+    assert.deepEqual(run.market.player, runs[0].market.player, 'currency cannot change the race portfolio');
+    assert.deepEqual(run.market.orders(), runs[0].market.orders(), 'identical race trades fill identically');
+    assert.equal(run.progress().frac, runs[0].progress().frac);
+  }
+  const solo = createRun({ ...options, currency: eth, exactStart: false });
+  assert.equal(F.money(solo.start, eth, px), '0.031 ETH');
+  assert.notEqual(solo.start, 1, 'solo native-coin starts keep their convenient rounded size');
+  const dollars = challengeById('five-hundred');
+  for (const currency of ['sol', 'usd', eth]) assert.equal(startSolFor(dollars, px, currency, { exactStart: true }), 1000 / px);
+});
+
+test('race start and goal labels describe exact funding in the chosen display coin', () => {
+  const challenge = challengeById('double-up'), px = 94.32, eth = { coin: 'eth', usd: 3000 }, options = { exactStart: true };
+  const actual = startSolFor(challenge, px, eth, options);
+  assert.equal(actual, 1);
+  assert.equal(startText(challenge, eth, px, options), '0.0314 ETH');
+  assert.equal(goalText(challenge, eth, px, options), 'Turn 0.0314 ETH into 0.0629 ETH (2x)');
+  assert.equal(startText(challenge, eth, px, options), F.money(actual, eth, px));
+  assert.equal(startText(challenge, eth, px), '0.031 ETH');
+  assert.equal(goalText(challenge, eth, px), 'Turn 0.031 ETH into 0.062 ETH (2x)');
 });
 
 test('all nine live chains keep their native denomination through challenge goals, run progress and results', async () => {
@@ -2591,12 +2626,15 @@ test('the leaderboards on agi1.app/games: each game\'s boards to pick, its top r
   }
 });
 
-test('GNGM and Phomo are ready: each board loads when played, with the same doors as Pomp.fun', () => {
+test('all six terminals are ready and their boards load only when played', () => {
   assert.equal(terminalById('scan').ready, true);
   assert.equal(terminalById('social').ready, true);
-  assert.deepEqual(TERMINALS.filter((t) => t.ready).map((t) => t.id), ['scan', 'board', 'social']);
+  assert.deepEqual(TERMINALS.filter((t) => t.ready).map((t) => t.id), [...TERMINAL_IDS]);
   const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
-  assert.match(shell, /t\.id === 'scan' \? import\('\.\/boards\/gngm\.js'\)\.then\(\(m\) => m\.mountGngm, \(\) => null\) : Promise\.resolve\(mountBoard\)/);
+  assert.match(shell, /t\.id === 'scan' \? import\('\.\/boards\/gngm\.js'\)\.then\(\(m\) => m\.mountGngm, \(\) => null\)/);
+  for (const [id, file, mount] of [['pro', 'axium', 'mountAxium'], ['chat', 'basedbott', 'mountBasedbott'], ['clank', 'clank', 'mountClank']]) {
+    assert.ok(shell.includes(`t.id === '${id}' ? import('./boards/${file}.js').then((m) => m.${mount}`), `${id} has its own board`);
+  }
   assert.match(shell, /t\.id === 'social' \? import\('\.\/boards\/phomo\.js'\)\.then\(\(m\) => m\.mountPhomo, \(\) => null\)/);
   assert.doesNotMatch(shell, /^import .*gngm/m, 'never in the page until it\'s played');
   assert.doesNotMatch(shell, /^import .*phomo/m, 'Phomo loads only when played');

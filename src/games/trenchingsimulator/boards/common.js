@@ -14,6 +14,9 @@ export const ORDER_ERRORS = Object.freeze({
   no_liquidity: 'There\'s no liquidity for that right now.', no_sol_for_fee: 'Not enough SOL left for the fee.',
   bad: 'Check the amount.', no_coin: 'That coin isn\'t on the board.', over: 'The run is over.',
   stale: 'This coin\'s price isn\'t live right now: try again when the live feed is back.',
+  bad_launch: 'Enter a name, an alphanumeric ticker, and a supported pair.',
+  free_only: 'Practice launches are available in simulated free play.',
+  launch_limit: 'This run has reached its limit of 20 practice launches.',
 });
 
 // who made a trade, in the latest-trade box's words (the engine's labels: never an address there)

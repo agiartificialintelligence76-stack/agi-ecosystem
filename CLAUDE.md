@@ -1,5 +1,22 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Trenching Simulator terminal release (2026-11-02):** the owner requested production publication of Axium,
+> BasedBott and Clank.trade. All six terminals are playable. Clank uses the original public fonts, branding and
+> credited CC BY-SA Vladcat model, measured desktop/phone layouts and a dedicated Robinhood-only public feed.
+> The owner's follow-up explicitly chose real Clank coins with locally simulated prices and volume. Each coin's
+> initial public quote seeds a practice market; crowd activity and the player's buys/sells then move its candles,
+> price and volume. Listing refreshes update identity and discovery without resetting that practice market.
+> The UI labels the distinction, and listing outages do not pause seeded practice prices. Logos use validated
+> source CIDs, bounded loading, shared caching and retryable failures. No wallet transactions or real market impact.
+> Axium/BasedBott use their own layouts, search, charts, order tickets, history and portfolios; simulated Clank
+> free play can launch a practice coin, recorded for replay. No new environment variables or serverless functions.
+> The chart is a recreation, not Clank's proprietary Charting Library; account/livestream services stay outside
+> the simulator. This release is prepared from production 54c888f and excludes other workspace changes.
+> Clean production build: Node 24, UTC, all 79 documented settings supplied as fixtures; 1,485 tests,
+> 1,479 passed, 6 skipped, zero failures; bundling, share pages and secret scan passed. The 169 focused terminal,
+> engine and replay tests also passed on Node 20 and 22. Browser testing found and fixed a native image-timer
+> receiver issue, now covered by a regression test; real artwork loads and practice fills move the chart and volume.
+
 > **The page's scrollbar matches the looks (2026-11-02):** the owner: "is it possible to design the scroll bar as well
 > that will match the website", then "just publish it in production after ur done". Pop mode: a violet pill outlined in
 > ink on lavender by day, a lighter violet outlined in lavender on deep ink at night, pink under the mouse, honey while
@@ -13708,6 +13725,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-31 | SKYBREAK's touch controls on any touchscreen (`pointer: coarse`), not only below 700 px wide, and a compact title on a short screen: a phone held sideways had no controls and couldn't reach Begin Ascent |
 | 2026-11-02 | First visits in Pop mode by day (the owner: "can you make the default light mode and pop mode when they first visit the site"): `/theme.js` and `DEFAULT_THEME` say light with nothing saved; a saved choice still wins, and nothing is saved until a button is pressed; the pages load `/theme.js?v=8` |
 | 2026-11-02 | The page's scrollbar in each look (the owner: "design the scroll bar as well that will match the website"): `--sb-*` values in `base.css` (the lab look), `pop.css` (Pop mode) and `studio-theme.css` (Studio); `::-webkit-scrollbar` on the page only (inner scroll areas keep theirs); Firefox gets `scrollbar-color` only inside `@supports not selector(::-webkit-scrollbar)` |
+
+| 2026-11-02 | Publish the approved Axium, BasedBott and Clank simulator terminals. The owner chose real Clank coins on Robinhood Chain with locally simulated prices and volume affected by play-money trades. Preserve production configuration and exclude unrelated workspace edits. |
 
 ## Open questions
 

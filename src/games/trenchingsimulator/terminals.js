@@ -8,16 +8,20 @@
 // (tests/trench-game.test.js).
 
 export const SAFETY_NOTE = 'Play money only. Not affiliated with any real trading terminal. This game never asks for a wallet.';
+// A fixed reference rate for the fictional market, explicitly labelled on the briefing screen.
+// Live BasedBott runs continue to use the relay's actual ETH quote, frozen for the run.
+export const SIMULATED_ETH = Object.freeze({ coin: 'eth', usd: 3000 });
 
 const T = (o) => Object.freeze({ ...o, colors: Object.freeze(o.colors), features: Object.freeze(o.features) });
 
 export const TERMINALS = Object.freeze([
   T({
-    id: 'chat', name: 'BasedBott', short: 'Chat bot', currency: 'sol', ready: false,
-    tagline: 'Paste a coin, tap a button, touch grass never.',
-    features: ['Paste a coin, get its card', 'Buy and sell buttons', 'Positions in one message', 'Limit-style quick sells'],
-    colors: { bg: '#0f1823', panel: '#172331', line: '#24334a', text: '#f2f5f8', muted: '#8a9db2', accent: '#5b9dff',
-      up: '#5fd38d', down: '#f2726f' },
+    id: 'chat', name: 'BasedBott', short: 'Terminal', currency: SIMULATED_ETH, ready: true,
+    tagline: 'Discover tokens, follow wallets, and trade from one workspace.',
+    features: ['Discover and Pulse', 'Token charts and quick trades', 'Wallet tracking', 'Portfolio and conditional orders'],
+    colors: { bg: '#17171c', panel: '#1d1d23', panel2: '#24242b', panel3: '#2b2b33', line: '#2b2c34', line2: '#3a3b46',
+      text: '#f1f2f6', soft: '#d4d5dd', muted: '#a1a3af', dim: '#a1a3af', hero: '#ffffff', accent: '#5bd2c5',
+      onAccent: '#082722', up: '#5bd2a0', down: '#ff7b8b', onDown: '#330a13', warn: '#f7c764', info: '#83bfff', violet: '#b8a7ff' },
   }),
   T({
     id: 'scan', name: 'GNGM', short: 'Scanner', currency: 'sol', ready: true,
@@ -43,11 +47,12 @@ export const TERMINALS = Object.freeze([
       violet: '#c084fc' },
   }),
   T({
-    id: 'pro', name: 'Axium', short: 'Pro', currency: 'sol', ready: false,
+    id: 'pro', name: 'Axium', short: 'Pro', currency: 'sol', ready: true,
     tagline: 'Three live columns, one-click buys, zero chill.',
     features: ['New, final stretch, migrated', 'One-click buys', 'Live candles and trades', 'Positions and P&L'],
-    colors: { bg: '#07080c', panel: '#101116', line: '#22242d', text: '#f4f4f7', muted: '#8b8ea1', accent: '#7088ff',
-      up: '#2fe3ac', down: '#f2587f' },
+    colors: { bg: '#08090d', panel: '#111216', panel2: '#191a20', panel3: '#24252d', line: '#25262e', line2: '#343640',
+      text: '#f4f4f7', soft: '#cfd1d8', muted: '#9699aa', dim: '#9699aa', hero: '#ffffff', accent: '#8da2ff',
+      onAccent: '#101b44', up: '#2fe3ac', down: '#ff6e8a', onDown: '#330a13', warn: '#f7c764', info: '#83bfff', violet: '#b8a7ff' },
   }),
   T({
     id: 'social', name: 'Phomo', short: 'Social', currency: 'usd', ready: true,
@@ -56,6 +61,14 @@ export const TERMINALS = Object.freeze([
     colors: { bg: '#0d0d10', panel: '#17171c', panel2: '#1b1b22', panel3: '#25252d', line: '#25252d', line2: '#33333e',
       text: '#f3f3f6', soft: '#d3d3dc', muted: '#a5a5b5', dim: '#9696a5', hero: '#ffffff', accent: '#ff967e',
       onAccent: '#33120a', up: '#55dda0', down: '#ff7b8b', onDown: '#330a13', warn: '#f7c764', info: '#83bfff', violet: '#b8a7ff' },
+  }),
+  T({
+    id: 'clank', name: 'Clank.trade', short: 'Launchpad', currency: 'usd', ready: true,
+    tagline: 'Explore the launchpad, trade coins, and launch your own practice token.',
+    features: ['Trending and new coins', 'Stock-pair discovery', 'Charts, trades and holders', 'Launch a practice coin'],
+    colors: { bg: '#131313', panel: '#1c1c1c', panel2: '#242424', panel3: '#2d2d2d', line: '#2b2b2b', line2: '#3a3a3a',
+      text: '#f5f5f5', soft: '#d5d5d5', muted: '#a6a6a6', dim: '#a6a6a6', hero: '#ffffff', accent: '#c4b5fd',
+      onAccent: '#211638', up: '#62daa5', down: '#ff7b8b', onDown: '#330a13', warn: '#f7c764', info: '#83bfff', violet: '#c4b5fd' },
   }),
 ]);
 

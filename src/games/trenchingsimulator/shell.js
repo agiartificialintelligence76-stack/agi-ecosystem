@@ -42,13 +42,18 @@ import { CHAINS, chainById, feedWords, liveOk, liveCurrency, UNIT_NAMES, relayUr
   LIVE_SOON_HOW, playState, liveMoney } from './live-chains.js';
 import { createLiveFeed } from './live-feed.js';
 import { createLiveMarket } from './live-market.js';
+import { createClankFeed, createClankMarket } from './clank-live.js';
+import { terminalLiveChains, terminalLiveChain, terminalFeedWords, CLANK_LIVE_NOTE } from './terminal-live.js';
 import { createRace, raceUrl, roomOfHash, inviteLink, cleanCode, raceWords, standingText } from './race.js';
 
 const NS = 'http://www.w3.org/2000/svg';
 // a ready terminal's board, the same doors for each (boards/board.js's): Pomp.fun's is in the page; GNGM's (2026-10-22)
 // and its PnL card come as their own file the first time they're needed (null: it couldn't be fetched)
 const boardFor = (t) => (t.id === 'social' ? import('./boards/phomo.js').then((m) => m.mountPhomo, () => null)
-  : t.id === 'scan' ? import('./boards/gngm.js').then((m) => m.mountGngm, () => null) : Promise.resolve(mountBoard));
+  : t.id === 'scan' ? import('./boards/gngm.js').then((m) => m.mountGngm, () => null)
+    : t.id === 'pro' ? import('./boards/axium.js').then((m) => m.mountAxium, () => null)
+      : t.id === 'chat' ? import('./boards/basedbott.js').then((m) => m.mountBasedbott, () => null)
+        : t.id === 'clank' ? import('./boards/clank.js').then((m) => m.mountClank, () => null) : Promise.resolve(mountBoard));
 const gngmCard = () => import('./boards/gngm-card.js');
 const CARD_W = 1200;
 const CARD_H = 630;
@@ -86,7 +91,7 @@ export function startShell(root) {
     }
   })();
   const S = { save: loadSave(store), price: null, priceAt: 0, priceP: null, play: null, last: null, expectPop: 0,
-    token: 0, resAgi: null, feed: null, offFeed: null, name: loadName(store), race: null, raceView: null, raceBoard: null,
+    token: 0, resAgi: null, feed: null, feedSource: null, offFeed: null, name: loadName(store), race: null, raceView: null, raceBoard: null,
     raceStarted: '', raceCh: 'speedrun' };
   const recordings = createReplayArchive(store);
   // Live mode: open on the site since its relay runs (2026-10-21; ./live-chains.js: LIVE_OPEN). Closed ("coming soon",
@@ -129,10 +134,21 @@ export function startShell(root) {
   // ---- Live mode ----
   // the one connection to the relay, made the first time Live mode is used, open only while it's on
   const liveFeed = () => {
-    if (!S.feed) S.feed = createLiveFeed({ url: relayUrl(location) });
+    S.save.chain = terminalLiveChain(S.save.terminal, S.save.chain);
+    const source = S.save.terminal === 'clank' ? 'clank' : 'relay';
+    if (S.feed && S.feedSource !== source) {
+      S.feed.stop();
+      if (S.offFeed) S.offFeed();
+      S.offFeed = null;
+      S.feed = null;
+    }
+    if (!S.feed) {
+      S.feed = source === 'clank' ? createClankFeed() : createLiveFeed({ url: relayUrl(location) });
+      S.feedSource = source;
+    }
     return S.feed;
   };
-  const chainNow = () => chainById(S.save.chain) || CHAINS[0];
+  const chainNow = () => chainById(terminalLiveChain(S.save.terminal, S.save.chain)) || CHAINS[0];
   // a run with this setup is a live one (the daily market and a challenge that ends on a rug never are)
   const liveRun = (setup) => S.save.live && setup.kind !== 'daily'
     && (setup.kind !== 'challenge' || liveOk(challengeById(setup.id)));
@@ -142,7 +158,7 @@ export function startShell(root) {
     const paint = () => {
       const f = liveFeed();
       const liveCoins = f.chain === S.save.chain ? f.coins().filter((c) => c.tracked).length : 0;
-      const w = feedWords(f.status, playState(f.chainState(S.save.chain), liveCoins), S.save.chain, when);
+      const w = terminalFeedWords(S.save.terminal, f.status, playState(f.chainState(S.save.chain), liveCoins), S.save.chain, when);
       setText(line, w.text);
       line.dataset.tone = w.tone;
       if (also) also();
@@ -296,10 +312,11 @@ export function startShell(root) {
         el('p', { class: 'ts-term-tag', text: t.tagline }),
         el('ul', { class: 'ts-term-feats' }, t.features.map((f) => el('li', { text: f }))),
         el('p', { class: 'ts-term-cur', text: S.save.live ? `Live: play money in ${UNIT_NAMES[liveCurrency(t.id, S.save.chain)]}`
-          : t.currency === 'usd' ? 'Play money in dollars' : 'Play money in SOL' }),
+          : t.currency === 'usd' ? 'Play money in dollars' : `Play money in ${unitOf(t.currency, priceUsd()).name}` }),
         t.ready
           ? btn(`Play on ${t.name}`, { kind: 'primary', ic: 'play', on: () => {
             S.save.terminal = t.id;
+            if (t.id === 'clank') S.save.chain = 'robinhood';
             save();
             go('modes');
           } })
@@ -309,7 +326,7 @@ export function startShell(root) {
     });
     return el('section', { class: 'ts-screen ts-terminals' }, header('home'),
       el('h1', { class: 'ts-h', text: 'Pick your terminal' }),
-      el('p', { class: 'ts-lede', text: 'Laid out the way you know them, under parody names of our own. More are on the way.' }),
+      el('p', { class: 'ts-lede', text: 'Six familiar trading layouts, one play-money market. Pick your workspace.' }),
       el('div', { class: 'ts-terms' }, cards), note());
   }
 
@@ -339,7 +356,8 @@ export function startShell(root) {
         again(`.ts-market [data-v="${v}"]`);
       }, 'ts-market-kind'),
       live ? [
-        radio('Chain', CHAINS.map((c) => [c.id, c.name]), S.save.chain, (v) => {
+        radio('Chain', terminalLiveChains(S.save.terminal).map((c) => [c.id, c.name]), S.save.chain, (v) => {
+          v = terminalLiveChain(S.save.terminal, v);
           if (v === S.save.chain) return;
           S.save.chain = v;
           save();
@@ -347,7 +365,7 @@ export function startShell(root) {
           again(`.ts-market [data-v="${v}"]`);
         }, 'ts-market-chain'),
         feedLine('before', onNews),
-        el('p', { class: 'ts-live-about', text: LIVE_NOTE }),
+        el('p', { class: 'ts-live-about', text: S.save.terminal === 'clank' ? CLANK_LIVE_NOTE : LIVE_NOTE }),
       ] : LIVE ? null : el('p', { class: 'ts-live-about', text: LIVE_SOON }));
   }
 
@@ -381,7 +399,7 @@ export function startShell(root) {
         card('Challenges', live ? `${CHALLENGES.length} goals against a clock that never stops` : `${CHALLENGES.length} goals against the clock`,
           live ? `${starsTotal(S.save, { live: true })} of ${STARS_MAX} ★ in Live mode` : `${starsTotal(S.save)} of ${STARS_MAX} ★`,
           () => go('challenges'), 'trophy'),
-        freeCard = card('Free play', live ? `Real ${chainNow().name} coins as they come. No clock and no goal.`
+        freeCard = card('Free play', live ? t.id === 'clank' ? 'Real Clank.trade coins with simulated prices and volume. Your trades move the practice market.' : `Real ${chainNow().name} coins as they come. No clock and no goal.`
           : 'No clock and no goal. Trade as long as you like.', freeSub(), () => go('brief', { kind: 'free' }), 'chart')),
       note());
   }
@@ -467,13 +485,13 @@ export function startShell(root) {
           ['Start', waiting ? `Waiting for ${liveUnit(t)} price` : money(freeStartSol(S.save.freeStart, c, px), c, px)]];
       rows.push(['On', t.name]);
       if (S.save.live) {
-        rows.push(['Market', live ? `Live coins · ${chainNow().name}` : setup.kind === 'daily' ? `Simulated in ${unitOf(t.currency, px).name}: the same coins for everyone today`
+        rows.push(['Market', live ? `Live coins · ${chainNow().name}${t.id === 'clank' ? ' · simulated prices and volume' : ''}` : setup.kind === 'daily' ? `Simulated in ${unitOf(t.currency, px).name}: the same coins for everyone today`
           : 'Simulated: a real coin is never called a rug here']);
       }
       facts.replaceChildren(...rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
       const src = live && S.feed && S.feed.px.sol > 0 ? 'live' : S.price ? S.price.source : '';
       setText(priceLine, waiting ? `${liveUnit(t)} price is not available yet. Start unlocks when it arrives.`
-        : isCoinCurrency(c) ? `${unitOf(c, px).name} ${usd(c.usd)} · live, frozen for this run`
+        : isCoinCurrency(c) ? `${unitOf(c, px).name} ${usd(c.usd)} · ${live ? 'live' : 'practice reference rate'}, frozen for this run`
           : `SOL ${usd(px)} ${src === 'live' ? '· live' : src === 'saved' ? '· last known' : '· a stand-in price'}, frozen for this run`);
       if (startButton) startButton.disabled = waiting;
       for (const [b, v, text] of chipTexts) {
@@ -511,7 +529,7 @@ export function startShell(root) {
       el('p', { class: 'ts-kicker', text: setup.kind === 'daily' ? `Daily market · ${setup.day}`
         : ch ? `Challenge · ${TIER_NAMES[ch.tier] || ch.tier}` : 'Free play' }),
       el('h1', { class: 'ts-h', text: ch ? ch.name : 'Free play' }),
-      el('p', { class: 'ts-lede', text: ch ? ch.blurb : live ? 'Real coins as they come, traded with play money. No clock and no goal: cash out whenever you like.'
+      el('p', { class: 'ts-lede', text: ch ? ch.blurb : live ? t.id === 'clank' ? 'Real Clank.trade coins in your own simulated market. Your play-money buys and sells affect prices and volume.' : 'Real coins as they come, traded with play money. No clock and no goal: cash out whenever you like.'
         : 'Your own market, no clock and no goal. Cash out whenever you like.' }),
       facts,
       setup.kind === 'free' ? [
@@ -525,7 +543,7 @@ export function startShell(root) {
           save();
         }),
       ] : null,
-      live ? [feedLine('before', onFeedNews), el('p', { class: 'ts-live-about', text: `${LIVE_NOTE} The clock never stops in Live mode, not even for the menu.` })] : null,
+      live ? [feedLine('before', onFeedNews), el('p', { class: 'ts-live-about', text: `${t.id === 'clank' ? CLANK_LIVE_NOTE : LIVE_NOTE} The clock never stops in Live mode, not even for the menu.` })] : null,
       best && best.stars > 0 ? el('p', { class: 'ts-best', text: `Your best: ${starsRow(best.stars)}${best.time != null ? ` · ${clock(best.time)}` : ''}` }) : null,
       dd ? el('p', { class: 'ts-best', text: dd.won ? `Won today ${starsRow(dd.stars)}` : `${dd.tries} ${dd.tries === 1 ? 'try' : 'tries'} today` }) : null,
       !live && setup.kind !== 'free' && t.currency === 'sol'
@@ -656,7 +674,8 @@ export function startShell(root) {
       const px = priceUsd();
       linkIn.value = inviteLink(rm.code, location.origin);
       facts.replaceChildren(...[['Challenge', ch ? ch.name : 'A challenge this page doesn\'t know yet: reload it'],
-        ['Goal', ch ? goalText(ch, t.currency, px) : '—'], ['Time', timeText(rm.set.seconds)], ['Start', ch ? startText(ch, t.currency, px) : '—'],
+        ['Goal', ch ? goalText(ch, t.currency, px, { exactStart: true }) : '—'], ['Time', timeText(rm.set.seconds)],
+        ['Start', ch ? startText(ch, t.currency, px, { exactStart: true }) : '—'],
         ['Market', 'Simulated: the same made-up coins for everyone in the room'], ['Clock', 'Never stops, not even for the menu']]
         .flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
       const between = rm.state === 'lobby' || rm.state === 'ended';
@@ -709,7 +728,7 @@ export function startShell(root) {
       el('p', { class: 'ts-kicker', text: `Race · ${ch.name}` }),
       el('h1', { class: 'ts-h', text: 'Get ready' }),
       el('p', { class: 'ts-race-count', text: '…' }),
-      el('p', { class: 'ts-lede', text: `${goalText(ch, t.currency, g.solUsd)} · ${timeText(ch.seconds)}. Everyone starts at the same moment, on the same market.` }),
+      el('p', { class: 'ts-lede', text: `${goalText(ch, t.currency, g.solUsd, { exactStart: true })} · ${timeText(ch.seconds)}. Everyone starts at the same moment, on the same market.` }),
       note());
   }
   function raceCountdown(tok) {
@@ -761,6 +780,7 @@ export function startShell(root) {
     else history.pushState(st, '');
     const tok = ++S.token;
     const t = terminal();
+    S.save.chain = terminalLiveChain(t.id, S.save.chain);
     // (2026-10-22) a race room's race (./race.js `go`): its seed and SOL's price are the room's, simulated, never ranked
     const race = setup.race || null;
     const live = !race && liveRun(setup) ? S.save.chain : null;
@@ -803,14 +823,15 @@ export function startShell(root) {
       return;
     }
     // a live run: real coins, play money, the real clock
-    const liveOpts = live ? { live, realTime: true, makeMarket: (o) => createLiveMarket({ ...o, feed, chain: live }) } : {};
+    const liveOpts = live ? { live, realTime: true, makeMarket: (o) => t.id === 'clank'
+      ? createClankMarket({ ...o, feed, chain: 'robinhood' }) : createLiveMarket({ ...o, feed, chain: live }) } : {};
     let run;
     if (setup.kind === 'daily') {
       run = createRun({ seed: tk ? tk.seed : dailySeed(setup.day), challenge: dailyChallenge(setup.day), mode: 'daily', solUsd: px,
         currency: t.currency, terminal: t.id });
     } else if (setup.kind === 'challenge' && race) {
       run = createRun({ seed: race.seed, challenge: challengeById(setup.id), mode: 'challenge', solUsd: race.solUsd, currency: t.currency,
-        terminal: t.id, realTime: true });
+        terminal: t.id, realTime: true, exactStart: true });
     } else if (setup.kind === 'challenge') {
       const ch = challengeById(setup.id);
       run = createRun({ seed: tk ? tk.seed : `${ch.id}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e9).toString(36)}`,
@@ -828,6 +849,7 @@ export function startShell(root) {
   }
 
   function mountPlay(run, setup, t, mount = mountBoard, ranked = null) {
+    const compactHud = ['social', 'pro', 'chat', 'clank'].includes(t.id);
     const cur = run.currency;
     const px = run.solUsd;
     const M = (x) => money(x, cur, px);
@@ -887,11 +909,11 @@ export function startShell(root) {
       el('div', { class: 'ts-hud-time' }, icon('clock'), time),
       el('div', { class: 'ts-hud-money' }, worth, pnl),
       el('div', { class: 'ts-hud-tools' }, speedBtn, soundBtn, endBtn));
-    if (t.id === 'social') hud.append(liveStrip || el('p', { class: 'ts-live-strip', role: 'status' },
+    if (compactHud) hud.append(liveStrip || el('p', { class: 'ts-live-strip', role: 'status' },
       el('span', {}, 'Simulated market · Play money only')));
     const boardHost = el('div', { class: 'ts-board-host' });
-    const screen = el('section', { class: ['ts-screen', 'ts-play', run.live && 'is-live'], data: setup.race ? { terminal: t.id, race: '1' } : { terminal: t.id } },
-      hud, t.id === 'social' ? null : liveStrip, raceStrip, boardHost);
+    const screen = el('section', { class: ['ts-screen', 'ts-play', compactHud && 'has-compact-hud', run.live && 'is-live'], data: setup.race ? { terminal: t.id, race: '1' } : { terminal: t.id } },
+      hud, compactHud ? null : liveStrip, raceStrip, boardHost);
     show(screen, run.challenge ? run.challenge.name : 'Free play');
     paintTerminal(screen, t);
     P.agi = createAgi(agiHost, { reduceMotion: reduceMotion() });
@@ -913,6 +935,11 @@ export function startShell(root) {
       run, market: run.market, currency: cur, solUsd: px, start: run.start, colors: t.colors, reduceMotion: reduceMotion(),
       settings: () => ({ slippage: S.save.slippage, priority: S.save.priority }),
       order: (p) => run.order({ slippage: S.save.slippage, priority: S.save.priority, ...defined(p) }),
+      launchCoin: (p) => {
+        if (run.over) return { ok: false, error: 'over' };
+        if (run.live || setup.kind !== 'free') return { ok: false, error: 'free_only' };
+        return run.market.launchCoin(p);
+      },
       openSettings: () => openSettings({ pause: false }),
       openReplays: openReplayLibrary,
       // Display actual public quotes already received by the shared feed, without starting a new connection.
@@ -956,9 +983,9 @@ export function startShell(root) {
     function renderLive() {
       if (!run.live || typeof run.market.liveState !== 'function') return;
       const st = run.market.liveState();
-      const w = feedWords(st.feed, st.chainState, st.chain, 'run');
+      const w = terminalFeedWords(t.id, st.feed, st.chainState, st.chain, 'run');
       const c = chainById(run.live);
-      setText(liveWords, w.tone === 'live' ? `Live · ${c.name} · real coins${c.src && c.allFrom ? ` from ${c.src}` : ''} · play money only` : w.text);
+      setText(liveWords, t.id === 'clank' ? w.text : w.tone === 'live' ? `Live · ${c.name} · real coins${c.src && c.allFrom ? ` from ${c.src}` : ''} · play money only` : w.text);
       if (liveStrip.dataset.tone !== w.tone) liveStrip.dataset.tone = w.tone;
     }
     function paintRace() {
