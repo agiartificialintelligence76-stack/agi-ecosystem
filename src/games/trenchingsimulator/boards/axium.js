@@ -7,7 +7,7 @@ import { updateStats } from './stable-ui.js';
 import { createCandleReader } from './candle-reader.js';
 import { markEl, wordEl } from '../brands.js';
 import { usd, money, moneySigned, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
-import { pic, samePic, short, num, buyPresets, parseAmount, ORDER_ERRORS, tone } from './common.js';
+import { pic, samePic, short, num, buyPresets, parseAmount, ORDER_ERRORS, tone, waitingForRealCoins } from './common.js';
 import { chartCredit } from './gchart.js';
 import { createPhomoChart } from './phomo-chart.js';
 import { createAddressSearch } from '../live-search.js';
@@ -154,7 +154,7 @@ export function mountAxium(host, ctx) {
   function paintCard(card, r) {
     const $ = card.$;
     setText($.name, r.ticker); setText($.fullname, r.name); setText($.age, age(r.age));
-    setText($.source, r.live ? (r.tracked === false ? 'Not live' : r.src || ctx.chain || 'Live coin') : r.standIn ? 'Simulated' : 'pump');
+    setText($.source, r.live ? (!r.practice && r.tracked === false ? 'Not live' : r.src || ctx.chain || 'Real coin') : r.standIn ? 'Simulated' : 'pump');
     if (!samePic($.tile.firstChild, r)) $.tile.replaceChildren(pic(r, '', 'ax'));
     setText($.cap, MC(r.mc)); setText($.volume, MC(r.vol5m)); setText($.txns, num(r.txns5m));
     setText($.change, pct(r.ch5m)); tone($.change, r.ch5m, 0);
@@ -166,7 +166,7 @@ export function mountAxium(host, ctx) {
     card.setAttribute('title', `${r.name} · ${r.phase === 'pool' ? 'Migrated' : `Bonding ${share(r.progress)}`}`);
     setText($.buy.children[1], A.columnQuick[$.column] || '—');
     flag(card, 'is-migrated', r.phase === 'pool'); flag(card, 'is-rugged', r.rugged);
-    $.buy.disabled = r.phase === 'migrating' || (r.live && r.tracked === false);
+    $.buy.disabled = !r.practice && (r.phase === 'migrating' || (r.live && r.tracked === false));
   }
   function updateQuickLabels() {
     for (const card of root.querySelectorAll('.ax-card')) if (card.$) setText(card.$.buy.children[1], A.columnQuick[card.$.column] || '—');
@@ -211,7 +211,7 @@ export function mountAxium(host, ctx) {
           c.ids = rows.map((r) => r.id);
         }
         clearEmpty(c.list); keyed(c.list, rows, (r) => r.id, (r) => makeCard(r, c.id), paintCard);
-        if (!rows.length) c.list.replaceChildren(empty('No tokens match your filters.'));
+        if (!rows.length) c.list.replaceChildren(empty(waitingForRealCoins(market) ? 'Waiting for real coin listings…' : 'No tokens match your filters.'));
         setText(c.count, rows.length); setText(c.state, A.paused || c.over ? 'Paused' : '');
         flag(c.filter, 'is-filtered', axiumFilterCount(A.filters[c.id]) > 0);
       }
@@ -220,7 +220,7 @@ export function mountAxium(host, ctx) {
       rows = rows.filter((r) => !A.hidden.has(r.id) && axiumPasses(r, stat(r.id), A.filters.discover, px));
       rows.sort((a, b) => (A.sort === 'token' ? a.ticker.localeCompare(b.ticker) : (a[A.sort] ?? -Infinity) - (b[A.sort] ?? -Infinity)) * (A.descending ? -1 : 1));
       clearEmpty(discoverBody); keyed(discoverBody, rows, (r) => r.id, makeDiscover, paintDiscover);
-      if (!rows.length) discoverBody.replaceChildren(el('tr', {}, el('td', { colSpan: 8 }, empty(A.watchOnly ? 'Your watchlist is empty. Star a token in Pulse.' : 'No tokens match your filters.'))));
+      if (!rows.length) discoverBody.replaceChildren(el('tr', {}, el('td', { colSpan: 8 }, empty(waitingForRealCoins(market) ? 'Waiting for real coin listings…' : A.watchOnly ? 'Your watchlist is empty. Star a token in Pulse.' : 'No tokens match your filters.'))));
       [...discoverTabs.children].forEach((b) => flag(b, 'is-active', A.watchOnly ? b.dataset.category === 'watchlist' : b.dataset.category === A.discover));
       [...discoverView.querySelectorAll('th')].forEach((th, i) => th.setAttribute('aria-sort', headers[i]?.[0] === A.sort ? A.descending ? 'descending' : 'ascending' : 'none'));
     }
@@ -309,7 +309,7 @@ export function mountAxium(host, ctx) {
     if (ctx.run?.over) return;
     for (const order of A.limits.slice()) {
       const row = market.row(order.coin);
-      if (!row || (row.live && row.tracked === false) || !axiumTrigger(order, row.mc, market.t)) continue;
+      if (!row || (!row.practice && row.live && row.tracked === false) || !axiumTrigger(order, row.mc, market.t)) continue;
       const res = send(order.side === 'buy' ? { coin: order.coin, side: 'buy', sol: order.sol } : { coin: order.coin, side: 'sell', frac: order.frac });
       if (res?.ok && order.kind === 'dca' && --order.remaining > 0) order.nextAt = market.t + order.interval;
       else A.limits = A.limits.filter((o) => o.id !== order.id);
@@ -320,7 +320,7 @@ export function mountAxium(host, ctx) {
   const trackToggle = button('Tracked only', () => { A.trackOnly = !A.trackOnly; trackToggle.setAttribute('aria-pressed', String(A.trackOnly)); renderTrackers(); }, 'ax-button', { 'aria-pressed': 'false' });
   const trackersView = el('section', { class: 'ax-trackers', hidden: true },
     el('section', {}, el('div', { class: 'ax-panel-title' }, el('h2', {}, 'Wallet Tracker'), el('span', { class: 'ax-muted' }, 'Simulated smart wallets')), trackerWallets),
-    el('section', {}, el('div', { class: 'ax-panel-title' }, el('h2', {}, 'Live Trades'), trackToggle), trackerFeed));
+    el('section', {}, el('div', { class: 'ax-panel-title' }, el('h2', {}, 'Simulated Trades'), trackToggle), trackerFeed));
   const perpsView = el('section', { class: 'ax-perps', hidden: true });
   async function loadPerps() {
     if (A.perps || A.perpsLoading) { A.perps?.setActive(A.coin === null && A.view === 'perpetuals'); return; }
@@ -467,15 +467,15 @@ export function mountAxium(host, ctx) {
     setText(coinName, r.ticker); setText(coinFullName, r.name);
     if (!samePic(coinPic.firstChild, r)) coinPic.replaceChildren(pic(r, '', 'ax'));
     flag(coinStar, 'is-starred', A.watch.has(r.id)); coinStar.setAttribute('aria-pressed', String(A.watch.has(r.id)));
-    updateStats(coinStats, [['Market Cap', MC(r.mc)], ['Liquidity', usd(s.liqUsd)],
+    updateStats(coinStats, [['Market Cap', MC(r.mc)], [s.practice ? 'Practice liquidity' : 'Liquidity', usd(s.liqUsd)],
       ['5m Volume', MC(s.vol5m)], ['5m Change', pct(s.change5m), s.change5m >= 0 ? 'is-up' : 'is-down']]);
-    setText(chartLabel, `${r.ticker} / ${U.name} · ${A.chartMode === 'mcap' ? 'Market Cap' : 'Price'} · ${r.live ? 'Real coin · play money' : 'Simulated market'}`);
+    setText(chartLabel, `${r.ticker} / ${U.name} · ${A.chartMode === 'mcap' ? 'Market Cap' : 'Price'} · ${r.live ? 'Real coin · simulated prices/volume' : 'Simulated market'}`);
     syncChartTools();
     A.chart?.set({ candles: candleReader.read(r.id, s.cdv), solUsd: px, tf: A.tf, base, migratedAt: s.migratedAt,
       marks: market.orders(120).filter((o) => o.coin === r.id && o.status === 'filled').map((o) => ({ t: o.doneAt, side: o.side })) });
     setText(tradeBalance, `Balance: ${M(market.player.sol)}`);
     setText(submit, `${A.orderType === 'market' ? A.side === 'buy' ? 'Buy' : 'Sell' : A.orderType === 'limit' ? 'Create Limit' : 'Start DCA'} ${r.ticker}`);
-    submit.disabled = r.phase === 'migrating' || (r.live && r.tracked === false);
+    submit.disabled = !r.practice && (r.phase === 'migrating' || (r.live && r.tracked === false));
     const settings = ctx.settings(); setText(tradeSettings, `Slippage ${share(settings.slippage, 0)}   ·   ${settings.priority} priority   ⚙`);
     const p = market.positions().find((p) => p.id === r.id);
     updateStats(tradePosition, [['Bought', M(p?.invested || 0)], ['Sold', M(p?.sold || 0)],
@@ -499,7 +499,7 @@ export function mountAxium(host, ctx) {
     };
     if (A.dataTab === 'trades') {
       const rows = (market.trades(A.coin, 60) || []).map((t) => [age(market.t - t.t), el('span', { class: t.side === 'buy' ? 'is-up' : 'is-down' }, t.side.toUpperCase()),
-        M(t.sol), tokens(t.tok), MC(t.mc), t.me ? 'You' : t.addr ? short(t.addr) : 'Trader']);
+        M(t.sol), tokens(t.tok), MC(t.mc), t.me ? 'You' : r.practice ? 'Simulated trader' : t.addr ? short(t.addr) : 'Trader']);
       setRows(rows, ['Age', 'Type', U.name, 'Amount', 'Market Cap', 'Trader']);
     } else if (A.dataTab === 'holders' || A.dataTab === 'traders') {
       if (r.live) { setRows([], ['Wallet', 'Holding', 'Supply', 'Bought', 'Sold']); dataBody.replaceChildren(el('tr', {}, el('td', { colSpan: 5 }, empty('This live feed does not provide wallet identities or holder distribution.')))); return; }
@@ -565,7 +565,7 @@ export function mountAxium(host, ctx) {
     setText(title, NAV.find(([id]) => id === A.view)?.[1] || 'Pulse');
     pulseTools.hidden = !['pulse', 'discover'].includes(A.view);
   }
-  const foot = el('footer', { class: 'ax-footer' }, el('span', { class: 'ax-connection' }, el('i'), ctx.chain ? 'Live feed · practice execution' : 'Simulation running'),
+  const foot = el('footer', { class: 'ax-footer' }, el('span', { class: 'ax-connection' }, el('i'), market.live ? 'Real coins · simulated prices/volume' : 'Simulation running'),
     button([icon('bag'), 'Positions'], () => { A.portfolioTab = 'positions'; setView('portfolio'); }, 'ax-footer-button'),
     button([icon('clock'), 'Orders'], () => { A.portfolioTab = 'orders'; setView('portfolio'); }, 'ax-footer-button'),
     el('span', { class: 'ax-footer-note' }, 'Play money only · Not affiliated with any real terminal'));

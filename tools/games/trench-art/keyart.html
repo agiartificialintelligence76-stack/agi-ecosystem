@@ -1,51 +1,10 @@
 <!doctype html>
-<!-- TRENCHING SIMULATOR's key art (src/games/trenchingsimulator/keyart.webp, 2026-10-21): photographed at 760 × 511 (twice its
-     pixels, then made smaller) with see-through edges by tools/games/trench-art.mjs, like Ride 'Em, AGI!'s on the shelf.
-     The title, real screenshots of the game's own terminal, Pomp.fun (board.webp on a computer, coin.webp on a phone:
-     the tool takes them), a "Play money" sticker, and AGI-1 only as her 2D art (never the 3D model). Its edges stay clear:
-     the card's own background (dots, or Pop mode's violet) shows around it. -->
-<html><head><meta charset="utf-8">
-<style>
-  @font-face { font-family: 'Anybody'; src: url('../../../public/fonts/Anybody-Variable.woff2') format('woff2'); font-weight: 100 900; font-stretch: 50% 150%; }
-  @font-face { font-family: 'Geist Mono'; src: url('../../../public/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; }
-  :root { --ink: #0b0b0e; --green: #86efac; --honey: #ffc933; --pink: #ff4da6; --paper: #fafafa; }
-  * { box-sizing: border-box; margin: 0; }
-  html, body { width: 760px; height: 511px; background: transparent; overflow: hidden; }
-  .art { position: relative; width: 760px; height: 511px; }
-
-  /* the computer's board: a window with an ink frame and a hard green shadow, a little turned */
-  .win { position: absolute; overflow: hidden; background: var(--ink); }
-  .win img { display: block; width: 100%; height: 100%; object-fit: cover; }
-  .board { left: 14px; top: 176px; width: 474px; height: 296px; border: 4px solid var(--ink); border-radius: 14px;
-    rotate: -4deg; box-shadow: 9px 10px 0 var(--green); }
-  /* (its left 1,100 of 1,440 pixels: the HUD with her 8-bit face, the bag, the king of the hill and the first cards) */
-  .board img { width: 130.91%; height: auto; max-width: none; object-fit: fill; }
-  /* the phone: its coin's chart, a dark phone with a pink shadow, turned the other way */
-  .phone { left: 392px; top: 196px; width: 148px; height: 300px; border: 6px solid var(--ink); border-radius: 26px;
-    rotate: 7deg; box-shadow: -8px 9px 0 var(--pink); }
-  .phone img { object-position: 0 0; }
-
-  /* AGI-1, her 2D art, standing beside them */
-  .agi { position: absolute; right: 2px; bottom: 4px; height: 500px; width: auto;
-    filter: drop-shadow(0 0 0 transparent); }
-
-  /* the title: the game's own heavy narrow letters, light with an ink edge and the board's green echo */
-  .title { position: absolute; left: 16px; top: 10px; font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 70%;
-    font-size: 84px; line-height: .86; letter-spacing: -0.005em; color: var(--paper);
-    -webkit-text-stroke: 7px var(--ink); paint-order: stroke fill; text-shadow: 5px 6px 0 var(--green); }
-  .title span { display: block; }
-
-  /* "Play money": a honey sticker */
-  .sticker { position: absolute; left: 382px; top: 110px; padding: 7px 12px 8px; rotate: -6deg; border: 4px solid var(--ink);
-    border-radius: 14px; background: var(--honey); box-shadow: 5px 6px 0 var(--ink); color: var(--ink); text-align: center;
-    font-family: 'Anybody', sans-serif; font-weight: 900; font-stretch: 88%; font-size: 22px; line-height: 1; letter-spacing: .01em; }
-  .sticker small { display: block; margin-top: 4px; font-family: 'Geist Mono', monospace; font-size: 11px; font-weight: 700;
-    letter-spacing: .06em; }
-</style></head>
-<body><div class="art">
-  <div class="win board"><img src="board.webp" alt=""></div>
-  <div class="win phone"><img src="coin.webp" alt=""></div>
-  <img class="agi" src="../../../public/images/landing/agi1-cutout.webp" alt="">
-  <p class="title"><span>TRENCHING</span><span>SIMULATOR</span></p>
-  <p class="sticker">PLAY MONEY<small>MADE-UP COINS</small></p>
-</div></body></html>
+<!-- Current 760 × 511 game shelf cover. Native HTML/SVG art; render through CUA and encode as src/games/trenchingsimulator/keyart.webp. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Trenching Simulator · cover art</title><link rel="stylesheet" href="./cover.css"></head>
+<body class="keyart"><main class="cover" aria-label="Trenching Simulator. Six terminals, one playground. Play money only.">
+<div class="grid" aria-hidden="true"></div><div class="glow" aria-hidden="true"></div>
+<header><div class="brand"><img src="/games/trenchingsimulator/mark.svg" alt=""><span>AGI GAMES<span class="brand-line">THE TRADING PLAYGROUND</span></span></div><span class="badge"><i></i>PLAY MONEY</span></header>
+<div class="chart" aria-hidden="true"><div class="chart-head"><span>THE NEXT MOVE IS YOURS</span><span>↗</span></div><img src="./market.svg" alt=""><div class="chart-foot"><span>LEARN. TRADE. REPEAT.</span><span>01 — 06</span></div></div>
+<div class="copy"><p class="eyebrow">SIX TERMINALS. ONE PLAYGROUND.</p><h1><span>TRENCHING</span><span>SIMULATOR<span class="period">.</span></span></h1><p class="tagline">Find your edge.</p></div>
+<footer><div class="terminals"><span><i class="pill"></i>Pomp.fun</span><span><i class="clank">✦</i>Clank.trade</span><span><i class="phomo">f</i>Phomo</span><span><i class="axium">A</i>Axium</span><span><i class="gngm">G</i>GNGM</span><span><i class="based">B</i>BasedBott</span></div><div class="fine"><span>REAL PRACTICE. ZERO REAL MONEY.</span><span>AGI1.APP/GAMES</span></div></footer>
+</main></body></html>

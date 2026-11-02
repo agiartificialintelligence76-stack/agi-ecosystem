@@ -85,10 +85,10 @@ export function tokenMetrics(market, id, { solUsd = market && market.solUsd, win
   return {
     id, key: coinKey(market, id), name: row.name, ticker: row.ticker, pic: row.pic || null, emoji: row.emoji,
     theme: row.theme, age: value(row.age), born: value(row.born), phase: row.phase,
-    live: row.live === true, simulated: row.live !== true, tracked: row.tracked !== false,
+    live: row.live === true, practice: row.practice === true, simulated: row.live !== true || row.practice === true, tracked: row.practice === true || row.tracked !== false,
     chain: row.live ? row.chain || info && info.chain || null : 'simulated', src: row.src || info && info.src || null,
     priceUsd: toUsd(s.price, px), practicePrice: row.live === true, marketCapUsd: toUsd(row.mc, px),
-    liquidityUsd: s.live && s.estimated ? null : toUsd(s.liq, px),
+    liquidityUsd: s.live && !s.practice && s.estimated ? null : toUsd(s.liq, px),
     volumeUsd: toUsd(volume, px), change, holders: value(s.holders), transactions: value(s.txns),
     progress: value(s.progress), socials: row.socials || {}, watched: false, hidden: false,
   };

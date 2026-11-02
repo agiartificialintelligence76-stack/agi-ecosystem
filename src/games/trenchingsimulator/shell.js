@@ -8,8 +8,8 @@
 // (Solana, Robinhood Chain, BNB Chain, Base; since 2026-10-22 also Ethereum, Monad, HyperEVM, Arbitrum and Tron). While
 // it's on, one connection to our relay (./live-feed.js) says how the
 // live feed is doing, in plain words; a run in it trades real coins with play money (./live-market.js) on a clock that
-// never stops, and falls back to simulated stand-ins, saying so, whenever the feed is down or the chain is quiet with too
-// few real coins (./live-chains.js: playState; a quiet chain with enough plays its real coins alone, since 2026-10-21).
+// never stops. Since 2026-11-03, each real coin's first quote seeds simulated prices and volume; source refreshes
+// preserve that practice market. No fictional coins fill in during a listing outage.
 // The daily market and the challenge that ends on a rug stay simulated.
 //
 // Race rooms (2026-10-22, ./race.js): "Race a friend" on the home screen makes or joins a room (an invite link is the
@@ -324,7 +324,7 @@ export function startShell(root) {
       el('p', { text: 'Pick a terminal, then a challenge, the daily market or free play. You get play money, and a market full of made-up coins: new ones launch every few seconds, most of them die, a few run.' }),
       el('p', { text: 'Buy a coin, watch its chart and its holders, and sell before it dumps. Every trade pays a small fee and lands a moment later (faster with a higher priority); if the price moves past your slippage, it fails.' }),
       el('p', { text: 'Rugs, dev sells and migrations happen. Challenges have a goal and a clock; free play has neither. Nothing here is real money, and nothing here is advice.' }),
-      el('p', { text: LIVE ? 'Live mode (on the modes screen): real new coins as they launch, on Solana, Robinhood Chain, BNB Chain, Base, Ethereum, Monad, HyperEVM, Arbitrum or Tron, with the names and pictures their makers gave them. You still trade them with play money only: nothing is ever bought or sold for real.'
+      el('p', { text: LIVE ? 'Live mode (on the modes screen): real coins and logos from your selected chain, with simulated prices and volume. Your play-money buys and sells move the practice chart. New listings keep arriving, and nothing is bought or sold for real.'
         : LIVE_SOON_HOW }),
       el('p', { class: 'ts-how-credit', text: 'GNGM\'s charts: TradingView Lightweight Charts™ · Copyright (c) 2025 TradingView, Inc. (tradingview.com).' }),
     ];
@@ -408,7 +408,7 @@ export function startShell(root) {
       el('h1', { class: 'ts-h', text: 'Pick a mode' }),
       marketPicker(onNews),
       el('div', { class: 'tsm-mode-grid' },
-        freeCard = card('Free play', live ? t.id === 'clank' ? 'Real Clank.trade coins with simulated prices and volume. Your trades move the practice market.' : `Real ${chainNow().name} coins as they come. No clock and no goal.`
+        freeCard = card('Free play', live ? t.id === 'clank' ? 'Real Clank.trade coins with simulated prices and volume. Your trades move the practice market.' : `Real ${chainNow().name} coins with simulated prices and volume. Your trades move the practice market.`
           : 'No clock and no goal. Trade as long as you like.', freeSub(), () => go('brief', { kind: 'free' }), 'chart'),
         card('Daily market', `${dch.name}: ${goalText(dch, t.currency, priceUsd())}`,
           live ? `Always simulated in ${unitOf(t.currency, priceUsd()).name}: the same coins for everyone today`
@@ -456,7 +456,7 @@ export function startShell(root) {
     return el('section', { class: 'ts-screen tsm-screen tsm-setup ts-challenges' }, header('modes'),
       el('h1', { class: 'ts-h', text: 'Challenges' }),
       el('p', { class: 'ts-lede', text: live
-        ? `Live mode: real ${chainNow().name} coins on a clock that never stops, not even for the menu. Its stars are kept apart from the simulated ones. Rug dodger stays simulated: a real coin is never called a rug here.`
+        ? `Live mode: real ${chainNow().name} coins with simulated prices and volume, on a clock that never stops. Its stars are kept apart from made-up markets. Rug dodger uses made-up coins: a real coin is never called a rug here.`
         : 'Win to earn up to 3 stars: faster wins and bigger multiples earn more.' }),
       live ? feedLine('before', () => descriptions.forEach(([c, goal, meta]) => describe(c, goal, meta))) : null,
       groups, note());
@@ -501,7 +501,7 @@ export function startShell(root) {
           ['Start', waiting ? `Waiting for ${liveUnit(t)} price` : money(freeStartSol(S.save.freeStart, c, px), c, px)]];
       rows.push(['On', t.name]);
       if (S.save.live) {
-        rows.push(['Market', live ? `Live coins · ${chainNow().name}${t.id === 'clank' ? ' · simulated prices and volume' : ''}` : setup.kind === 'daily' ? `Simulated in ${unitOf(t.currency, px).name}: the same coins for everyone today`
+        rows.push(['Market', live ? `Live coins · ${chainNow().name} · simulated prices and volume` : setup.kind === 'daily' ? `Simulated in ${unitOf(t.currency, px).name}: the same coins for everyone today`
           : 'Simulated: a real coin is never called a rug here']);
       }
       facts.replaceChildren(...rows.flatMap(([k, v]) => [el('dt', { text: k }), el('dd', { text: v })]));
@@ -545,7 +545,7 @@ export function startShell(root) {
       el('p', { class: 'ts-kicker', text: setup.kind === 'daily' ? `Daily market · ${setup.day}`
         : ch ? `Challenge · ${TIER_NAMES[ch.tier] || ch.tier}` : 'Free play' }),
       el('h1', { class: 'ts-h', text: ch ? ch.name : 'Free play' }),
-      el('p', { class: 'ts-lede', text: ch ? ch.blurb : live ? t.id === 'clank' ? 'Real Clank.trade coins in your own simulated market. Your play-money buys and sells affect prices and volume.' : 'Real coins as they come, traded with play money. No clock and no goal: cash out whenever you like.'
+      el('p', { class: 'ts-lede', text: ch ? ch.blurb : live ? t.id === 'clank' ? 'Real Clank.trade coins in your own simulated market. Your play-money buys and sells affect prices and volume.' : 'Real coins in your own simulated market. Your play-money buys and sells affect prices and volume. Cash out whenever you like.'
         : 'Your own market, no clock and no goal. Cash out whenever you like.' }),
       ch?.id === 'first-blood' ? el('ol', { class: 'tsm-first-steps', 'aria-label': 'Your first session' },
         el('li', {}, el('b', { text: 'Find a coin' }), el('span', { text: 'Open any coin from the feed to see its chart.' })),
@@ -1004,8 +1004,7 @@ export function startShell(root) {
       if (!run.live || typeof run.market.liveState !== 'function') return;
       const st = run.market.liveState();
       const w = terminalFeedWords(t.id, st.feed, st.chainState, st.chain, 'run');
-      const c = chainById(run.live);
-      setText(liveWords, t.id === 'clank' ? w.text : w.tone === 'live' ? `Live · ${c.name} · real coins${c.src && c.allFrom ? ` from ${c.src}` : ''} · play money only` : w.text);
+      setText(liveWords, w.text);
       if (liveStrip.dataset.tone !== w.tone) liveStrip.dataset.tone = w.tone;
     }
     function paintRace() {

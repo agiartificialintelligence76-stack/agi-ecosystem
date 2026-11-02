@@ -15,14 +15,11 @@
 // Money is SOL; times are seconds from the run's start (the warm-up before it is negative time, so the trenches are
 // already busy when the player arrives). Market caps are in SOL (× solUsd for dollars).
 //
-// Live mode (2026-10-21, #404): a market made with `live: true` also takes real coins from outside (market.ext: add,
-// state, history, track, pic, view), each a pool of its real reserves that the live feed moves (./live-market.js), with
-// the player's own tokens taken out of it (so their trades move it in their view, and a sell gives back along the same
-// curve). Real coins never get a plan, made-up trades, holders, a thread or flags (rug, dev sell, caller…): what isn't
-// known about them is null. The made-up coins stay as stand-ins: shown when the feed is down or quiet, and paused
-// (no launches, no trades but the player's) while it's live. Without `live`, nothing here changes.
-// Clank's explicit `practice` opt-in keeps the source identity but seeds a separate local pool: simulated crowd
-// trades and player orders move it together, while later source prices cannot replace its practice history.
+// Live mode accepts real identities through market.ext. Its explicit `practice` option seeds a separate local pool:
+// simulated crowd trades and player orders move it together, while later source prices cannot replace its history.
+// Source launch status and artwork remain metadata; unknown holders, security information and wallets stay unknown.
+// The lower-level non-practice API can also follow source reserves/history. Live adapters keep fictional launches
+// disabled and display only imported real coins, including during feed gaps. Without `live`, nothing here changes.
 import { makeRng, seedOf, hash32 } from './rng.js';
 import { SUPPLY, RESERVED, FLOOR_TOK, K, START_MC, FEES, newCurve, newPool, buy, sell, buyQuote, sellQuote, mOf, mcOf,
   priceOf, curveProgress, curveSol } from './curve.js';
@@ -1009,7 +1006,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
   function compact(c) {
     const out = [];
     for (const x of c.cd) {
-      const b = Math.floor(x.t / 60) * 60;
+      const b = c.ext?.practice ? Math.max(c.cd[0].t, Math.floor(x.t / 60) * 60) : Math.floor(x.t / 60) * 60;
       const last = out.length ? out[out.length - 1] : null;
       if (last && last.t === b) {
         if (x.h > last.h) last.h = x.h;
@@ -1018,12 +1015,15 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
         last.v += x.v;
         last.b += x.b;
         last.s += x.s;
-      } else out.push({ t: b, o: x.o, h: x.h, l: x.l, c: x.c, v: x.v, b: x.b, s: x.s });
+        if (c.ext?.practice) { last.buyVol += x.buyVol || 0; last.sellVol += x.sellVol || 0; }
+      } else out.push({ t: b, o: x.o, h: x.h, l: x.l, c: x.c, v: x.v, b: x.b, s: x.s,
+        ...(c.ext?.practice ? { buyVol: x.buyVol || 0, sellVol: x.sellVol || 0 } : {}) });
     }
     c.cd = out;
     if (c.trades.length > 20) c.trades.splice(0, c.trades.length - 20);
     c.compacted = true;
     c.hs = null;
+    if (c.ext?.practice) c.cdv++;
   }
 
   // ---------- reading (never changes the market, never draws a number) ----------
@@ -1167,7 +1167,7 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       txns5m: d && Number.isFinite(d.b5) && Number.isFinite(d.s5) ? d.b5 + d.s5 : v5.b + v5.s,
       ch5m: pick(d && d.c5, changeSince(c, t - 300, mc)), rugged: false, dexPaid: false, cto: false, calls: 0,
       socials: { ...c.socials }, migratedAt: c.poolAt, lastTrade: c.lastTrade, copyOf: null, koth: M.koth === c.id,
-      live: true, pic: x.pic, src: x.src, chain: x.chain, tracked: x.live, pair: x.pair,
+      live: true, practice: Boolean(x.practice), metadataLive: x.metadataLive, pic: x.pic, src: x.src, chain: x.chain, tracked: x.live, pair: x.pair,
     };
   }
   const vol5Of = (c, t) => (c.ext && c.ext.dx && Number.isFinite(c.ext.dx.v5) ? c.ext.dx.v5 : volSince(c, t - 300).v);
@@ -1287,7 +1287,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
       me: pos && (pos.tokens > 0 || pos.realized !== 0)
         ? { tokens: pos.tokens, cost: pos.cost, value: exitValue(c, pos.tokens), realized: pos.realized } : null,
       pending: c.q.map(orderView),
-      live: true, tracked: x.live, src: x.src, chain: x.chain, pic: x.pic, pair: x.pair, cdv: c.cdv, estimated: x.estimated,
+      live: true, practice: Boolean(x.practice), metadataLive: x.metadataLive, tracked: x.live, src: x.src, chain: x.chain,
+      pic: x.pic, pair: x.pair, cdv: c.cdv, estimated: x.estimated,
     };
   }
 
@@ -1310,7 +1311,8 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     if (c.ext) {
       return { id: c.id, name: c.name, ticker: c.ticker, emoji: c.emoji, theme: c.theme, line: null, mint: c.mint,
         dev: c.devUser, devAddr: c.ext.by, born: c.born, copyOf: null, socials: { ...c.socials }, devCoins: null,
-        devMigrated: null, live: true, src: c.ext.src, chain: c.ext.chain, pic: c.ext.pic, pair: c.ext.pair };
+        devMigrated: null, live: true, practice: Boolean(c.ext.practice), metadataLive: c.ext.metadataLive,
+        src: c.ext.src, chain: c.ext.chain, pic: c.ext.pic, pair: c.ext.pair };
     }
     return {
       id: c.id, name: c.name, ticker: c.ticker, emoji: c.emoji, theme: c.theme, line: c.line, mint: c.mint,
@@ -1747,6 +1749,66 @@ export function createMarket({ seed = 'trench', solUsd = 150, startSol = 1, conf
     add: extAdd,
     state: extState,
     history: extHistory,
+    // Only a source-identity practice adapter may skip an unobserved wall-clock gap. Pending fills must have been
+    // settled first; ordinary simulations and source-reserve markets keep their normal deterministic step loop.
+    practiceSkipTo(t) {
+      if (!M.live || !M.simPaused || M.showSim || P.pending.size || M.coins.some(c => !c.ext?.practice)) return false;
+      if (!Number.isFinite(t)) return false;
+      const goal = n0 + Math.floor(t * STEPS_PER_S + 1e-9);
+      if (!Number.isSafeInteger(goal) || goal <= M.n) return false;
+      M.n = goal;
+      M.lc = null;
+      return true;
+    },
+    // Bound crowd work to a discovery window. Positions and queued player orders are always protected; ordering a
+    // dormant coin also wakes it through the ordinary order path. Resuming uses its saved reserves/RNG, never a
+    // source quote or invented catch-up trades. Iterate the active set, not all historical source identities.
+    practiceActivity(ids) {
+      const wanted = new Set(ids);
+      let slept = false;
+      for (const c of M.awake) {
+        if (!c.ext?.practice || wanted.has(c.id) || c.q.length || (P.pos.get(c.id)?.tokens || 0) > 0) continue;
+        c.asleep = true; slept = true;
+      }
+      if (slept) M.awake = M.awake.filter(c => !c.asleep);
+      for (const id of wanted) {
+        const c = coinOf(id);
+        if (c?.ext?.practice) wake(c);
+      }
+    },
+    // A practice market follows source identity and launch categories without importing a source trade, price,
+    // volume statistic, reserve or history revision. Its local pool remains open even during source migration.
+    metadata(id, data) {
+      const c = coinOf(id);
+      if (!c || !c.ext || !c.ext.practice || !data || typeof data !== 'object') return false;
+      const x = c.ext, was = x.phase;
+      let changed = false;
+      const set = (target, key, value) => {
+        if (target[key] !== value) { target[key] = value; changed = true; }
+      };
+      if (['curve', 'migrating', 'pool'].includes(data.phase)) set(x, 'phase', data.phase);
+      if (data.progress === null || Number.isFinite(data.progress)) set(x, 'progress', data.progress === null ? null : clamp(data.progress, 0, 1));
+      if (data.realSol === null || Number.isFinite(data.realSol) && data.realSol >= 0) set(x, 'realSol', data.realSol);
+      if (typeof data.metadataLive === 'boolean') set(x, 'metadataLive', data.metadataLive);
+      if (typeof data.name === 'string' && data.name.trim()) set(c, 'name', data.name.slice(0, 48));
+      if (typeof data.ticker === 'string' && data.ticker.trim()) {
+        set(c, 'ticker', data.ticker.slice(0, 16)); set(c, 'tk', c.ticker.toUpperCase());
+      }
+      if (typeof data.src === 'string' && data.src) set(x, 'src', data.src);
+      if (typeof data.by === 'string' && data.by) {
+        set(x, 'by', data.by); set(c, 'devUser', `${data.by.slice(0, 4)}…${data.by.slice(-4)}`);
+      }
+      if (data.socials && typeof data.socials === 'object') {
+        for (const key of ['x', 'tg', 'web']) if (typeof data.socials[key] === 'boolean') set(c.socials, key, data.socials[key]);
+      }
+      if (was !== x.phase) {
+        const t = tOf(M.n);
+        if (x.phase === 'migrating' || x.phase === 'pool') c.gradAt ??= t;
+        if (x.phase === 'pool') c.poolAt = t;
+      }
+      if (changed) M.lc = null;
+      return changed;
+    },
     practiceWindows(id) {
       const c = coinOf(id);
       if (!c || !c.ext || !c.ext.practice) return null;

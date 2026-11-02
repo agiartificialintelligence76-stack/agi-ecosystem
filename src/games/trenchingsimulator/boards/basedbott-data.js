@@ -31,7 +31,7 @@ export function createBasedOrders({ row, order, now, notify = () => {} }) {
         : item.mode === 'migration' ? r.phase === 'pool'
           : item.mode === 'trail' ? r.mc <= item.high * (1 - item.drop)
             : item.direction === 'down' ? r.mc <= item.target : r.mc >= item.target;
-      if (!hit || r.phase === 'migrating') continue;
+      if (!hit || (!r.practice && r.phase === 'migrating')) continue;
       const result = item.side === 'alert' ? { ok: true } : order({ coin: item.coin, side: item.side,
         ...(item.side === 'buy' ? { sol: item.sol } : { frac: item.frac }),
         ...(item.slippage == null ? {} : { slippage: item.slippage }), ...(item.priority ? { priority: item.priority } : {}) });

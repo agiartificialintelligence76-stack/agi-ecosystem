@@ -452,7 +452,7 @@ export function mountPhomoPosition(host, ctx, { coin, traderKey = 'you' } = {}, 
       const entries = state.notes({ coin }); notes.replaceChildren(...entries.slice(0, 10).map((n) => el('p', {}, el('strong', {}, 'You · local thesis '), n.text)));
       if (!entries.length) notes.append(empty('No local thesis for this token'));
     }
-    setText(about, `${r.name} · ${r.live ? 'Live market with practice positions. Quantities and entry prices use normalized practice units.' : 'Simulation token and recorded game activity.'} Chart shows retained observations only.`);
+    setText(about, `${r.name} · ${r.live ? 'Real coin with simulated prices, volume and practice positions. Quantities and entry prices use normalized practice units.' : 'Simulation token and recorded game activity.'} Chart shows retained practice history only.`);
     setText(unknown, d.own ? 'Average entry is the remaining position cost per practice unit. Transaction history retains up to 300 of your run orders.' : 'Unknown entry and realized P&L stay blank. Only retained swaps for this simulated identity are shown.');
     const threshold = Number(min.value), history = d.history.filter((t) => !Number.isFinite(threshold) || threshold <= 0 || (fin(t.amountUsd) && t.amountUsd >= threshold));
     const count = Math.max(1, Math.ceil(history.length / 11)); page = Math.max(0, Math.min(page, count - 1));

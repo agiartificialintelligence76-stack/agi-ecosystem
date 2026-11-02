@@ -35,7 +35,7 @@ export function mountReplay(host, record) {
   const priceCanvas = el('canvas', { class: 'ts-rp-candles', role: 'img', 'aria-label': 'Recorded token market cap in dollars' });
   const equityCanvas = el('canvas', { class: 'ts-rp-equity', role: 'img', 'aria-label': 'Recorded play portfolio value in dollars' });
   const coverage = el('p', { class: 'ts-rp-note' });
-  const source = record.live ? 'Live recording' : 'Simulated recording';
+  const source = record.practice ? 'Real coins · simulated prices and volume' : record.live ? 'Live recording' : 'Simulated recording';
   const intro = el('div', { class: 'ts-rp-heading' }, el('div', {}, el('h3', {}, 'Watch your run'),
     el('p', {}, `${source} · Read only · Play money`)), el('span', { class: 'ts-rp-badge' }, 'REPLAY'));
   const priceBlock = el('section', { class: 'ts-rp-chart' }, el('div', { class: 'ts-rp-chart-title' }, el('h4', {}, 'Token market cap'), choice, interval), priceCanvas, coverage);
@@ -54,7 +54,7 @@ export function mountReplay(host, record) {
   const orderBlock = el('aside', { class: 'ts-rp-trades' }, el('h4', {}, 'Your recorded orders'),
     el('p', { class: 'ts-rp-note' }, 'Select an order to jump to its result.'), list);
   const trimmed = record.coverage.ordersTrimmed || record.coverage.coinsTrimmed || record.coverage.candlesTrimmed;
-  const note = `${record.live ? 'Only retained live observations are shown. ' : 'Prices and trades are recorded from the same simulated run. '}`
+  const note = `${record.live && !record.practice ? 'Only retained live observations are shown. ' : 'Prices and trades are recorded from the same simulated run. '}`
     + 'Playback cannot place trades. Missing history stays blank; moves inside a saved candle are not reconstructed.'
     + (trimmed ? ' This long run contains only the retained portion of some history.' : '')
     + (record.coverage.equitySampled ? ' Portfolio history is sampled from recorded points.' : '');

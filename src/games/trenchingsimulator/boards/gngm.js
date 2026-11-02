@@ -28,7 +28,7 @@ import { SLIPPAGES, PRIORITIES } from '../save.js';
 import { chainById } from '../live-chains.js';
 import { kolById } from '../names.js';
 import { ORDER_ERRORS, buyPresets, parseAmount, num, ago, short, hueOf, initial, setP, tone, pic, samePic,
-  fromWords } from './common.js';
+  fromWords, waitingForRealCoins } from './common.js';
 import { cardMetrics, passes, riskOf, FILTERS, trackItems, TRACK_FILTERS, smartProfile, kolProfile, DIST_LABELS, limitHit,
   limitName, autoHit, entryMcOf, pnlOf } from './gngm-data.js';
 import { positionCardWords } from './gngm-card.js';
@@ -407,7 +407,7 @@ export function mountGngm(host, ctx) {
         .map(([, l]) => el('span', { class: 'tsg-soc' }, l)));
     }
     const tags = [r.rugged && ['Rugged', 'is-bad'], r.cto && ['CTO', ''], r.dexPaid && ['DEX', 'is-info'],
-      r.standIn && ['Sim', ''], r.live && r.tracked === false && ['Not live', 'is-warn'], r.live && ['Real', 'is-real']].filter(Boolean);
+      r.standIn && ['Sim', ''], r.live && !r.practice && r.tracked === false && ['Not live', 'is-warn'], r.live && ['Real', 'is-real']].filter(Boolean);
     const tk = tags.map((t) => t[0]).join('|');
     if (tk !== $.tagKey) {
       $.tagKey = tk;
@@ -441,7 +441,7 @@ export function mountGngm(host, ctx) {
       });
       setText(C.count, String(rows.length));
       C.empty.hidden = rows.length > 0;
-      setText(C.empty, G.filter[id] !== 'all' ? 'Nothing passes this filter right now.'
+      setText(C.empty, waitingForRealCoins(market) ? 'Waiting for real coin listings…' : G.filter[id] !== 'all' ? 'Nothing passes this filter right now.'
         : id === 'migrated' ? 'Nothing has migrated yet.' : id === 'stretch' ? 'Nothing is close to bonding yet.' : 'Waiting for new coins…');
     }
   }
@@ -1172,7 +1172,7 @@ export function mountGngm(host, ctx) {
     setText(balN, isUsd ? usd(p.sol * px) : MN(p.sol));
     checkTriggers();
     const state = typeof market.liveState === 'function' ? market.liveState() : null;
-    setText(dockStatus, state ? state.feed === 'live' ? '● Live feed · practice account' : '○ Feed reconnecting · practice account' : '● Simulated market · practice account');
+    setText(dockStatus, state ? state.feed === 'live' ? '● Real coins · simulated prices/volume' : '○ Coin feed reconnecting · simulation running' : '● Simulated market · practice account');
     if (G.sub === 'coin') coin.fast(force);
   }
   function slow(force) {

@@ -1,5 +1,24 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Live practice markets and new cover (2026-11-03):** the owner asked for every terminal's Live mode to work
+> like Clank: real coin identities and logos with locally simulated prices and volume, plus a new games-page cover,
+> and authorized production publication. Pomp, GNGM, Phomo, Axium and BasedBott now seed practice pools once from
+> each real coin's first source quote. Later listings, artwork and source launch status update without resetting
+> local prices, candles, volume or holdings. Source outages keep loaded coins playable; an empty feed stays empty.
+> No fictional fallback coins, real orders, invented real wallets, holders or security metrics. Clank remains
+> Robinhood-only. Terminal captions, setup, results and saved replay provenance match the practice behavior.
+> Source migration no longer blocks a valid practice pool. Crowd simulation is bounded to 300 recent listings
+> plus held, focused and pending-order coins; dormant pools retain their state. Returning after a long hidden
+> gap settles pending fills and skips unseen time without fabricating volume or synchronously replaying an hour.
+> The shelf and social cover use the new black/lime mark, title and six-terminal design (31 KB WebP / 93 KB JPEG).
+> Native HTML/SVG sources and the inspected-screenshot encoder replace the retired screenshot composition.
+> Release is isolated in output/clank-production-20261102, branch codex/trench-live-practice, based on fd452a4.
+> Final clean Node 24/UTC build with all 79 documented environment fixtures: 1,524 tests, 1,518 passed, 6 skipped,
+> no failures; bundling, share pages and secret scan pass. The 143 engine/feed/replay checks pass on Node 20 and 22,
+> as do all 76 focused board checks. Built browser checks use unchanged public feed messages through a loopback-only
+> read-only QA proxy because the source permits the production origin; GNGM/Pomp/Phomo fills, moving candles/volume,
+> real source artwork, 360 px GNGM charts and practice replay provenance pass. The source files are ready for preview.
+
 > **Terminal refresh and smoother charts (2026-11-03):** the owner asked for Clank's ticker to run smoothly,
 > a closer Pump.fun / GMGN / Fomo match, a beginner-friendly menu and new logo, and production publication.
 > Pomp now has Pump's compact rail/header, three-column feed, Explore layouts and coin workspace. GNGM has
@@ -13334,6 +13353,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 
 | Date | Decision |
 |---|---|
+| 2026-11-03 | All Live spot terminals use real coin identities/artwork with local practice prices and volume; no fictional fallback during source outages. The owner authorized publication and replacement of the games-page cover with the new menu branding. |
 | 2026-09-23 | Rebuild from scratch in `AGI NEW WEBSITE`; AGI FINAL is a read-only reference |
 | 2026-09-23 | Vite + plain JavaScript; server code in Vercel Functions (replaces the Render chat server) |
 | 2026-09-23 | Gemini paid tier with prepaid credits; model `gemini-3.1-flash-lite` |

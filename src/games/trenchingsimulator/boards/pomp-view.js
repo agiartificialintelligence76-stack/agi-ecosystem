@@ -1,6 +1,6 @@
 import { el, icon, keyed, setText, flag } from '../ui.js';
 import { usd, pct, age } from '../format.js';
-import { pic, samePic, short } from './common.js';
+import { pic, samePic, short, waitingForRealCoins } from './common.js';
 import { POMP_TABS, pompRows, pompRange, pompCallouts } from './pomp-data.js';
 
 const button = (label, fn, cls = '') => el('button', { type: 'button', class: cls, on: { click: fn } }, label);
@@ -81,7 +81,7 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
     el('div', { class: 'pomp-table-scroll' }, table), cards);
   const content = el('div', { class: 'pomp-workspace', data: { mobile: S.mobile } }, mobileTabs, feed, explore);
   const foot = el('footer', { class: 'pomp-footer' }, el('span', {}, '© Pomp.fun · Simulator'),
-    el('span', {}, market.live ? 'Real market · play money' : 'Simulated market · play money'));
+    el('span', {}, market.live ? 'Real coins · simulated prices/volume' : 'Simulated market · play money'));
   const mobileNav = el('nav', { class: 'pomp-mobile-nav', 'aria-label': 'Mobile terminal navigation' },
     [['Feed', 'flame', () => navigate('feed')], ['Explore', 'search', () => navigate('explore')], ['Create', 'bolt', showLaunch],
       ['Portfolio', 'bag', openBag], ['Settings', 'sliders', showSettings]].map(([name, glyph, fn]) => {
@@ -166,7 +166,7 @@ export function createPompWorkspace({ market, ctx, openCoin, openBag, closeCoin,
       for (const b of layoutButtons) b.setAttribute('aria-pressed', String(b.dataset.layout === S.layout));
       table.parentNode.hidden = S.layout !== 'table'; cards.hidden = S.layout !== 'grid';
       keyed(S.layout === 'table' ? tableBody : cards, rows, r => r.id, r => makeRow(r, S.layout), updateRow);
-      setText(resultNote, rows.length ? S.query ? `${rows.length} coins matching “${S.query}”` : '' : S.tab === 'watch' ? 'Star a coin to add it to your watchlist.' : 'No coins match these filters.');
+      setText(resultNote, rows.length ? S.query ? `${rows.length} coins matching “${S.query}”` : '' : waitingForRealCoins(market) ? 'Waiting for real coin listings…' : S.tab === 'watch' ? 'Star a coin to add it to your watchlist.' : 'No coins match these filters.');
     } else if (!S.paused) {
       const rows = pompRows(market, { tab: trendSort.value || 'movers', limit: 30, per: px });
       if (S.panels.trending) keyed(trendList, rows, r => r.id, r => makeRow(r, 'trend'), updateRow);

@@ -6,7 +6,7 @@ import { usd, usdFull, signed, pct, age, compact, price as priceWords } from '..
 import { SAFETY_NOTE } from '../terminals.js';
 import { chainById, feedWords } from '../live-chains.js';
 import { createAddressSearch } from '../live-search.js';
-import { pic, samePic, parseAmount, ORDER_ERRORS, short } from './common.js';
+import { pic, samePic, parseAmount, ORDER_ERRORS, short, waitingForRealCoins } from './common.js';
 import { createPhomoState } from './phomo-state.js';
 import { PHOMO_CATEGORIES, PHOMO_WINDOWS, tokenMetrics } from './phomo-data.js';
 import { mountPhomoCoin } from './phomo-coin.js';
@@ -158,7 +158,7 @@ export function mountPhomo(host, ctx) {
       const n = button([pic(r,'','ph'),el('span',{class:'ph-nav-identity'},name,price),el('span',{class:'ph-nav-values'},cap,change)],() => openCoin(r.id),'ph-nav-token',`Open discovery ${r.ticker}`);
       n._ph = {name,price,cap,change}; return n;
     },(n,r) => { setText(n._ph.name,r.ticker); setText(n._ph.price,fin(r.priceUsd) ? `$${priceWords(r.priceUsd,4)}` : '—'); n._ph.price.title = r.practicePrice ? 'Price per practice unit' : 'Practice token price'; setText(n._ph.cap,usd(r.marketCapUsd)); setText(n._ph.change,pct(r.change)); tint(n._ph.change,r.change); flag(n,'is-active',r.id === selectedCoin); n.setAttribute('aria-pressed',String(r.id === selectedCoin)); });
-    if (!rows.length) navRows.replaceChildren(empty('No tokens here','Change category or star a token to add it to your watchlist.'));
+    if (!rows.length) navRows.replaceChildren(waitingForRealCoins(market) ? empty('Waiting for real coin listings','New listings will appear when the coin feed connects.') : empty('No tokens here','Change category or star a token to add it to your watchlist.'));
     [...navCategories.children].forEach((n,i) => flag(n,'is-active',['trending','mostheld','graduated','bonding','bluechips'][i] === navCategory));
   }
   function error(res) { toast(res?.error === 'min_buy' ? `Minimum buy: ${usd(0.001 * ctx.solUsd)}.`
@@ -310,6 +310,8 @@ export function mountPhomo(host, ctx) {
       }
       const result = state.tokens({ ...p.options,category:p.kind === 'watchlist' ? 'watchlist' : p.options.category });
       setText(count,`${result.total} tokens`); blank.hidden = result.rows.length > 0; table.hidden = !result.rows.length;
+      setText(blank.querySelector('strong'), waitingForRealCoins(market) ? 'Waiting for real coin listings' : 'No matching tokens');
+      setText(blank.querySelector('p'), waitingForRealCoins(market) ? 'New listings will appear when the coin feed connects.' : 'Try another category or reset the filters.');
       for (const n of [network,launchpad]) flag(n._phButton,'is-active',n.value !== 'all');
       [...windows.children].forEach((b,i) => { flag(b,'is-active',PHOMO_WINDOWS[i] === p.options.window); b.setAttribute('aria-pressed',String(PHOMO_WINDOWS[i] === p.options.window)); });
       const heads = table.querySelectorAll('th'); setText(heads[3].firstChild,`${p.options.window} change`); setText(heads[4].firstChild,`${p.options.window} volume`);
@@ -480,10 +482,10 @@ export function mountPhomo(host, ctx) {
     const liveState = market.liveState?.();
     if (ctx.chain) {
       const words = feedWords(liveState?.feed,liveState?.chainState,ctx.chain,'run');
-      const label = words.tone === 'live' ? 'Live' : ['connecting','idle'].includes(liveState?.feed) ? 'Connecting'
+      const label = words.tone === 'live' ? 'Coin feed live' : ['connecting','idle'].includes(liveState?.feed) ? 'Connecting'
         : liveState?.feed === 'full' ? 'Feed full' : liveState?.feed !== 'live' ? 'Reconnecting'
-          : liveState?.chainState === 'quiet' ? 'Quiet market' : 'Feed unavailable';
-      setText(status,`● ${label} · ${chain}`); status.title = words.text;
+          : liveState?.chainState === 'quiet' ? 'Quiet coin feed' : 'Feed unavailable';
+      setText(status,`● ${label} · ${chain} · simulated prices/volume`); status.title = words.text;
       flag(status,'is-down',words.tone !== 'live');
     } else { setText(status,'● Simulated · play money'); status.title = 'Simulated market · practice money'; flag(status,'is-down',false); }
     refreshNavigator();

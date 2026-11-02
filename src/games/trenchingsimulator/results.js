@@ -171,7 +171,7 @@ export function cardText(res) {
     sub: `${moneySigned(r.pnl, c, p)}${fin(r.timeUsed) ? ` · ${clock(r.timeUsed)}` : ''}`,
     stars: r.outcome === 'won' && fin(r.stars) && r.stars > 0 ? starsRow(r.stars) : '',
     // (Live mode, 2026-10-21: its own words; never a real coin's name on the card)
-    foot: tradedLive(r) ? 'Play money on live coins · agi1.app/games/trenchingsimulator'
+    foot: typeof r.live === 'string' ? 'Play money on live coins · agi1.app/games/trenchingsimulator'
       : 'Play money, made-up coins · agi1.app/games/trenchingsimulator',
     tone: resultTone(r),
   };

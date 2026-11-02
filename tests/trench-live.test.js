@@ -27,7 +27,7 @@ import { createRooms, roomName, ROOMS, CODE as ROOM_CODE } from '../tools/trench
 import * as RACE from '../src/games/trenchingsimulator/race.js';
 import * as L from '../src/games/trenchingsimulator/live-chains.js';
 import { createLiveFeed } from '../src/games/trenchingsimulator/live-feed.js';
-import { createLiveMarket } from '../src/games/trenchingsimulator/live-market.js';
+import { createLiveMarket, LIVE_PRACTICE_LIMIT } from '../src/games/trenchingsimulator/live-market.js';
 import { createMarket } from '../src/games/trenchingsimulator/engine.js';
 import { buyQuote, curvePrice, curveProgress, START_MC, FLOOR_TOK, CURVE_TOK, K } from '../src/games/trenchingsimulator/curve.js';
 import { createRun, MAX_DT } from '../src/games/trenchingsimulator/run.js';
@@ -1281,9 +1281,9 @@ test("Live mode's chains, the money each terminal shows in it, and which challen
   // from clank.trade and, since 2026-10-21 (the owner's "Add DexScreener coins"), other launchpads' listed ones
   assert.deepEqual(L.CHAINS.map((c) => c.allFrom), [true, false, false, false, false, false, false, false, false]);
   assert.equal(L.feedWords('live', 'live', 'robinhood', 'before').text,
-    'Live: every new clank.trade coin as it launches, and others as they get listed on Robinhood Chain, traded with play money.');
+    'Robinhood Chain coins · simulated prices & volume');
   assert.match(readFileSync('src/games/trenchingsimulator/shell.js', 'utf8'),
-    /`Live · \$\{c\.name\} · real coins\$\{c\.src && c\.allFrom \? ` from \$\{c\.src\}` : ''\} · play money only`/);
+    /real coins and logos from your selected chain, with simulated prices and volume/);
   // the owner's: Pomp.fun and GNGM the chain's own coin (Pomp.fun's since the owner's "Each chain's money", 2026-10-21:
   // SOL on every chain before), BasedBott ETH, Phomo dollars, Axium its counterpart's (SOL)
   for (const ch of L.CHAIN_IDS) {
@@ -1473,7 +1473,7 @@ test('what the relay sends, checked before anything sees it', () => {
 function fakeFeed({ status = 'live', state = 'live', chain = 'solana', coins = [] } = {}) {
   const listeners = new Set();
   const f = {
-    status, ch: { [chain]: state }, list: coins.slice(), watched: [],
+    status, chain, ch: { [chain]: state }, list: coins.slice(), watched: [],
     on(fn) {
       listeners.add(fn);
       return () => listeners.delete(fn);
@@ -1509,35 +1509,33 @@ const wireCoin = (i, over = {}) => L.parseCoin(P.encodeCoin({ id: `s${i}`, key: 
   name: `Live Coin ${i}`, symbol: `LIVE${i}`, pic: '/p/abcdefghijklmnopqrstuv.webp', born: Date.now() - 30_000, by: DEV, src: 'pump.fun',
   soc: 1, sup: 1e9, st: curveAt(700_000_000), st0: curveAt(793_100_000), tracked: true, ...over }), 'solana');
 
-test('a quiet chain with enough real coins live plays them alone (no stand-ins); with too few, the stand-ins fill in', () => {
-  // the owner (2026-10-21): "on the live mode on robinhood chain use real coins not fake ones": Robinhood Chain is often
-  // quiet (no new clank.trade coin for 45 minutes) while its newest coins still trade
-  assert.equal(L.REAL_ENOUGH, 8);
+test('Live practice keeps real coins only through quiet, removed and offline source listings', () => {
+  // The wire helper remains independent of the practice adapter's source-status wording.
   assert.equal(L.playState('quiet', 8), 'live');
   assert.equal(L.playState('quiet', 7), 'quiet');
-  assert.equal(L.playState('quiet', NaN), 'quiet');
-  for (const s of ['live', 'down', 'off', null]) assert.equal(L.playState(s, 50), s, String(s));
   const coins = Array.from({ length: 9 }, (_, i) => wireCoin(i + 1));
   const feed = fakeFeed({ state: 'quiet', coins });
-  const m = createLiveMarket({ feed, chain: 'solana', seed: 'quiet-test', solUsd: 150, startSol: 1, config: { warmup: 120 } });
+  const m = createLiveMarket({ feed, seed: 'quiet-test', config: { warmup: 120 }, wallNow: () => 1_792_000_100_000 });
   try {
-    feed.emit({ type: 'snap', coins });
-    assert.deepEqual(m.ext.shown, { sim: false, ext: true, simPaused: true }, 'nine real coins live: the real ones alone');
-    assert.equal(m.liveState().chainState, 'live', 'and its words say live');
-    assert.ok(Object.values(m.lists({ limit: 30 })).flat().filter(Boolean).every((r) => !r.standIn), 'no stand-in in the lists');
-    // the relay lets two go: seven live, too few; the stand-ins fill in (and run)
+    assert.equal(m.t, 0, 'a requested fictional warmup cannot seed Live fallback coins');
+    assert.equal(m.size.coins, 9);
+    assert.equal(m.liveState().chainState, 'quiet', 'source status remains honest even with many practice coins');
+    assert.equal(m.liveState().practice, true);
+    assert.equal(m.livePractice, true);
     feed.emit({ type: 'off', ids: ['s1', 's2'] });
-    assert.deepEqual(m.ext.shown, { sim: true, ext: true, simPaused: false });
-    assert.equal(m.liveState().chainState, 'quiet');
-    // a new coin: eight again, the real ones alone
-    feed.emit({ type: 'coin', coin: wireCoin(10) });
+    feed.setStatus('down');
+    feed.emit({ type: 'snap', coins: [] });
+    m.advanceTo(120);
     assert.deepEqual(m.ext.shown, { sim: false, ext: true, simPaused: true });
-  } finally {
-    m.destroy();
-  }
-  // the modes screen counts the feed's coins followed live for the same rule
-  const shell = readFileSync('src/games/trenchingsimulator/shell.js', 'utf8');
-  assert.match(shell, /const liveCoins = f\.chain === S\.save\.chain \? f\.coins\(\)\.filter\(\(c\) => c\.tracked\)\.length : 0;\s*const w = terminalFeedWords\(S\.save\.terminal, f\.status, playState\(f\.chainState\(S\.save\.chain\), liveCoins\), S\.save\.chain, when\);/);
+    assert.equal(m.size.coins, 9, 'no fictional launches during a listing outage');
+    const rows = [...m.lists().new, ...m.lists().stretch, ...m.lists().migrated];
+    assert.equal(rows.length, 9, 'previously seen real coins stay available');
+    assert.ok(rows.every(r => r.live && r.practice && !r.standIn && r.tracked && !r.metadataLive));
+    feed.emit({ type: 'coin', coin: wireCoin(10) });
+    assert.equal(m.size.coins, 10);
+    assert.equal(m.stats(0).practice, true);
+    assert.equal(m.info(0).practice, true);
+  } finally { m.destroy(); }
 });
 
 test('newest-first live snapshots stay newest-first before the display limit and update without animation frames', () => {
@@ -1559,7 +1557,8 @@ test('newest-first live snapshots stay newest-first before the display limit and
     const before = m.t;
     now += 10_000;
     feed.emit({ type: 'u', u: [{ id: 'r1', st: { ...newest.st, mu: 30000 }, dx: null }] });
-    near(m.row(id).mc, 200, 1e-9, 'market cap updates from $15K to $30K without a game frame');
+    assert.ok(m.row(id).mc !== 100 && m.row(id).mc !== 200, 'practice advances without replacing its path with the new $30K source quote');
+    assert.ok(m.stats(id).vol > 0);
     assert.ok(m.t > before, 'the live clock catches up with feed events');
     assert.equal(m.row(id).tracked, true);
     assert.deepEqual(m.lists({ limit: 2 }).new.map((row) => row.ticker), ['R1', 'R2']);
@@ -1570,60 +1569,224 @@ test('newest-first live snapshots stay newest-first before the display limit and
   }
 });
 
-test('a live market: real coins in its lists with their pictures; the stand-ins paused while live, there while quiet or down', () => {
-  const feed = fakeFeed({ coins: [wireCoin(1), wireCoin(2)] });
-  const m = createLiveMarket({ feed, chain: 'solana', seed: 'live-test', solUsd: 150, startSol: 1, config: { warmup: 120 } });
+test('real identities seed once; practice fills move candles and survive source resets, history and reconnects', () => {
+  const now = 1_792_000_100_000;
+  const initial = wireCoin(1, { born: now - 30_000 });
+  const feed = fakeFeed({ coins: [initial, wireCoin(2, { born: now - 20_000 })] });
+  const controlFeed = fakeFeed({ coins: [initial, wireCoin(2, { born: now - 20_000 })] });
+  const make = feed => createLiveMarket({ feed, seed: 'live-test', solUsd: 150, startSol: 100,
+    config: { warmup: 120 }, wallNow: () => now });
+  const m = make(feed), control = make(controlFeed);
   try {
-    let L1 = m.lists({ limit: 30 });
-    const fresh = L1.new;
-    assert.deepEqual(fresh.map((r) => r.ticker), ['LIVE2', 'LIVE1'], 'its real coins, newest first');
-    assert.ok(fresh.every((r) => r.live && r.tracked && r.src === 'pump.fun' && r.pic === 'https://live.agi1.app/p/abcdefghijklmnopqrstuv.webp'));
-    assert.ok(Object.values(L1).flat().filter(Boolean).every((r) => !r.standIn), 'no stand-ins while live');
-    assert.deepEqual(m.ext.shown, { sim: false, ext: true, simPaused: true });
-    near(fresh[0].mc, P.curveMarketCap(curveAt(700_000_000)), 1e-6, 'its market cap, the real one');
-    // a new coin comes in; a change moves it (somebody's trade)
-    feed.emit({ type: 'coin', coin: wireCoin(3) });
-    assert.equal(m.lists().new[0].ticker, 'LIVE3');
-    const id = m.ext.byKey(wireCoin(1).key);
-    feed.emit({ type: 'u', u: [{ id: 's1', st: L.parseState(P.encodeState(curveAt(650_000_000))), dx: null }] });
-    const tr = m.trades(id, 5);
-    assert.equal(tr[0].side, 'buy');
-    assert.equal(tr[0].label, 'trader');
-    assert.equal(tr[0].addr, null, 'never an address for somebody out there');
-    near(tr[0].tok, 50_000_000, 1, 'the tokens it took');
-    near(tr[0].sol, curveAt(650_000_000).vs - curveAt(700_000_000).vs, 1e-5, 'the SOL it put in (six decimals on the wire)');
-    // quiet: the stand-ins fill in (and run), the real coins stay
-    feed.setChain('quiet');
-    assert.deepEqual(m.ext.shown, { sim: true, ext: true, simPaused: false });
-    L1 = m.lists({ limit: 30 });
-    assert.ok(L1.new.some((r) => r.standIn) && L1.new.some((r) => r.live));
-    // down: the stand-ins only; the real coins aren't live (an order on one waits)
+    const id = m.ext.byKey(initial.key);
+    assert.deepEqual(m.lists().new.map(r => r.ticker), ['LIVE2', 'LIVE1']);
+    const first = m.row(id);
+    assert.equal(first.pic, 'https://live.agi1.app/p/abcdefghijklmnopqrstuv.webp');
+    assert.equal(first.src, 'pump.fun');
+    assert.equal(first.chain, 'solana');
+    near(first.mc, P.curveMarketCap(curveAt(700_000_000)), 1e-6, 'current quote, never the older st0 launch quote');
+    assert.deepEqual(m.candles(id).map(c => c.t), [0], 'source age cannot backdate the practice seed');
+    assert.equal(first.age, 30);
+    m.advanceTo(20); control.advanceTo(20);
+    assert.ok(m.stats(id).vol > 0 && m.row(id).mc !== first.mc, 'the practice crowd moves prices and volume without source events');
+    assert.deepEqual(m.candles(id), control.candles(id), 'local market is deterministic');
+    assert.ok(m.trades(id, 10).every(t => t.label === 'practice' && t.addr === null));
+    assert.equal(m.order({ coin: id, side: 'buy', sol: 5, priority: 'ultra', slippage: 1 }).ok, true);
+    m.advanceTo(21); control.advanceTo(21);
+    const pos = m.positions().find(p => p.id === id);
+    assert.ok(pos?.tokens > 0);
+    const own = m.trades(id, 100).find(t => t.me && t.side === 'buy');
+    assert.ok(own?.sol > 0, 'player fill appears in the same tape');
+    assert.ok(m.candles(id).find(c => c.t === Math.floor(own.t)).v >= own.sol, 'player volume belongs to its execution candle');
+    assert.notEqual(m.row(id).mc, control.row(id).mc, 'player buy changes the shared practice price');
+    const prices = () => ({ candles: m.candles(id), mc: m.row(id).mc, vol: m.row(id).vol, txns: m.row(id).txns });
+    const saved = prices();
+    feed.emit({ type: 'u', u: [{ id: 's1', st: L.parseState(P.encodeState(curveAt(10_000_000))), dx: [1e9, 9e5, 9e5, 1e9, 9e5, 1e9, 9e5, 80, 90] }] });
+    feed.emit({ type: 'h', id: 's1', h: [{ at: now - 20_000, st: initial.st0 }, { at: now - 10_000, st: initial.st }] });
+    feed.emit({ type: 'off', ids: ['s1'] });
     feed.setStatus('down');
-    assert.deepEqual(m.ext.shown, { sim: true, ext: false, simPaused: false });
-    L1 = m.lists({ limit: 30 });
-    assert.ok(Object.values(L1).flat().filter(Boolean).every((r) => !r.live));
-    assert.equal(m.row(id).tracked, false);
-    assert.deepEqual(m.order({ coin: id, side: 'buy', sol: 0.1 }), { ok: false, error: 'stale' });
-    assert.ok(ORDER_ERRORS.stale.includes('live feed'), 'the board says why');
-    // back: its next snapshot makes them live again; a stand-in held meanwhile stays tradeable
-    feed.setStatus('live');
-    feed.ch.solana = 'live';
-    feed.emit({ type: 'snap', coins: [wireCoin(1), wireCoin(2), wireCoin(3)] });
+    feed.emit({ type: 'snap', coins: [] });
+    assert.deepEqual(prices(), saved, 'source quotes, totals and history never rewrite practice data');
     assert.equal(m.row(id).tracked, true);
-    assert.equal(m.order({ coin: id, side: 'buy', sol: 0.1 }).ok, true);
-    // the coin open and the ones held are watched (by the relay's ids)
-    m.advanceTo(m.t + 2);
-    m.focus(m.ext.byKey(wireCoin(2).key));
-    assert.deepEqual(feed.watched.slice().sort(), ['s1', 's2']);
-    m.focus(null);
-    assert.deepEqual(feed.watched, ['s1']);
-    // let go of the feed
+    assert.equal(m.row(id).metadataLive, false);
+    assert.equal(m.order({ coin: id, side: 'sell', frac: 1, priority: 'ultra', slippage: 1 }).ok, true);
+    m.advanceTo(22);
+    assert.equal(m.positions().find(p => p.id === id).tokens, 0, 'practice sells still fill offline');
+    const afterSell = prices();
+    const restored = { ...initial, id: 's77', pic: '/p/zyxwvutsrqponmlkjihgfe.webp', name: 'Updated actual name' };
+    feed.setStatus('live');
+    feed.emit({ type: 'snap', coins: [restored] });
+    assert.equal(m.ext.byKey(initial.key), id, 'reconnected relay IDs reuse the original practice coin');
+    assert.equal(m.size.coins, 2, 'a coin omitted from the new snapshot remains available');
+    assert.deepEqual(prices(), afterSell);
+    assert.equal(m.row(id).name, 'Updated actual name');
+    assert.match(m.row(id).pic, /zyxwvutsrqponmlkjihgfe/);
+    m.focus(id);
+    assert.deepEqual(feed.watched, ['s77']);
     m.destroy();
     assert.equal(feed.listeners, 0);
     assert.deepEqual(feed.watched, []);
-  } finally {
-    m.destroy();
+    feed.emit({ type: 'coin', coin: wireCoin(3) });
+    assert.equal(m.size.coins, 2, 'destroyed adapters ignore later listings');
+  } finally { m.destroy(); control.destroy(); }
+});
+
+test('every Live chain keeps its real address, logo and unit while curve, migration and pool remain playable', () => {
+  const now = 1_792_000_100_000;
+  for (const [i, chain] of L.CHAINS.entries()) {
+    const key = chain.id === 'solana' ? MINT : chain.id === 'tron' ? 'TXYZopYRdj2D9XRtbG411XZZ3kM5VkAeBf' : AGI_CA.toLowerCase();
+    const states = [
+      { k: 'u', mu: 15000, lu: 12000, pg: 0.2, gr: false, cl: false },
+      { k: 'u', mu: 18000, lu: 12000, pg: 1, gr: false, cl: true },
+      { k: 'u', mu: 24000, lu: 12000, pg: 1, gr: true, cl: false },
+    ];
+    for (const [j, state] of states.entries()) {
+      const c = L.parseCoin(P.encodeCoin({ id: 's1', key, name: 'Actual chain token', symbol: 'ACTUAL',
+        pic: '/p/abcdefghijklmnopqrstuv.webp', src: chain.src, born: now - 90000, sup: 1e9, st: state,
+        st0: { ...state, mu: 1000 }, tracked: true }), chain.id);
+      const feed = fakeFeed({ chain: chain.id, coins: [c] });
+      const m = createLiveMarket({ feed, chain: chain.id, seed: `chain-${i}-${j}`, startSol: 10, solUsd: 150, wallNow: () => now });
+      try {
+        const id = m.ext.byKey(key), row = m.row(id);
+        assert.equal(m.info(id).mint, key);
+        assert.equal(row.chain, chain.id);
+        assert.equal(row.pair, chain.coin.toUpperCase());
+        assert.equal(row.phase, ['curve', 'migrating', 'pool'][j]);
+        assert.equal(row.practice, true);
+        assert.equal(m.info(id).dev, '—', 'unknown creator stays unknown');
+        near(row.mc, state.mu / 150, 1e-9);
+        assert.ok(m.quote({ coin: id, side: 'buy', sol: 1 }).ok, `${chain.id} ${row.phase}: simulated pool remains open`);
+        assert.equal(m.order({ coin: id, side: 'buy', sol: 1, priority: 'ultra', slippage: 1 }).ok, true);
+        m.advanceTo(1);
+        assert.ok(m.positions().find(p => p.id === id)?.tokens > 0);
+        const saved = m.candles(id), cap = m.row(id).mc;
+        feed.emit({ type: 'u', u: [{ id: 's1', st: { ...state, mu: 1e6, gr: true, cl: false } }] });
+        assert.equal(m.row(id).phase, 'pool');
+        assert.ok(m.lists().migrated.some(r => r.id === id), 'source migration moves discovery category');
+        assert.equal(m.row(id).mc, cap);
+        assert.deepEqual(m.candles(id), saved, 'source phase updates never alter candles');
+        assert.equal(m.stats(id).holders, null);
+        assert.deepEqual(m.comments(id), []);
+      } finally { m.destroy(); }
+    }
   }
+});
+
+test('empty Live feeds never seed fictional coins and a switched feed cannot mislabel another chain', () => {
+  const now = 1_792_000_100_000;
+  const feed = fakeFeed({ status: 'down', coins: [] });
+  const m = createLiveMarket({ feed, seed: 'empty-source', config: { warmup: 120 }, wallNow: () => now });
+  try {
+    m.advanceTo(120);
+    assert.equal(m.size.coins, 0);
+    assert.ok(Object.values(m.lists()).flat().filter(Boolean).length === 0);
+    feed.emit({ type: 'coin', coin: wireCoin(1, { born: now - 30000 }) });
+    assert.equal(m.size.coins, 1);
+    const id = m.ext.byKey(mintOf(1));
+    assert.deepEqual(m.candles(id).map(c => c.t), [120], 'late discovery seeds at observation time');
+    const saved = m.candles(id);
+    feed.chain = 'base';
+    feed.emit({ type: 'chain', chain: 'base' });
+    feed.emit({ type: 'snap', coins: [wireCoin(2)] });
+    assert.equal(m.size.coins, 1, 'other-chain snapshots cannot enter this run');
+    assert.deepEqual(m.candles(id), saved);
+    assert.equal(m.row(id).metadataLive, false);
+  } finally { m.destroy(); }
+});
+
+test('rotating real discovery bounds crowd work while focused coins, holdings and queued orders keep running', () => {
+  const now = 1_792_000_100_000;
+  const coin = n => L.parseCoin(P.encodeCoin({ id: `b${n + 1}`, key: '0x' + (n + 1).toString(16).padStart(40, '0'),
+    name: `Actual ${n}`, symbol: `A${n}`, born: now - 100000 + n, sup: 1e9,
+    st: { k: 'u', mu: 15000, lu: 12000, pg: 0.2, gr: false, cl: false }, tracked: true }), 'base');
+  const feed = fakeFeed({ chain: 'base', coins: Array.from({ length: 3 }, (_, i) => coin(i)) });
+  const m = createLiveMarket({ feed, chain: 'base', seed: 'bounded-practice', startSol: 100, wallNow: () => now });
+  try {
+    m.focus(0);
+    assert.equal(m.order({ coin: 1, side: 'buy', sol: 1, priority: 'ultra', slippage: 1 }).ok, true);
+    m.advanceTo(1);
+    assert.ok(m.positions().find(p => p.id === 1)?.tokens > 0);
+    assert.equal(m.order({ coin: 2, side: 'buy', sol: 1, priority: 'ultra', slippage: 1 }).ok, true);
+    for (let i = 3; i < 1200; i++) feed.emit({ type: 'coin', coin: coin(i) });
+    assert.equal(m.size.coins, 1200, 'identity/history stay available after rolling out of active discovery');
+    assert.equal(m.size.awake, LIVE_PRACTICE_LIMIT + 3, 'only current discovery plus protected player coins receive crowd work');
+    const dormant = m.candles(10), focused = m.candles(0), held = m.candles(1);
+    m.advanceTo(11);
+    assert.deepEqual(m.candles(10), dormant, 'unobserved dormant coins do not fabricate a catch-up history');
+    assert.notDeepEqual(m.candles(0), focused);
+    assert.notDeepEqual(m.candles(1), held);
+    assert.ok(m.positions().find(p => p.id === 2)?.tokens > 0, 'a protected pending order lands');
+    m.focus(10);
+    assert.deepEqual(m.candles(10), dormant, 'reopening does not reset reserves or backfill trades');
+    m.advanceTo(21);
+    assert.ok(m.candles(10).length > dormant.length);
+    assert.equal(m.size.awake, LIVE_PRACTICE_LIMIT + 3);
+    assert.equal(m.order({ coin: 11, side: 'buy', sol: 1, priority: 'ultra', slippage: 1 }).ok, true);
+    m.advanceTo(22);
+    assert.ok(m.positions().find(p => p.id === 11)?.tokens > 0, 'ordering a dormant search result wakes and fills it');
+  } finally { m.destroy(); }
+});
+
+test('hidden Live gaps settle queued fills but skip unseen crowd volume and keep fixed epoch timing', () => {
+  let now = 1_792_000_100_000;
+  const coin = wireCoin(1, { born: now - 30000 });
+  const feed = fakeFeed({ coins: [coin] }), controlFeed = fakeFeed({ coins: [coin] });
+  const make = f => createLiveMarket({ feed: f, seed: 'hidden-practice', startSol: 100, wallNow: () => now });
+  const m = make(feed), control = make(controlFeed);
+  try {
+    const base = m.baseTime;
+    let skips = 0;
+    const skip = m.ext.practiceSkipTo;
+    m.ext.practiceSkipTo = t => { skips++; return skip(t); };
+    for (const t of [0.01, 0.02, 0.09, NaN, Infinity]) m.advanceTo(t);
+    assert.equal(skips, 0, 'fractional animation frames never scan retained identities for clock skipping');
+    assert.equal(m.t, 0);
+    for (const market of [m, control]) assert.equal(market.order({ coin: 0, side: 'buy', sol: 5, priority: 'fast', slippage: 1 }).ok, true);
+    control.advanceTo(2);
+    now += 3600_000;
+    feed.emit({ type: 'u', u: [{ id: 's1', st: coin.st }] });
+    assert.equal(m.t, 3600, 'source ages use the actual elapsed clock');
+    assert.equal(skips, 1, 'only a true long gap uses the skip path');
+    assert.equal(m.baseTime, base, 'chart epoch mapping never shifts');
+    assert.equal(m.player.pending, 0);
+    assert.ok(m.positions().find(p => p.id === 0)?.tokens > 0, 'the queued order settled before the skipped gap');
+    assert.deepEqual(m.candles(0), control.candles(0), 'the skipped 3598 seconds invent no candles or volume');
+    assert.equal(m.row(0).vol, control.row(0).vol);
+    assert.equal(m.row(0).mc, control.row(0).mc);
+    const saved = m.candles(0);
+    m.advanceTo(3600); // run.tick catches up with the same wall clock
+    assert.deepEqual(m.candles(0), saved, 'the resumed frame cannot replay the feed catch-up');
+    feed.emit({ type: 'coin', coin: wireCoin(2, { born: now }) });
+    assert.deepEqual(m.candles(1).map(c => c.t), [3600]);
+    m.advanceTo(3602);
+    assert.ok(m.candles(0).some(c => c.t >= 3600), 'new activity starts at the resumed time');
+    const pending = m.order({ coin: 0, side: 'buy', sol: 1, priority: 'fast', slippage: 1 });
+    assert.equal(pending.ok, true);
+    assert.equal(m.ext.practiceSkipTo(7200), false, 'low-level skipping cannot lose a pending player fill');
+  } finally { m.destroy(); control.destroy(); }
+  const ordinary = createMarket({ seed: 'no-skip', config: { warmup: 0 }, live: true });
+  assert.equal(ordinary.ext.practiceSkipTo(3600), false, 'ordinary made-up markets cannot bypass their step loop');
+});
+
+test('dormant practice compaction preserves prices and directional volume and declares its history revision', () => {
+  const m = createMarket({ seed: 'practice-compaction', config: { warmup: 0 }, live: true });
+  m.ext.view({ sim: false, ext: true, simPaused: true });
+  m.advanceTo(17);
+  const id = m.ext.add({ key: MINT, name: 'Actual coin', ticker: 'ACTUAL', practice: true, born: -100,
+    real: L.toReal({ k: 'u', mu: 15000, lu: 12000, pg: 0.2, gr: false, cl: false }, { solUsd: 150 }) });
+  m.advanceTo(117);
+  const before = m.ext.practiceWindows(id)['1d'];
+  const cap = m.row(id).mc;
+  m.ext.practiceActivity([]);
+  m.advanceTo(3900);
+  m.advanceTo(3900); // the engine intentionally advances at most one hour per call
+  assert.equal(m.size.awake, 0);
+  assert.equal(m.row(id).mc, cap);
+  assert.ok(m.stats(id).cdv > 0, 'cached chart readers reload corrected historical buckets');
+  assert.equal(m.candles(id)[0].t, 17, 'compaction never backdates the first known practice quote');
+  const after = m.ext.practiceWindows(id)['1d'];
+  for (const key of ['buyVolume', 'sellVolume', 'volume']) near(after[key], before[key], 1e-9, key);
+  for (const key of ['buys', 'sells']) assert.equal(after[key], before[key]);
 });
 
 test("play money against the live curve: the curve's own tokens for a buy, the player's tokens move it in their view, a sell comes back along it", () => {
@@ -1813,8 +1976,8 @@ test("a live run: the real clock (never paused, one speed), its results say Live
   const post = shareText(res);
   assert.match(post, /play money on live coins/);
   assert.ok(post.length + 24 <= 280 && !/\bbuy\b|pump\.?fun|MFROG|LIVE1/i.test(post), post);
-  // a live run with no real coin traded keeps the old words
-  assert.equal(cardText({ ...res, liveTraded: 0 }).foot, 'Play money, made-up coins · agi1.app/games/trenchingsimulator');
+  // An empty Live run still never contains fictional fallback coins.
+  assert.equal(cardText({ ...res, liveTraded: 0 }).foot, 'Play money on live coins · agi1.app/games/trenchingsimulator');
   // its best: Live mode's own book, never the simulated stars
   let s = SAVE.blank();
   assert.deepEqual([s.live, s.chain, s.liveBest], [false, 'solana', {}]);
@@ -1958,40 +2121,33 @@ test('browser contract lookup resolves into the live market, deduplicates and ca
   dropped.feed.stop();
 });
 
-test('snapshots and state-only updates preserve real volume and transaction metrics through feed and market', () => {
+test('source metrics remain in the feed while practice prices and totals never import them', () => {
   const { feed, socket } = browserFeedHarness();
   const metrics = [1500, 12, 7, 9000, 140, 30000, 700, 4.2, -3.5];
   const state = { k: 'u', mu: 15000, lu: 12000, pg: 0.2, gr: false, cl: false };
   const wire = P.encodeCoin(coinIn(AGI_CA.toLowerCase(), { id: 'r1', src: 'clank.trade', st: state, dx: metrics }));
-  assert.deepEqual(wire.dx, metrics, 'the relay includes its latest metrics in a full coin');
+  assert.deepEqual(wire.dx, metrics);
   assert.deepEqual(L.parseCoin(wire, 'robinhood').dx, metrics);
   assert.equal(Object.hasOwn(L.parseCoin({ ...wire, dx: [1, 2] }, 'robinhood'), 'dx'), false);
   socket.msg({ t: 'snap', chain: 'robinhood', coins: [wire] });
-  const m = createLiveMarket({ feed, chain: 'robinhood', seed: 'retained-metrics', solUsd: 150, startSol: 1, config: { warmup: 0 } });
+  const m = createLiveMarket({ feed, chain: 'robinhood', seed: 'retained-metrics', solUsd: 150,
+    wallNow: () => 1_792_000_100_000 });
   const id = m.ext.byKey(AGI_CA.toLowerCase());
   try {
-    const check = (vol5m, vol, txns) => {
-      const row = m.row(id);
-      near(row.vol5m, vol5m, 1e-9, 'five-minute volume retains its real quote');
-      near(row.vol, vol, 1e-9, 'daily volume retains its real quote');
-      assert.equal(row.txns, txns);
-    };
-    check(10, 200, 700);
+    near(m.row(id).mc, 100, 1e-9, 'source market cap supplies the initial price');
+    assert.deepEqual([m.row(id).vol5m, m.row(id).vol, m.row(id).txns], [0, 0, 0], 'source history is not practice volume');
+    for (let t = 1; t <= 60; t++) m.advanceTo(t);
+    const saved = { row: m.row(id), stats: m.stats(id), candles: m.candles(id) };
+    assert.ok(saved.row.vol > 0 && saved.row.txns > 0);
     socket.msg({ t: 'u', u: [['r1', P.encodeState({ ...state, mu: 30000 })]] });
-    assert.deepEqual(feed.coins()[0].dx, metrics, 'the browser retains metrics while the launchpad changes only price or progress');
-    near(m.row(id).mc, 200, 1e-9, 'the price still updates');
-    check(10, 200, 700);
+    assert.deepEqual(feed.coins()[0].dx, metrics, 'raw feed retains its reported metrics');
     const newer = [3000, 18, 9, 12000, 150, 45000, 900, 5, 2];
     socket.msg({ t: 'u', u: [['r1', P.encodeState({ ...state, mu: 45000 }), newer]] });
-    check(20, 300, 900);
-    socket.msg({ t: 'u', u: [['r1', P.encodeState({ ...state, mu: 60000 })]] });
-    check(20, 300, 900);
+    assert.deepEqual(feed.coins()[0].dx, newer);
     socket.msg({ t: 'snap', chain: 'robinhood', coins: [P.encodeCoin({ ...coinIn(AGI_CA.toLowerCase()), id: 'r1', src: 'clank.trade', st: state, dx: newer })] });
-    check(20, 300, 900);
-  } finally {
-    m.destroy();
-    feed.stop();
-  }
+    assert.deepEqual({ row: m.row(id), stats: m.stats(id), candles: m.candles(id) }, saved,
+      'neither price-only updates nor snapshots reset any practice metric or candle');
+  } finally { m.destroy(); feed.stop(); }
 });
 
 test('the feed in the browser: connecting, live, down and back by itself, full; its words plain, never a tip', async () => {
@@ -2080,14 +2236,15 @@ test('the feed in the browser: connecting, live, down and back by itself, full; 
     assert.ok(['live', 'wait', 'off'].includes(w.tone));
     assert.ok(w.text.length > 10 && w.text.length < 140, w.text);
     assert.doesNotMatch(w.text, /\bbuy\b|\bsell\b|guarantee|advice/i, w.text);
-    if (fs === 'live' && cs === 'live') assert.match(w.text, /play money/, w.text);
+    if (fs === 'live' && cs === 'live') assert.match(w.text, /simulated prices & volume/, w.text);
     if (fs === 'down' || fs === 'full' || (fs === 'live' && ['down', 'off'].includes(cs))) {
       assert.equal(w.tone, 'off');
-      assert.match(w.text, /simulated coins/, `${ch} ${when}: ${w.text}`);
+      assert.match(w.text, when === 'run' ? /practice prices keep moving/ : /Waiting for real coins/, `${ch} ${when}: ${w.text}`);
+      assert.doesNotMatch(w.text, /simulated coins|fill in|stand-in/);
     }
   }
-  assert.equal(L.feedWords('down', null, 'solana', 'run').text, 'The live feed isn\'t reachable right now. You\'re trading simulated coins until it\'s back.');
-  assert.equal(L.feedWords('live', 'quiet', 'robinhood').text, 'Robinhood Chain is quiet: no new coins for a while. Simulated coins fill in until real ones arrive.');
+  assert.equal(L.feedWords('down', null, 'solana', 'run').text, 'Listings reconnecting · practice prices keep moving');
+  assert.equal(L.feedWords('live', 'quiet', 'robinhood').text, 'Robinhood Chain listings quiet · simulated prices & volume');
   assert.match(L.LIVE_NOTE, /play money/);
   assert.match(L.LIVE_NOTE, /Not financial advice/);
 });
@@ -2144,7 +2301,7 @@ test("the game's Live files: no HTML from strings, no link anywhere (never a way
   assert.match(files.find(([f]) => f === 'shell.js')[1], /GNGM\\'s charts: TradingView Lightweight Charts™ · Copyright \(c\) 2025 TradingView, Inc\. \(tradingview\.com\)\./, 'and in How to play');
   const coinPage = files.find(([f]) => f === 'boards/gngm-coin.js')[1];
   assert.match(coinPage, /`CA \$\{f\.mint\.slice\(0, 6\)\}…`/);
-  assert.match(coinPage, /'Real coin · play money'/);
+  assert.match(coinPage, /'Real coin · simulated prices\/volume'/);
   assert.match(coinPage, /' · play money'/);
   assert.match(files.find(([f]) => f === 'boards/gngm.js')[1], /play money/);
   const css = readFileSync(dir + 'trench.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');

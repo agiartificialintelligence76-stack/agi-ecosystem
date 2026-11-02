@@ -44,7 +44,7 @@ export function mountCoin(kit) {
   const chFull = el('span', { class: 'tsg-ch-full' });
   const chName = el('h2', { class: 'tsg-ch-name', tabIndex: -1 }, chTk, ' ', chFull);
   const chAge = el('span', { class: 'tsg-chipx' });
-  const chReal = el('span', { class: 'tsg-chipx is-real', hidden: true }, 'Real coin · play money');
+  const chReal = el('span', { class: 'tsg-chipx is-real', hidden: true }, 'Real coin · simulated prices/volume');
   const chFrom = el('span', { class: 'tsg-chipx', hidden: true });
   const chCa = el('span', { class: 'tsg-chipx is-mono' });
   const chSocs = el('span', { class: 'tsg-ch-socs' });
@@ -516,16 +516,16 @@ export function mountCoin(kit) {
       tone(chg[k], v, 0.0005);
     }
     curveBox.hidden = s.phase === 'pool';
-    if (s.phase === 'migrating') setText(curveT, 'Bonding curve sold out: migrating to its pool');
+    if (s.phase === 'migrating') setText(curveT, s.practice ? 'Source coin migrating · practice trading continues' : 'Bonding curve sold out: migrating to its pool');
     else if (s.phase === 'curve') {
-      setText(curveT, s.live && s.src !== 'pump.fun' ? `Bonding curve ${share(s.progress, 0)}, as its source says`
+      setText(curveT, s.live && (s.practice || s.src !== 'pump.fun') ? `Bonding curve ${share(s.progress, 0)}, as its source says`
         : `Bonding curve ${share(s.progress, 0)} · ${tokens(CURVE_TOK * (1 - s.progress))} left · migrates at ${usd(GRAD_MC * px)}`);
     }
     setP(curveBar, s.phase === 'curve' ? s.progress : 1);
     flag(curveBar, 'is-mig', s.phase === 'migrating');
     const keys = [s.rugged && ['Rugged', 'is-bad'], s.cto && ['CTO', ''], s.dexPaid && ['DEX paid', 'is-info'], s.koth && ['King', 'is-warn'],
       s.phase === 'pool' && ['Migrated', 'is-good'], market.row(s.id) && market.row(s.id).standIn && ['Simulated', ''],
-      s.live && s.tracked === false && ['Not live', 'is-warn']].filter(Boolean);
+      s.live && !s.practice && s.tracked === false && ['Not live', 'is-warn']].filter(Boolean);
     const key = keys.map((k) => k[0]).join('|');
     if (key !== C.tagKey) {
       C.tagKey = key;
@@ -568,7 +568,7 @@ export function mountCoin(kit) {
     const tk = `$${s.ticker}`;
     if (C.side === 'sell') setText(holdLine, holding ? `You hold ${tokens(me.tokens)} ${tk} · ${M(me.value)}` : `You don't hold any ${tk}`);
     else setText(holdLine, `Balance ${M(market.player.sol)}${holding ? ` · ${tokens(me.tokens)} ${tk}` : ''}`);
-    const off = s.phase === 'migrating' && C.otype === 'market';
+    const off = !s.practice && s.phase === 'migrating' && C.otype === 'market';
     flag(placeBtn, 'is-off', off);
     if (placeBtn.getAttribute('aria-disabled') !== String(off)) placeBtn.setAttribute('aria-disabled', String(off));
   }
@@ -618,7 +618,7 @@ export function mountCoin(kit) {
       if (t.empty) return el('tr', { class: 'tsg-emptyrow' }, el('td', { colSpan: 6 }, C.maker === 'all' ? 'No trades yet' : 'No trades from them yet'));
       const smart = t.label === 'smart' ? kit.smartIndexOf(t.addr) : null;
       const canOpen = Boolean(t.kol) || smart !== null;
-      const name = t.me ? 'You' : t.kol ? `@${t.kol}` : t.addr ? short(t.addr) : 'a trader';
+      const name = t.me ? 'You' : s?.practice ? 'Simulated trader' : t.kol ? `@${t.kol}` : t.addr ? short(t.addr) : 'a trader';
       const tag = t.me ? '' : makerTag(t.kol ? 'kol' : t.label);
       const maker = el(canOpen ? 'button' : 'span', { class: 'tsg-maker', type: canOpen ? 'button' : null,
         on: canOpen ? { click: () => kit.openWallet(t.kol ? 'kol' : 'smart', t.kol || smart) } : null },
@@ -759,7 +759,7 @@ export function mountCoin(kit) {
     setText(secSum, s.live ? '—' : `${good}/${checks.length}`);
     secNote.hidden = !s.live;
     // its pool
-    const rows = [['Pair', s.pair || (U.id !== 'sol' && U.id !== 'usd' ? U.name : 'SOL')], [s.phase === 'pool' ? 'Liquidity' : 'In the curve', usd(s.liq * px)],
+    const rows = [['Pair', s.pair || (U.id !== 'sol' && U.id !== 'usd' ? U.name : 'SOL')], [s.practice ? 'Practice liquidity' : s.phase === 'pool' ? 'Liquidity' : 'In the curve', usd(s.liq * px)],
       ['Market cap', mc(s.mc)], ['Supply', tokens(SUPPLY)], ['Created', ago(s.age)], ['Creator', f.devAddr ? short(f.devAddr) : '—'],
       ['Contract', typeof f.mint === 'string' ? `${f.mint.slice(0, 6)}…` : '—'],
       ['Status', s.phase === 'pool' ? `Migrated${Number.isFinite(s.migratedAt) ? ` ${ago(market.t - s.migratedAt)}` : ''}` : s.phase === 'migrating' ? 'Migrating' : `Bonding curve ${share(s.progress, 0)}`]];

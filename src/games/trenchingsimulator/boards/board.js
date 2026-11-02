@@ -395,7 +395,7 @@ export function mountBoard(host, ctx) {
   const chTags = el('span', { class: 'tsb-tags' });
   // a real coin's: where it came from, and that it's play money here
   const chFrom = el('span', { class: 'tsb-chip', hidden: true });
-  const chReal = el('span', { class: 'tsb-chip is-real', hidden: true }, 'Real coin · play money');
+  const chReal = el('span', { class: 'tsb-chip is-real', hidden: true }, 'Real coin · simulated prices/volume');
   const chChips = el('div', { class: 'tsb-ch-chips' },
     el('span', { class: 'tsb-chip' }, icon('clock', 'ts-icon tsb-chip-ic'), chAge), chReal, chFrom, chCa, chSocs, chDev, chTags);
   const chMcv = el('b', { class: 'tsb-ch-mcv' });
@@ -495,7 +495,7 @@ export function mountBoard(host, ctx) {
   const utabBtns = [['stats', 'Stats'], ['audit', 'Audit']].map(([id, label]) => el('button', { class: 'tsb-utab', type: 'button',
     'aria-pressed': String(id === B.stab), data: { stab: id }, on: { click: () => setStab(id) } }, label));
   const winBtns = WINS.map((w) => el('button', { class: 'tsb-seg-b', type: 'button', 'aria-pressed': String(w === B.win),
-    data: { win: w }, on: { click: () => setWin(w) } }, w));
+    data: { win: w }, on: { click: () => setWin(w) } }, w === '24h' && market.live ? 'Session' : w));
   const seg = el('div', { class: 'tsb-seg', role: 'group', 'aria-label': 'Time window' }, winBtns);
   const sRows = dlRows([['ch', 'Price change'], ['vol', 'Volume'], ['tx', 'Transactions']], 'tsb-rows');
   const split1 = splitEl('Buys', 'Sells');
@@ -764,10 +764,11 @@ export function mountBoard(host, ctx) {
     setText(chMcv, mc(s.mc));
     setText(chMcch, `${pct(s.change5m)} · 5m`);
     tone(chMcch, s.change5m, 0.0005);
+    setText(chStats.dt.vol, s.practice ? 'Session vol' : '24h vol');
     setText(chStats.dd.vol, usd(s.vol * px));
     setText(chStats.dd.hold, num(s.holders));
     setText(chStats.dd.ath, mc(s.ath));
-    setText(chStats.dt.liq, s.phase === 'pool' ? 'Liquidity' : 'In the curve');
+    setText(chStats.dt.liq, s.practice ? 'Practice liquidity' : s.phase === 'pool' ? 'Liquidity' : 'In the curve');
     setText(chStats.dd.liq, usd(s.liq * px));
     const devGone = s.devSold >= 0.999 && s.dev < 0.0005;
     // (a real coin's dev isn't followed: no chip rather than a guess)
@@ -776,7 +777,7 @@ export function mountBoard(host, ctx) {
     flag(chDev, 'is-warn', !devGone && s.dev > 0.05);
     // its curve in a line (phones: the trade column's boxes are under Info)
     if (s.phase === 'pool') setText(chCurveT, 'Graduated: trading in its pool');
-    else if (s.phase === 'migrating') setText(chCurveT, 'Migrating to its pool');
+    else if (s.phase === 'migrating') setText(chCurveT, s.practice ? 'Source coin migrating · practice trading continues' : 'Migrating to its pool');
     else setText(chCurveT, `Bonding curve ${share(s.progress, 0)}`);
     setP(chCurveBar, s.phase === 'curve' ? s.progress : 1);
     flag(chCurveBar, 'is-mig', s.phase === 'migrating');
@@ -812,8 +813,8 @@ export function mountBoard(host, ctx) {
     else setText(holdLine, `Balance ${M(market.player.sol)}${holding ? ` · ${tokens(me.tokens)} ${tk}` : ''}`);
     const set = ctx.settings();
     setText(slipV, `${share(set.slippage, 0)} · ${set.priority}`);
-    // a migrating coin can't be traded: its button says so (faded, and "off" for screen readers), and still explains why when pressed
-    const off = s.phase === 'migrating';
+    // Source migration is informational for a real coin's independent practice pool.
+    const off = !s.practice && s.phase === 'migrating';
     flag(placeBtn, 'is-off', off);
     if (placeBtn.getAttribute('aria-disabled') !== String(off)) placeBtn.setAttribute('aria-disabled', String(off));
     placeLabel();
@@ -833,7 +834,7 @@ export function mountBoard(host, ctx) {
     keyed(tradesBody, items, (t) => t.key, (t) => {
       if (t.empty) return el('tr', { class: 'tsb-empty' }, el('td', { colSpan: 6 }, 'No trades yet'));
       return el('tr', { class: [t.side === 'buy' ? 'is-buy' : 'is-sell', t.me && 'is-me'] },
-        el('td', { class: 'tsb-acct' }, t.me ? 'You' : t.kol ? `@${t.kol}` : short(t.addr || t.label)),
+        el('td', { class: 'tsb-acct' }, t.me ? 'You' : market.row(id)?.practice ? 'Simulated trader' : t.kol ? `@${t.kol}` : short(t.addr || t.label)),
         el('td', { class: 'tsb-type' }, t.side === 'buy' ? 'Buy' : 'Sell'),
         el('td', { class: 'tsb-num' }, MN(t.sol)),
         el('td', { class: 'tsb-num tsb-c-amt' }, tokens(t.tok)),
@@ -881,11 +882,11 @@ export function mountBoard(host, ctx) {
     aboutEl.replaceChildren(
       el('div', { class: 'tsb-about-h' }, pic(market.row(s.id) || s, 'is-about'),
         el('div', { class: 'tsb-about-t' }, el('b', {}, s.name), el('span', {}, `$${s.ticker}`))),
-      f.line ? el('p', { class: 'tsb-about-line' }, f.line) : null,
+      ...(f.line ? [el('p', { class: 'tsb-about-line' }, f.line)] : []),
       el('div', { class: 'tsb-socials' }, SOCIALS.map(([k, label]) => el('span', { class: ['tsb-chip', !soc[k] && 'is-off'] },
         soc[k] ? label : `No ${label}`))),
       f.live
-        ? el('p', { class: 'tsb-note' }, `A real coin ${fromWords(f)}, shown as its maker named it. Your trades here are play money and never leave this page.`)
+        ? el('p', { class: 'tsb-note' }, `A real coin ${fromWords(f)}, shown as its maker named it. Prices, volume and trades are simulated locally with play money.`)
         : el('p', { class: 'tsb-note' }, `Dev record: ${num(f.devCoins)} coin${f.devCoins === 1 ? '' : 's'} launched before · ${num(f.devMigrated)} graduated`));
   }
 
@@ -980,12 +981,12 @@ export function mountBoard(host, ctx) {
     if (s.phase === 'pool') {
       setText(curveV, '100%');
       setP(curveBar, 1);
-      setText(curveTxt, `Graduated${s.migratedAt !== null ? ` ${age(market.t - s.migratedAt)} ago` : ''}: it trades in its own pool now, with ${usd(s.liq * px)} of liquidity.`);
+      setText(curveTxt, s.practice ? `The source coin has graduated. This practice pool has ${usd(s.liq * px)} of simulated liquidity.` : `Graduated${s.migratedAt !== null ? ` ${age(market.t - s.migratedAt)} ago` : ''}: it trades in its own pool now, with ${usd(s.liq * px)} of liquidity.`);
     } else if (s.phase === 'migrating') {
       setText(curveV, '100%');
       setP(curveBar, 1);
-      setText(curveTxt, 'The curve is sold out: it\'s moving into its pool. Trading opens again in a moment.');
-    } else if (s.live && s.src !== 'pump.fun') {
+      setText(curveTxt, s.practice ? 'The source coin is migrating. Its independent practice pool stays open for trading.' : 'The curve is sold out: it\'s moving into its pool. Trading opens again in a moment.');
+    } else if (s.live && (s.practice || s.src !== 'pump.fun')) {
       // another launchpad's curve: only how far along it is, as its source says
       setText(curveV, share(s.progress, 0));
       setP(curveBar, s.progress);
@@ -1019,7 +1020,7 @@ export function mountBoard(host, ctx) {
     }
     // its pool
     setText(pool.dd.pair, s.pair || (U.id !== 'sol' && U.id !== 'usd' ? U.name : 'SOL'));
-    setText(pool.dt.liq, s.phase === 'pool' ? 'Liquidity' : 'In the curve');
+    setText(pool.dt.liq, s.practice ? 'Practice liquidity' : s.phase === 'pool' ? 'Liquidity' : 'In the curve');
     setText(pool.dd.liq, isUsd ? usd(s.liq * px) : `${usd(s.liq * px)} (${MN(s.liq)} ${U.name})`);
     setText(pool.dd.mc, mc(s.mc));
     setText(pool.dd.ath, mc(s.ath));

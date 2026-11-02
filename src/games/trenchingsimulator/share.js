@@ -16,7 +16,7 @@ const change = (m) => (fin(m) && m > 0 ? `${m >= 1 ? '+' : '−'}${Math.round(Ma
 // the post for a finished run (its result, as run.result() gives it)
 export function shareText(result) {
   const r = result && typeof result === 'object' ? result : {};
-  const PLAY = typeof r.live === 'string' && Number.isFinite(r.liveTraded) && r.liveTraded > 0 ? PLAY_LIVE : PLAY_MADE;
+  const PLAY = typeof r.live === 'string' ? PLAY_LIVE : PLAY_MADE;
   const cur = currencyOf(r.currency);
   const px = fin(r.solUsd) && r.solUsd > 0 ? r.solUsd : 150;
   const from = money(r.start, cur, px);

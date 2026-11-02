@@ -19,6 +19,13 @@ export const ORDER_ERRORS = Object.freeze({
   launch_limit: 'This run has reached its limit of 20 practice launches.',
 });
 
+// An empty real-identity feed is a loading/outage state, never a reason to show fictional listings.
+export const waitingForRealCoins = (market) => {
+  if (!market?.live) return false;
+  const state = typeof market.liveState === 'function' ? market.liveState() : market.liveState;
+  return (state?.seen ?? market.ext?.liveCount?.()) === 0;
+};
+
 // who made a trade, in the latest-trade box's words (the engine's labels: never an address there)
 const WHO = Object.freeze({ dev: 'the dev', bundler: 'a bundler', sniper: 'a sniper', insider: 'an insider',
   kol: 'a caller', smart: 'a smart wallet', whale: 'a whale', me: 'you', mev: 'a bot' });

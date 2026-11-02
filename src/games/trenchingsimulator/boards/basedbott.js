@@ -9,7 +9,7 @@ import { createCandleReader } from './candle-reader.js';
 import { paintBasedTable, paintBasedInfo } from './basedbott-table.js';
 import { markEl, wordEl } from '../brands.js';
 import { usd, money, moneySigned, pct, share, age, tokens, currencyOf, unitOf, nice } from '../format.js';
-import { buyPresets, parseAmount, pic, num, short, tone, ORDER_ERRORS } from './common.js';
+import { buyPresets, parseAmount, pic, num, short, tone, ORDER_ERRORS, waitingForRealCoins } from './common.js';
 import { createGChart, chartCredit } from './gchart.js';
 import { createAddressSearch } from '../live-search.js';
 import { CHAINS, chainById } from '../live-chains.js';
@@ -100,7 +100,7 @@ export function mountBasedbott(host, ctx) {
   rail.append(...railButtons);
   const sortBtns = SORTS.map(([id, label]) => btn(label, () => { S.sort = id; render(); }, 'tbb-sort', { data: { sort: id } }));
   const source = el('select', { class: 'tbb-source', 'aria-label': 'Filter token source', on: { change: () => { S.source = source.value; render(); } } }, el('option', { value: 'all' }, 'All sources'));
-  const windowBtns = ['1m', '5m', '1h', '24h'].map(w => btn(w, () => { S.window = w; render(); }, 'tbb-window', { data: { win: w } }));
+  const windowBtns = ['1m', '5m', '1h', '24h'].map(w => btn(w === '24h' && market.live ? 'Session' : w, () => { S.window = w; render(); }, 'tbb-window', { data: { win: w } }));
   const discoverTools = el('div', { class: 'tbb-discover-tools' }, el('div', { class: 'tbb-sorts' }, sortBtns), source,
     el('div', { class: 'tbb-windows' }, windowBtns), btn([icon('sliders'), 'Filter'], showFilters, 'tbb-filter'),
     el('label', { class: 'tbb-quick' }, 'Quick Buy', quick, el('span', {}, U.name)), ibtn('lock', 'Manage blacklist', showBlacklist));
@@ -216,7 +216,7 @@ export function mountBasedbott(host, ctx) {
     setText(x.vol, MC(S.window === '1m' ? st.vol1m : S.window === '1h' ? st.vol1h : S.window === '24h' ? st.vol : st.vol5m));
     setText(x.txns, num(S.window === '1h' ? st.txns1h : S.window === '24h' ? st.txns : st.txns5m));
     updateLabels(x.intel, [`Holders ${num(r.holders)}`, `Top 10 ${share(r.top10)}`, `Dev ${share(r.dev)}`]);
-    x.buy.disabled = r.phase === 'migrating' || r.live && r.tracked === false;
+    x.buy.disabled = !r.practice && (r.phase === 'migrating' || r.live && r.tracked === false);
   }
   function makePulseCard(r) {
     const name = btn([pic(r, '', 'tbb'), el('span', {}, el('b', {}, r.ticker), el('small', {}, r.name))], () => openCoin(r.id), 'tbb-pulse-token');
@@ -227,11 +227,11 @@ export function mountBasedbott(host, ctx) {
   }
   function updatePulseCard(node, r) {
     const x = node.$;
-    setText(x.meta, `${age(r.age)} · ${r.live ? 'Real coin · play money' : 'Simulated'} · ${num(r.holders)} holders`);
+    setText(x.meta, `${age(r.age)} · ${r.live ? 'Real coin · simulated market' : 'Simulated'} · ${num(r.holders)} holders`);
     updateStats(x.stats, [['MC', MC(r.mc)], ['V 5m', MC(r.vol5m)], ['Change', pct(r.ch5m), r.ch5m >= 0 ? 'is-up' : 'is-down']], 'strong', 'tbb-stat');
     x.bar.style.setProperty('--progress', `${Math.max(0, Math.min(100, (r.progress || 0) * 100))}%`);
     x.bar.title = `Bonding curve ${share(r.progress)}`;
-    setText(x.buy, `ϟ ${quick.value} ${U.name}`); x.buy.disabled = r.phase === 'migrating' || r.live && r.tracked === false;
+    setText(x.buy, `ϟ ${quick.value} ${U.name}`); x.buy.disabled = !r.practice && (r.phase === 'migrating' || r.live && r.tracked === false);
     x.watch.setAttribute('aria-pressed', String(S.watched.has(r.id)));
   }
   function render() {
@@ -244,7 +244,7 @@ export function mountBasedbott(host, ctx) {
     portfolio.hidden = S.coin !== null || S.view !== 'portfolio'; trackers.hidden = S.coin !== null || S.view !== 'trackers';
     multichart.hidden = S.coin !== null || S.view !== 'multichart'; coinView.hidden = S.coin === null;
     setText(balance, `W1  ${M(market.player.sol)}`);
-    setText(footerStatus, market.live ? '● Live market · play money' : '● Practice session');
+    setText(footerStatus, market.live ? '● Real coins · simulated prices/volume' : '● Practice session');
     notifications.title = `${S.notification} automation notifications`;
     if (!discover.hidden || !pulse.hidden) {
       const rows = allRows(), sources = [...new Set(rows.map(r => r.src || 'simulated'))];
@@ -255,7 +255,7 @@ export function mountBasedbott(host, ctx) {
       if (!discover.hidden) {
         const list = filtered(rows).slice(0, 75);
         keyed(discoverList, list, r => r.id, makeMarketRow, updateMarketRow);
-        if (!list.length) discoverList.replaceChildren(empty(S.sort === 'watching' ? 'Star a token to add it to your watchlist.' : 'No tokens match these filters.'));
+        if (!list.length) discoverList.replaceChildren(empty(waitingForRealCoins(market) ? 'Waiting for real coin listings…' : S.sort === 'watching' ? 'Star a token to add it to your watchlist.' : 'No tokens match these filters.'));
         else discoverList.querySelector('.tbb-empty')?.remove();
       }
       if (!pulse.hidden && !S.paused) {
@@ -263,7 +263,7 @@ export function mountBasedbott(host, ctx) {
         for (const id of ['new', 'stretch', 'migrated']) {
           const list = filtered(lists[id]); setText(pulseCounts[id], list.length);
           keyed(pulseLists[id], list, r => r.id, makePulseCard, updatePulseCard);
-          if (!list.length) pulseLists[id].replaceChildren(empty('No tokens here yet.'));
+          if (!list.length) pulseLists[id].replaceChildren(empty(waitingForRealCoins(market) ? 'Waiting for real coin listings…' : 'No tokens here yet.'));
           else pulseLists[id].querySelector('.tbb-empty')?.remove();
         }
       }
@@ -320,8 +320,8 @@ export function mountBasedbott(host, ctx) {
   function renderCoin() {
     if (S.coin === null || S.dead) return;
     const r = market.row(S.coin), st = market.stats(S.coin); if (!r || !st) return;
-    setText(coinSubtitle, `${r.name} · ${age(r.age)} · ${r.live ? 'Real coin · play money' : 'Simulated'}${r.live && !r.tracked ? ' · Not live' : ''}`);
-    updateStats(coinStats, [['Market Cap', MC(r.mc)], ['Liquidity', MC(st.liq)], ['Volume 5m', MC(st.vol5m)], ['Holders', num(st.holders)], ['5m', pct(st.change5m), st.change5m >= 0 ? 'is-up' : 'is-down']], 'strong', 'tbb-stat');
+    setText(coinSubtitle, `${r.name} · ${age(r.age)} · ${r.live ? 'Real coin · simulated prices/volume' : 'Simulated'}${r.live && !r.practice && !r.tracked ? ' · Not live' : ''}`);
+    updateStats(coinStats, [['Market Cap', MC(r.mc)], [st.practice ? 'Practice liquidity' : 'Liquidity', MC(st.liq)], ['Volume 5m', MC(st.vol5m)], ['Holders', num(st.holders)], ['5m', pct(st.change5m), st.change5m >= 0 ? 'is-up' : 'is-down']], 'strong', 'tbb-stat');
     watchCoin.setAttribute('aria-pressed', String(S.watched.has(S.coin)));
     for (const b of tfBtns) b.setAttribute('aria-pressed', String(Number(b.dataset.tf) === S.tf));
     for (const b of fxBtns) b.setAttribute('aria-pressed', String(S.indicators.has(b.dataset.fx)));
@@ -329,7 +329,7 @@ export function mountBasedbott(host, ctx) {
       marks: market.orders(120).filter(o => o.coin === S.coin && o.status === 'filled').map(o => ({ t: o.doneAt, side: o.side })) });
     setText(holdLine, S.side === 'buy' ? `Balance ${M(market.player.sol)}` : `Holding ${tokens(st.me?.tokens || 0)} ${r.ticker}`);
     const settings = ctx.settings(); setText(tradeSettings, `Slippage ${share(settings.slippage)}  ·  Priority ${settings.priority}  ⚙`);
-    orderBtn.disabled = S.type === 'market' && (r.phase === 'migrating' || r.live && !r.tracked);
+    orderBtn.disabled = S.type === 'market' && !r.practice && (r.phase === 'migrating' || r.live && !r.tracked);
     const p = market.positions().find(p => p.id === S.coin);
     paintBasedInfo(positionInfo, 'position', 'My Position', [['Bought', M(p?.invested || 0)], ['Sold', M(p?.sold || 0)], ['Current holding', M(p?.value || 0)], ['PnL', p ? `${MS(p.total)} (${pct(p.pnlPct)})` : '—']]);
     paintBasedInfo(riskInfo, 'risk', 'Token Info', [['Top 10', share(st.top10)], ['Dev holding', share(st.dev)], ['Snipers', share(st.snipers)], ['Bundlers', share(st.bundlers)], ['Bonding curve', share(st.progress)], ['DEX paid', r.live ? '—' : st.dexPaid ? 'Yes' : 'No']]);
@@ -352,7 +352,7 @@ export function mountBasedbott(host, ctx) {
     if (S.tab === 'trades') {
       const trades = market.trades(S.coin, 40) || [];
       paintBasedTable(coinTable, `trades:${S.coin}`, ['Time', 'Type', 'Value', 'Tokens', 'Market Cap', 'Trader'], trades.map(t => ({ id: tradeKey(t), cells: [age(market.t - t.t),
-        { text: t.side.toUpperCase(), tone: t.side === 'buy' ? 'is-up' : 'is-down' }, M(t.sol), tokens(t.tok), MC(t.mc), t.me ? 'You' : t.kol || (t.addr ? short(t.addr) : '—')] })), 'No trades yet.');
+        { text: t.side.toUpperCase(), tone: t.side === 'buy' ? 'is-up' : 'is-down' }, M(t.sol), tokens(t.tok), MC(t.mc), t.me ? 'You' : st.practice ? 'Simulated trader' : t.kol || (t.addr ? short(t.addr) : '—')] })), 'No trades yet.');
     } else if (S.tab === 'holders') {
       const holders = market.holders(S.coin, 40);
       paintBasedTable(coinTable, `holders:${S.coin}`, ['#', 'Holder', 'Share', 'Tokens', 'Bought', 'Sold'], (st.live ? [] : holders?.list || []).map(h => ({ id: h.addr, cells: [h.rank, h.me ? 'You' : short(h.addr), share(h.pct), tokens(h.tok), M(h.in), M(h.out)] })), st.live ? 'Holder identities are not provided by this live feed.' : 'No holders yet.');

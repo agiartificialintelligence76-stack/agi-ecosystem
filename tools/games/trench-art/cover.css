@@ -1,0 +1,34 @@
+@font-face{font-family:Anybody;src:url('/fonts/Anybody-Variable.woff2') format('woff2');font-weight:100 900;font-stretch:50% 150%;font-display:block}
+@font-face{font-family:Geist;src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:block}
+@font-face{font-family:GeistMono;src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:block}
+*{box-sizing:border-box;margin:0}
+html,body{background:#0d0f0c;color:#f3f4ef;overflow:hidden;font-family:Geist,Arial,sans-serif;-webkit-font-smoothing:antialiased}
+.keyart,.keyart .cover{width:760px;height:511px}.social,.social .cover{width:1200px;height:630px}
+.cover{position:relative;isolation:isolate;overflow:hidden;background:#0d0f0c}
+.grid{position:absolute;inset:0;z-index:-2;background-image:linear-gradient(#d6ff6206 1px,transparent 1px),linear-gradient(90deg,#d6ff6206 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(90deg,transparent 15%,black 80%)}
+.glow{position:absolute;width:620px;height:620px;right:-220px;top:-180px;z-index:-1;border-radius:50%;background:radial-gradient(closest-side,#a6ce3d18,transparent)}
+header{position:absolute;top:32px;left:38px;right:38px;display:flex;align-items:center;justify-content:space-between}
+.brand{display:flex;align-items:center;gap:11px;font-size:12px;font-weight:650;letter-spacing:.12em}
+.brand img{width:38px;height:38px}.brand-line{display:block;margin-top:5px;font:8px GeistMono,monospace;letter-spacing:.1em;color:#7e8972}
+.badge{display:flex;align-items:center;gap:7px;border:1px solid #3a4728;border-radius:5px;background:#182013;padding:8px 10px;font:9px GeistMono,monospace;letter-spacing:.06em;color:#d6ff62}
+.badge i{height:5px;width:5px;display:block;border-radius:50%;background:#d6ff62}
+.copy{position:absolute;top:112px;left:38px;z-index:2}
+.eyebrow{font:9px GeistMono,monospace;letter-spacing:.13em;color:#8c9a7b;margin-bottom:16px}
+h1{font-family:Anybody,Geist,sans-serif;font-size:76px;font-weight:850;font-variation-settings:'wdth' 75;line-height:.97;letter-spacing:-.045em;color:#f3f4ef}
+h1>span{display:block}h1>span+span{color:#d6ff62}.period{color:#d6ff62}
+.tagline{margin-top:19px;color:#b0b7a6;font-size:18px;letter-spacing:-.02em;font-weight:450}
+.chart{position:absolute;right:-49px;top:108px;width:350px;height:300px;border:1px solid #424e2e;border-radius:12px;transform:perspective(1000px) rotateY(-12deg) rotateZ(-8deg);background:linear-gradient(145deg,#202a18,#10170b 65%);box-shadow:-24px 24px 60px #0007;z-index:1;overflow:hidden}
+.chart:after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,#0d0f0cdd,transparent 46%);pointer-events:none}
+.chart-head,.chart-foot{position:absolute;left:18px;right:18px;display:flex;align-items:center;justify-content:space-between;font:8px GeistMono,monospace;letter-spacing:.05em;color:#7e9166}.chart-head{top:16px}.chart-head>span:last-child{font:20px Geist,sans-serif;color:#d6ff62}.chart-foot{bottom:15px;font-size:7px}
+.chart>img{display:block;width:calc(100% - 30px);height:210px;margin:48px 15px 0;object-fit:fill}
+footer{position:absolute;left:38px;right:38px;bottom:23px;z-index:3}
+.terminals{display:flex;align-items:center;justify-content:space-between;padding:15px 0;border-top:1px solid #303729;border-bottom:1px solid #303729;background:#0d0f0ce8}
+.terminals>span{display:flex;align-items:center;gap:6px;white-space:nowrap;font-size:11px;color:#c0c7b4;font-weight:550}
+.terminals i{display:inline-flex;align-items:center;justify-content:center;font-style:normal;width:16px;height:16px;flex:none;color:#d6ff62;font-size:12px;font-weight:750}
+.terminals .pill{width:15px;height:8px;border-radius:5px;transform:rotate(-40deg);border:1px solid #a8cf85;background:linear-gradient(90deg,#a8cf85 50%,transparent 50%)}
+.terminals .clank{color:#c9c9c6;font-size:19px}.terminals .phomo{color:#f59ad2;font-family:Georgia,serif;font-style:italic;font-size:20px}.terminals .axium{color:#9dbbff;font-size:14px}.terminals .gngm{color:#8bd99f;border:1px solid #375a3f;border-radius:4px;font-size:10px}.terminals .based{color:#b5a2ff;border:1px solid #4d4268;border-radius:50%;font-size:9px}
+.fine{display:flex;justify-content:space-between;margin-top:15px;font:7px GeistMono,monospace;letter-spacing:.08em;color:#66725a}
+.social header{top:44px;left:58px;right:58px}.social .brand{font-size:16px;gap:14px}.social .brand img{width:48px;height:48px}.social .brand-line{font-size:9px;margin-top:6px}.social .badge{font-size:11px;padding:10px 13px;gap:9px}
+.social .copy{left:58px;top:158px}.social .eyebrow{font-size:11px;margin-bottom:20px}.social h1{font-size:112px}.social .tagline{font-size:25px;margin-top:22px}
+.social .chart{top:137px;right:20px;width:468px;height:345px;transform:perspective(1000px) rotateY(-10deg) rotateZ(-7deg);border-radius:16px}.social .chart>img{height:250px;margin-top:48px}.social .chart:after{background:linear-gradient(90deg,#0d0f0c9c,transparent 40%)}.social .chart-head{font-size:10px;left:24px;right:24px}.social .chart-foot{font-size:9px;left:24px;right:24px}
+.social footer{left:58px;right:58px;bottom:29px}.social .terminals{justify-content:flex-start;gap:37px;padding:17px 0}.social .terminals>span{font-size:14px;gap:8px}.social .terminals i{width:19px;height:19px}.social .terminals .pill{width:18px;height:10px}.social .terminals .clank{font-size:23px}.social .terminals .phomo{font-size:24px}.social .terminals .axium{font-size:17px}.social .fine{font-size:9px;margin-top:17px}

@@ -76,9 +76,8 @@ export function toUnit(solAmount, unit, px) {
   return p[unit] > 0 ? (solAmount * p.sol) / p[unit] : NaN;
 }
 
-// A quiet chain (the relay's word: no new coin for a while, 45 minutes on Robinhood Chain) with at least REAL_ENOUGH real
-// coins followed live plays them alone, like a live one (the owner, 2026-10-21: "on the live mode on robinhood chain use
-// real coins not fake ones"); with fewer (BNB Chain's or Base's few listed coins, say), made-up stand-ins still fill in.
+// Legacy source-state helper retained for callers that distinguish a quiet but populated listing feed.
+// Live practice markets now use only real identities regardless of this count; they never add fictional stand-ins.
 export const REAL_ENOUGH = 8;
 // the chain's state as the game plays it (`liveCoins`: its real coins followed live right now)
 export function playState(chainState, liveCoins) {
@@ -132,8 +131,8 @@ export function picUrl(relay, path) {
 
 // ---------- its words ----------
 
-export const LIVE_NOTE = 'Live mode shows real new coins, with the names and pictures their makers gave them. You trade them with play money: nothing is bought or sold for real, and nothing leaves this page. Not financial advice.';
-export const LIVE_SHORT = 'Real coins · play money only';
+export const LIVE_NOTE = 'Real coins and logos from your selected chain. The first market quote starts a local practice market, then prices and volume are simulated for your run. You trade with play money; your buys and sells move this practice market, not the real market. No real trades are sent. Not financial advice.';
+export const LIVE_SHORT = 'Real coins · simulated prices & volume · play money';
 // while Live mode is closed (LIVE_OPEN false, as it was until 2026-10-21): its Market switch's line, and How to play's
 export const LIVE_SOON = 'Live coins are coming soon: real new coins as they launch, with the names and pictures their makers gave them, traded with play money only. Until then, every coin here is made up.';
 export const LIVE_SOON_HOW = 'Live mode is coming soon: real new coins on Solana, Robinhood Chain, BNB Chain, Base, Ethereum, Monad, HyperEVM, Arbitrum or Tron, with their makers\' names and pictures, traded with play money only.';
@@ -144,23 +143,23 @@ export const LIVE_SOON_HOW = 'Live mode is coming soon: real new coins on Solana
 export function feedWords(feed, chainState, chainId, when = 'run') {
   const ch = chainById(chainId) || chainById(DEFAULT_CHAIN);
   const run = when === 'run';
-  if (feed === 'connecting' || feed === 'idle') return { tone: 'wait', text: 'Connecting to the live feed…' };
+  if (feed === 'connecting' || feed === 'idle') return { tone: 'wait', text: run ? `${ch.name} listings connecting · simulated prices & volume` : `Connecting to real ${ch.name} coin listings…` };
   if (feed === 'full') {
-    return { tone: 'off', text: run ? 'The live feed is full right now. You\'re trading simulated coins until there\'s room.'
-      : 'The live feed is full right now: a run would use simulated coins until there\'s room.' };
+    return { tone: 'off', text: run ? 'Listings busy · practice prices keep moving'
+      : 'Coin listings are busy. Waiting for real coins to load.' };
   }
   if (feed !== 'live') {
-    return { tone: 'off', text: run ? 'The live feed isn\'t reachable right now. You\'re trading simulated coins until it\'s back.'
-      : 'The live feed isn\'t reachable right now: a run would use simulated coins until it\'s back.' };
+    return { tone: 'off', text: run ? 'Listings reconnecting · practice prices keep moving'
+      : 'Coin listings are reconnecting. Waiting for real coins to load.' };
   }
   if (chainState === 'live') {
-    return { tone: 'live', text: `Live: ${ch.what} on ${ch.name}, traded with play money.` };
+    return { tone: 'live', text: `${ch.name} coins · simulated prices & volume` };
   }
   if (chainState === 'quiet') {
-    return { tone: 'wait', text: `${ch.name} is quiet: no new coins for a while. Simulated coins fill in until real ones arrive.` };
+    return { tone: 'wait', text: run ? `${ch.name} listings quiet · simulated prices & volume` : `${ch.name} is quiet. Only real listed coins will appear; prices and volume are simulated.` };
   }
-  return { tone: 'off', text: run ? `${ch.name} isn't on the live feed right now. You're trading simulated coins.`
-    : `${ch.name} isn't on the live feed right now: a run would use simulated coins.` };
+  return { tone: 'off', text: run ? `${ch.name} listings offline · practice prices keep moving`
+    : `${ch.name} listings are unavailable. Waiting for real coins to load.` };
 }
 
 // ---------- what the relay sends, checked ----------

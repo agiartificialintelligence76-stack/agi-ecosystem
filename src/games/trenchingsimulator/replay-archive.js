@@ -18,10 +18,11 @@ const id = (v) => Number.isSafeInteger(v) && v >= 0;
 export function validArchivedReplay(r) {
   // Storage is editable JSON. Validate the whole shape rather than retaining arbitrary nested payloads
   // which can later break exporting, copying, or the playback renderer's ordered-history assumptions.
-  if (!fields(r, ['v', 'seed', 'live', 'chain', 'terminal', 'duration', 'solUsd', 'startSol', 'until', 'n0', 'config', 'replayable', 'log', 'orders', 'coins', 'equity', 'coverage'])
+  if (!fields(r, ['v', 'seed', 'live', 'practice', 'chain', 'terminal', 'duration', 'solUsd', 'startSol', 'until', 'n0', 'config', 'replayable', 'log', 'orders', 'coins', 'equity', 'coverage'])
     || r.v !== 1 || !fin(r.duration) || r.duration < 0 || r.duration > Number.MAX_SAFE_INTEGER || !fin(r.solUsd) || r.solUsd <= 0
     || !fin(r.startSol) || r.startSol < 0 || !fin(r.startSol * r.solUsd) || !word(r.seed, 200)
     || !optional(r.chain, (s) => word(s, 24)) || !optional(r.until, id) || !optional(r.n0, id)
+    || (r.practice !== undefined && typeof r.practice !== 'boolean')
     || typeof r.replayable !== 'boolean' || !fields(r.coverage, ['ordersTrimmed', 'coinsTrimmed', 'candlesTrimmed', 'equitySampled', 'equityFrom', 'logComplete'])
     || !['ordersTrimmed', 'coinsTrimmed', 'candlesTrimmed', 'equitySampled', 'logComplete'].every((k) => typeof r.coverage[k] === 'boolean')
     || !optional(r.coverage.equityFrom, (n) => fin(n) && n >= 0 && n <= r.duration)) return false;

@@ -24,6 +24,24 @@ function liveFixture() {
   return { run, bars, equity, orders };
 }
 
+test('real-coin practice recordings retain simulated-price provenance and reopen alongside legacy live recordings', () => {
+  const legacy = captureRunReplay(liveFixture().run);
+  assert.equal(legacy.practice, undefined);
+  assert.equal(validArchivedReplay(legacy), true);
+  for (const flag of ['livePractice', 'clankPractice']) {
+    const { run } = liveFixture(); run.market[flag] = true;
+    const record = captureRunReplay(run);
+    assert.equal(record.practice, true);
+    assert.equal(record.live, true);
+    assert.equal(record.replayable, false, 'real discovery is recorded, never recreated from a seed');
+    const storage = replayStorage(), archive = createReplayArchive(storage, { now: () => 1000 });
+    const saved = archive.save(record, 'Practice on real coins');
+    assert.equal(saved.ok, true);
+    assert.deepEqual(createReplayArchive(storage).get(saved.id), record);
+    assert.equal(validArchivedReplay({ ...record, practice: 'true' }), false);
+  }
+});
+
 test('a recorded simulated run retains the exact seed, configuration and order steps, independently of playback', () => {
   const run = createRun({ seed: 12345, startSol: 100, solUsd: 100, terminal: 'social', currency: 'usd' });
   const coin = run.market.lists({ limit: 1 }).new[0].id;

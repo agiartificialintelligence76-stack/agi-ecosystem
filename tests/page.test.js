@@ -659,12 +659,10 @@ test('AGI games\' link preview: a real 1200 × 630 JPEG under 160 KB, made from 
   assert.doesNotMatch(words, /\bbuy\b|%|\$\s?\d/i, 'no price talk');
 });
 
-// (2026-10-21) TRENCHING SIMULATOR, AGI games' second game: its own link preview and its key art on the shelf, both made by
-// tools/games/trench-art.mjs from real screenshots of its own terminal (tools/games/trench-art/), its title, "Play money"
-// and AGI-1 only as her 2D art. Their words are exactly these (so never a real trading terminal's name, nor a price)
-const TS_CARD_WORDS = 'PLAY MONEY MADE-UP COINS AGI games · beta TRENCHING SIMULATOR Trade the trenches. Made-up coins, play money, terminals you know. '
-  + 'No wallet needed. agi1.app/games/trenchingsimulator Free to play · beta · not financial advice';
-const TS_ART_WORDS = 'TRENCHING SIMULATOR PLAY MONEY MADE-UP COINS';
+// The current cover follows the black/lime menu. Its sources are native HTML/SVG, rendered through CUA;
+// the deployed shelf and social images stay small, complete, and explicit about play money.
+const TS_COVER_WORDS = ['AGI GAMES', 'PLAY MONEY', 'SIX TERMINALS. ONE PLAYGROUND.', 'TRENCHING', 'SIMULATOR',
+  'Find your edge.', 'Pomp.fun', 'Clank.trade', 'Phomo', 'Axium', 'GNGM', 'BasedBott', 'REAL PRACTICE. ZERO REAL MONEY.'];
 const jpegSize = (jpg) => {
   for (let i = 2; i < jpg.length - 9;) {
     if (jpg[i] !== 0xff) break;
@@ -674,60 +672,65 @@ const jpegSize = (jpg) => {
   }
   return null;
 };
-test('TRENCHING SIMULATOR\'s link preview: a real 1200 × 630 JPEG under 160 KB, made from tools/cards/trenchingsimulator-card.html; its page\'s preview tags', () => {
+test('TRENCHING SIMULATOR\'s link preview: a 1200 × 630 JPEG with the current mark, chart and six terminals under its reserved size limit', () => {
   const jpg = readFileSync(new URL('../public/cards/trenchingsimulator.jpg', import.meta.url));
-  assert.ok(jpg.length <= 160_000, `${jpg.length} bytes (the build fails over 160 KB; the owner's copy carries a ~6 KB label)`);
+  assert.ok(jpg.length < 154_000, `${jpg.length} bytes (reserve 6 KB for the owner's content-credentials label)`);
   assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');
   assert.deepEqual(jpegSize(jpg), [1200, 630]);
   const card = readPage('tools/cards/trenchingsimulator-card.html');
-  const words = textOf(card.slice(card.indexOf('<body>'))).trim();
-  assert.equal(words, TS_CARD_WORDS, 'its words: the title, "Play money", no wallet needed, its address, not financial advice');
-  for (const src of ['../games/trench-art/board.webp', '../games/trench-art/coin.webp', '../../public/images/landing/agi1-cutout.webp']) {
-    assert.ok(card.includes(`src="${src}"`), `${src}: the game's own screenshots, AGI-1 as her 2D art`);
-  }
+  const words = textOf(card.slice(card.indexOf('<body'))).trim();
+  for (const word of TS_COVER_WORDS) assert.ok(words.includes(word), word);
+  assert.ok(words.includes('AGI1.APP/GAMES/TRENCHINGSIMULATOR'));
+  assert.ok(card.includes('src="/games/trenchingsimulator/mark.svg"'), 'the new menu mark');
+  assert.ok(card.includes('src="../games/trench-art/market.svg"'), 'the native candle chart');
+  assert.ok(card.includes('href="../games/trench-art/cover.css"'), 'the shared art typography and palette');
+  assert.doesNotMatch(card, /board\.webp|coin\.webp|agi1-cutout/, 'the old cover composition is retired');
   assert.doesNotMatch(card, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
   assert.doesNotMatch(words, /\bbuy\b|%|\$\s?\d/i, 'no price talk');
   // the game's page: its own picture, with the site's address filled in at build time
   const page = readPage('trenchingsimulator.html');
   assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/trenchingsimulator.jpg" />'), 'its own link preview');
   assert.match(page, /<meta property="og:image:width" content="1200" \/>\s*<meta property="og:image:height" content="630" \/>/);
-  assert.match(page, /<meta property="og:image:alt" content="The words TRENCHING SIMULATOR and Play money, next to the game's own trading screens and AGI-1" \/>/);
+  assert.match(page, /<meta property="og:image:alt" content="TRENCHING SIMULATOR[^\"]*trading-arrow logo[^\"]*candle chart[^\"]*six terminal[^\"]*" \/>/);
   assert.match(page, /<meta name="twitter:card" content="summary_large_image" \/>/);
   assert.match(page, /<meta property="og:url" content="__SITE__\/games\/trenchingsimulator" \/>/);
   assert.match(readPage('scripts/share-pages.js'), /'dist\/trenchingsimulator\.html'/, 'its preview gets the site\'s address');
   assert.ok(readPage('scripts/share-pages.js').includes("'trenchingsimulator.jpg'"), 'the build checks its picture is there');
 });
 
-test('TRENCHING SIMULATOR\'s key art: Ride \'Em, AGI!\'s size, see-through edges, made by tools/games/trench-art.mjs from the game\'s own screenshots', () => {
-  const webpSize = (b) => {
-    assert.equal(b.toString('ascii', 0, 4), 'RIFF');
-    assert.equal(b.toString('ascii', 8, 12), 'WEBP');
-    const kind = b.toString('ascii', 12, 16);
-    assert.equal(kind, 'VP8X', 'an extended WebP (its see-through edges)');
-    return { w: 1 + b.readUIntLE(24, 3), h: 1 + b.readUIntLE(27, 3), alpha: (b[20] & 0x10) !== 0 };
-  };
+test('TRENCHING SIMULATOR\'s key art: a compact 760 × 511 black/lime cover with readable title and no retired screenshots', async () => {
+  const { default: sharp } = await import('sharp');
   const art = readFileSync(new URL('../src/games/trenchingsimulator/keyart.webp', import.meta.url));
   const ride = readFileSync(new URL('../src/games/rideemagi/keyart.webp', import.meta.url));
-  const a = webpSize(art), r = webpSize(ride);
-  assert.deepEqual([a.w, a.h], [r.w, r.h], 'the same size as Ride \'Em, AGI!\'s, so the shelf\'s cards match');
-  assert.deepEqual([a.w, a.h], [760, 511]);
-  assert.equal(a.alpha, true, 'see-through around it, like Ride \'Em, AGI!\'s');
+  const [a, r] = await Promise.all([sharp(art).metadata(), sharp(ride).metadata()]);
+  assert.equal(a.format, 'webp');
+  assert.deepEqual([a.width, a.height], [r.width, r.height], 'the shelf images share their aspect ratio');
+  assert.deepEqual([a.width, a.height], [760, 511]);
   assert.ok(art.length < 200_000, `${art.length} bytes`);
-  // its page: the title, "Play money", the game's own screenshots and AGI-1's 2D art
-  const page = readPage('tools/games/trench-art/keyart.html');
-  assert.equal(textOf(page.slice(page.indexOf('<body>'))).trim(), TS_ART_WORDS);
-  for (const src of ['board.webp', 'coin.webp', '../../../public/images/landing/agi1-cutout.webp']) assert.ok(page.includes(`src="${src}"`), src);
-  for (const f of ['tools/games/trench-art/board.webp', 'tools/games/trench-art/coin.webp']) assert.ok(existsSync(new URL(`../${f}`, import.meta.url)), `${f}: its screenshot`);
-  assert.doesNotMatch(page, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
-  // the tool: from the built game, the same market every time, the two pictures at their sizes and the card under its limit
-  const tool = readPage('tools/games/trench-art.mjs');
-  assert.match(tool, /export const KEYART_SIZE = \[760, 511\];/);
-  assert.match(tool, /export const CARD_SIZE = \[1200, 630\];/);
-  assert.match(tool, /export const CARD_MAX = 154_000;/);
-  for (const w of ['clock.install', 'clock.setSystemTime', '__trenchArtSeed', "reducedMotion: 'reduce'", 'omitBackground', "'dist'", 'agi1-cutout']) {
-    assert.ok(tool.includes(w) || page.includes(w), w);
+  // A capture made while the variable font is repainting can silently omit the title.
+  const { data, info } = await sharp(art).extract({ left: 38, top: 140, width: 400, height: 145 }).raw().toBuffer({ resolveWithObject: true });
+  let white = 0, lime = 0;
+  for (let i = 0; i < data.length; i += info.channels) {
+    const [red, green, blue] = data.subarray(i, i + 3);
+    if (red > 200 && green > 200 && blue > 180) white++;
+    if (red > 160 && green > 210 && blue < 150) lime++;
   }
-  assert.doesNotMatch(tool, /\.glb\b/, 'never the 3D model');
+  assert.ok(white > 2000 && lime > 2000, `both title lines must be painted: ${white} white, ${lime} lime pixels`);
+  const page = readPage('tools/games/trench-art/keyart.html');
+  const words = textOf(page.slice(page.indexOf('<body'))).trim();
+  for (const word of TS_COVER_WORDS) assert.ok(words.includes(word), word);
+  assert.ok(page.includes('src="/games/trenchingsimulator/mark.svg"'));
+  assert.ok(page.includes('src="./market.svg"'));
+  assert.ok(page.includes('href="./cover.css"'));
+  assert.doesNotMatch(page, /board\.webp|coin\.webp|agi1-cutout/, 'no old terminal images or character cutout');
+  assert.doesNotMatch(page, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
+  const css = readPage('tools/games/trench-art/cover.css');
+  for (const font of ['Anybody-Variable.woff2', 'Geist-Variable.woff2']) assert.ok(css.includes(font), font);
+  assert.match(css, /font-size:76px/); assert.match(css, /#d6ff62/); assert.match(css, /#0d0f0c/);
+  const chart = readPage('tools/games/trench-art/market.svg');
+  assert.match(chart, /viewBox="0 0 440 250"/);
+  assert.ok((chart.match(/<rect /g) || []).length >= 16, 'a complete candle chart');
+  assert.doesNotMatch(chart, /<script|<foreignObject|<image|href=/i, 'the graphic is self-contained vector art');
 });
 
 test('VLAD RUNNER 2049: its card, stars, players and plays, its direct page; never leaderboards or score requests', async () => {
@@ -879,8 +882,9 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), the shelf with confi
   // trading terminal; "made-up coins only" was true only while Live mode said "Coming soon"
   const ts = cardOf('trenchingsimulator');
   assert.match(ts, /<li class="gm-tag is-play">Play money<\/li>/);
-  for (const w of ['Trade made-up coins with play money', 'timed challenges', 'the daily market', 'free play',
-    'Play money only, on made-up coins or, in Live mode, real new coins: nothing in it is real money or advice, and it isn\'t affiliated with any real trading terminal.']) assert.ok(textOf(ts).includes(w), w);
+  for (const w of ['Practice on six trading terminals with play money', 'guided challenge', 'the daily market', 'free play',
+    'real names and logos, simulated prices and volume', 'charts that move with your trades',
+    'Play money only.', 'no real trades are sent.', 'Not financial advice or affiliated with any real trading terminal.']) assert.ok(textOf(ts).includes(w), w);
   assert.doesNotMatch(textOf(ts), /made-up coins only/, 'not since Live mode is open');
   // ratings and reviews: a tab for each game (the WAI-ARIA tabs pattern) and its panel, in which one box, one state at a time,
   // the first "loading" (src/games/page.js picks the next). #rate stays Ride 'Em, AGI!'s, #rate-<game> is each game's panel

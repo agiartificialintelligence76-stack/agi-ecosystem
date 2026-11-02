@@ -207,7 +207,7 @@ test('Phomo leaderboard keeps the selected metric and displayed amounts consiste
   } finally { f.view.destroy(); }
 });
 
-test('Phomo footer describes live-feed interruptions and recovery without claiming disconnected quotes are live', () => {
+test('Phomo footer distinguishes coin-feed interruptions from continuing simulated prices and volume', () => {
   const market = createMarket({ seed: 'phomo-feed-status', startSol: 100, solUsd: 200 });
   let status = { feed: 'connecting', chainState: 'down' };
   market.liveState = () => status;
@@ -216,15 +216,15 @@ test('Phomo footer describes live-feed interruptions and recovery without claimi
     const footer = f.cls('ph-status');
     assert.match(footer.textContent, /Connecting/);
     status = { feed: 'live', chainState: 'live' }; f.refresh();
-    assert.match(footer.textContent, /● Live · Base/);
+    assert.match(footer.textContent, /Coin feed live · Base · simulated prices\/volume/);
     assert.equal(footer.classList.contains('is-down'), false);
     status = { feed: 'down', chainState: 'live' }; f.refresh();
     assert.match(footer.textContent, /Reconnecting/);
-    assert.match(footer.title, /isn't reachable/);
+    assert.match(footer.title, /reconnecting.*practice prices keep moving/i);
     assert.equal(footer.classList.contains('is-down'), true);
     status = { feed: 'full', chainState: 'down' }; f.refresh(); assert.match(footer.textContent, /Feed full/);
-    status = { feed: 'live', chainState: 'quiet' }; f.refresh(); assert.match(footer.textContent, /Quiet market/);
-    status = { feed: 'live', chainState: 'live' }; f.refresh(); assert.match(footer.textContent, /● Live · Base/);
+    status = { feed: 'live', chainState: 'quiet' }; f.refresh(); assert.match(footer.textContent, /Quiet coin feed/);
+    status = { feed: 'live', chainState: 'live' }; f.refresh(); assert.match(footer.textContent, /Coin feed live · Base/);
   } finally { f.view.destroy(); }
 });
 

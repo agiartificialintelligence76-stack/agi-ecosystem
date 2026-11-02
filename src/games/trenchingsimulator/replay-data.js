@@ -68,7 +68,8 @@ export function captureRunReplay(run) {
   const config = Object.fromEntries(Object.entries(m.config || {}).filter(([, v]) => fin(v) || typeof v === 'boolean' || typeof v === 'string'));
   let placed = rawOrders.length;
   if (typeof run.result === 'function') placed = number(run.result().placed, placed);
-  return freeze({ v: 1, seed: String(run.seed ?? m.seed ?? '').slice(0, 200), live, chain: typeof run.live === 'string' ? run.live : null,
+  return freeze({ v: 1, seed: String(run.seed ?? m.seed ?? '').slice(0, 200), live,
+    ...(live && (m.livePractice || m.clankPractice) ? { practice: true } : {}), chain: typeof run.live === 'string' ? run.live : null,
     terminal: word(run.terminal, 24), duration, solUsd: number(run.solUsd, number(m.solUsd, 150)),
     startSol: number(run.start, number(m.startSol, 0)), until: number(m.n), n0: number(m.n0), config,
     replayable, log, orders, coins, equity,

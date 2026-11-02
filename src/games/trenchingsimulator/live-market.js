@@ -1,16 +1,15 @@
-// TRENCHING SIMULATOR's live market (2026-10-21, #404): the engine's market (./engine.js, made with `live: true`) with the
-// live feed's coins in it (./live-feed.js). Every coin the feed knows comes in (its name, its picture, its market now and
-// at its launch), every change moves it (on a live curve: somebody's trade), a coin the relay stops following is marked
-// not live (orders on it wait: "stale"), and the feed's state says which coins the lists show: the real ones while the
-// chain is live, or quiet with enough real coins live (./live-chains.js: playState, since 2026-10-21); real ones and
-// made-up stand-ins while it's quiet with fewer; the stand-ins alone (and running) while the feed is down. The player's
-// orders are the engine's own: play money against the live curve, never sent anywhere. The coins a player has open or
-// holds are kept live for them (watch). Pure apart from the feed it's handed: read in Node too.
+// Live identities, local practice markets. A source quote seeds each real coin once; simulated crowd trades and
+// player orders then share its local pool. Source metadata can update artwork and launch status, but cannot replace
+// practice prices, volume or history. Imported coins keep trading through feed gaps; an empty feed stays empty.
 import { createMarket } from './engine.js';
-import { toReal, parseDx, socialsOf, chainById, DEFAULT_CHAIN, playState } from './live-chains.js';
+import { toReal, socialsOf, chainById, DEFAULT_CHAIN } from './live-chains.js';
+
+// Source removals retain identity/history, but an indefinitely running discovery feed must not grow per-step work.
+export const LIVE_PRACTICE_LIMIT = 300;
+export const LIVE_PRACTICE_MAX_ADVANCE = 2;
 
 export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 150, startSol, config, wallNow = () => Date.now() } = {}) {
-  const m = createMarket({ seed, solUsd, startSol, config, live: true });
+  const m = createMarket({ seed, solUsd, startSol, config: { ...config, warmup: 0 }, live: true });
   const ext = m.ext;
   const px = Number.isFinite(solUsd) && solUsd > 0 ? solUsd : 150;
   const ch = chainById(chain) || chainById(DEFAULT_CHAIN);
@@ -20,29 +19,45 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
   const byRelay = new Map(); // the relay's id (this connection) → the market's
   const relayOf = new Map(); // the market's id → the relay's
   const sups = new Map(); // the market's id → its coin's supply
-  const L = { focus: null, watchKey: null, watchAt: -Infinity, dead: false, seen: 0 };
+  const L = { focus: null, watchKey: null, watchAt: -Infinity, activityAt: -Infinity, dead: false, seen: 0 };
+  const recent = [];
+  m.baseTime = t0;
+  m.livePractice = true;
+  ext.view({ ext: true, sim: false, simPaused: true });
 
-  const feedLive = () => feed.status === 'live' && ['live', 'quiet'].includes(feed.chainState(chain));
+  const sameChain = () => !feed.chain || feed.chain === ch.id;
+  const feedLive = () => sameChain() && feed.status === 'live' && ['live', 'quiet'].includes(feed.chainState(ch.id));
   const realOf = (st, sup) => toReal(st, { sup, solUsd: px });
+  const sourceTracked = new Map();
+  function metadata(id, real = {}, identity = {}) {
+    ext.metadata(id, { phase: real.phase, progress: real.progress, realSol: real.realSol, ...identity,
+      metadataLive: sourceTracked.get(id) === true && feedLive() });
+  }
+  function activity(force = false) {
+    if (!force && m.t - L.activityAt < 2) return;
+    L.activityAt = m.t;
+    ext.practiceActivity([...recent.map(c => c.id), ...(L.focus === null ? [] : [L.focus])]);
+  }
 
   function upsert(c) {
-    if (!c) return null;
+    if (!c || !sameChain()) return null;
     const real = realOf(c.st, c.sup);
     if (!real) return null;
-    if (c.dx) real.dx = parseDx(c.dx, px);
     let id = ext.byKey(c.key);
-    const live = c.tracked && feedLive();
     if (id === null) {
       id = ext.add({ key: c.key, chain: ch.id, src: c.src, name: c.name, ticker: c.ticker, pic: c.pic ? feed.picUrl(c.pic) : null,
-        by: c.by, born: at(c.born), socials: socialsOf(c.soc), pair, live, real, real0: c.st0 ? realOf(c.st0, c.sup) : null });
+        by: c.by, born: at(c.born), socials: socialsOf(c.soc), pair, live: true, practice: true, real });
       if (id === null) return null;
-      if (real.dx) ext.state(id, real);
       L.seen += 1;
+      recent.push({ id, born: m.row(id).born });
+      recent.sort((a, b) => b.born - a.born || b.id - a.id);
+      if (recent.length > LIVE_PRACTICE_LIMIT) recent.length = LIVE_PRACTICE_LIMIT;
+      activity(true);
     } else {
-      ext.track(id, live);
-      ext.state(id, real);
       if (c.pic) ext.pic(id, feed.picUrl(c.pic), socialsOf(c.soc));
     }
+    sourceTracked.set(id, c.tracked === true);
+    metadata(id, real, { name: c.name, ticker: c.ticker, by: c.by, src: c.src, socials: socialsOf(c.soc) });
     const old = relayOf.get(id);
     if (old && old !== c.id) byRelay.delete(old);
     byRelay.set(c.id, id);
@@ -51,47 +66,39 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
     return id;
   }
 
-  // the chain's state as the game plays it: quiet with enough real coins live plays as live
-  const playing = () => playState(feed.chainState(chain), ext.liveCount());
-  // which coins the lists show: live → the real ones (the stand-ins paused); quiet → both; down → the stand-ins
-  function applyView() {
-    const s = feed.status === 'live' ? playing() : null;
-    const live = s === 'live';
-    const quiet = s === 'quiet';
-    ext.view({ ext: live || quiet, sim: !live, simPaused: live });
-    if (!live && !quiet) for (const id of ext.ids()) ext.track(id, false);
-  }
+  const refreshSource = () => { for (const id of ext.ids()) metadata(id); };
 
   // the market's clock kept with the page's while the feed talks (a hidden tab's frames stop; its feed doesn't)
   function catchUp() {
     const want = (wallNow() - t0) / 1000;
-    if (want - m.t > 2) m.advanceTo(Math.min(want, m.t + 3600));
+    if (want - m.t > 2) m.advanceTo(want);
   }
 
   function onFeed(ev) {
     if (L.dead) return;
+    if (!sameChain() && !['chain', 'status', 'chains'].includes(ev.type)) return;
     if (['snap', 'coin', 'u', 'h'].includes(ev.type)) catchUp();
     switch (ev.type) {
       case 'status':
       case 'chains':
-        applyView();
+        refreshSource();
         break;
       case 'chain':
         byRelay.clear();
         relayOf.clear();
-        applyView();
+        sourceTracked.clear();
+        refreshSource();
         break;
       case 'snap':
-        for (const id of ext.ids()) ext.track(id, false);
         byRelay.clear();
         relayOf.clear();
+        sourceTracked.clear();
         for (const c of ev.coins) upsert(c);
-        applyView();
+        refreshSource();
         watch(true);
         break;
       case 'coin':
         upsert(ev.coin);
-        applyView(); // (enough real coins now, maybe)
         break;
       case 'u':
         for (const x of ev.u) {
@@ -99,29 +106,22 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
           if (id === undefined) continue;
           const real = realOf(x.st, sups.get(id));
           if (!real) continue;
-          if (x.dx) real.dx = parseDx(x.dx, px);
-          ext.state(id, real);
+          metadata(id, real);
         }
         break;
       case 'off':
         for (const rid of ev.ids) {
           const id = byRelay.get(rid);
-          if (id !== undefined) ext.track(id, false);
+          if (id !== undefined) { sourceTracked.set(id, false); metadata(id); }
         }
-        applyView(); // (too few real coins now, maybe)
         break;
       case 'pic': {
         const id = byRelay.get(ev.id);
         if (id !== undefined) ext.pic(id, feed.picUrl(ev.pic), ev.soc !== null && ev.soc !== undefined ? socialsOf(ev.soc) : null);
         break;
       }
-      case 'h': {
-        const id = byRelay.get(ev.id);
-        if (id === undefined) break;
-        const sup = sups.get(id);
-        ext.history(id, ev.h.map((p) => ({ t: at(p.at), real: realOf(p.st, sup) })).filter((p) => p.real));
-        break;
-      }
+      // Source history remains in the feed; it is not a local practice trade or a correction to the player's chart.
+      case 'h': break;
       default:
         break;
     }
@@ -129,6 +129,7 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
 
   // the coins kept live for this player: the one open, and the ones in its bag (at most 8)
   function watch(force = false) {
+    if (L.dead || !sameChain()) return;
     const t = wallNow();
     if (!force && t - L.watchAt < 2000) return;
     L.watchAt = t;
@@ -147,36 +148,43 @@ export function createLiveMarket({ feed, chain = DEFAULT_CHAIN, seed, solUsd = 1
 
   const off = feed.on(onFeed);
   for (const c of feed.coins()) upsert(c);
-  applyView();
 
   const advanceTo = m.advanceTo;
   m.advanceTo = (t) => {
-    const k = advanceTo(t);
+    const target = Number(t);
+    if (!Number.isFinite(target)) return 0;
+    const budgetEnd = m.t + LIVE_PRACTICE_MAX_ADVANCE;
+    const k = advanceTo(Math.min(target, budgetEnd));
+    // Hidden pages may return hours later. Settle pending fills, then leave an honest gap rather than running
+    // thousands of unseen crowd steps or backdating newly discovered source coins into the old market clock.
+    if (target > budgetEnd) ext.practiceSkipTo(target);
+    activity();
     watch();
     return k;
   };
   // the coin the board has open (null: none)
   m.focus = (id) => {
     L.focus = Number.isInteger(id) && m.isExt(id) ? id : null;
+    activity(true);
     watch(true);
   };
   m.lookup = async (address) => {
-    if (L.dead || typeof feed.lookup !== 'function') return null;
+    if (L.dead || !sameChain() || typeof feed.lookup !== 'function') return null;
     const c = await feed.lookup(address);
     if (L.dead || !c) return null;
     const id = upsert(c);
-    applyView();
     return id;
   };
   // how Live mode is going, for the screen: the feed's state, the chain's, and how many real coins came in
-  m.liveState = () => ({ chain: ch.id, feed: feed.status, chainState: playing(), seen: L.seen, shown: ext.shown });
+  m.liveState = () => ({ chain: ch.id, feed: feed.status, chainState: feed.chainState(ch.id), seen: L.seen,
+    practice: true, shown: ext.shown });
   // the real coins the player traded (for the results' words)
   m.liveTraded = () => m.positions().filter((p) => m.isExt(p.id) && p.buys > 0).length;
   m.destroy = () => {
     if (L.dead) return;
     L.dead = true;
     off();
-    feed.watch([]);
+    if (sameChain()) feed.watch([]);
   };
   return m;
 }

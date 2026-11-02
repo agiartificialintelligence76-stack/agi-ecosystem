@@ -88,6 +88,10 @@
 }
 .gm-game-img { width: 100%; max-width: 560px; height: auto; transition: translate .3s cubic-bezier(.2, .7, .2, 1); }
 .gm-game:hover .gm-game-img { translate: 0 -4px; }
+/* The simulator's cover follows its own dark/lime menu in every site theme. */
+html .gm-game[data-gm-game='trenchingsimulator'] .gm-game-art { padding: 0; background: #0d0f0c; }
+.gm-game[data-gm-game='trenchingsimulator'] .gm-game-img { width: 100%; max-width: none; }
+.gm-game[data-gm-game='trenchingsimulator']:hover .gm-game-img { translate: none; }
 .gm-game-body { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; min-width: 0; padding: clamp(22px, 3vw, 36px); }
 .gm-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
 .gm-tag {

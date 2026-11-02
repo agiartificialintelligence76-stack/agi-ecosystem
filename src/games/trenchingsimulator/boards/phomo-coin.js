@@ -354,7 +354,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     const profile = key && state.profile(key);
     const name = row.me ? 'You' : profile?.name || (row.kol ? `@${row.kol}` : short(row.addr));
     return el('div', { class: 'tspc-trader' }, key ? button(name, () => onTrader(key), { class: 'tspc-trader-link' }) : el('span', {}, name || 'Unknown trader'),
-      el('small', { class: 'tspc-muted' }, row.me ? 'Practice account' : live ? 'Unidentified live swap' : 'Simulated trader'));
+      el('small', { class: 'tspc-muted' }, row.me ? 'Practice account' : live ? 'Simulated swap · no real wallet' : 'Simulated trader'));
   }
   const minSize = () => Math.max(0, parseAmount(minimum.value) || 0);
   const accepts = (row, dollars) => (!C.following || state.isFollowing(traderKey(row))) && (!minSize() || fin(dollars) && dollars >= minSize());
@@ -390,7 +390,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
       tableHead.replaceChildren(el('tr', {}, headers.map((h) => el('th', { scope: 'col' }, h))));
       tableBody.replaceChildren();
     }
-    setText(rowsNote, s.live ? 'Real market data · only your practice holding is known. Other holders and identities are unavailable.'
+    setText(rowsNote, s.live ? 'Simulated prices, volume and swaps on a real coin. Only your practice holding is known; real holder identities are unavailable.'
       : 'Simulated traders and practice positions. All amounts are in dollars.');
     if (C.tab === 'holders') {
       const rows = (market.holders(id, 100)?.list || []).filter((h) => (!s.live || h.me) && accepts(h, h.tok * s.price * px));
@@ -474,7 +474,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     setText(fullName, s.name);
     setText(coinAge, age(s.age));
     setText(coinKind, s.live ? CHAIN_NAMES[s.chain] || 'Live' : 'Simulated');
-    coinKind.title = s.live ? 'Live market data · practice money' : 'Simulated coin';
+    coinKind.title = s.live ? 'Real coin · simulated prices/volume' : 'Simulated coin';
     if (!samePic(picture.firstChild, s)) picture.replaceChildren(pic(s, '', 'tspc'));
     setText(contract, short(info.mint));
     contract.title = info.mint || '';
@@ -489,10 +489,11 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
     setText(stats.change.dd, pct(day?.change));
     tone(stats.change.dd, day?.change, 0.0005);
     setText(stats.volume.dd, usd(day?.volumeUsd));
-    setText(stats.liquidity.dd, usd(s.live && s.estimated ? null : s.liq * px));
+    setText(stats.liquidity.el.firstChild, s.practice ? 'Practice liquidity' : 'Liquidity');
+    setText(stats.liquidity.dd, usd(s.live && !s.practice && s.estimated ? null : s.liq * px));
     setText(stats.holders.dd, s.live ? '—' : num(s.holders));
     setText(stats.top10.dd, s.live ? '—' : share(s.top10));
-    setText(chartNote, s.live ? 'Chart follows real market cap. Prices and token counts use normalized practice units. Missing data is shown as —.'
+    setText(chartNote, s.live ? 'Real coin identity and artwork; prices, market cap, volume and swaps are simulated locally. Your practice buys and sells move this chart. Token counts use normalized practice units.'
       : 'Simulated market · drag to pan, scroll or pinch to zoom. Your practice swaps appear as B/S markers.');
     setText(clock, `${new Date().toLocaleTimeString('en-GB', { hour12: false, timeZone: 'UTC' })} (UTC)`);
     renderChart(s);
@@ -520,7 +521,7 @@ export function mountPhomoCoin(host, ctx, id, { state, onTrader = () => {}, onCl
         website: info.socials?.web ? 'Available · address not supplied' : '—',
         socials: [info.socials?.x && 'X', info.socials?.tg && 'Telegram'].filter(Boolean).join(' · ') || '—' };
       for (const [key, value] of Object.entries(values)) setText(aboutFields[key].dd, value);
-      setText(description, info.line || (s.live ? 'Live market data, traded with practice money. The relay has not supplied a token description.' : 'A simulated token in this practice market.'));
+      setText(description, info.line || (s.live ? 'A real coin with locally simulated prices and volume. The coin feed has not supplied a token description.' : 'A simulated token in this practice market.'));
       const total = s.buys5m + s.sells5m;
       tradesPair.meter.value = total > 0 ? s.buys5m / total : 0;
       tradesPair.meter.classList.toggle('is-unknown', !(total > 0));
