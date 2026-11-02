@@ -38,7 +38,7 @@ import { askTicket, sendScore } from './ranked.js';
 import { rankWords, boardTitle } from '../boards.js';
 import { shareText, shareLink, GAME_NAME } from './share.js';
 import { money, moneySigned, clock, share, times, tokens, usd, unitOf, isCoinCurrency } from './format.js';
-import { resultTitle, resultTone, resultLine, statLines, starsRow, sparkPath, cardText, modeLabel } from './results.js';
+import { resultTitle, resultTone, statLines, starsRow, sparkPath, cardText, modeLabel } from './results.js';
 import { CHAINS, chainById, feedWords, liveOk, liveCurrency, UNIT_NAMES, relayUrl, liveOpen, LIVE_NOTE, LIVE_SOON,
   LIVE_SOON_HOW, playState, liveMoney } from './live-chains.js';
 import { createLiveFeed } from './live-feed.js';
@@ -46,6 +46,7 @@ import { createLiveMarket } from './live-market.js';
 import { createClankFeed, createClankMarket } from './clank-live.js';
 import { terminalLiveChains, terminalLiveChain, terminalFeedWords, CLANK_LIVE_NOTE } from './terminal-live.js';
 import { createRace, raceUrl, roomOfHash, inviteLink, cleanCode, raceWords, standingText } from './race.js';
+import './results.css';
 
 const NS = 'http://www.w3.org/2000/svg';
 // a ready terminal's board, the same doors for each (boards/board.js's): Pomp.fun's is in the page; GNGM's (2026-10-22)
@@ -1316,6 +1317,14 @@ export function startShell(root) {
   function resultsScreen() {
     const { res, setup, line, t } = S.last;
     const tone = resultTone(res);
+    const pnlTone = res.pnl > 0 ? 'up' : res.pnl < 0 ? 'down' : '';
+    const live = typeof res.live === 'string';
+    const localCoins = S.last.replay?.coins.some(c => c.live === false);
+    const provenance = live
+      ? `${localCoins ? 'Live listings + local practice coins' : 'Live listings'} · simulated prices & volume`
+      : 'Simulated coins, prices & volume';
+    const startValue = money(res.start, res.currency, res.solUsd);
+    const endValue = money(res.worth, res.currency, res.solUsd);
     const sp = sparkPath(res.equity, { w: 600, h: 160, pad: 6, base: res.start });
     let chart = null;
     if (sp) {
@@ -1344,34 +1353,63 @@ export function startShell(root) {
       S.raceBoard = { el: raceRes, paint };
       paint();
     }
-    const node = el('section', { class: ['ts-screen', 'ts-results', `is-${tone}`], data: setup.race ? { race: '1' } : null },
-      header(setup.race ? 'race' : setup.kind === 'challenge' ? 'challenges' : 'modes'),
-      el('p', { class: 'ts-kicker', text: modeLabel(res) }),
-      el('h1', { class: 'ts-res-title', text: resultTitle(res) }),
-      res.outcome === 'won' && res.stars > 0 ? el('p', { class: 'ts-res-stars', 'aria-label': `${res.stars} of 3 stars`, text: starsRow(res.stars) }) : null,
-      el('p', { class: 'ts-res-big', text: times(res.multiple) }),
-      el('p', { class: 'ts-res-line', text: resultLine(res) }),
+    const node = el('section', { class: ['ts-screen', 'ts-results', 'tsm-screen', `is-${tone}`], data: setup.race ? { race: '1' } : null },
+      gameMenuHeader(),
+      el('div', { class: 'ts-res-heading' },
+        el('div', {}, el('p', { class: 'ts-kicker', text: 'SESSION COMPLETE' }),
+          el('h1', { class: 'ts-res-title', text: resultTitle(res) }),
+          el('p', { class: 'ts-res-mode', text: modeLabel(res) })),
+        el('div', { class: 'ts-res-meta' },
+          el('span', { class: 'ts-res-chip' }, markEl(t.id), el('span', { text: t.name })),
+          el('span', { class: 'ts-res-chip is-practice', text: 'Play money' }))),
+      el('p', { class: 'ts-res-provenance', text: provenance }),
+      el('div', { class: 'ts-res-layout' },
+        el('section', { class: 'ts-res-summary', 'aria-label': 'Session result' },
+          el('div', { class: 'ts-res-card-head' }, el('h2', { text: 'Your result' }),
+            res.outcome === 'won' && res.stars > 0 ? el('p', { class: 'ts-res-stars', 'aria-label': `${res.stars} of 3 stars`, text: starsRow(res.stars) }) : null),
+          el('p', { class: 'ts-res-big', text: times(res.multiple) }),
+          el('p', { class: 'ts-res-summary-label', text: 'Portfolio multiple' }),
+          el('p', { class: ['ts-res-profit', pnlTone && `is-${pnlTone}`] },
+            el('strong', { text: moneySigned(res.pnl, res.currency, res.solUsd) }), ' ', el('span', { text: 'Total profit / loss' })),
+          el('dl', { class: 'ts-res-balances' },
+            el('div', {}, el('dt', { text: 'Start portfolio' }), el('dd', { text: startValue })),
+            el('div', {}, el('dt', { text: 'End portfolio' }), el('dd', { text: endValue }))),
+          el('p', { class: 'ts-res-summary-note', text: 'Portfolio value includes any remaining positions.' })),
+        el('section', { class: 'ts-res-equity', 'aria-label': 'Portfolio over time' },
+          el('div', { class: 'ts-res-card-head' }, el('h2', { text: 'Portfolio over time' }), el('span', { text: clock(res.timeUsed) })),
+          chart || el('p', { class: 'ts-res-chart-empty', text: 'Balance history was not recorded for this run.' }),
+          el('div', { class: 'ts-res-chart-caption' }, el('span', { text: `Start · ${startValue}` }), el('span', { text: `End · ${endValue}` })),
+          chart ? el('p', { class: 'ts-res-chart-key', text: 'Dashed line: starting portfolio' }) : null,
+          !(res.filled > 0) ? el('p', { class: 'ts-res-chart-note' },
+            el('strong', { text: 'No filled trades this run.' }), ' ', el('span', { text: 'Try a practice buy in your next session.' })) : null)),
       el('p', { class: 'ts-rank', role: 'status', 'aria-live': 'polite', text: rankWords(S.last.rank, boardName) }),
       raceRes,
-      chart,
-      el('dl', { class: 'ts-res-stats' }, statLines(res).flatMap((s) => [el('dt', { text: s.label }),
-        el('dd', { class: s.tone ? `is-${s.tone}` : '', text: s.value })])),
-      agiHost,
-      el('div', { class: 'ts-actions' },
-        setup.race ? btn('Back to the room', { kind: 'primary', ic: 'users', on: () => go('race') })
-          : btn('Play again', { kind: 'primary', ic: 'replay', on: again }),
-        S.last.replay ? btn('Replay this run', { ic: 'play', on: openReplay }) : null,
-        S.last.replay ? btn('Export this replay', { ic: 'download', on: () => exportReplay(S.last.replay, S.last.replaySaved?.id) }) : null,
-        btn('Saved replays', { ic: 'replay', on: openReplayLibrary }),
-        el('a', { class: 'ts-btn', href: shareLink(text), target: '_blank', rel: 'noopener noreferrer' }, icon('share'), el('span', { text: 'Share on X' })),
-        btn('Save card', { ic: 'download', on: (e) => saveCard(res, t, e.currentTarget) }),
-        setup.race ? btn('Leave the room', { kind: 'ghost', on: () => go('home') })
-          : btn(setup.kind === 'challenge' ? 'Choose another' : 'Pick a mode', { kind: 'ghost', on: () => go(setup.kind === 'challenge' ? 'challenges' : 'modes') }),
-        btn('Home', { kind: 'ghost', on: () => go('home') })),
-      el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ', el('a', { href: '/games', text: 'All games' })),
-      S.last.replaySaved && !S.last.replaySaved.ok ? el('p', { class: 'ts-sheet-note' },
-        'This replay is available until you leave this page. Browser storage could not keep this recording.') : null,
-      note());
+      el('section', { class: 'ts-res-actions', 'aria-label': 'Run actions' },
+        el('div', { class: 'ts-res-action-group is-primary' }, el('h2', { text: 'Keep going' }),
+          el('div', { class: 'ts-actions' },
+            setup.race ? btn('Back to the room', { kind: 'primary', ic: 'users', on: () => go('race') })
+              : btn('Play again', { kind: 'primary', ic: 'replay', on: again }),
+            S.last.replay ? btn('Replay this run', { ic: 'play', on: openReplay }) : null)),
+        el('div', { class: 'ts-res-action-group is-secondary' }, el('h2', { text: 'Save or share' }),
+          el('div', { class: 'ts-actions' },
+            btn('Save card', { ic: 'download', on: (e) => saveCard(res, t, e.currentTarget) }),
+            el('a', { class: 'ts-btn', href: shareLink(text), target: '_blank', rel: 'noopener noreferrer' }, icon('share'), el('span', { text: 'Share on X' })),
+            S.last.replay ? btn('Export this replay', { ic: 'download', on: () => exportReplay(S.last.replay, S.last.replaySaved?.id) }) : null,
+            btn('Saved replays', { ic: 'replay', on: openReplayLibrary })))),
+      el('section', { class: 'ts-res-details', 'aria-label': 'Session breakdown' },
+        el('div', { class: 'ts-res-section-head' }, el('h2', { text: 'Session breakdown' }), el('p', { text: 'Your trades, outcomes and costs.' })),
+        el('dl', { class: 'ts-res-stats' }, statLines(res).map((s) => el('div', { class: 'ts-res-stat' },
+          el('dt', { text: s.label }), el('dd', { class: s.tone ? `is-${s.tone}` : '', text: s.value }))))),
+      el('aside', { class: 'ts-res-coach', 'aria-label': 'AGI-1’s reaction' }, agiHost),
+      el('footer', { class: 'ts-res-footer' },
+        el('div', { class: 'ts-actions' },
+          setup.race ? btn('Leave the room', { kind: 'ghost', on: () => go('home') })
+            : btn(setup.kind === 'challenge' ? 'Choose another' : 'Pick a mode', { kind: 'ghost', on: () => go(setup.kind === 'challenge' ? 'challenges' : 'modes') }),
+          btn('Home', { kind: 'ghost', on: () => go('home') })),
+        el('p', { class: 'ts-links' }, el('a', { href: '/games#rate-trenchingsimulator', text: 'Rate it' }), ' · ', el('a', { href: '/games', text: 'All games' })),
+        S.last.replaySaved && !S.last.replaySaved.ok ? el('p', { class: 'ts-sheet-note' },
+          'This replay is available until you leave this page. Browser storage could not keep this recording.') : null,
+        note()));
     queueMicrotask(() => {
       if (!root.contains(agiHost)) return;
       S.resAgi = createAgi(agiHost, { reduceMotion: reduceMotion(), ms: 600000 });

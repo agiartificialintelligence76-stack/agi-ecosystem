@@ -1,5 +1,15 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Results-screen refresh (2026-11-03):** the owner flagged the old cash-out screen during release verification.
+> Results now use the new menu's black/lime design, with a session summary, labeled portfolio chart,
+> grouped statistics, prominent play/replay controls and separate sharing/export/navigation actions.
+> The summary retains frozen currency conversions, all ten statistics, ranking/race hooks and replay storage notes.
+> Zero-trade sessions explain the flat chart. Live practice provenance includes locally created Clank coins.
+> This is included with the Clank Live launch fix before production publication.
+> The combined clean Node 24/UTC release build passes: 1,536 tests, 1,530 passed, 6 skipped, no failures.
+> Results/currency/replay checks pass on Node 20 and 22. Browser checks cover zero-trade and filled-trade
+> results, all ten statistics, mixed Live practice provenance, replay/library controls, and 360 px layout.
+
 > **Clank Live practice launches (2026-11-03):** the owner reported that launching a coin in Clank Live was blocked.
 > Clank free play now explicitly enables local practice launches alongside public Robinhood Clank listings.
 > The launch form supports artwork, stock pair, description, safe social links and an optional initial practice buy.
@@ -13367,6 +13377,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 
 | Date | Decision |
 |---|---|
+| 2026-11-03 | Refresh the cash-out/results screen to match the new menu design, including clearer performance, chart, statistics and controls. Preserve scoring, currency, race/ranking and replay behavior. |
 | 2026-11-03 | Fix Clank Live free-play launching as a labeled, local practice coin alongside public listings. Creation, optional initial buy, artwork and social links are per-run only; no real on-chain launch or outbound order. Existing production publication authorization applies. |
 | 2026-11-03 | All Live spot terminals use real coin identities/artwork with local practice prices and volume; no fictional fallback during source outages. The owner authorized publication and replacement of the games-page cover with the new menu branding. |
 | 2026-09-23 | Rebuild from scratch in `AGI NEW WEBSITE`; AGI FINAL is a read-only reference |
