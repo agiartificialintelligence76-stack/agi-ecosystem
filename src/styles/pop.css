@@ -995,3 +995,12 @@
   .pop-ribbon-track { animation: none !important; }
   [data-skin='pop'] .chk-item.is-fresh { animation: none; box-shadow: inset 3px 0 0 var(--pop-violet); }
 }
+
+/* ---------- the page's scrollbar (2026-11-02; base.css draws it from these) ----------
+   A violet pill outlined in ink on lavender by day; a lighter violet outlined in lavender on deep ink at night; pink under
+   the mouse, honey while it's dragged. */
+:root[data-skin='pop'] {
+  --sb-w: 18px; --sb-track: var(--pop-lav); --sb-rule: 2px; --sb-edge: var(--pop-ink); --sb-outline: 2px; --sb-gap: 3px;
+  --sb-thumb: var(--pop-violet); --sb-hover: var(--pop-pink); --sb-active: var(--pop-honey);
+}
+:root[data-skin='pop'][data-theme='dark'] { --sb-track: #1c1036; --sb-edge: var(--pop-lav-2); --sb-thumb: var(--pop-violet-2); }

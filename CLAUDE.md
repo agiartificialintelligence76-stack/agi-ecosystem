@@ -1,5 +1,15 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **The page's scrollbar matches the looks (2026-11-02):** the owner: "is it possible to design the scroll bar as well
+> that will match the website", then "just publish it in production after ur done". Pop mode: a violet pill outlined in
+> ink on lavender by day, a lighter violet outlined in lavender on deep ink at night, pink under the mouse, honey while
+> dragged; the lab look: a quiet gray pill on the page's own color, a hairline beside it. `base.css` draws it from `--sb-*`
+> values (the lab look's), `pop.css` sets Pop mode's, and `studio-theme.css` has the same for Studio (which loads
+> neither). Chrome, Edge and Safari get the whole design (`::-webkit-scrollbar` on the page itself); Firefox only its two
+> colors (`scrollbar-color`, only there: Chrome would draw its plain bar in those colors instead); phones draw their own
+> thin bar over the page. Checked in Chromium in all four looks, and live while switching (the bar follows at once).
+> Pushed to `main` (production) on 2026-11-02, on top of `823631b`.
+
 > **Pop mode by day for first visits (2026-11-02):** the owner: "can you make the default light mode and pop mode when
 > they first visit the site, publish to production". A visitor with nothing saved now gets Pop mode in the light theme
 > (Pop mode at night from 2026-09-28 until now): `public/theme.js` before the page paints, and `DEFAULT_THEME` in
@@ -9,7 +19,11 @@
 > browsers holding the old copy (kept a day) get the new one at once; PFP's and Studio's own first browser-bar color in
 > their HTML follows (`#6b3bff`, `#f8f5ff`). Tests: `tests/pop.test.js` (the defaults; Studio's switches from the new
 > start), `tests/page.test.js` and `tests/popout.test.js` (the browser bar with nothing saved), the `v=8` checks.
-> Pushed to `main` (production) on 2026-11-02 from a clean copy of production's `43af80f` with only these files.
+> **Published 2026-11-02 as `823631b` to `main`** (from a clean copy of production's `43af80f`). Before the push: the full
+> build the way Vercel runs it (1,423 tests, 0 failed, 4 skipped; Vite, share pages, secret check) and first visits in a
+> browser on 7 pages at 1440 and 390 px (Pop mode by day and its browser bar even with the system dark; a saved dark or
+> Pop mode off still wins; no flip after the first paint; no console errors or CSP reports). Vercel: Ready; agi1.app
+> serves `/theme.js?v=8` with the light default.
 
 > **The front's four looks (2026-11-02):** the owner: "can you make a pop mode/light/dark on these also just like the
 > others". The front (the hero with the huge AGI, her orbit, Her world and the contract address; its ribbons; the "General →
@@ -13693,6 +13707,7 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-31 | On the site SKYBREAK's billboards chart a made-up `$SKY`, never `$AGI`'s price, and the Moon's flag is AGI-1's (hard rule 8); its own project keeps its originals |
 | 2026-10-31 | SKYBREAK's touch controls on any touchscreen (`pointer: coarse`), not only below 700 px wide, and a compact title on a short screen: a phone held sideways had no controls and couldn't reach Begin Ascent |
 | 2026-11-02 | First visits in Pop mode by day (the owner: "can you make the default light mode and pop mode when they first visit the site"): `/theme.js` and `DEFAULT_THEME` say light with nothing saved; a saved choice still wins, and nothing is saved until a button is pressed; the pages load `/theme.js?v=8` |
+| 2026-11-02 | The page's scrollbar in each look (the owner: "design the scroll bar as well that will match the website"): `--sb-*` values in `base.css` (the lab look), `pop.css` (Pop mode) and `studio-theme.css` (Studio); `::-webkit-scrollbar` on the page only (inner scroll areas keep theirs); Firefox gets `scrollbar-color` only inside `@supports not selector(::-webkit-scrollbar)` |
 
 ## Open questions
 

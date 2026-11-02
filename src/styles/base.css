@@ -70,3 +70,28 @@ a { color: inherit; text-underline-offset: 3px; }
     transition-duration: .001ms !important;
   }
 }
+
+/* ---------- the page's scrollbar (2026-11-02, the owner: "design the scroll bar as well that will match the website") ----------
+   Drawn from these --sb-* values: the lab look's here (a quiet gray pill on the page's own color, a hairline beside it),
+   Pop mode's in pop.css (a violet pill outlined in ink on lavender; a lighter violet outlined in lavender on deep ink at
+   night; pink under the mouse, honey while dragged). Chrome, Edge and Safari draw it with ::-webkit-scrollbar; Firefox
+   takes only two colors (scrollbar-color), and only there, because Chrome would draw its plain bar in those colors
+   instead. Phones draw their own thin bar over the page. Studio loads neither file: studio-theme.css has the same. */
+:root {
+  --sb-w: 14px; --sb-track: var(--bg); --sb-rule: 1px; --sb-edge: var(--line); --sb-outline: 0px; --sb-gap: 4px;
+  --sb-thumb: color-mix(in srgb, var(--fg) 24%, var(--bg));
+  --sb-hover: color-mix(in srgb, var(--fg) 42%, var(--bg));
+  --sb-active: color-mix(in srgb, var(--fg) 58%, var(--bg));
+}
+:root::-webkit-scrollbar { width: var(--sb-w); height: var(--sb-w); background: var(--sb-track); }
+:root::-webkit-scrollbar-track { background: var(--sb-track); box-shadow: inset var(--sb-rule) 0 0 var(--sb-edge); }
+:root::-webkit-scrollbar-thumb {
+  min-height: 48px; border: var(--sb-gap) solid transparent; border-left-width: calc(var(--sb-gap) + var(--sb-rule));
+  border-radius: 999px; background: var(--sb-thumb) padding-box; box-shadow: inset 0 0 0 var(--sb-outline) var(--sb-edge);
+}
+:root::-webkit-scrollbar-thumb:hover { background-color: var(--sb-hover); }
+:root::-webkit-scrollbar-thumb:active { background-color: var(--sb-active); }
+:root::-webkit-scrollbar-corner { background: var(--sb-track); }
+@supports not selector(::-webkit-scrollbar) {
+  :root { scrollbar-color: var(--sb-thumb) var(--sb-track); }
+}
