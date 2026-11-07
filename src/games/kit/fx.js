@@ -117,27 +117,41 @@ export class Particles {
     }
   }
   update(dt) {
+    // the living ones kept in place, in their order (one pass, no splicing)
     const items = this.items;
-    for (let i = items.length - 1; i >= 0; i--) {
+    let kept = 0;
+    for (let i = 0; i < items.length; i++) {
       const p = items[i];
       p.life -= dt;
-      if (p.life <= 0) { items.splice(i, 1); continue; }
+      if (p.life <= 0) continue;
       const k = Math.exp(-p.drag * dt);
       p.vx *= k; p.vy = p.vy * k + p.gravity * dt;
       p.x += p.vx * dt; p.y += p.vy * dt;
       p.rot += p.spin * dt;
       p.size = Math.max(0, p.size + p.grow * dt);
+      items[kept++] = p;
     }
+    items.length = kept;
   }
   draw(ctx) {
+    // each shape is its own path in the canvas's coordinates (no save / rotate / restore per particle: a phone without a
+    // fast canvas draws hundreds a frame), so an outline (`stroke`) follows the shape just drawn
+    let alpha = -1;
     for (const p of this.items) {
       const t = p.life / p.max;
-      ctx.globalAlpha = p.fade ? Math.min(1, t * 1.6) : 1;
-      ctx.fillStyle = p.color;
+      const a = p.fade ? Math.min(1, t * 1.6) : 1;
       const s = p.size;
+      if (a < 0.004 || s <= 0) continue;
+      if (a !== alpha) { ctx.globalAlpha = a; alpha = a; }
+      ctx.fillStyle = p.color;
       switch (p.shape) {
-        case 'square':
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); ctx.fillRect(-s / 2, -s / 2, s, s); ctx.restore(); break;
+        case 'square': {
+          const c = (Math.cos(p.rot) * s) / 2, n = (Math.sin(p.rot) * s) / 2;
+          ctx.beginPath();
+          ctx.moveTo(p.x - c + n, p.y - n - c); ctx.lineTo(p.x + c + n, p.y + n - c);
+          ctx.lineTo(p.x + c - n, p.y + n + c); ctx.lineTo(p.x - c - n, p.y - n + c);
+          ctx.closePath(); ctx.fill(); break;
+        }
         case 'spark': {
           const len = Math.hypot(p.vx, p.vy) * 0.045 + s;
           const a = Math.atan2(p.vy, p.vx);
@@ -149,7 +163,7 @@ export class Particles {
           ctx.strokeStyle = p.color; ctx.lineWidth = Math.max(1, s * 0.25);
           ctx.beginPath(); ctx.arc(p.x, p.y, s * (1.6 - t), 0, TAU); ctx.stroke(); break;
         case 'star':
-          ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot); star(ctx, 0, 0, s, s * 0.45, 5); ctx.fill(); ctx.restore(); break;
+          star(ctx, p.x, p.y, s, s * 0.45, 5, p.rot); ctx.fill(); break;
         default:
           ctx.beginPath(); ctx.arc(p.x, p.y, s / 2, 0, TAU); ctx.fill();
       }
@@ -160,10 +174,10 @@ export class Particles {
   clear() { this.items.length = 0; }
 }
 
-export function star(ctx, x, y, outer, inner, points = 5) {
+export function star(ctx, x, y, outer, inner, points = 5, rot = 0) {
   ctx.beginPath();
   for (let i = 0; i < points * 2; i++) {
-    const r = i % 2 ? inner : outer, a = (i / (points * 2)) * TAU - Math.PI / 2;
+    const r = i % 2 ? inner : outer, a = (i / (points * 2)) * TAU - Math.PI / 2 + rot;
     ctx[i ? 'lineTo' : 'moveTo'](x + Math.cos(a) * r, y + Math.sin(a) * r);
   }
   ctx.closePath();

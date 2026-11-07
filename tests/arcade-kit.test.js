@@ -161,8 +161,9 @@ test('the kit: a game\'s save and the arcade\'s settings, kept only in this brow
 
 test('the kit\'s files: its styles scoped to ak- classes, its shell builds with DOM methods, ?demo counts and saves nothing', () => {
   const css = read('src/games/kit/kit.css').replace(/\/\*[\s\S]*?\*\//g, '');
-  for (const sel of css.replace(/@font-face\s*\{[^}]*\}/g, '').match(/[^{}@]+(?=\{)/g).map((s) => s.trim()).filter((s) => s && !/^(from|to|\d+%)/.test(s))) {
-    for (const one of sel.split(',')) {
+  // every selector (an at-rule's own line, such as @media's, and keyframes' steps aren't selectors)
+  for (const sel of css.replace(/@font-face\s*\{[^}]*\}/g, '').match(/[^{}]+(?=\{)/g).map((s) => s.trim()).filter((s) => s && !/^(@|from|to|\d+%)/.test(s))) {
+    for (const one of sel.split(/,(?![^(]*\))/)) {   // (a comma inside :where(…) isn't a new selector)
       if (/^\s*(@|from|to|\d)/.test(one)) continue;
       assert.match(one.trim(), /(\.ak\b|\.ak-|html\.ak-page|:where\(\.ak\))/, `scoped: ${one.trim()}`);
     }
