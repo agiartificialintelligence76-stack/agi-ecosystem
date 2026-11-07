@@ -66,7 +66,11 @@ shell.demo / shell.touch    // the page is a recorded demo / a touchscreen
   no `eval` / `new Function`, nothing from another site (fonts, pictures, sound: our own files only). Setting
   `node.style.foo = …` or `style.setProperty('--x', …)` from code is fine (the CSS object model).
 - **`?demo`**: the game plays itself (its own AI), at once, forever (a new run after each end), silent, nothing saved or
-  counted. `?seed=n` repeats it exactly. This records the gameplay previews on agi1.app/games.
+  counted. `?seed=n` repeats it exactly. This records the gameplay previews on agi1.app/games
+  (`tools/games/capture-previews.mjs`, `?demo&seed=7` in a 480 × 480 window): its clock starts with the page, the
+  intro takes 3.2 s, then 2.5 s more, then 6 s are recorded, so a demo's best moments belong about **5.7 to 11.7 s**
+  after the page opens. Its particles may use `Math.random` (the pictures differ a little from run to run; the game and
+  its AI must not).
 - **Hard rules** (CLAUDE.md): PG-13; AGI-1's lines in her voice (lowercase, playful, 💜 now and then); no money, prices or
   "buy" anywhere; no real coins, people or brands; Share on X only opens X's own post box.
 - Phones first, computers too: touch, mouse and keyboard; any size from 360 px wide to 4K; sideways phones; the notch
