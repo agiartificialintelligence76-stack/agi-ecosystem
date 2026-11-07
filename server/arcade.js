@@ -207,9 +207,9 @@ export const LOOK_GAMES = Object.freeze({
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
   jaywalk: Object.freeze({
-    what: '"JAYWALK", an arcade game where an anime girl, AGI-1, hops across busy cartoon streets, rivers and train '
-      + 'tracks without getting hit: talk about hopping, cars, trains, logs, dying and distance in the game is part '
-      + 'of reviewing it',
+    what: '"JAYWALK", an arcade game where an anime girl, AGI-1, hops across busy cartoon streets, data rivers and train '
+      + 'tracks without getting hit: talk about hopping, cars, trains, rafts, hearts, her looks, dying and distance in '
+      + 'the game is part of reviewing it',
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
