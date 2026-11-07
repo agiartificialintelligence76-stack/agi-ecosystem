@@ -1,5 +1,30 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Ten more AGI games, night two — 2026-11-08
+
+The owner, at 4 a.m.: "can you create 10 more games, i only have one 1 idea thou guess whats ai(picture) what do u think,
+do the rest and ill go back to sleep, try thinking original games with creative game mechanics … make this better then
+continue". Their choices: "Yes, both" (AI pictures made with ChatGPT in their Chrome, and public-domain real photos) and
+"Yes, publish".
+
+- **The games** (agi1.app/games/<id>): REAL OR AI? (`realorai`, the owner's idea), I'M NOT A ROBOT (`notarobot`), ALIGNMENT
+  (`alignment`), GRADIENT DESCENT (`gradient`), EPOCHS (`epochs`), SYNAPSE (`synapse`), OVERCLOCK (`overclock`), BEAT THE AGI
+  (`beattheagi`), HALLUCINATION (`hallucination`), GUARDRAILS (`guardrails`). What each one is: CLAUDE.md, "AGI games" →
+  "Ten more on the kit, night two".
+- **REAL OR AI?'s pictures:** 39 made that night in the owner's ChatGPT (four chats in their Chrome), 42 CC0 photos from
+  Wikimedia Commons (first on Unsplash; each photographer credited in the game). Sources (full size, with `credits.json`):
+  the owner's `Downloads/agi-realorai-sources/`. Data: `tools/games/realorai/pictures.json`; rebuild with
+  `node tools/games/realorai/build-pictures.mjs <folder with aiu/ and sq/>` (the 1024 px squares made from those sources).
+- **/games:** 24 games; three small tiles a row on a phone (name and kind), five on a wide screen; "New" is these ten.
+- **AGI-1's 2D art only:** ALIGNMENT and ROBOTAXI RUSH (its billboards) now use `public/images/agi1-portrait-2d.webp`, a square
+  crop of her 2D art (`agi1-live-2d.webp`), not the 3D model's render (`agi1-portrait.webp`, still the chat's share cards).
+- **Nothing to set up:** no new setting, SQL, function or service.
+- **Built** on the branch `arcade-ten-more` (each game by its own Claude agent from a written brief, then reviewed and wired
+  in). RELEASE_LINE
+- **Checks:** TESTS_LINE
+- **Left for the owner:** play a few on a real phone and say which feel too hard or too easy (all tuning was against each game's
+  own AI); listen to the sound (nobody could hear it here); rate them.
+
 ## Ten new AGI games and a compact /games — 2026-11-08
 
 The owner, before going to sleep: "can you create 10 more high quality new games … enjoyable, addicted and fun … the

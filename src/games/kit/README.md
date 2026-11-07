@@ -1,7 +1,9 @@
 # The AGI arcade kit (`src/games/kit/`)
 
-Since 2026-11-08 the ten newer AGI games (MERGE TO AGI, BLOCKCHAIN, HEARTBEAT, SCAM SLAYER, LAST MODEL STANDING,
-SINGULARITY, JAILBREAK, STACKED, JAYWALK, ROBOTAXI RUSH) share this kit, so every game has the same frame: the top bar
+Since 2026-11-08 the twenty newer AGI games (MERGE TO AGI, BLOCKCHAIN, HEARTBEAT, SCAM SLAYER, LAST MODEL STANDING,
+SINGULARITY, JAILBREAK, STACKED, JAYWALK, ROBOTAXI RUSH, and from the second night REAL OR AI?, I'M NOT A ROBOT, ALIGNMENT,
+GRADIENT DESCENT, EPOCHS, SYNAPSE, OVERCLOCK, BEAT THE AGI, HALLUCINATION, GUARDRAILS) share this kit, so every game has
+the same frame: the top bar
 (back to the arcade, the game's numbers, sound, full screen, pause), the title screen, pause, how to play, the end-of-run
 card with the player's best and Share on X, toasts, settings that follow the player from game to game, local bests,
 and the play counter for agi1.app/games. The games draw their own playfields.

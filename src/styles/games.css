@@ -311,6 +311,8 @@
 .gm-fine a { color: var(--fg); }
 
 /* ---------- smaller screens ---------- */
+/* (2026-11-08, the second night: 24 games) five a row on a wide screen, so all of them fit in a few rows */
+@media (min-width: 1240px) { .gm-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 16px; } }
 @media (max-width: 1100px) { .gm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 960px) {
   .gm-rate-grid { grid-template-columns: minmax(0, 1fr); }
@@ -323,7 +325,7 @@
   .gm-stamp-text { font-size: 15px; }
 }
 @media (max-width: 760px) {
-  .gm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .gm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
   .gm-tools { flex-direction: column; align-items: stretch; gap: 10px; }
   .gm-sort { align-self: flex-start; }
   .gm-tile-link { border-radius: 16px; }
@@ -336,6 +338,18 @@
   .gm-tile-badge { top: 8px; left: 8px; font-size: 9.5px; padding: 2px 7px 1px; }
   /* (no hover on a phone: a small play mark stays on each tile) */
   .gm-tile-go { right: 8px; bottom: 8px; height: 28px; padding: 0 9px 0 7px; font-size: 12px; scale: 1; translate: 0 0; visibility: visible; }
+}
+/* a phone (2026-11-08, the second night: 24 games): three small tiles a row, like a phone's home screen, so every game is a
+   short scroll away: its loop, its name and its kind (its line, numbers and Play mark on bigger screens) */
+@media (max-width: 560px) {
+  .gm-grid { gap: 10px 9px; }
+  .gm-tile-link { border-radius: 14px; }
+  .gm-tile-body { gap: 2px; padding: 7px 8px 8px; }
+  .gm-tile-name { font-size: 12.5px; line-height: 1.12; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .gm-tile-line, .gm-tile-nums, .gm-tile-go { display: none; }
+  .gm-tile-meta { padding-top: 2px; }
+  .gm-tile-genre { font-size: 9px; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .gm-tile-badge { top: 6px; left: 6px; font-size: 8.5px; line-height: 13px; padding: 1px 6px 0; }
 }
 @media (max-width: 480px) {
   .gm-hero-in { grid-template-columns: minmax(0, 1fr); }
@@ -360,8 +374,8 @@
   .gm-say { margin-top: 10px; }
 }
 @media (max-width: 360px) {
-  .gm-grid { gap: 10px; }
-  .gm-tile-line { display: none; }
+  .gm-grid { gap: 8px 7px; }
+  .gm-tile-name { font-size: 11.5px; }
 }
 
 /* "reduce motion": nothing moves by itself (base.css shortens the rest), and the hero is simply there */

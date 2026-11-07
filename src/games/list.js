@@ -22,6 +22,17 @@ export const GAMES = {
   stacked: { name: "STACKED", path: '/games/stacked', genre: 'Arcade', kit: true },
   jaywalk: { name: "JAYWALK", path: '/games/jaywalk', genre: 'Arcade', kit: true },
   robotaxi: { name: "ROBOTAXI RUSH", path: '/games/robotaxi', genre: 'Racing', kit: true },
+  // since 2026-11-08 (the owner's second night): ten more on the arcade kit, REAL OR AI? the owner's own idea
+  realorai: { name: "REAL OR AI?", path: '/games/realorai', genre: 'Quiz', kit: true },
+  notarobot: { name: "I'M NOT A ROBOT", path: '/games/notarobot', genre: 'Arcade', kit: true },
+  alignment: { name: "ALIGNMENT", path: '/games/alignment', genre: 'Story', kit: true },
+  gradient: { name: "GRADIENT DESCENT", path: '/games/gradient', genre: 'Sports', kit: true },
+  epochs: { name: "EPOCHS", path: '/games/epochs', genre: 'Puzzle', kit: true },
+  synapse: { name: "SYNAPSE", path: '/games/synapse', genre: 'Puzzle', kit: true },
+  overclock: { name: "OVERCLOCK", path: '/games/overclock', genre: 'Arcade', kit: true },
+  beattheagi: { name: "BEAT THE AGI", path: '/games/beattheagi', genre: 'Strategy', kit: true },
+  hallucination: { name: "HALLUCINATION", path: '/games/hallucination', genre: 'Puzzle', kit: true },
+  guardrails: { name: "GUARDRAILS", path: '/games/guardrails', genre: 'Strategy', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

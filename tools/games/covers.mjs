@@ -27,6 +27,17 @@ export const COVERS = {
   stacked: { lines: ['STACKED'], bg: '#14102b', bg2: '#33256b', accent: '#ffc933', line: 'One tap. Perfect drops. How high can she go?', tag: 'Stacker' },
   jaywalk: { lines: ['JAY', 'WALK'], bg: '#123a2a', bg2: '#1f6a4a', accent: '#ffc933', line: "Hop. Dodge. Don't look back.", tag: 'Hopper' },
   robotaxi: { lines: ['ROBOTAXI', 'RUSH'], bg: '#120726', bg2: '#4a1268', accent: '#ff4da6', line: 'Neon highway. No brakes. Chain the near misses.', tag: 'Racing', small: true },
+  // (2026-11-08, the second night)
+  realorai: { lines: ['REAL', 'OR AI?'], bg: '#14132b', bg2: '#3b2a6e', accent: '#3ff0c3', line: 'One photo. Real or AI? Trust your eyes.', tag: 'Photo quiz' },
+  notarobot: { lines: ["I'M NOT", 'A ROBOT'], bg: '#0f1d3a', bg2: '#22408a', accent: '#3ff0c3', line: "Prove you're human. Four seconds at a time.", tag: 'Microgames', small: true },
+  alignment: { lines: ['ALIGN', 'MENT'], bg: '#1b1030', bg2: '#4a2470', accent: '#ffc933', line: 'Run her lab. Swipe yes or no. Keep it all in balance.', tag: 'Swipe story' },
+  gradient: { lines: ['GRADIENT', 'DESCENT'], bg: '#0b1a24', bg2: '#134a5a', accent: '#ffc933', line: 'Roll down the loss. Find the lowest point.', tag: '3D mini golf', small: true },
+  epochs: { lines: ['EPOCHS'], bg: '#120f26', bg2: '#2c2563', accent: '#3ff0c3', line: 'Every try comes back to help.', tag: 'Echo puzzle' },
+  synapse: { lines: ['SYNAPSE'], bg: '#0a0f24', bg2: '#1c2a66', accent: '#ff4da6', line: 'Connect the neurons. Fill the brain.', tag: 'Link puzzle' },
+  overclock: { lines: ['OVER', 'CLOCK'], bg: '#12061f', bg2: '#4a1056', accent: '#ff7a59', line: "Flip fast. Run hot. Don't drop the ball.", tag: 'Pinball' },
+  beattheagi: { lines: ['BEAT', 'THE AGI'], bg: '#1a0d33', bg2: '#46207a', accent: '#ffc933', line: 'Four in a row. From 1B to AGI.', tag: 'Four in a row' },
+  hallucination: { lines: ['HALLUCI', 'NATION'], bg: '#1d0f2a', bg2: '#51245e', accent: '#ff4da6', line: 'She drew it from memory. Find what she made up.', tag: 'Spot the diff', small: true },
+  guardrails: { lines: ['GUARD', 'RAILS'], bg: '#0c1620', bg2: '#16465a', accent: '#3ff0c3', line: 'Hold the line. Nothing gets to her core.', tag: 'Tower defense' },
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');

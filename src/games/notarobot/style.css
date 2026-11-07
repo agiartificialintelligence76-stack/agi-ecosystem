@@ -1,0 +1,84 @@
+/* I'M NOT A ROBOT (2026-11-08): its own few styles; the arcade kit's frame is src/games/kit/kit.css. The game itself is
+   drawn on a canvas (./render.js). The title's gate is a little browser window whose checkbox is the play button. */
+.ak[data-ak-game='notarobot'] {
+  --ak-bg: #0f1d3a;
+  --ak-accent: var(--ak-mint);
+}
+/* the notch and the rounded corners: read by game.js to keep the window clear of them */
+.nr-safe {
+  position: absolute; inset: 0; z-index: -1; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.ak[data-ak-game='notarobot'] .ak-title-actions { display: none; }
+.ak[data-ak-game='notarobot'] .ak-screen-scrim { background: radial-gradient(70% 60% at 50% 50%, rgba(15, 29, 58, .82) 30%, transparent 75%); }
+
+/* ---------- the gate: a paper browser window, its checkbox the play button ---------- */
+.nr-gate-wrap { display: grid; justify-items: center; gap: 12px; width: min(380px, 100%); margin-top: 4px; }
+.nr-gate {
+  width: 100%; text-align: left; overflow: hidden;
+  background: var(--ak-paper); color: var(--ak-ink);
+  border: 3px solid var(--ak-ink); border-radius: 20px; box-shadow: 7px 8px 0 var(--ak-ink);
+  rotate: -1.5deg;
+}
+.nr-gate-bar { display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: var(--ak-lav); border-bottom: 2.5px solid var(--ak-ink); }
+.nr-dots { display: flex; gap: 6px; flex: none; }
+.nr-dots i { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-pink); }
+.nr-dots i:nth-child(2) { background: var(--ak-honey); }
+.nr-dots i:nth-child(3) { background: var(--ak-mint); }
+.nr-addr {
+  flex: 1; min-width: 0; padding: 3px 11px; border-radius: 999px; background: #fff; border: 2px solid var(--ak-ink);
+  font-family: var(--ak-mono); font-size: 12px; font-weight: 650; color: var(--ak-ink2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.nr-gate-body { display: flex; align-items: center; gap: 14px; padding: 16px; }
+.nr-check {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 14px; min-height: 68px; padding: 9px 16px 9px 10px;
+  border-radius: 14px; border: 2.5px solid var(--ak-ink); background: #fff; box-shadow: 0 5px 0 var(--ak-ink);
+  font-family: var(--ak-sans); font-weight: 750; font-size: 19px; letter-spacing: -0.01em; color: var(--ak-ink); text-align: left;
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease;
+}
+.nr-check:hover { transform: translateY(-1px); box-shadow: 0 6px 0 var(--ak-ink); background: #fffdf6; }
+.nr-check:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ak-ink); }
+.nr-check-label { min-width: 0; }
+.nr-box {
+  position: relative; flex: none; display: grid; place-items: center; width: 46px; height: 46px;
+  border-radius: 10px; border: 3px solid var(--ak-ink); background: #fff; transition: background-color .15s ease, border-color .15s ease;
+}
+.nr-tick { width: 34px; height: 34px; fill: none; stroke: var(--ak-ink); stroke-width: 3.8; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 26; stroke-dashoffset: 26; }
+.nr-spin { position: absolute; inset: 5px; border-radius: 50%; border: 4px solid var(--ak-lav2); border-top-color: var(--ak-violet); opacity: 0; }
+.nr-check.is-busy .nr-box { border-color: transparent; background: transparent; }
+.nr-check.is-busy .nr-spin { opacity: 1; animation: nr-spin .55s linear infinite; }
+.nr-check.is-on .nr-box { background: var(--ak-mint); }
+.nr-check.is-on .nr-tick { stroke-dashoffset: 0; transition: stroke-dashoffset .26s cubic-bezier(.3, .9, .3, 1); }
+@keyframes nr-spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: no-preference) {
+  .nr-check:not(.is-busy):not(.is-on) .nr-box { animation: nr-nudge 2.4s ease-in-out infinite; }
+}
+@keyframes nr-nudge { 0%, 70%, 100% { transform: none; } 78% { transform: rotate(-8deg) scale(1.06); } 86% { transform: rotate(6deg) scale(1.06); } 94% { transform: rotate(-3deg); } }
+.nr-brand { flex: none; display: grid; justify-items: center; gap: 3px; }
+.nr-seal { width: 42px; height: 42px; overflow: visible; }
+.nr-seal-head { fill: #c9d1e3; stroke: var(--ak-ink); stroke-width: 2.4; }
+.nr-seal-eye { fill: var(--ak-mint); stroke: var(--ak-ink); stroke-width: 1.6; }
+.nr-seal-line { fill: none; stroke: var(--ak-ink); stroke-width: 2.4; stroke-linecap: round; }
+.nr-seal-dot { fill: var(--ak-pink); stroke: var(--ak-ink); stroke-width: 2; }
+.nr-seal-stache { fill: #b98a52; stroke: var(--ak-ink); stroke-width: 1.4; stroke-linejoin: round; }
+.nr-brand small { font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 9px; letter-spacing: .1em; text-transform: uppercase; line-height: 1.1; text-align: center; color: var(--ak-ink2); }
+.nr-record { margin: 0; font-family: var(--ak-mono); font-size: 12.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: color-mix(in srgb, var(--ak-fg) 72%, transparent); }
+
+/* a short screen (a phone held sideways): a smaller gate */
+@media (max-height: 520px) {
+  .nr-gate-wrap { width: min(340px, 100%); gap: 8px; }
+  .nr-gate-bar { padding: 5px 10px; }
+  .nr-gate-body { padding: 10px 12px; }
+  .nr-check { min-height: 54px; font-size: 17px; }
+  .nr-box { width: 38px; height: 38px; }
+  .nr-tick { width: 28px; height: 28px; }
+  .nr-seal { width: 34px; height: 34px; }
+}
+.nr-check-label { white-space: nowrap; }
+@media (max-width: 400px) {
+  .nr-gate-body { gap: 10px; padding: 14px 12px; }
+  .nr-check { font-size: 17px; gap: 11px; padding-right: 12px; }
+  .nr-brand small { display: none; }
+  .nr-seal { width: 34px; height: 34px; }
+}
+@media (max-width: 340px) { .nr-brand { display: none; } }

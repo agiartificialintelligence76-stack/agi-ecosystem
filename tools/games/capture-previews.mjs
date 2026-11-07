@@ -31,6 +31,9 @@ export const RECIPES = {
   // (its pixel art is small on a wide field: drawn twice as fine and cropped around her, so the bots read on a small tile)
   lastmodel: kit('lastmodel', 7, { dpr: 2, crop: [110, 80, 260, 260] }), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),
   jaywalk: kit('jaywalk'), robotaxi: kit('robotaxi'),
+  // (2026-11-08, the second night)
+  realorai: kit('realorai'), notarobot: kit('notarobot', 7, { poster: 0.2 }), alignment: kit('alignment'), gradient: kit('gradient'), epochs: kit('epochs'),
+  synapse: kit('synapse'), overclock: kit('overclock'), beattheagi: kit('beattheagi', 7, { poster: 0.1 }), hallucination: kit('hallucination'), guardrails: kit('guardrails'),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],

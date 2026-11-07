@@ -1,0 +1,1272 @@
+[
+ {
+  "key": "ai_aurora",
+  "src": "aiu/ai_aurora.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "nature",
+  "title": "Northern lights over a cabin",
+  "clues": [
+   {
+    "x": 0.2,
+    "y": 0.55,
+    "r": 0.15,
+    "text": "every pine is the same perfect christmas-tree shape"
+   },
+   {
+    "x": 0.45,
+    "y": 0.9,
+    "r": 0.12,
+    "text": "smooth snow with no tracks, no texture, nothing"
+   }
+  ],
+  "note": "aurora, cozy cabin, perfect snow. a little too dreamy 🙈"
+ },
+ {
+  "key": "ai_bakery",
+  "src": "aiu/ai_bakery.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "food",
+  "title": "Pastries in a bakery case",
+  "clues": [
+   {
+    "x": 0.32,
+    "y": 0.13,
+    "r": 0.1,
+    "text": "the same little leaf doodle on every single label"
+   },
+   {
+    "x": 0.25,
+    "y": 0.38,
+    "r": 0.13,
+    "text": "the croissants blur into one golden pile"
+   }
+  ],
+  "note": "a real baker would get bored drawing the same leaf 🙈"
+ },
+ {
+  "key": "ai_bicycles",
+  "src": "aiu/ai_bicycles.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "city",
+  "title": "Bikes by a canal",
+  "clues": [
+   {
+    "x": 0.36,
+    "y": 0.73,
+    "r": 0.12,
+    "text": "tulips posed like a postcard, not one wilted"
+   },
+   {
+    "x": 0.68,
+    "y": 0.6,
+    "r": 0.15,
+    "text": "mushy reflections under crisp houses"
+   }
+  ],
+  "note": "so pretty it hurts. honestly that's the tell"
+ },
+ {
+  "key": "ai_butterfly",
+  "src": "aiu/ai_butterfly.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "animals",
+  "title": "Butterfly on pink flowers",
+  "clues": [
+   {
+    "x": 0.48,
+    "y": 0.47,
+    "r": 0.12,
+    "text": "no legs holding on: it just floats on the flower"
+   }
+  ],
+  "note": "butterflies have six legs. this one has… vibes 🙈"
+ },
+ {
+  "key": "ai_camera",
+  "src": "aiu/ai_camera.jpg",
+  "ai": true,
+  "level": 1,
+  "topic": "objects",
+  "title": "Film camera on a table",
+  "clues": [
+   {
+    "x": 0.6,
+    "y": 0.47,
+    "r": 0.13,
+    "text": "the lens numbers are a jumbled mess"
+   },
+   {
+    "x": 0.37,
+    "y": 0.24,
+    "r": 0.08,
+    "text": "the dial numbers don't follow any real order"
+   }
+  ],
+  "note": "no brand, scrambled numbers. cameras are hard for ai"
+ },
+ {
+  "key": "ai_canyon",
+  "src": "aiu/ai_canyon.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "nature",
+  "title": "Turquoise river in a canyon",
+  "clues": [
+   {
+    "x": 0.6,
+    "y": 0.72,
+    "r": 0.1,
+    "text": "tiny boats as clean white blobs"
+   },
+   {
+    "x": 0.15,
+    "y": 0.45,
+    "r": 0.15,
+    "text": "cliff texture that repeats like wallpaper"
+   }
+  ],
+  "note": "honestly? nearly perfect. that's the scary part"
+ },
+ {
+  "key": "ai_cappuccino",
+  "src": "aiu/ai_cappuccino.jpg",
+  "ai": true,
+  "level": 1,
+  "topic": "food",
+  "title": "Cappuccino with a heart",
+  "clues": [
+   {
+    "x": 0.68,
+    "y": 0.62,
+    "r": 0.1,
+    "text": "a blank sugar packet: real ones always have print"
+   },
+   {
+    "x": 0.5,
+    "y": 0.33,
+    "r": 0.12,
+    "text": "a heart so symmetric it looks stamped on"
+   }
+  ],
+  "note": "blank packet. real cafés print their names on everything"
+ },
+ {
+  "key": "ai_cat",
+  "src": "aiu/ai_cat.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Tabby on a windowsill",
+  "clues": [
+   {
+    "x": 0.78,
+    "y": 0.5,
+    "r": 0.2,
+    "text": "a very, very long cat that never seems to end"
+   }
+  ],
+  "note": "that cat is about three cats long 🙈"
+ },
+ {
+  "key": "ai_chess",
+  "src": "aiu/ai_chess.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "objects",
+  "title": "Chess at a café table",
+  "clues": [
+   {
+    "x": 0.45,
+    "y": 0.5,
+    "r": 0.18,
+    "text": "the squares don't line up into a real grid"
+   },
+   {
+    "x": 0.3,
+    "y": 0.75,
+    "r": 0.1,
+    "text": "captured pieces in a neat little army"
+   }
+  ],
+  "note": "count the squares, babe. i dare you"
+ },
+ {
+  "key": "ai_clock",
+  "src": "aiu/ai_clock.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "objects",
+  "title": "Clock in a train station",
+  "clues": [
+   {
+    "x": 0.42,
+    "y": 0.38,
+    "r": 0.14,
+    "text": "10:10, the time every ad clock shows"
+   },
+   {
+    "x": 0.9,
+    "y": 0.85,
+    "r": 0.08,
+    "text": "platform numbers floating in the air"
+   }
+  ],
+  "note": "it's always 10:10 in ai land 💜"
+ },
+ {
+  "key": "ai_desk",
+  "src": "aiu/ai_desk.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "home",
+  "title": "Laptop on a wooden desk",
+  "clues": [
+   {
+    "x": 0.92,
+    "y": 0.3,
+    "r": 0.08,
+    "text": "a pull chain hanging off the pole, not the lamp"
+   },
+   {
+    "x": 0.25,
+    "y": 0.42,
+    "r": 0.15,
+    "text": "a tidy demo app: ai loves a perfect screen"
+   }
+  ],
+  "note": "too tidy. real desks have crumbs and seven tabs open"
+ },
+ {
+  "key": "ai_flamingos",
+  "src": "aiu/ai_flamingos.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Flamingos in a lagoon",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.82,
+    "r": 0.15,
+    "text": "the reflections don't match the birds above them"
+   }
+  ],
+  "note": "the reflections are doing their own thing 🙈"
+ },
+ {
+  "key": "ai_fox",
+  "src": "aiu/ai_fox.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Red fox in the snow",
+  "clues": [
+   {
+    "x": 0.76,
+    "y": 0.53,
+    "r": 0.1,
+    "text": "a breath cloud that floats like a sticker"
+   },
+   {
+    "x": 0.47,
+    "y": 0.84,
+    "r": 0.14,
+    "text": "fresh snow with no paw prints around it"
+   }
+  ],
+  "note": "where did it walk from? no tracks at all"
+ },
+ {
+  "key": "ai_frog",
+  "src": "aiu/ai_frog.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Tree frog on a leaf",
+  "clues": [
+   {
+    "x": 0.73,
+    "y": 0.28,
+    "r": 0.1,
+    "text": "toes that melt into soft orange blobs"
+   }
+  ],
+  "note": "cute frog. suspicious toes"
+ },
+ {
+  "key": "ai_hedgehog",
+  "src": "aiu/ai_hedgehog.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "animals",
+  "title": "Hedgehog in autumn leaves",
+  "clues": [
+   {
+    "x": 0.35,
+    "y": 0.38,
+    "r": 0.16,
+    "text": "every spine the same length, like a brush"
+   },
+   {
+    "x": 0.55,
+    "y": 0.78,
+    "r": 0.15,
+    "text": "leaves arranged like a set, not a forest floor"
+   }
+  ],
+  "note": "this one fooled half the lab"
+ },
+ {
+  "key": "ai_horse",
+  "src": "aiu/ai_horse.jpg",
+  "ai": true,
+  "level": 1,
+  "topic": "animals",
+  "title": "White horse in the mist",
+  "clues": [
+   {
+    "x": 0.42,
+    "y": 0.62,
+    "r": 0.1,
+    "text": "the fence wire can't decide if it's in front or behind"
+   }
+  ],
+  "note": "the wire goes into the horse. spooky 🙈"
+ },
+ {
+  "key": "ai_kitchen",
+  "src": "aiu/ai_kitchen.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "home",
+  "title": "Kitchen counter in the morning",
+  "clues": [
+   {
+    "x": 0.6,
+    "y": 0.72,
+    "r": 0.12,
+    "text": "the knife slides under the bread like a ghost"
+   },
+   {
+    "x": 0.4,
+    "y": 0.35,
+    "r": 0.2,
+    "text": "perfect golden light on every single thing"
+   }
+  ],
+  "note": "styled like a photoshoot that never happened"
+ },
+ {
+  "key": "ai_koi",
+  "src": "aiu/ai_koi.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Koi crowding the surface",
+  "clues": [
+   {
+    "x": 0.45,
+    "y": 0.35,
+    "r": 0.2,
+    "text": "fish bodies blend where they overlap"
+   },
+   {
+    "x": 0.66,
+    "y": 0.55,
+    "r": 0.12,
+    "text": "fins that grow from odd places"
+   }
+  ],
+  "note": "count the fins. go on"
+ },
+ {
+  "key": "ai_lanterns",
+  "src": "aiu/ai_lanterns.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "city",
+  "title": "Paper lanterns at night",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.55,
+    "r": 0.3,
+    "text": "flawless text, perfect glow: ai got good at signs"
+   }
+  ],
+  "note": "the writing is perfect now. this is why it's getting hard 🙈"
+ },
+ {
+  "key": "ai_library",
+  "src": "aiu/ai_library.jpg",
+  "ai": true,
+  "level": 1,
+  "topic": "home",
+  "title": "Library shelves and a ladder",
+  "clues": [
+   {
+    "x": 0.22,
+    "y": 0.35,
+    "r": 0.2,
+    "text": "every famous classic, lined up like a reading list"
+   }
+  ],
+  "note": "nobody's shelf is only the greatest hits"
+ },
+ {
+  "key": "ai_lighthouse",
+  "src": "aiu/ai_lighthouse.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "nature",
+  "title": "Lighthouse at blue hour",
+  "clues": [
+   {
+    "x": 0.75,
+    "y": 0.28,
+    "r": 0.12,
+    "text": "a glowing lamp with no beam and no glare"
+   }
+  ],
+  "note": "perfect blue hour, perfect waves. too perfect?"
+ },
+ {
+  "key": "ai_living",
+  "src": "aiu/ai_living.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "home",
+  "title": "Living room with a fireplace",
+  "clues": [
+   {
+    "x": 0.78,
+    "y": 0.18,
+    "r": 0.15,
+    "text": "dozens of books and not one readable title"
+   }
+  ],
+  "note": "cozy… but try reading one spine"
+ },
+ {
+  "key": "ai_macarons",
+  "src": "aiu/ai_macarons.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "food",
+  "title": "A stack of macarons",
+  "clues": [
+   {
+    "x": 0.25,
+    "y": 0.67,
+    "r": 0.12,
+    "text": "the leaning macaron splits open like a mouth"
+   }
+  ],
+  "note": "it's looking at me 🙈"
+ },
+ {
+  "key": "ai_market",
+  "src": "aiu/ai_market.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "food",
+  "title": "Fruit stall with chalkboards",
+  "clues": [
+   {
+    "x": 0.25,
+    "y": 0.75,
+    "r": 0.18,
+    "text": "every apple flawless: no bruises, no stickers"
+   }
+  ],
+  "note": "real fruit has bad days. this fruit never did"
+ },
+ {
+  "key": "ai_mountain",
+  "src": "aiu/ai_mountain.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "nature",
+  "title": "Misty mountain lake",
+  "clues": [
+   {
+    "x": 0.55,
+    "y": 0.62,
+    "r": 0.14,
+    "text": "the mirrored peaks don't match the real ones"
+   }
+  ],
+  "note": "check the reflection against the mountains"
+ },
+ {
+  "key": "ai_neonstreet",
+  "src": "aiu/ai_neonstreet.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "city",
+  "title": "Rainy side street at night",
+  "clues": [
+   {
+    "x": 0.6,
+    "y": 0.78,
+    "r": 0.2,
+    "text": "mirror-perfect reflections and zero litter"
+   }
+  ],
+  "note": "a city street with no trash at all? suspicious"
+ },
+ {
+  "key": "ai_oldstreet",
+  "src": "aiu/ai_oldstreet.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "city",
+  "title": "Old town street after rain",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.85,
+    "r": 0.18,
+    "text": "every cobblestone glows like it was polished"
+   }
+  ],
+  "note": "it looks like a movie set. because it kind of is"
+ },
+ {
+  "key": "ai_owl",
+  "src": "aiu/ai_owl.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Barn owl on a fence post",
+  "clues": [
+   {
+    "x": 0.43,
+    "y": 0.66,
+    "r": 0.08,
+    "text": "the feet melt into the post"
+   }
+  ],
+  "note": "where are its toes? asking for a friend"
+ },
+ {
+  "key": "ai_pancakes",
+  "src": "aiu/ai_pancakes.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "food",
+  "title": "Pancakes at a diner",
+  "clues": [
+   {
+    "x": 0.45,
+    "y": 0.4,
+    "r": 0.12,
+    "text": "blueberries like glossy marbles"
+   },
+   {
+    "x": 0.9,
+    "y": 0.52,
+    "r": 0.1,
+    "text": "the fork and knife fuse together"
+   }
+  ],
+  "note": "too pretty to eat. that's the tell"
+ },
+ {
+  "key": "ai_parrot",
+  "src": "aiu/ai_parrot.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "animals",
+  "title": "Macaw on a branch",
+  "clues": [
+   {
+    "x": 0.35,
+    "y": 0.76,
+    "r": 0.1,
+    "text": "parrots grip with two toes front, two back. not this one"
+   }
+  ],
+  "note": "look at the feet. always look at the feet"
+ },
+ {
+  "key": "ai_piano",
+  "src": "aiu/ai_piano.jpg",
+  "ai": true,
+  "level": 1,
+  "topic": "objects",
+  "title": "Old piano keys",
+  "clues": [
+   {
+    "x": 0.45,
+    "y": 0.55,
+    "r": 0.18,
+    "text": "black keys in one long row: real ones come in twos and threes"
+   },
+   {
+    "x": 0.6,
+    "y": 0.12,
+    "r": 0.12,
+    "text": "sheet music that no one could play"
+   }
+  ],
+  "note": "a piano with no gaps. that's not how music works 💜"
+ },
+ {
+  "key": "ai_pizza",
+  "src": "aiu/ai_pizza.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "food",
+  "title": "Wood-fired pizza",
+  "clues": [
+   {
+    "x": 0.3,
+    "y": 0.6,
+    "r": 0.12,
+    "text": "char spots stamped on in an even pattern"
+   }
+  ],
+  "note": "almost perfect. almost"
+ },
+ {
+  "key": "ai_puppy",
+  "src": "aiu/ai_puppy.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "animals",
+  "title": "Puppy in autumn leaves",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.6,
+    "r": 0.2,
+    "text": "sitting in leaves, not one stuck to its fluff"
+   }
+  ],
+  "note": "real puppies come with leaves attached"
+ },
+ {
+  "key": "ai_ramen",
+  "src": "aiu/ai_ramen.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "food",
+  "title": "Ramen at the counter",
+  "clues": [
+   {
+    "x": 0.66,
+    "y": 0.62,
+    "r": 0.2,
+    "text": "a flawless bowl: perfect egg, slices and steam"
+   }
+  ],
+  "note": "the menu is real japanese now. the tell is how perfect it all is"
+ },
+ {
+  "key": "ai_subway",
+  "src": "aiu/ai_subway.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "city",
+  "title": "Subway platform",
+  "clues": [
+   {
+    "x": 0.6,
+    "y": 0.62,
+    "r": 0.2,
+    "text": "the train blur is too smooth, like a filter"
+   }
+  ],
+  "note": "cleanest subway platform in history 🙈"
+ },
+ {
+  "key": "ai_sunflower",
+  "src": "aiu/ai_sunflower.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "nature",
+  "title": "Sunflower under a storm",
+  "clues": [
+   {
+    "x": 0.75,
+    "y": 0.6,
+    "r": 0.15,
+    "text": "the field's sunflowers face every which way"
+   },
+   {
+    "x": 0.35,
+    "y": 0.45,
+    "r": 0.14,
+    "text": "the star flower poses for the camera, not the sun"
+   }
+  ],
+  "note": "real sunflowers in a field all face the same way"
+ },
+ {
+  "key": "ai_tram",
+  "src": "aiu/ai_tram.jpg",
+  "ai": true,
+  "level": 2,
+  "topic": "city",
+  "title": "Yellow tram on a hill",
+  "clues": [
+   {
+    "x": 0.62,
+    "y": 0.47,
+    "r": 0.12,
+    "text": "a city tram with no number or route sign"
+   }
+  ],
+  "note": "which line is it? exactly"
+ },
+ {
+  "key": "ai_typewriter",
+  "src": "aiu/ai_typewriter.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "objects",
+  "title": "Typewriter keys",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.5,
+    "r": 0.3,
+    "text": "it even got qwerty right. the tell: every key is spotless"
+   }
+  ],
+  "note": "okay this one is just good. sorry 🙈"
+ },
+ {
+  "key": "ai_waterfall",
+  "src": "aiu/ai_waterfall.jpg",
+  "ai": true,
+  "level": 3,
+  "topic": "nature",
+  "title": "Rainforest waterfall",
+  "clues": [
+   {
+    "x": 0.15,
+    "y": 0.7,
+    "r": 0.15,
+    "text": "ferns copied and pasted along the edge"
+   }
+  ],
+  "note": "nature is messier than this"
+ },
+ {
+  "key": "real_cat2",
+  "src": "sq/real_cat2.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "animals",
+  "title": "Cat standing up",
+  "clues": [],
+  "note": "real. a cat really stood like that. i checked 🙈",
+  "credit": "Photo: Marko Blažević · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_cat1",
+  "src": "sq/real_cat1.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "animals",
+  "title": "Fluffy cat close-up",
+  "clues": [],
+  "note": "real whiskers go everywhere. ai likes them tidy",
+  "credit": "Photo: Mikhail Vasilyev · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_puppy4",
+  "src": "sq/real_puppy4.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Puppy on a wooden floor",
+  "clues": [],
+  "note": "real. the floorboards line up and the paws have toes 💜",
+  "credit": "Photo: Margo Brodowicz · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_fox2",
+  "src": "sq/real_fox2.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Red fox in falling snow",
+  "clues": [],
+  "note": "real. look at the messy, random snowflakes",
+  "credit": "Photo: Ray Hennessy · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_owl0",
+  "src": "sq/real_owl0.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "animals",
+  "title": "Barn owl in yellow flowers",
+  "clues": [],
+  "note": "real. it looks painted, but it's a real owl in a real field",
+  "credit": "Photo: Andy Chilton · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_owl3",
+  "src": "sq/real_owl3.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Barn owl portrait",
+  "clues": [],
+  "note": "real. every feather has its own little mess",
+  "credit": "Photo: Doug Swinson · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_flamingo0",
+  "src": "sq/real_flamingo0.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "animals",
+  "title": "Flamingo in the dark",
+  "clues": [],
+  "note": "real flamingo, real flash. nature is extra sometimes",
+  "credit": "Photo: Thomas Griesbeck · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_frog3",
+  "src": "sq/real_frog3.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Tiny tree frog",
+  "clues": [],
+  "note": "real frog. real tiny toes",
+  "credit": "Photo: Riley Robinson · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_horse1",
+  "src": "sq/real_horse1.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Horse in the fog",
+  "clues": [
+   {
+    "x": 0.78,
+    "y": 0.73,
+    "r": 0.1,
+    "text": "a thin fence wire runs straight across"
+   }
+  ],
+  "note": "real. the fence wire stays put, unlike ai fences",
+  "credit": "Photo: Henry Chuy · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_parrot3",
+  "src": "sq/real_parrot3.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "animals",
+  "title": "Macaw close-up",
+  "clues": [],
+  "note": "real. those colors are just how macaws are",
+  "credit": "Photo: Andrew Pons · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_hedgehog0",
+  "src": "sq/real_hedgehog0.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "animals",
+  "title": "Hedgehog in leaves",
+  "clues": [],
+  "note": "real hedgehog. every spine a little different",
+  "credit": "Photo: Piotr Łaskawski · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_butterfly3",
+  "src": "sq/real_butterfly3.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Butterfly on flowers",
+  "clues": [],
+  "note": "real. you can see its legs holding the flower 💜",
+  "credit": "Photo: Martina Misar-Tummeltshammer · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_koi2",
+  "src": "sq/real_koi2.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "animals",
+  "title": "Koi pond",
+  "clues": [],
+  "note": "real koi. the fins all add up",
+  "credit": "Photo: Frank Green · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_ramen2",
+  "src": "sq/real_ramen2.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Ramen in a red bowl",
+  "clues": [],
+  "note": "real ramen. the mess is the proof",
+  "credit": "Photo: Matthew Hamilton · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_pancakes3",
+  "src": "sq/real_pancakes3.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Pancakes with berries",
+  "clues": [],
+  "note": "real. the syrup puddle is beautifully messy",
+  "credit": "Photo: Herson Rodriguez · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_fruit4",
+  "src": "sq/real_fruit4.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Market stall",
+  "clues": [],
+  "note": "real market. thousands of fruits and none melt together",
+  "credit": "Photo: ja ma · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_croissant4",
+  "src": "sq/real_croissant4.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Croissants on a tray",
+  "clues": [],
+  "note": "real. every croissant a little different",
+  "credit": "Photo: Olia Gozha · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_cappuccino1",
+  "src": "sq/real_cappuccino1.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Latte art and a laptop",
+  "clues": [],
+  "note": "real. the keyboard keys are real keys",
+  "credit": "Photo: Nafinia Putra · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_macarons1",
+  "src": "sq/real_macarons1.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "food",
+  "title": "Macaron stack",
+  "clues": [],
+  "note": "real! perfectly stacked macarons exist. i'm shocked too",
+  "credit": "Photo: Baher Khairy · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_pizza1",
+  "src": "sq/real_pizza1.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Pizza with greens",
+  "clues": [],
+  "note": "real pizza. the burnt bits are random, like real fire",
+  "credit": "Photo: David Nuescheler · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_burger0",
+  "src": "sq/real_burger0.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "food",
+  "title": "Veggie burger",
+  "clues": [],
+  "note": "real. sesame seeds scattered any old way",
+  "credit": "Photo: Markus Spiske · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_mountain3",
+  "src": "sq/real_mountain3.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "nature",
+  "title": "Mountain lake",
+  "clues": [],
+  "note": "real. that blue is just what glacier lakes do",
+  "credit": "Photo: Braxton Stuntz · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_waterfall0",
+  "src": "sq/real_waterfall0.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "nature",
+  "title": "Waterfall",
+  "clues": [],
+  "note": "real waterfall, real silky long exposure",
+  "credit": "Photo: Jeffrey Workman · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_sunflowers2",
+  "src": "sq/real_sunflowers2.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "nature",
+  "title": "Sunflower field",
+  "clues": [],
+  "note": "real. they all face the same way, and some are droopy",
+  "credit": "Photo: Angelika Levshakova · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_aurora2",
+  "src": "sq/real_aurora2.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "nature",
+  "title": "Northern lights",
+  "clues": [],
+  "note": "real aurora. the sky really does that up north",
+  "credit": "Photo: Vincent Guth · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_canyon3",
+  "src": "sq/real_canyon3.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "nature",
+  "title": "Turquoise canyon river",
+  "clues": [],
+  "note": "real. the water really is that color",
+  "credit": "Photo: Dieter Schäfer · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_lighthouse0",
+  "src": "sq/real_lighthouse0.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "nature",
+  "title": "Lighthouse at dusk",
+  "clues": [],
+  "note": "real. a lighthouse under the stars looks fake, but it's a real place",
+  "credit": "Photo: Joshua Hibbert · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_street1",
+  "src": "sq/real_street1.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "city",
+  "title": "City at night",
+  "clues": [],
+  "note": "real. a long exposure turns cars into light trails",
+  "credit": "Photo: Joey Kyber · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_neon3",
+  "src": "sq/real_neon3.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "city",
+  "title": "Neon sign",
+  "clues": [
+   {
+    "x": 0.62,
+    "y": 0.42,
+    "r": 0.2,
+    "text": "clean letters you can actually read"
+   }
+  ],
+  "note": "real sign, real letters, real bricks",
+  "credit": "Photo: Mike Petrucci · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_tram4",
+  "src": "sq/real_tram4.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "city",
+  "title": "Orange tram",
+  "clues": [],
+  "note": "real tram. that color is just its paint job",
+  "credit": "Photo: Will Broomfield · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_subway1",
+  "src": "sq/real_subway1.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "city",
+  "title": "Subway platform",
+  "clues": [],
+  "note": "real. that blur is a real train moving",
+  "credit": "Photo: Femke Ongena · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_cherry2",
+  "src": "sq/real_cherry2.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "city",
+  "title": "Cherry blossoms",
+  "clues": [
+   {
+    "x": 0.75,
+    "y": 0.75,
+    "r": 0.2,
+    "text": "real writing: every stroke makes sense"
+   }
+  ],
+  "note": "real. the writing on the boards is real writing",
+  "credit": "Photo: Galen Crout · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_lanterns3",
+  "src": "sq/real_lanterns3.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "city",
+  "title": "Paper lanterns",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.28,
+    "r": 0.15,
+    "text": "real characters, painted by hand"
+   }
+  ],
+  "note": "real lanterns with real characters",
+  "credit": "Photo: kazuend · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_living2",
+  "src": "sq/real_living2.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "home",
+  "title": "Eclectic living room",
+  "clues": [],
+  "note": "real room. real clutter makes sense, ai clutter doesn't",
+  "credit": "Photo: Stephen Di Donato · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_kitchen0",
+  "src": "sq/real_kitchen0.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "home",
+  "title": "Blue kitchen",
+  "clues": [],
+  "note": "real. it looks like a render, but it's a real kitchen",
+  "credit": "Photo: NeONBRAND · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_library0",
+  "src": "sq/real_library0.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "home",
+  "title": "Bookshelf",
+  "clues": [
+   {
+    "x": 0.6,
+    "y": 0.66,
+    "r": 0.08,
+    "text": "a library label you can actually read"
+   }
+  ],
+  "note": "real books with real, readable spines",
+  "credit": "Photo: Aleksi Tappura · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_film4",
+  "src": "sq/real_film4.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "objects",
+  "title": "Old folding camera",
+  "clues": [],
+  "note": "real camera, real tiny engraved letters",
+  "credit": "Photo: Annie Spratt · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_chess0",
+  "src": "sq/real_chess0.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "objects",
+  "title": "Chess pieces",
+  "clues": [],
+  "note": "real pieces, and the board's squares line up",
+  "credit": "Photo: Lou Levit · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_piano2",
+  "src": "sq/real_piano2.jpg",
+  "ai": false,
+  "level": 3,
+  "topic": "objects",
+  "title": "Blurry piano keys",
+  "clues": [],
+  "note": "real! just a very dreamy lens",
+  "credit": "Photo: Ryan Holloway · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_clock2",
+  "src": "sq/real_clock2.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "objects",
+  "title": "Station clock",
+  "clues": [
+   {
+    "x": 0.47,
+    "y": 0.6,
+    "r": 0.1,
+    "text": "twelve marks and hands that make sense"
+   }
+  ],
+  "note": "real clock: twelve hours, real time",
+  "credit": "Photo: Teresa Kluge · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_typewriter2",
+  "src": "sq/real_typewriter2.jpg",
+  "ai": false,
+  "level": 1,
+  "topic": "objects",
+  "title": "Typewriter keys",
+  "clues": [
+   {
+    "x": 0.5,
+    "y": 0.72,
+    "r": 0.2,
+    "text": "r-t-y-u-i in the right order: real keys"
+   }
+  ],
+  "note": "real keys, real letters, real dust",
+  "credit": "Photo: Cliff Johnson · CC0 · Wikimedia Commons"
+ },
+ {
+  "key": "real_bicycle3",
+  "src": "sq/real_bicycle3.jpg",
+  "ai": false,
+  "level": 2,
+  "topic": "objects",
+  "title": "Red bicycle",
+  "clues": [],
+  "note": "real bike: the chain, spokes and pedals all connect",
+  "credit": "Photo: Dakota Corbin · CC0 · Wikimedia Commons"
+ }
+]

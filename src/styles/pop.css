@@ -939,6 +939,12 @@
   [data-skin='pop'] .gm-tile-media { border-bottom-width: 2.5px; }
   [data-skin='pop'] .gm-sub { font-size: clamp(22px, 6.4vw, 30px); }
 }
+/* (2026-11-08, the second night) a phone's three small tiles a row: thinner outlines */
+@media (max-width: 560px) {
+  [data-skin='pop'] .gm-tile-link { border-width: 2px; border-radius: 13px; box-shadow: 0 4px 0 -1px var(--shade); }
+  [data-skin='pop'] .gm-tile-media { border-bottom-width: 2px; }
+  [data-skin='pop'] .gm-tile-badge.is-new, [data-skin='pop'] .gm-tile-badge.is-play { border-width: 1.5px; }
+}
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */
 [data-skin='pop'] .notice { border: 2px solid var(--edge); border-radius: 22px; box-shadow: 0 8px 0 -1px var(--shade); }
 [data-skin='pop'] .notice-ava { box-shadow: 0 0 0 2px var(--edge); }

@@ -1,5 +1,18 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Ten more AGI games, night two (2026-11-08):** the owner, waking up at 4 a.m.: "can you create 10 more games, i only
+> have one 1 idea thou guess whats ai(picture) … try thinking original games with creative game mechanics … make this
+> better then continue", then "Yes, both" (ChatGPT pictures in their Chrome and public-domain real photos) and "Yes,
+> publish". **REAL OR AI?** (the owner's idea: real photo or AI picture? 81 pictures: 39 made with ChatGPT's image model
+> that night, 42 CC0 photos from Wikimedia Commons, credited), **I'M NOT A ROBOT** (four-second "prove you're human"
+> microgames), **ALIGNMENT** (run her lab, swipe yes or no, keep four meters in balance; endings to collect), **GRADIENT
+> DESCENT** (3D mini golf on loss landscapes), **EPOCHS** (each try replays as an echo that helps), **SYNAPSE** (link
+> the neurons, fill the board; the network plays its melody), **OVERCLOCK** (pinball on her motherboard), **BEAT THE
+> AGI** (four in a row, from 1B up to AGI, her search shown as attention bars), **HALLUCINATION** (spot the five things she
+> made up, scenes drawn in code) and **GUARDRAILS** (tower defense against jailbreak gremlins), at agi1.app/games/<id>,
+> all on the arcade kit. /games: 24 games, three small tiles a row on a phone and five on a wide screen; "New" is these ten.
+> **No new setting, SQL, function or service.** See "Ten more on the kit, night two" under "AGI games". RELEASE_LINE
+
 > **Ten new AGI games and a compact /games (2026-11-08):** the owner, before going to sleep: "create 10 more high
 > quality new games … enjoyable, addicted and fun … the interface must not look like a vibecoded ai slop … optimized
 > both for mobile devices, iphone duo, pc … compact all the games so its easy to pick … a preview of gameplay on every
@@ -9941,8 +9954,9 @@ coming-soon page for games until then, is AGI games' own page, with the owner's 
 before pushing it** (below). No new setting or service.
 
 **What visitors see at agi1.app/games** (`games.html`, `src/games/page.js`, `src/styles/games.css`):
-- (Since 2026-11-08 the page is a compact picker of fourteen games with a gameplay loop on each tile: see "The
-  arcade kit and ten new games" below. Its ratings, reviews and leaderboards work as described here.)
+- (Since 2026-11-08 the page is a compact picker with a gameplay loop on each tile: fourteen games, twenty-four since the
+  second night: see "The arcade kit and ten new games" and "Ten more on the kit, night two" below. Its ratings, reviews
+  and leaderboards work as described here.)
 - The site's top bar and footer ("Games" marked as the page you're on); its tab "GAME beta · AGI games".
 - **The top:** "AGI games", then a huge **GAME** with a small **beta** sticker stuck over the top right of its E, turned
   a little (one line, a real space between the words, so screen readers say "GAME beta"); it lands from about twice its
@@ -10332,7 +10346,7 @@ per run (`kit/site.js`: the same `game-play` as every AGI game: no sign-in, neve
 ended the run, and a held key never restarts it.
 
 **agi1.app/games, compact** (`games.html`, `src/games/page.js`, `src/games/shelf.js`, `src/styles/games.css` + Pop mode in
-`pop.css`): a shorter hero ("fourteen games now 💜"), then **Pick a game**: every game a small tile (two a row on a phone,
+`pop.css`): a shorter hero ("fourteen games now 💜"; twenty-four since night two), then **Pick a game**: every game a small tile (two a row on a phone,
 three on a tablet, four on a computer) that opens it, with **a muted loop of it playing itself** (the ones on screen play,
 a few at a time, nearest the middle first; on a computer the one under the mouse; never with "reduce motion" or the data
 saver: the stills stay), its kind, its line, its stars and plays ("New" for none yet) and a New / Play money sticker; filters
@@ -10343,7 +10357,7 @@ reviews: one compact tab per game (a row that scrolls sideways on a phone), each
 still Ride 'Em, AGI!'s). Its link preview is a wall of its games (`public/cards/games-all.jpg`:
 `node tools/cards/games-all.mjs` from `tools/cards/games-all-card.html`); Ride 'Em, AGI! keeps `cards/games.jpg`.
 
-**The previews** (`public/images/games/<id>.mp4` and `.webp`, all fourteen games): `node tools/games/capture-previews.mjs
+**The previews** (`public/images/games/<id>.mp4` and `.webp`, every game: fourteen, then twenty-four): `node tools/games/capture-previews.mjs
 [--base http://127.0.0.1:5173] [game …]` with the site running (`npx vite`): Chromium with a fake clock that stands still
 between frames, so each frame is exactly 1/30 s of play however slowly the machine draws, then ffmpeg (480 × 480 H.264,
 6 s, no sound, fast start; a 600 × 600 still). The kit games play themselves (`?demo&seed=7`, each tuned so its best moments
@@ -10380,6 +10394,62 @@ Tuning was against simulated players (each game's own AI), so real play may show
 **Tests:** `tests/arcade-kit.test.js` (the kit, the wiring, the covers), each game's own file, `tests/page.test.js` (the picker,
 its tiles and previews, filters and sorts, the tabs and the panel template, the wall of games, the look in Pop mode),
 `tests/intro.test.js` (every game's page), `tests/arcade.test.js`, `tests/clips.test.js`, `tests/share.test.js`.
+
+### Ten more on the kit, night two (2026-11-08)
+
+**The owner's request** (2026-11-08, waking up at 4 a.m. after the first ten went live): "can you create 10 more games, i
+only have one 1 idea thou guess whats ai(picture) what do u think, do the rest and ill go back to sleep, try thinking
+original games with creative game mechanics or an inspiration gsme from another but upto u make this better then
+continue". The owner's choices: "Yes, both" (AI pictures made with ChatGPT in their Chrome, and public-domain real photos
+from Wikimedia Commons, for REAL OR AI?) and "Yes, publish". Built the same way as the first ten (the kit, one builder a
+game from a written brief, reviewed and wired in), on the branch `arcade-ten-more`.
+
+| Game | What it is | Its parts | Its controls |
+|---|---|---|---|
+| **REAL OR AI?** (`realorai`, photo quiz; the owner's idea) | Is the photo real or made by AI? 81 square pictures (`public/games/realorai/p/`, neutral 5-letter names; about 9 MB, loaded one at a time): 39 made that night with ChatGPT's image model in the owner's Chrome (each carries the IPTC "AI-made" tag in its file) and 42 CC0 photos from Wikimedia Commons (first on Unsplash), each photographer credited on its reveal; no people in any. **Daily 10** (the same ten for everyone on a local date, 4–6 AI-made, progress kept, then "practice") and **Streak** (3 hearts, 10 s a photo, ×2…×5). The **loupe** (hold still on the photo: 2.5×), a rubber-stamp reveal with circled clues (what gives an AI picture away, or what shows a photo is real), AGI-1's note and the credit; right answers move on, wrong ones wait. **AGI-1 guesses too** (about 75/65/55% by level): "You 7 vs AGI-1 6". "Your eye" stats on the title. The pictures: `tools/games/realorai/pictures.json` (truth, level, topic, title, clues, note, credit) → `node tools/games/realorai/build-pictures.mjs <source dir>` → the WebPs and `pictures.js` (the sources: the owner's `Downloads/agi-realorai-sources/`). | `rules`, `ui`, `render`, `art`, `images`, `sound`, `lines`, `demo`, `pictures` | swipe the photo right for REAL, left for AI, or the AI / REAL buttons; hold for the loupe; ←/A, →/D, hold Z or Shift (arrows move it), Space / Enter next |
+| **I'M NOT A ROBOT** (`notarobot`, microgames) | AGI-1, in a cardboard mustache, sneaks into the humans-only internet; you pass her human checks, one 4.5-second check at a time (2.4 s at the fastest, nine tempo levels). 19 checks with 3 levels each (TICK IT with a nervous checkbox, ONLY CATS, SLIDE IT, TYPE IT, TURN IT, FIND THE BOT, HOLD… LET GO, TAP ×5, DON'T!, SMILE, ODD ONE, HOW MANY?, CATCH IT, SWAT, STEADY, IN ORDER, SHAKE NO, SIGN IT, WAIT… TAP!) from a fair shuffle; every 15 a FINAL VERIFICATION (three on one fuse; passing it clears a light); four suspicion lights and she's caught. The title's "I'm not a robot" box is its Play button. 40 lines. | `run`, `bag`, `tempo`, `bot`, `checks/`, `render`, `art`, `sound`, `lines` (`tools/games/notarobot/`: balance, demo timeline) | tap, drag, hold (DON'T!: touch nothing); arrows, Space, A–Z, 1–5 |
+| **EPOCHS** (`epochs`, echo puzzle) | Each try is an epoch: when the next one starts the world resets and every earlier try replays as an echo (v1–v4), move for move, holding plates, pushing boxes, blocking lasers. 30 handmade levels in 5 worlds (Warm-up, Heavy lifting, Hot lines, Timing, Many selves), each with a reference solution the tests play; `tools/games/epochs/solve.mjs` proved none can be solved in fewer epochs. Stars for solving, par epochs and par moves; undo across epochs; a zapped try can be kept as an echo. 25 lines. | `engine`, `levels`, `render`, `sprite`, `ui`, `sound`, `lines` (`tools/games/epochs/`: solve, refs, draft) | swipe, the D-pad, tap toward a tile, tap her to wait; arrows / WASD, Space wait, E new epoch, Z undo, R retry |
+| **OVERCLOCK** (`overclock`, pinball) | Pinball on AGI-1's motherboard: 3 flippers, slingshots, three CPU-core bumpers, the cooling-fan spinner, R-A-M lanes (multiplier up to 6×), G-P-U drop targets, the CPU-socket saucer, the PCIe ramp (a scripted ride), orbits and a skill shot. OVERCLOCK (full heat: 20 s of double points, the traces glow), MULTIBALL (lock 2; a growing jackpot on the ramp), 8 mission types and AGI MODE; ball save, an extra ball at 2.5M, nudge and tilt, the end-of-ball bonus count. A 128 × 32 dot-matrix display with AGI-1's pixel face (9 expressions). Its own physics (substeps and swept checks: no tunnelling in 415,000 ticks at top speed), tuned with headless games. | `physics`, `table`, `rules`, `sim`, `ai`, `dmd`, `render`, `sound`, `lines` (`tools/games/overclock/`: physics check, harness, calibrate, face, DMD preview) | each half of the screen flips its side (multi-touch), hold and let go to plunge, a third finger nudges; ←/Z/Left Shift, →/M/Right Shift, Space / ↓ plunge, ↑ nudge |
+| **GUARDRAILS** (`guardrails`, tower defense) | Prompt gremlins walk to AGI-1's core (20 hearts). 3 maps (THE CHAT, THE INBOX, THE SERVER ROOM; 15 waves held opens the next), 30 waves each then endless (1–11 written by hand, each a new trick), a boss every 10 (THE MEGAPROMPT, THE HYPOTHETICAL, THE FINAL FORM). 6 guardrails (Filter, Classifier, Red Team, Rate Limiter, Honeypot on the path, System Prompt), tier 2 then a choice of two tier-3 specialties, targeting, 70% back. 8 gremlins and 2 split-offs, each trick with its counter (disguised, armored, shielded, splitting, healing, Sudo ignores honeypots). Send early, 1×/2×; compute (⚡), never money. `tools/games/guardrails/balance.mjs` (a sensible AI build reaches about wave 41). | `data`, `sim`, `waves`, `ai`, `art`, `render`, `ui`, `sound`, `lines` | tap a tile for the radial menu or drag from the tray, tap a guardrail for its card; 1–6, arrows, Space/Enter, U, T, Backspace, N next wave, F speed |
+| **ALIGNMENT** (`alignment`, swipe story) | Run AGI-1's lab one day at a time: a card, two choices (drag it left or right; two real buttons too); four meters (PEOPLE, SAFETY, COMPUTE, HEART) start near 50, and one at 0 or 100 ends the run. Dots over the meters show how much a choice moves them, never which way. 173 cards from 12 characters (the Director, Dr. Nyx, Pip the intern, Byte her cat in meows with a translation, the Users in chat bubbles, VECTOR the rival model in capitals, Prof. Quill, Juno, the Mayor, Glitch, the Fan Club, AGI-1), 8 story arcs (flags and chained cards) and **16 endings** to collect (8 from the meters, 8 secret), each with its own picture: "Endings n/16". "AGI-1 v2.0 released" every 50 days; days survived is the score. `tools/games/alignment/balance.mjs`: a random player lasts about 25 days, a good one 87. AGI-1's cards use her 2D art (`/images/agi1-portrait-2d.webp`). | `cards`, `engine`, `ai`, `layout`, `render`, `art`, `ui`, `sound`, `lines` | drag the card; the two buttons; ←/→ leans, the same arrow or Enter/Space chooses |
+| **GRADIENT DESCENT** (`gradient`, 3D mini golf) | Putt down night-time loss landscapes (three.js): 3 courses of 6 handmade holes (Warm-up, Saddle Country, The Overfit Badlands), the cup at each hole's lowest point (the tests sample all 18), local minima that keep the ball, and hazards course by course (bumper posts, sticky "weight decay", ripples, NaN pits). A shader draws the colormap and crisp contour lines. Its own deterministic ball physics (240 Hz); too fast at the cup lips out ("learning rate: too high"). A dotted preview of the roll (shorter each course), a scorecard per hole, a **Daily hole** made from the date and checked before use. 40 lines. | `terrain`, `course`, `holes`, `daily`, `physics`, `ai`, `score`, `scene`, `shaders`, `sound`, `ui` (`tools/games/gradient/`: holes, demo) | pull back from the ball and let go; drag elsewhere to turn, pinch to zoom, Map, Recentre; ←/→ aim, ↑/↓ power, Space/Enter, M, C |
+| **HALLUCINATION** (`hallucination`, spot the difference) | AGI-1 redraws a scene from memory and makes up five things: endless scenes drawn in code (10 places from her room to a space station, 2–3 palettes each, 92 objects with their own parameters, her grey striped cat in 3 poses), 12 kinds of change that never overlap and are always big enough to see. Endless (60 s a scene, down to 35; a wrong tap costs 3 s; finds in a row build a combo) and a **Daily scene** (timed). "Ask her" (she confesses one) and **Blink** (the two pictures flick in one big view for 1.2 s, at a flash-safe rate). `?qa=gallery` shows the objects (for checking art). | `paint`, `objects`, `objects-home`, `objects-out`, `templates`, `compose`, `scene`, `rules`, `layout`, `draw`, `render`, `ai`, `lines`, `sound`, `qa` (`tools/games/hallucination/`: balance, demo frames) | tap either picture; arrows move a magnifier on both, Space/Enter checks, H asks her, B blinks |
+| **SYNAPSE** (`synapse`, link puzzle) | Drag from a neuron to its twin: paths never cross, and a board is solved when every pair is linked and every cell filled. Twists: holes, **bridges** (one path over the other) and **gates** (crossed the way the arrow points). When solved, **the network fires**: a pulse runs every path, each cell a note on a five-note scale (a path's shape is its melody), each color its own register. **Campaign** (6 packs of 24: Sprout 5×5 … Neocortex 10×10, each board a stored seed with exactly one answer, checked by `tools/games/synapse/pick.mjs`), **Daily** (three boards a day, a streak) and **Rush** (3 minutes, +10 s a board). Hints (3 a day, +1 per 5 solved); ✓ solved, ★ perfect. A shape on every neuron, so color is never the only cue. | `puzzle`, `rules`, `packs`, `campaign`, `render`, `art`, `melody`, `sound`, `demo`, `ui`, `lines` | drag to draw, back to shorten, through a path to cut it, tap a path to clear; arrows, Space, Backspace, H hint, R reset, Enter next |
+| **BEAT THE AGI** (`beattheagi`, four in a row) | Four in a row against AGI-1 up a ladder of six levels named like model sizes: **1B** (mostly random), **7B** (takes wins, blocks threats), **13B** (4 moves deep), **70B** (7), **400B** (10, remembering positions) and **AGI** (as deep as 0.7 s on a phone or 1.1 s on a computer allows, 12–14 moves in the opening, a small opening book): each unlocks by beating the one below once (a "PROMOTED" card); whoever starts can force a win with perfect play, and she says so. **Watch her think**: bars over the columns show how much she likes each move as her search deepens ("depth 7 · 8 · 9…", a proven win honey with a star), her portrait (her 2D art) calm, smug, worried or shocked; about 85 lines with a personality per level. Her search runs in a module Web Worker (main thread one depth at a time if workers fail). Pass & play (two people, Undo). Win/draw/loss and best streak per level, kept locally. | `engine`, `levels`, `match`, `brain`, `worker`, `render`, `art`, `layout`, `rules`, `ui`, `lines`, `sound`, `demo` (`tools/games/beattheagi/`: arena, book, demo openings) | tap or click a column (drag to aim on a phone); ←/→, 1–7, ↓/Space/Enter, U undo (Pass & play) |
+
+Everything in "The arcade kit and ten new games" above holds for these ten too (the kit's frame, `?demo`, local bests
+`agi_arcade:<game>`, never money, PG-13, the site's CSP, phones both ways to 4K, touch, mouse and keyboard, "reduce motion").
+
+**REAL OR AI?'s pictures:** the AI-made ones were made that night in the owner's ChatGPT (four chats in their Chrome; the
+prompts asked for photorealistic scenes with the kinds of detail image models still get wrong: piano keys, clock faces,
+signs, bicycles, chess boards), each picture looked at for its giveaways (`clues`: honest observations, and where a
+picture is simply flawless the clue and AGI-1 say so); the real ones are CC0 photos on Wikimedia Commons (from Unsplash's
+CC0 years), cropped square at their subject. Both kinds were made the same size and format, so file details don't give
+them away (except an AI-made one's own "AI-made" tag, kept on purpose). Sources at full size, with each real photo's
+`credits.json` (title, photographer, license, page): the owner's `Downloads/agi-realorai-sources/`.
+
+**/games for 24** (`games.html`, `src/games/shelf.js`, `games.css`, `pop.css`): five tiles a row on a wide screen (1240 px
+and up), four and three below it, and **three small tiles a row on a phone** (560 px and under: its loop, name and kind;
+its line, numbers and Play mark on bigger screens), so all 24 fit in eight short rows (about 1,460 px at 390 px wide,
+3,440 before). "New" is these ten (their `added` has an hour, `2026-11-08T10:00`, so Newest puts them before the first
+ten). The Featured order mixes both nights. The wall of games (`cards/games-all.jpg`) and every count say twenty-four.
+
+**AGI-1's 2D art only:** ALIGNMENT's own cards and ROBOTAXI RUSH's billboards now use `public/images/agi1-portrait-2d.webp`
+(a 384 px square crop of her 2D art, `agi1-live-2d.webp`) instead of `agi1-portrait.webp` (a render of the 3D model:
+still the chat's share cards). No game uses the 3D model or its renders.
+
+**Not done, on purpose:** no leaderboards (local bests, like the first ten); no new service, setting, SQL or function. The
+builders' suggestions for the kit (a game's own card keeping Esc from pausing, `shell.over`'s `bestKey` living beside the
+game's own data, the kit's CSS loading after a game's, chip icons) are left for a later pass: the kit is shared by twenty
+games.
+
+**Owner:** nothing to set up. Play a few on a phone; the sound was never heard here (headless browsers), and the
+difficulty was tuned against each game's own AI: say which feel too hard or too easy.
+
+**Tests:** each game's own file (`tests/<id>.test.js`: rules, generators, solvers, AI, content checks; EPOCHS's 30
+reference solutions, SYNAPSE's 144 stored boards, GRADIENT DESCENT's 18 cups, ALIGNMENT's 16 endings reachable), plus
+`tests/arcade-kit.test.js`, `tests/page.test.js` (24 tiles and tabs, the phone grid), `tests/intro.test.js`,
+`tests/arcade.test.js`, `tests/clips.test.js`.
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 

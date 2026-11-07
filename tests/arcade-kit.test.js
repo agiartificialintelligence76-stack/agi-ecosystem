@@ -9,9 +9,9 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const exists = (p) => existsSync(new URL(`../${p}`, import.meta.url));
-const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi'];
+const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails'];
 
-test('the ten kit games are in the games list, after the first four, with their names and addresses', async () => {
+test('the kit games (twenty since the second night of 2026-11-08) are in the games list, after the first four, with their names and addresses', async () => {
   const { GAMES, isGame } = await import('../src/games/list.js');
   assert.deepEqual(Object.keys(GAMES).slice(4), KIT_IDS);
   for (const id of KIT_IDS) {
