@@ -3,7 +3,6 @@
   "buildCommand": "npm run build",
   "outputDirectory": "dist",
   "cleanUrls": true,
-  "git": { "deploymentEnabled": { "arcade-ten-games": false } },
   "rewrites": [
     { "source": "/launch/:draft", "destination": "/launch" },
     { "source": "/studio/:path+", "destination": "/studio" },
