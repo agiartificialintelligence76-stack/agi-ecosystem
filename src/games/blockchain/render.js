@@ -475,59 +475,71 @@ export function createRenderer() {
   }
 
   // ---------- labels: DOUBLE, TRIPLE…, CHAIN ×n, PERFECT CLEAR, NO ROOM ----------
+  // a label's lines, measured once: its words (one or two lines), the chain, the points
+  function labelLines(g, lb) {
+    const C = L.C, out = [];
+    if (lb.text) {
+      font(g, 900, Math.round(lb.size), DISPLAY, 'expanded');
+      const wide = Math.max(g.measureText(lb.text).width, lb.text2 ? g.measureText(lb.text2).width : 0);
+      const fs = Math.round(lb.size * Math.min(1, (C * 7.9) / Math.max(1, wide)));
+      font(g, 900, fs, DISPLAY, 'expanded');
+      out.push({ kind: 'text', text: lb.text, fs, color: lb.color, w: g.measureText(lb.text).width, h: fs * 1.02 });
+      if (lb.text2) out.push({ kind: 'text', text: lb.text2, fs, color: PAPER, w: g.measureText(lb.text2).width, h: fs * 1.02 });
+    }
+    if (lb.sub) {
+      const fs = Math.round(lb.text ? lb.size * 0.5 : lb.size);
+      font(g, 900, fs, DISPLAY, 'expanded');
+      const text = `CHAIN ×${lb.sub}`;
+      out.push({ kind: 'chain', text, fs, color: HEX[0], w: g.measureText(text).width + fs * 1.05, h: fs * 1.2 });
+    }
+    if (lb.pts) {
+      const fs = Math.round(Math.max(C * 0.46, (lb.text ? lb.size : lb.size * 1.4) * 0.48));
+      font(g, 900, fs, DISPLAY, 'expanded');
+      out.push({ kind: 'pts', text: lb.pts, fs, color: PAPER, w: g.measureText(lb.pts).width, h: fs * 1.15 });
+    }
+    lb.half = Math.min(C * 4.15, Math.max(...out.map((l) => l.w)) / 2 + C * 0.25);
+    lb.height = out.reduce((s, l) => s + l.h, 0);
+    return out;
+  }
   function drawLabels(g, se, now) {
     for (const lb of se.labels) {
       const a = now - lb.t0;
       if (a < 0) continue;
+      if (!lb.lines) lb.lines = labelLines(g, lb);
       const kin = clamp(a / 0.26, 0, 1);
       const sc = REDUCED ? 1 : lerp(1.85, 1, ease.outBack(kin, 2.2));
       const out = lb.stay ? 0 : clamp((a - (lb.life - 0.32)) / 0.32, 0, 1);
-      // kept inside the board: its widest line measured once
-      if (lb.half == null) {
-        font(g, 900, Math.round(lb.size), DISPLAY, 'expanded');
-        const main = lb.text ? Math.max(g.measureText(lb.text).width, lb.text2 ? g.measureText(lb.text2).width : 0) : 0;
-        const fs = Math.round(lb.text ? lb.size * 0.5 : lb.size);
-        font(g, 900, fs, DISPLAY, 'expanded');
-        const sub = lb.sub ? g.measureText(`CHAIN ×${lb.sub}`).width + fs * 1.1 : 0;
-        lb.half = Math.min(L.C * 4.1, Math.max(main, sub) / 2 + L.C * 0.2);
-      }
-      const fr = L.frame;
+      // kept inside the board
+      const fr = L.frame, half = lb.height / 2;
       const lx = clamp(lb.x, fr.x + lb.half, fr.x + fr.w - lb.half);
+      const ly = clamp(lb.y, L.gy + half, L.gy + L.C * 8 - half);
       g.save();
       g.globalAlpha = (REDUCED ? 1 : clamp(a / 0.06, 0, 1)) * (1 - out);
-      g.translate(lx, lb.y - out * L.C * 0.6);
+      g.translate(lx, ly - out * L.C * 0.6);
       g.rotate(lb.rot);
       g.scale(sc, sc);
-      const size = lb.size;
-      let y = 0;
-      if (lb.text) {
-        font(g, 900, Math.round(size), DISPLAY, 'expanded');
-        const fit = Math.min(1, (L.C * 8.2) / Math.max(1, g.measureText(lb.text2 && lb.text2.length > lb.text.length ? lb.text2 : lb.text).width));
-        if (fit < 1) font(g, 900, Math.round(size * fit), DISPLAY, 'expanded');
-        const fs = Math.round(size * fit);
-        if (lb.text2) {
-          sticker(g, lb.text, 0, -fs * 0.5, fs, lb.color);
-          sticker(g, lb.text2, 0, fs * 0.52, fs, PAPER);
-          y = fs * 1.25;
-        } else {
-          sticker(g, lb.text, 0, 0, fs, lb.color);
-          y = fs * 0.85;
-        }
-      }
-      if (lb.sub) {
-        const fs = Math.round(lb.text ? size * 0.5 : size);
-        font(g, 900, fs, DISPLAY, 'expanded');
-        const txt = `CHAIN ×${lb.sub}`;
-        const tw = g.measureText(txt).width;
-        const iu = fs * 0.5;
-        const total = iu * 1.7 + fs * 0.2 + tw;
-        const x0 = -total / 2;
-        chainIcon(g, x0 + iu * 0.85, y + fs * 0.08, iu, INK);
-        g.save();
-        g.translate(0, -fs * 0.05);
-        chainIcon(g, x0 + iu * 0.85, y + fs * 0.08, iu, HEX[0]);
-        g.restore();
-        sticker(g, txt, x0 + iu * 1.7 + fs * 0.2, y, fs, HEX[0], { align: 'left' });
+      let y = -half;
+      for (const ln of lb.lines) {
+        const cy = y + ln.h / 2;
+        font(g, 900, ln.fs, DISPLAY, 'expanded');
+        if (ln.kind === 'chain') {
+          const iu = ln.fs * 0.5, x0 = -ln.w / 2;
+          chainIcon(g, x0 + iu * 0.85, cy + ln.fs * 0.1, iu, INK);
+          chainIcon(g, x0 + iu * 0.85, cy + ln.fs * 0.02, iu, HEX[0]);
+          sticker(g, ln.text, x0 + ln.fs * 1.05, cy, ln.fs, ln.color, { align: 'left' });
+        } else if (ln.kind === 'pts') {
+          // the points come in a beat later, with their own little pop
+          const pa = a - 0.1;
+          if (pa > 0) {
+            const k2 = REDUCED ? 1 : lerp(1.5, 1, ease.outBack(clamp(pa / 0.2, 0, 1), 2));
+            g.save();
+            g.translate(0, cy);
+            g.scale(k2, k2);
+            sticker(g, ln.text, 0, 0, ln.fs, ln.color);
+            g.restore();
+          }
+        } else sticker(g, ln.text, 0, cy, ln.fs, ln.color);
+        y += ln.h;
       }
       g.restore();
     }
