@@ -75,6 +75,7 @@ let ladderOpen = false, resultUp = false, lastCard = null;
 let ppFirst = PINK;
 let demoIndex = 0, demoGames = 0;
 let keyCol = -1;
+let startedAt = 0;            // the key that starts a game (Space, Enter) never also plays in it
 // the dice: seeded with ?seed= (the demo: 7), otherwise with a fresh number for this visit; every game gets its own seed
 // from them, and her moves, her words and her reactions all come from seeded dice
 const visit = (() => { try { return crypto.getRandomValues(new Uint32Array(1))[0]; } catch { return Date.now() >>> 0; } })();
@@ -178,6 +179,7 @@ function playLevel(level, { rematch = false } = {}) {
   const fresh = !LEVELS.some((x) => { const st = save.stats[x.id]; return st.w + st.d + st.l > 0; });
   M = new Match({ mode: 'ladder', level: save.level, turn: first === 'you' ? PINK : MINT, seed: newSeed(), hooks: hooksFor('play'), coach: fresh });
   mode = 'ladder';
+  startedAt = performance.now();
   shell.started();
   shell.audio.music(music);
   showChips();
@@ -221,8 +223,8 @@ function gameOver(result) {
   const stats = [
     [`Record at ${LEVELS[level].id}`, record(st)],
     ['Win streak', `${st.streak}${st.best > st.streak ? ` (best ${st.best})` : ''}`],
-    ['Your stones', String(yours)],
-    ['Her deepest look', level <= 1 || !M.deepest ? 'one glance' : `${M.deepest} moves`],
+    ['Your moves', String(yours)],
+    ['She looked', level <= 1 || !M.deepest ? 'one glance' : `${M.deepest} deep`],
   ];
   // the shell's end state (Enter, Space or R: a rematch; no pause), with this game's own card on top
   shell.over({ score: null, title: 'Game over', onAgain: () => playLevel(level, { rematch: true }), onMenu: () => toTitle() });
@@ -247,6 +249,7 @@ function playPP({ swap = false } = {}) {
   parts.clear(); floats.clear(); glitchT = 0;
   M = new Match({ mode: 'pp', turn: ppFirst, seed: newSeed(), hooks: hooksFor('play') });
   mode = 'pp';
+  startedAt = performance.now();
   shell.started();
   shell.audio.music(music);
   showChips();
@@ -268,7 +271,7 @@ function ppOver(result) {
   resultUp = true;
   shell.card(resultCard({
     mode: 'pp', result, level: 0, save, line,
-    stats: [['Pink wins', String(save.pp.pink)], ['Mint wins', String(save.pp.mint)], ['Draws', String(save.pp.draws)], ['Stones', String(count(M.cells))]],
+    stats: [['Pink wins', String(save.pp.pink)], ['Mint wins', String(save.pp.mint)], ['Draws', String(save.pp.draws)], ['Stones played', String(count(M.cells))]],
     onRematch: () => playPP({ swap: true }), onMenu: () => toTitle(),
   }), { label: result === 'draw' ? 'A draw' : `${result === 'pink' ? 'Pink' : 'Mint'} wins` });
 }
@@ -409,7 +412,7 @@ keyboard({
 }, {
   blocked: () => !playing(),
   down(name, e) {
-    if (e.target?.closest?.('button, a')) return;
+    if (e.target?.closest?.('button, a') || performance.now() - startedAt < 160) return;
     if (name === 'undo') { doUndo(); return; }
     const cur = M.hover >= 0 ? M.hover : 3;
     if (name === 'left' || name === 'right') {
@@ -487,7 +490,7 @@ const loop = createLoop({
       return;
     }
     renderer.draw(g, view, L, m, {
-      t, levelLabel, shake, parts, floats, glitch: glitchT / 0.7, demo: DEMO, coachText: TOUCH ? 'Tap a column' : 'Click a column',
+      t, levelLabel, shake, parts, floats, glitch: glitchT / 0.7, demo: DEMO, coachText: TOUCH ? 'Tap a column' : keyCol >= 0 ? 'Space drops it' : 'Click a column',
       ladder: m.mode === 'ladder' ? ladderInfo(m.level) : null,
     });
   },

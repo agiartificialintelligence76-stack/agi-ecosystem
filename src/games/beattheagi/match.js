@@ -137,8 +137,8 @@ export class Match {
     const demoish = this.mode === 'demo' || this.mode === 'attract';
     const th = {
       t: 0, snaps: [], next: 0, lastReveal: -1, result: null,
-      min: (demoish ? 0.62 : [0.8, 0.8, 0.85, 0.9, 0.95, 1.0][this.level]) * this.pace.think,
-      every: demoish ? 0.07 : [0.24, 0.22, 0.17, 0.12, 0.085, 0.072][this.level],
+      min: (demoish ? 0.62 : [0.66, 0.66, 0.78, 0.86, 0.92, 1.0][this.level]) * this.pace.think,
+      every: demoish ? 0.07 : [0.2, 0.2, 0.16, 0.11, 0.085, 0.072][this.level],
       id: 0, level: this.level,
     };
     this.think = th;

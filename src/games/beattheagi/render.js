@@ -54,7 +54,8 @@ export function createRenderer({ reduced = false } = {}) {
     g.font = font;
     lines = [];
     let cur = '';
-    for (const word of text.split(' ')) {
+    // (an emoji stays with the word before it: never alone on a line)
+    for (const word of text.replace(/ (\p{Extended_Pictographic})/gu, '\u00a0$1').split(' ')) {
       const next = cur ? `${cur} ${word}` : word;
       if (g.measureText(next).width > maxW && cur) { lines.push(cur); cur = word; } else cur = next;
     }
