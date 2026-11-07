@@ -66,7 +66,9 @@ export function allSharePages(site) {
 // tools/cards/trenchingsimulator-card.html)
 export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
   'games.jpg', 'trenchingsimulator.jpg'];
-export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp'];
+// (2026-11-08) the arcade kit's ten games: each its own link preview, cards/games/<id>.jpg (tools/games/covers.mjs)
+const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi'];
+export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp', ...KIT_GAMES.map((id) => `cards/games/${id}.jpg`)];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();

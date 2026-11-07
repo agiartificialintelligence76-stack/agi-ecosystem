@@ -26,9 +26,11 @@ import { isGame, STARS } from './list.js';
 import {
   WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText,
   barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText,
-  deletedText, reviewError, gameOfHash,
+  deletedText, reviewError, gameOfHash, tileStats, shownText,
 } from './words.js';
 import { startBoards } from './leaderboard.js';
+import { GAMES } from './list.js';
+import { SHELF, FILTERS, SORTS, sortShelf, inFilter } from './shelf.js';
 
 // the site's 18+ answer and wallet session (the home page's and her live page's too: a wallet connected there is connected
 // here), { session, wallet, level, name, notes }
@@ -184,19 +186,22 @@ function mountGame(rate, session) {
     renderAll();
   }
 
+  // its tile in the picker: its rating ("4.8" and a star, or "New") and its plays ("1.2K plays")
   function renderCard() {
     if (!card) return;
-    const c = cardStats(stats, { loading: stats === undefined });
+    const c = tileStats(stats, { loading: stats === undefined });
     const rating = $('[data-gm-stat="rating"]', card);
     if (rating) {
       rating.replaceChildren();
       if (c.rating.star) rating.append(svgOf('gm-stat-star', '0 0 24 24', STAR_PATH));
       rating.append(document.createTextNode(c.rating.value));
       if (c.rating.star) rating.append(el('span', 'sr-only', ' out of 5'));
+      rating.hidden = !c.rating.value;
     }
-    const players = $('[data-gm-stat="players"]', card), plays = $('[data-gm-stat="plays"]', card);
-    if (players) players.textContent = c.players;
-    if (plays) plays.textContent = c.plays;
+    const plays = $('[data-gm-stat="plays"]', card);
+    if (plays) { plays.textContent = c.plays; plays.hidden = !c.plays; }
+    if (stats) shelfStats.set(GAME, stats);
+    shelfChanged();
   }
 
   function renderSummary() {
@@ -589,6 +594,11 @@ function startTabs(boxes) {
       if (panel) panel.hidden = !on;
     }
     if (focus) tab.focus();
+    // (fourteen tabs scroll sideways on a phone: the picked one comes into view in its row, never the page)
+    const row = list, l = tab.offsetLeft, r = l + tab.offsetWidth;
+    if (row.scrollWidth > row.clientWidth && (l < row.scrollLeft || r > row.scrollLeft + row.clientWidth)) {
+      try { row.scrollTo({ left: l - 16, behavior: 'smooth' }); } catch { row.scrollLeft = l - 16; }
+    }
     boxes.find((b) => b.game === tab.dataset.gmTab)?.render();     // its box drawn as it shows (and asks for your review)
   }
   const picked = (tab) => tab.getAttribute('aria-selected') === 'true';
@@ -627,9 +637,117 @@ function startTabs(boxes) {
   }
 }
 
+// ---------- each game's ratings panel, from the page's one template (2026-11-08: fourteen games) ----------
+// games.html has an empty panel per game (its tab's) and one <template> of a panel's insides, written for "GAMEID" and
+// "GAMENAME": each panel gets its own copy, with its own ids
+const NAMED = ['id', 'for', 'aria-labelledby', 'aria-describedby', 'aria-controls'];
+function fillPanels() {
+  const tpl = document.getElementById('gm-panel-tpl');
+  if (!tpl) return;
+  for (const panel of document.querySelectorAll('[data-gm-rate]')) {
+    const game = panel.dataset.gmRate;
+    if (!isGame(game) || panel.childElementCount) continue;
+    const copy = tpl.content.cloneNode(true);
+    for (const node of copy.querySelectorAll('*')) {
+      for (const a of NAMED) {
+        const v = node.getAttribute(a);
+        if (v && v.includes('GAMEID')) node.setAttribute(a, v.replaceAll('GAMEID', game));
+      }
+    }
+    const walk = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+    for (let t = walk.nextNode(); t; t = walk.nextNode()) if (t.data.includes('GAMENAME')) t.data = t.data.replaceAll('GAMENAME', GAMES[game].name);
+    panel.append(copy);
+  }
+}
+
+// ---------- the picker: filters, the sort, and each tile's gameplay preview ----------
+// Every tile shows a still from its game; the ones on screen play a short muted loop of the game playing itself (a few at
+// a time, the ones nearest the middle of the screen; on a computer, the one under the mouse first). Nothing plays with
+// "reduce motion" or the browser's data saver on: the stills stay. A preview that can't load is never asked again.
+const shelfStats = new Map();
+let shelfChanged = () => {};
+function startShelf() {
+  const grid = $('[data-gm-grid]');
+  if (!grid) return;
+  const tiles = new Map([...grid.querySelectorAll('[data-gm-game]')].map((li) => [li.dataset.gmGame, li]));
+  const shown = $('[data-gm-shown]');
+  const chips = [...document.querySelectorAll('[data-gm-filter]')];
+  const sortPick = $('[data-gm-sort]');
+  let filter = 'all', sort = 'featured';
+  const labelOf = (list, id) => list.find((x) => x.id === id)?.label || '';
+
+  function order() {
+    const list = sortShelf(sort, Object.fromEntries(shelfStats));
+    const now = [...grid.children].map((li) => li.dataset.gmGame).join();
+    if (now !== list.map((g) => g.id).join()) for (const g of list) { const li = tiles.get(g.id); if (li) grid.append(li); }
+    for (const g of SHELF) { const li = tiles.get(g.id); if (li) li.hidden = !inFilter(g, filter); }
+    pickPlaying();
+  }
+  const say = () => { if (shown) shown.textContent = shownText([...tiles.values()].filter((li) => !li.hidden).length, labelOf(FILTERS, filter), labelOf(SORTS, sort)); };
+  for (const chip of chips) {
+    chip.addEventListener('click', () => {
+      filter = chip.dataset.gmFilter;
+      for (const c of chips) c.setAttribute('aria-pressed', String(c === chip));
+      order(); say();
+    });
+  }
+  sortPick?.addEventListener('change', () => { sort = sortPick.value; order(); say(); });
+  // Most played and Top rated follow the numbers as they come in
+  shelfChanged = () => { if (sort === 'played' || sort === 'rated') order(); };
+
+  // ---------- previews ----------
+  const media = (q) => { try { return matchMedia(q).matches; } catch { return false; } };
+  const still = media('(prefers-reduced-motion: reduce)') || navigator.connection?.saveData === true;
+  const fine = media('(hover: hover) and (pointer: fine)');
+  const MAX = fine ? 6 : 4;
+  const seen = new Map();                 // a tile → how much of it is on screen (0 to 1)
+  let hovered = null;
+  const vids = new Map([...tiles].map(([id, li]) => [id, li.querySelector('[data-gm-video]')]));
+  function play(id) {
+    const v = vids.get(id), li = tiles.get(id);
+    if (!v || li.dataset.gmNoVideo !== undefined) return;
+    if (!v.getAttribute('src')) {
+      v.addEventListener('playing', () => li.classList.add('is-live'), { once: false });
+      v.addEventListener('error', () => { li.dataset.gmNoVideo = ''; li.classList.remove('is-live'); }, { once: true });
+      v.src = v.dataset.gmVideo;
+    }
+    if (v.paused) v.play().catch(() => { /* not allowed now: its still stays */ });
+  }
+  function stop(id) { const v = vids.get(id); if (v && !v.paused) v.pause(); }
+  function pickPlaying() {
+    if (still || document.visibilityState === 'hidden') { for (const id of vids.keys()) stop(id); return; }
+    const mid = innerHeight / 2;
+    const ranked = [...seen].filter(([li, r]) => r >= 0.55 && !li.hidden)
+      .map(([li]) => { const b = li.getBoundingClientRect(); return [li.dataset.gmGame, Math.abs(b.top + b.height / 2 - mid)]; })
+      .sort((a, b) => a[1] - b[1]).map(([id]) => id);
+    const on = new Set(ranked.slice(0, MAX));
+    if (hovered) on.add(hovered);
+    for (const id of vids.keys()) (on.has(id) ? play : stop)(id);
+  }
+  if (typeof IntersectionObserver === 'function') {
+    const io = new IntersectionObserver((entries) => {
+      for (const e of entries) seen.set(e.target, e.isIntersecting ? e.intersectionRatio : 0);
+      pickPlaying();
+    }, { threshold: [0, 0.3, 0.55, 0.8, 1] });
+    for (const li of tiles.values()) io.observe(li);
+  }
+  if (fine) {
+    for (const [id, li] of tiles) {
+      li.addEventListener('pointerenter', () => { hovered = id; pickPlaying(); });
+      li.addEventListener('pointerleave', () => { if (hovered === id) hovered = null; pickPlaying(); });
+    }
+  }
+  let scrollT = 0;
+  addEventListener('scroll', () => { clearTimeout(scrollT); scrollT = setTimeout(pickPlaying, 120); }, { passive: true });
+  document.addEventListener('visibilitychange', pickPlaying);
+  say();
+}
+
 function start() {
   startTheme();
   startMenu();
+  fillPanels();
+  startShelf();
   startBoards();          // the leaderboards: asked once their section is near the screen
   const session = createSession();
   const boxes = [...document.querySelectorAll('[data-gm-rate]')]
@@ -638,7 +756,7 @@ function start() {
   if (!boxes.length) return;
   startTabs(boxes);
   addEventListener('storage', (e) => session.follow(e));
-  // each game's numbers at once (the shelf shows them all)
+  // each game's numbers at once (every tile shows them)
   for (const box of boxes) box.start();
 }
 

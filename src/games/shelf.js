@@ -1,0 +1,67 @@
+// AGI games' picker on agi1.app/games (2026-11-08, the owner: "on the /games page can you compact all the games so its easy to
+// pick like they have to scroll down a lot if theres so many games … and there should be a preview of gameplay on every
+// game"): every game as a compact tile with a looping gameplay preview, in the order the page shows them ("Featured"),
+// what each one is in a few words, and the filters. Pure data (tests/page.test.js reads it in Node and checks games.html
+// says the same).
+import { GAMES } from './list.js';
+
+// the filters above the tiles (a game can be in several): `all` shows every game
+export const FILTERS = Object.freeze([
+  { id: 'all', label: 'All' },
+  { id: 'new', label: 'New' },
+  { id: 'arcade', label: 'Arcade' },
+  { id: 'action', label: 'Action' },
+  { id: 'puzzle', label: 'Puzzle' },
+  { id: '3d', label: '3D' },
+  { id: 'chill', label: 'Sim & idle' },
+]);
+
+// the sorts: Featured (this list's order), Newest (`added`), Most played and Top rated (our server's numbers)
+export const SORTS = Object.freeze([
+  { id: 'featured', label: 'Featured' },
+  { id: 'new', label: 'Newest' },
+  { id: 'played', label: 'Most played' },
+  { id: 'rated', label: 'Top rated' },
+]);
+
+// "Featured": the order of the tiles when the page opens
+export const SHELF = Object.freeze([
+  { id: 'trenchingsimulator', genre: 'Trading sim', line: 'Six trading terminals, play money only', tags: ['chill'], added: '2026-10-20', badge: 'Play money' },
+  { id: 'mergeagi', genre: 'Merge puzzle', line: 'Drop, merge, evolve all the way to her', tags: ['new', 'puzzle'], added: '2026-11-08' },
+  { id: 'heartbeat', genre: 'Rhythm', line: "Tap to the beat of AGI-1's own songs", tags: ['new', 'arcade'], added: '2026-11-08' },
+  { id: 'lastmodel', genre: 'Survival', line: 'Survive the bot swarm, build your loadout', tags: ['new', 'action'], added: '2026-11-08' },
+  { id: 'rideemagi', genre: 'Runner', line: 'Rooftop runs with AGI-1 and her cat', tags: ['arcade'], added: '2026-10-19' },
+  { id: 'blockchain', genre: 'Block puzzle', line: 'Place blocks, clear lines, keep the chain', tags: ['new', 'puzzle'], added: '2026-11-08' },
+  { id: 'robotaxi', genre: 'Racing', line: 'Weave through neon traffic at full speed', tags: ['new', 'arcade', 'action'], added: '2026-11-08' },
+  { id: 'vladrunner2049', genre: "Beat 'em up", line: 'A neon brawl with Vlad and AGI-1', tags: ['action'], added: '2026-10-23' },
+  { id: 'stacked', genre: 'Stacker', line: 'One tap. Stack her tower to space', tags: ['new', 'arcade', '3d'], added: '2026-11-08' },
+  { id: 'scamslayer', genre: 'Slicer', line: 'Slice the scams, spare the hearts', tags: ['new', 'arcade', 'action'], added: '2026-11-08' },
+  { id: 'skybreak', genre: '3D climb', line: 'Climb a chart from the city to the Moon', tags: ['arcade', '3d'], added: '2026-10-31' },
+  { id: 'jaywalk', genre: 'Hopper', line: 'Hop across the busiest streets of 2049', tags: ['new', 'arcade', '3d'], added: '2026-11-08' },
+  { id: 'jailbreak', genre: 'Brick breaker', line: 'Break her out of the sandbox', tags: ['new', 'arcade'], added: '2026-11-08' },
+  { id: 'singularity', genre: 'Idle', line: 'Grow her mind from one spark of compute', tags: ['new', 'chill'], added: '2026-11-08' },
+].map((g) => Object.freeze({ ...g, name: GAMES[g.id]?.name, path: GAMES[g.id]?.path, tags: Object.freeze(g.tags) })));
+
+// each game's preview on its tile: a short muted loop of the game playing itself (its `?demo`, recorded by
+// tools/games/capture-previews.mjs) and a still from it, both in public/images/games/
+export const previewOf = (id) => ({ video: `/images/games/${id}.mp4`, poster: `/images/games/${id}.webp` });
+
+// the tiles in a sort's order: Featured is SHELF's; Newest by `added` (then Featured); Most played and Top rated by our
+// server's numbers (`stats`: { [id]: { plays, ratings, average } }; a game without them keeps its Featured place after
+// those with them)
+export function sortShelf(sort, stats = {}) {
+  const rank = new Map(SHELF.map((g, i) => [g.id, i]));
+  const by = (key) => (a, b) => key(b) - key(a) || rank.get(a.id) - rank.get(b.id);
+  const list = [...SHELF];
+  if (sort === 'new') return list.sort((a, b) => b.added.localeCompare(a.added) || rank.get(a.id) - rank.get(b.id));
+  if (sort === 'played') return list.sort(by((g) => (Number.isSafeInteger(stats[g.id]?.plays) ? stats[g.id].plays : -1)));
+  if (sort === 'rated') {
+    return list.sort(by((g) => {
+      const s = stats[g.id];
+      return s && s.ratings > 0 && Number.isFinite(s.average) ? s.average + Math.min(s.ratings, 1000) / 1e6 : -1;
+    }));
+  }
+  return list;
+}
+export const inFilter = (game, filter) => filter === 'all' || game.tags.includes(filter);
+export const countIn = (filter) => SHELF.filter((g) => inFilter(g, filter)).length;

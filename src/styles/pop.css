@@ -633,7 +633,7 @@
    checks on what's live, a pink "We're here"; each coming-soon page its own color block (stake mint, giveaways honey;
    games.html is AGI games' own page since 2026-10-19, below) */
 [data-skin='pop'] .rm-hero {
-  margin-top: -72px; padding-top: calc(72px + clamp(40px, 6vw, 84px)); padding-bottom: clamp(64px, 8vw, 112px);
+  margin-top: -72px; padding-top: calc(72px + clamp(22px, 3.2vw, 44px)); padding-bottom: clamp(30px, 4vw, 52px);
   color: #fff; background: var(--pop-violet); border-bottom: 3px solid var(--pop-ink);
   --fg: #fff; --fg-2: rgb(255 255 255 / .9); --fg-3: rgb(255 255 255 / .82); --line: rgb(255 255 255 / .35); --kicker-dot: var(--pop-honey);
 }
@@ -796,7 +796,7 @@
    hard shadow, stuck over the top of its E; then the shelf on lavender, its ratings and reviews on paper, what's coming on
    honey: white cards with ink outlines and hard shadows, honey stars with ink outlines */
 [data-skin='pop'] .gm-hero {
-  margin-top: -72px; padding-top: calc(72px + clamp(40px, 6vw, 84px)); padding-bottom: clamp(64px, 8vw, 112px);
+  margin-top: -72px; padding-top: calc(72px + clamp(22px, 3.2vw, 44px)); padding-bottom: clamp(30px, 4vw, 52px);
   color: #fff; background: var(--pop-violet); border-bottom: 3px solid var(--pop-ink);
   --fg: #fff; --fg-2: rgb(255 255 255 / .9); --fg-3: rgb(255 255 255 / .82); --line: rgb(255 255 255 / .35); --kicker-dot: var(--pop-honey);
 }
@@ -818,7 +818,7 @@
   font-family: var(--display); font-weight: 900; font-stretch: 100%; letter-spacing: .01em; text-shadow: none;
   color: var(--pop-ink); background: var(--pop-honey); border: max(2px, .07em) solid var(--pop-ink); box-shadow: .09em .11em 0 var(--pop-ink);
 }
-[data-skin='pop'] .gm-sub { font-family: var(--serif); font-style: italic; font-size: clamp(28px, 3.6vw, 44px); line-height: 1.05; letter-spacing: -0.01em; color: #fff; }
+[data-skin='pop'] .gm-sub { font-family: var(--serif); font-style: italic; font-size: clamp(26px, 3.2vw, 40px); line-height: 1.05; letter-spacing: -0.01em; color: #fff; }
 [data-skin='pop'] .gm-lede { color: rgb(255 255 255 / .92); }
 [data-skin='pop'] .gm-say { color: var(--pop-ink); background: #fff; border: 2px solid var(--pop-ink); box-shadow: 3px 3px 0 var(--pop-ink); font-weight: 500; }
 [data-skin='pop'] .gm-say img { box-shadow: 0 0 0 2px var(--pop-ink); }
@@ -829,35 +829,40 @@
 [data-skin='pop'] .gm-rate { --sec: var(--pop-paper); }
 [data-skin='pop'] .gm-next { --sec: var(--pop-honey); --fg-2: #2d1f52; --fg-3: #3d3064; }
 [data-skin='pop'] .gm-next :focus-visible { outline-color: var(--pop-ink); }
-[data-skin='pop'] .gm-game, [data-skin='pop'] .gm-sum, [data-skin='pop'] .gm-box {
+[data-skin='pop'] .gm-sum, [data-skin='pop'] .gm-box {
   background: var(--bg); border: 3px solid var(--edge); border-radius: var(--radius); box-shadow: 0 9px 0 -2px var(--shade);
 }
-/* the game's card: its picture on violet with pink halftone, honey Play */
-[data-skin='pop'] .gm-game-art {
-  background-color: var(--pop-violet); border-right: 3px solid var(--edge);
-  background-image: radial-gradient(circle, rgb(255 77 166 / .5) 1.6px, transparent 1.9px); background-size: 14px 14px;
+/* the picker (2026-11-08): a tighter lavender band; sticker tiles (white, ink outline, hard shadow) that hop up under the
+   mouse, a honey "Play" and a pink "New" sticker; the filters white pills, the picked one ink */
+[data-skin='pop'] main > .gm-shelf { padding-block: clamp(36px, 5vw, 64px) clamp(52px, 6vw, 84px); }
+[data-skin='pop'] .gm-shelf-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .gm-shelf-n { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); box-shadow: 2px 2px 0 var(--pop-ink); font-weight: 700; }
+[data-skin='pop'] .gm-filter {
+  color: var(--pop-ink); background: #fff; border: 2px solid var(--edge); box-shadow: 0 3px 0 var(--shade);
+  font-family: var(--display); font-weight: 850; font-stretch: 108%;
 }
-[data-skin='pop'] .gm-tag { color: var(--fg); background: var(--bg); border: 2px solid var(--edge); font-weight: 700; }
-[data-skin='pop'] .gm-tag.is-beta { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
-[data-skin='pop'] .gm-tag.is-play { color: var(--pop-ink); background: var(--pop-mint); border-color: var(--pop-ink); }
-[data-skin='pop'] .gm-game-name { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
-[data-skin='pop'] .gm-stat { background: var(--bg-2); border: 2px solid var(--edge); border-radius: 16px; }
-[data-skin='pop'] .gm-stat dd { font-family: var(--display); font-weight: 850; font-stretch: 110%; letter-spacing: -0.01em; }
+[data-skin='pop'] .gm-filter:hover { background: var(--pop-paper); border-color: var(--edge); }
+[data-skin='pop'] .gm-filter[aria-pressed='true'] { color: #fff; background: var(--pop-ink); border-color: var(--pop-ink); }
+[data-skin='pop'] .gm-sort-pick { color: var(--pop-ink); background: #fff; border: 2px solid var(--edge); font-family: var(--display); font-weight: 800; }
+[data-skin='pop'] .gm-tile-link { background: var(--bg); border: 3px solid var(--edge); border-radius: 20px; box-shadow: 0 7px 0 -1px var(--shade); }
+[data-skin='pop'] .gm-tile-link:hover { border-color: var(--edge); box-shadow: 0 11px 0 -1px var(--shade); }
+[data-skin='pop'] .gm-tile-link:focus-visible { outline: 3px solid var(--pop-violet); }
+[data-skin='pop'] .gm-tile-media { border-bottom: 3px solid var(--edge); }
+[data-skin='pop'] .gm-tile-name { font-family: var(--display); font-weight: 900; font-stretch: 108%; letter-spacing: -0.01em; }
+[data-skin='pop'] .gm-tile-badge.is-new { color: var(--pop-ink); background: var(--pop-pink); border: 2px solid var(--pop-ink); rotate: -4deg; font-weight: 700; }
+[data-skin='pop'] .gm-tile-badge.is-play { color: var(--pop-ink); background: var(--pop-mint); border: 2px solid var(--pop-ink); rotate: -4deg; font-weight: 700; }
+[data-skin='pop'] .gm-tile-go { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); box-shadow: 0 3px 0 var(--pop-ink); font-family: var(--display); font-weight: 850; }
+[data-skin='pop'] .gm-tile-genre { color: var(--pop-violet); font-weight: 600; }
 [data-skin='pop'] .gm-stat-star { fill: var(--pop-honey); stroke: var(--pop-ink); stroke-width: 1.6; stroke-linejoin: round; }
-[data-skin='pop'] .gm-play { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-ink); }
-[data-skin='pop'] .gm-play:hover { color: var(--pop-ink); background: #ffd766; border-color: var(--pop-ink); }
 /* a tab for each game's ratings (2026-10-21): white pills with ink outlines and hard shadows, the picked one honey, each
    game's picture on violet like its card's */
 [data-skin='pop'] .gm-tab {
-  color: var(--fg); background: var(--bg); border: 2px solid var(--edge); border-radius: 18px; box-shadow: 0 5px 0 -1px var(--shade);
+  color: var(--fg); background: var(--bg); border: 2px solid var(--edge); border-radius: 999px; box-shadow: 0 4px 0 -1px var(--shade);
   font-family: var(--display); font-weight: 850; font-stretch: 108%; letter-spacing: -0.005em;
 }
 [data-skin='pop'] .gm-tab:hover { color: var(--pop-ink); background: var(--pop-lav); border-color: var(--edge); }
 [data-skin='pop'] .gm-tab[aria-selected='true'] { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-ink); }
-[data-skin='pop'] .gm-tab-art {
-  background-color: var(--pop-violet); box-shadow: 0 0 0 2px var(--pop-ink);
-  background-image: radial-gradient(circle, rgb(255 77 166 / .5) 1.2px, transparent 1.5px); background-size: 8px 8px;
-}
+[data-skin='pop'] .gm-tab-art { background-color: var(--pop-violet); box-shadow: 0 0 0 2px var(--pop-ink); }
 /* its ratings: the average violet with a pink echo; stars honey with ink outlines (white where they're empty) */
 [data-skin='pop'] .gm-avg-n { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; color: var(--pop-violet); text-shadow: .05em .05em 0 var(--pop-pink); }
 [data-skin='pop'] .gm-box-title, [data-skin='pop'] .gm-reviews-title, [data-skin='pop'] .gm-soon-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
@@ -905,11 +910,17 @@
 [data-skin='pop'][data-theme='dark'] .gm-lead { --sec: #0b2126; --shade: var(--pop-mint); --kicker-dot: var(--pop-mint); --fg-2: #cbbff0; --fg-3: #ad9fdb; }
 [data-skin='pop'][data-theme='dark'] .gm-lead :focus-visible { outline-color: var(--pop-mint); }
 [data-skin='pop'][data-theme='dark'] .gm-lb { border-width: 2px; }
-[data-skin='pop'][data-theme='dark'] .gm-game, [data-skin='pop'][data-theme='dark'] .gm-sum, [data-skin='pop'][data-theme='dark'] .gm-box,
+[data-skin='pop'][data-theme='dark'] .gm-sum, [data-skin='pop'][data-theme='dark'] .gm-box,
 [data-skin='pop'][data-theme='dark'] .gm-soon { border-width: 2px; }
-[data-skin='pop'][data-theme='dark'] .gm-game-art { background-color: #2a0f7a; border-right-width: 2px; }
-[data-skin='pop'][data-theme='dark'] .gm-play { border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-pink); }
-[data-skin='pop'][data-theme='dark'] .gm-play:hover { border-color: var(--pop-ink); }
+[data-skin='pop'][data-theme='dark'] .gm-tile-link { border-width: 2px; box-shadow: 0 7px 0 -1px var(--pop-violet); }
+[data-skin='pop'][data-theme='dark'] .gm-tile-link:hover { box-shadow: 0 11px 0 -1px var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .gm-tile-media { border-bottom-width: 2px; }
+[data-skin='pop'][data-theme='dark'] .gm-tile-genre { color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .gm-filter { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); box-shadow: 0 3px 0 var(--pop-violet); }
+[data-skin='pop'][data-theme='dark'] .gm-filter:hover { background: #2a1660; }
+[data-skin='pop'][data-theme='dark'] .gm-filter[aria-pressed='true'] { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
+[data-skin='pop'][data-theme='dark'] .gm-sort-pick { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .gm-shelf-n { box-shadow: 2px 2px 0 var(--pop-pink); }
 [data-skin='pop'][data-theme='dark'] .gm-tab[aria-selected='true'] { box-shadow: 0 5px 0 0 var(--pop-pink); }
 [data-skin='pop'][data-theme='dark'] .gm-tab-art { background-color: #2a0f7a; box-shadow: 0 0 0 2px var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-avg-n { color: var(--pop-honey); }
@@ -919,12 +930,11 @@
 [data-skin='pop'][data-theme='dark'] .gm-pick-star svg { stroke: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-pick-star.is-on { color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] .gm-fine { border-top-width: 2px; }
-@media (max-width: 960px) {
-  [data-skin='pop'] .gm-game-art { border-right: 0; border-bottom: 3px solid var(--edge); }
-  [data-skin='pop'][data-theme='dark'] .gm-game-art { border-bottom-width: 2px; }
-}
 @media (max-width: 760px) {
-  [data-skin='pop'] .gm-hero { margin-top: -64px; padding-top: calc(64px + 36px); }
+  [data-skin='pop'] .gm-hero { margin-top: -64px; padding-top: calc(64px + 24px); }
+  [data-skin='pop'] .gm-tile-link { border-width: 2.5px; border-radius: 16px; box-shadow: 0 5px 0 -1px var(--shade); }
+  [data-skin='pop'] .gm-tile-media { border-bottom-width: 2.5px; }
+  [data-skin='pop'] .gm-sub { font-size: clamp(22px, 6.4vw, 30px); }
 }
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */
 [data-skin='pop'] .notice { border: 2px solid var(--edge); border-radius: 22px; box-shadow: 0 8px 0 -1px var(--shade); }

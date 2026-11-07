@@ -157,6 +157,9 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
     roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
     trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html', skybreak: 'skybreak.html', memes: 'memes.html', pfp: 'pfp.html', vote: 'vote.html',
     owner: 'owner-command.html', content: 'content.html', notfound: '404.html', verify: 'verify.html',
+    // (2026-11-08) the arcade kit's ten games
+    mergeagi: 'mergeagi.html', blockchain: 'blockchain.html', heartbeat: 'heartbeat.html', scamslayer: 'scamslayer.html', lastmodel: 'lastmodel.html',
+    singularity: 'singularity.html', jailbreak: 'jailbreak.html', stacked: 'stacked.html', jaywalk: 'jaywalk.html', robotaxi: 'robotaxi.html',
   }, 'only website entries, including the owner editor and its custom-page shell; never the clips page or live-show scene');
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the
