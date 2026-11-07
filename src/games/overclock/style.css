@@ -1,0 +1,17 @@
+/* OVERCLOCK (2026-11-08): neon pinball on AGI-1's motherboard. The table, its display and its panels are drawn on the
+   canvas; this sets the page's colours and the few DOM bits of the game's own. */
+.ak[data-ak-game='overclock'] {
+  --ak-bg: #0b0414;
+  --ak-accent: var(--ak-honey);
+}
+.oc-canvas { cursor: default; }
+.ak[data-ak-game='overclock'] .ak-title .ak-title-body { margin-top: 8vh; }
+/* a phone held sideways: the side panels show the score and the ball, so the bar keeps only its buttons */
+.ak[data-ak-game='overclock'].oc-side-hud .ak-hud { visibility: hidden; }
+/* pinball scores run to millions: the end card's number a little smaller, so nine or ten digits fit a phone */
+.ak[data-ak-game='overclock'] .ak-score { font-size: clamp(40px, 12.5vw, 80px); }
+/* a narrow phone: the bar's numbers without their labels (the display above the table names them) */
+@media (max-width: 400px) {
+  .ak[data-ak-game='overclock'] .ak-chip-label { display: none; }
+  .ak[data-ak-game='overclock'] .ak-chip { padding: 0 11px; }
+}

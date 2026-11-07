@@ -1,0 +1,136 @@
+/* BEAT THE AGI (2026-11-08): its own styles; the arcade kit's frame is src/games/kit/kit.css. Every rule names a bt-
+   class or the game's own root. The board, the stones, AGI-1 and her bars are drawn on the canvas (./render.js); the
+   night stage behind them is CSS: a deep violet room, a warm spotlight on the table, a halftone of dots. */
+.ak[data-ak-game='beattheagi'] {
+  --ak-bg: #1a0d33;
+  --ak-accent: var(--ak-honey);
+}
+.bt-stage {
+  background:
+    radial-gradient(70% 55% at 50% 52%, rgba(255, 201, 51, 0.10), transparent 70%),
+    radial-gradient(120% 70% at 50% -10%, rgba(107, 59, 255, 0.30), transparent 60%),
+    radial-gradient(90% 50% at 50% 110%, rgba(63, 240, 195, 0.07), transparent 70%),
+    linear-gradient(180deg, #221042 0%, #1a0d33 55%, #120828 100%);
+}
+.bt-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(205, 184, 255, 0.13) 1.1px, transparent 1.6px);
+  background-size: 16px 16px;
+  -webkit-mask-image: radial-gradient(120% 90% at 50% 40%, transparent 30%, #000 90%);
+  mask-image: radial-gradient(120% 90% at 50% 40%, transparent 30%, #000 90%);
+}
+.bt-stage canvas { cursor: default; }
+
+/* the notch and the rounded corners: read by game.js to keep the board clear of them */
+.bt-safe {
+  position: absolute; inset: 0; z-index: -1; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* pass & play's undo, next to the status (placed by game.js) */
+.ak-btn.bt-undo { position: absolute; z-index: 5; width: 116px; min-height: 44px; padding: 6px 14px; gap: 7px; font-size: 13px; box-shadow: 0 4px 0 var(--ak-ink); }
+.ak-btn.bt-undo svg { width: 18px; height: 18px; }
+
+/* ---------- the level chips (the title, the ladder card) ---------- */
+.bt-chip {
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
+  min-width: 58px; height: 34px; padding: 0 12px; border-radius: 999px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 115%; font-size: 14px; letter-spacing: .02em;
+  position: relative; white-space: nowrap;
+}
+.bt-chip b { font-weight: 900; }
+.bt-chip svg { width: 13px; height: 13px; flex: none; }
+.bt-chip.is-done { background: var(--ak-honey); }
+.bt-chip.is-current { background: var(--ak-mint); }
+.bt-chip.is-locked { background: transparent; color: color-mix(in srgb, var(--ak-lav) 75%, transparent); border-color: color-mix(in srgb, var(--ak-lav) 35%, transparent); box-shadow: none; }
+.bt-chip.is-small { min-width: 0; height: 28px; padding: 0 9px; font-size: 12px; gap: 3px; box-shadow: 0 2px 0 var(--ak-ink); border-width: 2px; }
+.bt-chip.is-small.is-locked { border-style: dashed; }
+.bt-chip.is-small svg { width: 11px; height: 11px; }
+
+/* the title: the climb in one row */
+.bt-mini-wrap { display: grid; justify-items: center; width: 100%; }
+.bt-mini { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; justify-content: center; gap: 6px; }
+.bt-mini li { display: block; }
+
+/* ---------- the ladder card ---------- */
+.bt-card { width: min(460px, 100%); }
+.bt-lede { margin: -8px 0 12px; font-size: 14.5px; line-height: 1.4; color: var(--ak-ink2); }
+.bt-levels { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.bt-level {
+  width: 100%; display: grid; grid-template-columns: 78px 1fr auto; align-items: center; gap: 10px;
+  min-height: 50px; padding: 6px 12px 6px 9px; border-radius: 16px; text-align: left;
+  background: #fff; border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease;
+}
+.bt-level:hover { background: var(--ak-lav); }
+.bt-level:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.bt-level .bt-chip { width: 100%; min-width: 0; padding: 0 8px; box-shadow: none; }
+.bt-short { display: none; }
+.bt-level.is-current { background: color-mix(in srgb, var(--ak-mint) 22%, #fff); }
+.bt-level.is-locked { background: color-mix(in srgb, var(--ak-lav) 55%, #fff); box-shadow: none; cursor: not-allowed; }
+.bt-level.is-locked .bt-chip { color: var(--ak-ink2); border-color: var(--ak-ink2); }
+.bt-level.is-locked .bt-level-blurb { color: var(--ak-ink2); }
+.bt-level-text { display: grid; gap: 1px; min-width: 0; }
+.bt-level-blurb { font-weight: 700; font-size: 14.5px; line-height: 1.25; color: var(--ak-ink); }
+.bt-level-meta { font-family: var(--ak-mono); font-size: 12px; font-weight: 650; color: var(--ak-ink2); }
+.bt-level-go { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--ak-honey); border: 2px solid var(--ak-ink); }
+.bt-level-go svg { width: 16px; height: 16px; }
+.bt-level.is-nope { animation: bt-nope .32s ease; }
+@keyframes bt-nope { 20%, 60% { transform: translateX(-5px); } 40%, 80% { transform: translateX(5px); } }
+
+.bt-starter { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 12px; margin-top: 16px; padding-top: 14px; border-top: 2px dashed color-mix(in srgb, var(--ak-ink) 22%, transparent); }
+.bt-starter-label { font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ak-violet); }
+.bt-seg { display: inline-flex; border: 2.5px solid var(--ak-ink); border-radius: 999px; overflow: hidden; box-shadow: 0 3px 0 var(--ak-ink); }
+.bt-seg-btn { min-height: 40px; padding: 6px 13px; font-weight: 750; font-size: 13.5px; background: #fff; }
+.bt-seg-btn + .bt-seg-btn { border-left: 2px solid var(--ak-ink); }
+.bt-seg-btn[aria-pressed='true'] { background: var(--ak-mint); }
+.bt-note { margin: 12px 0 0; font-family: var(--ak-serif); font-style: italic; font-size: 16px; line-height: 1.3; color: var(--ak-ink2); }
+
+/* ---------- the end of a game ---------- */
+.bt-result-head { display: grid; justify-items: center; }
+.bt-result-title {
+  margin: 2px 0 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; text-transform: uppercase;
+  font-size: clamp(40px, 12vw, 58px); line-height: .95; letter-spacing: -0.02em;
+  color: var(--ak-ink);
+}
+.bt-result.is-win .bt-result-title, .bt-result.is-pink .bt-result-title { color: var(--ak-pink); -webkit-text-stroke: .04em var(--ak-ink); paint-order: stroke fill; text-shadow: 0 .06em 0 var(--ak-ink); }
+.bt-result.is-mint .bt-result-title, .bt-result.is-loss .bt-result-title { color: var(--ak-mint); -webkit-text-stroke: .04em var(--ak-ink); paint-order: stroke fill; text-shadow: 0 .06em 0 var(--ak-ink); }
+.bt-banner {
+  display: grid; justify-items: center; gap: 4px; margin: 14px 0 0; padding: 10px 14px 11px; border-radius: 16px;
+  background: var(--ak-honey); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink); transform: rotate(-1.5deg);
+}
+.bt-banner b { font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; }
+.bt-banner > span { font-size: 14px; font-weight: 650; }
+.bt-banner.is-agi { background: var(--ak-pink); }
+.bt-promo { display: inline-flex; align-items: center; gap: 8px; font-family: var(--ak-mono); font-weight: 750; font-size: 14px; }
+.bt-promo svg { width: 16px; height: 16px; }
+.bt-promo-to { padding: 2px 9px; border-radius: 999px; background: var(--ak-mint); border: 2px solid var(--ak-ink); }
+@media (prefers-reduced-motion: no-preference) {
+  .bt-banner { animation: bt-stamp .55s .2s cubic-bezier(.2, 1.6, .4, 1) both; }
+}
+@keyframes bt-stamp { from { opacity: .01; transform: rotate(-12deg) scale(1.6); } }
+@media (max-height: 520px) {
+  .bt-result-title { font-size: 40px; }
+  .bt-banner { margin-top: 8px; padding: 7px 12px 8px; }
+  .bt-level { min-height: 46px; padding: 6px 10px; }
+}
+@media (max-width: 440px) {
+  .bt-long { display: none; }
+  .bt-short { display: inline; }
+}
+@media (max-width: 380px) {
+  .bt-level { grid-template-columns: 74px 1fr auto; gap: 8px; padding: 5px 9px 5px 7px; }
+  .bt-level .bt-chip { font-size: 13px; padding: 0 6px; }
+  .bt-level-go { width: 28px; height: 28px; }
+  .bt-seg-btn { padding: 6px 10px; font-size: 12.5px; }
+  .bt-ladder .bt-lede, .bt-ladder .bt-note { display: none; }
+  .bt-starter { margin-top: 12px; padding-top: 10px; }
+}
+@media (max-height: 700px) {
+  .bt-ladder .bt-note { display: none; }
+  .bt-levels { gap: 6px; }
+}

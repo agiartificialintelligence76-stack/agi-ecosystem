@@ -1,0 +1,86 @@
+/* ALIGNMENT (2026-11-08): its own pieces in the arcade kit's sticker look. The playfield is a canvas (render.js); these
+   are the two choice buttons, the endings collection and the ending's row on the end-of-run card. Every rule names an
+   al- class. */
+.ak[data-ak-game='alignment'] { --ak-bg: #1b1030; --ak-accent: var(--ak-honey); }
+
+.al-canvas { cursor: grab; }
+.al-canvas.is-dragging { cursor: grabbing; }
+.al-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- the two choices ---------- */
+.al-choices { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.al-choices .al-choice {
+  position: absolute; pointer-events: auto; width: auto; min-height: 0; padding: 0 12px; gap: 7px;
+  font-size: 14.5px; letter-spacing: .03em; justify-content: center;
+  transition: transform .08s ease, box-shadow .08s ease, background-color .12s ease;
+}
+.al-choices .al-choice svg { width: 20px; height: 20px; flex: none; }
+.al-choice-label { min-width: 0; overflow: hidden; line-height: 1.02; text-align: center; overflow-wrap: break-word; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2; }
+.al-choices .al-choice.is-long { font-size: 12.5px; letter-spacing: .01em; }
+.al-choices .al-choice.is-lean { background: var(--ak-honey); transform: translateY(-2px); box-shadow: 0 7px 0 var(--ak-ink); }
+.al-choices.is-busy .al-choice { pointer-events: auto; }
+.al-choices.is-flank .al-choice { flex-direction: column; gap: 4px; padding: 6px 12px; border-radius: 22px; font-size: 15.5px; }
+.al-choices.is-flank .al-choice.is-long { font-size: 14px; }
+.al-choices.is-flank .al-choice svg { width: 24px; height: 24px; }
+.al-choices.is-flank .al-choice-right svg { order: -1; }
+.al-choices.is-flank.is-big .al-choice { font-size: 20px; border-radius: 28px; }
+.al-choices.is-flank.is-big .al-choice.is-long { font-size: 18px; }
+.al-choices.is-flank.is-big .al-choice svg { width: 30px; height: 30px; }
+.al-choices.is-flank.is-short .al-choice { font-size: 13.5px; gap: 2px; padding: 4px 10px; }
+.al-choices.is-flank.is-short .al-choice.is-long { font-size: 12px; }
+.al-choices.is-flank.is-short .al-choice svg { width: 19px; height: 19px; }
+.al-choices.is-short .al-choice { font-size: 13.5px; }
+@media (max-width: 380px) { .al-choices .al-choice { padding: 0 10px; gap: 5px; font-size: 13.5px; } .al-choices .al-choice svg { width: 17px; height: 17px; } }
+
+/* ---------- the endings collection ---------- */
+.ak-card.al-coll { width: min(640px, 100%); }
+.al-coll-count { margin: -8px 0 8px; font-size: 15px; color: var(--ak-ink2); }
+.al-coll-count b { font-family: var(--ak-mono); font-size: 18px; color: var(--ak-ink); }
+.al-coll-bar { height: 12px; border-radius: 999px; border: 2.5px solid var(--ak-ink); background: var(--ak-lav); overflow: hidden; }
+.al-coll-bar > span { display: block; height: 100%; background: var(--ak-violet); border-right: 2.5px solid var(--ak-ink); }
+.al-coll-detail { margin: 14px 0 12px; padding: 12px 14px; min-height: 92px; border-radius: 16px; background: #fff; border: 2px solid var(--ak-ink); }
+.al-coll-detail.is-locked { background: var(--ak-lav); }
+.al-coll-kicker { margin: 0; font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ak-violet); }
+.al-coll-name { margin: 2px 0 4px; font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 19px; line-height: 1.05; text-transform: uppercase; }
+.al-coll-text { margin: 0; font-family: var(--ak-serif); font-style: italic; font-size: 18px; line-height: 1.25; color: var(--ak-ink); }
+.al-coll-grid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 10px; }
+.al-end {
+  display: grid; justify-items: center; gap: 6px; width: 100%; padding: 8px 6px 9px; border-radius: 16px;
+  background: var(--ak-paper); border: 2px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  transition: transform .08s ease, box-shadow .08s ease, background-color .12s ease;
+}
+.al-end:hover { background: #fff; }
+.al-end:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.al-end.is-on { background: var(--ak-honey); }
+.al-end .al-thumb { display: block; border-radius: 10px; border: 2px solid var(--ak-ink); }
+.al-end-name { font-family: var(--ak-display); font-weight: 850; font-stretch: 108%; font-size: 11px; line-height: 1.1; letter-spacing: .02em; text-transform: uppercase; text-align: center; min-height: 2.2em; display: grid; place-items: center; }
+.al-end.is-locked .al-end-name { color: var(--ak-ink2); letter-spacing: .2em; }
+@media (max-width: 420px) {
+  .al-coll-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+  .al-end .al-thumb { width: 100% !important; height: auto !important; aspect-ratio: 1; }
+}
+
+/* ---------- the ending, on the end-of-run card ---------- */
+.al-over-end {
+  display: flex; align-items: center; gap: 12px; margin: 14px 0 0; padding: 8px 12px 8px 8px; text-align: left;
+  border-radius: 16px; background: #fff; border: 2px solid var(--ak-ink); position: relative;
+}
+.al-over-end .al-thumb { flex: none; border-radius: 10px; border: 2px solid var(--ak-ink); }
+.al-over-end-text { min-width: 0; }
+.al-over-end-kicker { margin: 0; font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ak-violet); }
+.al-over-end.is-secret .al-over-end-kicker { color: #9a6b00; }
+.al-over-end-name { margin: 2px 0 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 110%; font-size: 17px; line-height: 1.05; text-transform: uppercase; }
+.al-over-new {
+  position: absolute; top: -10px; right: -8px; padding: 4px 10px 3px; border-radius: 999px; transform: rotate(6deg);
+  background: var(--ak-pink); border: 2px solid var(--ak-ink); box-shadow: 0 2px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 120%; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+}
+@media (max-height: 520px) and (min-width: 600px) { .al-over-end { margin-top: 0; margin-bottom: 4px; } }
+.al-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+/* the title's cards rise from the bottom: the kit's dark scrim there, a little lighter so they show */
+.ak[data-ak-game='alignment'] .ak-title > .ak-screen-scrim { opacity: .5; }
+/* her own words in a toast: her voice (the end card's bubble), not a shout */
+.ak[data-ak-game='alignment'] .ak-toast.is-her {
+  text-transform: none; letter-spacing: 0; font-family: var(--ak-serif); font-style: italic; font-weight: 400; font-size: 17px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+}

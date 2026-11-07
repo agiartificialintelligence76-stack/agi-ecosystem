@@ -1,0 +1,47 @@
+/* HALLUCINATION (2026-11-08): its own few styles; the arcade kit's frame is src/games/kit/kit.css. The pictures, the cards
+   and the clock are drawn on the canvas (./render.js); here: its colors, the two tool buttons under the pictures, the
+   title's record line. Every rule names an hl- class or the game's own root. */
+.ak[data-ak-game='hallucination'] { --ak-bg: #1d0f2a; --ak-accent: var(--ak-honey); }
+.ak[data-ak-game='hallucination'] .ak-logo-line.is-pink { color: var(--ak-pink); }
+.hl-canvas { cursor: crosshair; }
+.ak[data-ak-state='title'] .hl-canvas, .ak[data-ak-state='over'] .hl-canvas { cursor: default; }
+/* its title: the dark is behind the words (its two little pictures stay bright around them) */
+.ak[data-ak-game='hallucination'] .ak-title .ak-screen-scrim { background: radial-gradient(70% 46% at 50% 50%, rgba(18, 8, 28, 0.78) 30%, rgba(18, 8, 28, 0) 100%); }
+/* the notch and the rounded corners: read by game.js to keep the cards clear of them */
+.hl-safe {
+  position: absolute; inset: 0; z-index: -1; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* the two tools: "Ask her" (a hint) and "Blink" */
+.hl-tool {
+  position: absolute; z-index: 5; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 0 12px 0 8px; border-radius: 999px; min-width: 44px; min-height: 44px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 13px; letter-spacing: .04em; text-transform: uppercase;
+  transition: transform .08s ease, box-shadow .08s ease, opacity .2s ease, filter .2s ease;
+}
+.hl-tool:hover { filter: brightness(1.04); }
+.hl-tool:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ak-ink); }
+.hl-tool[aria-disabled='true'] { opacity: .45; filter: grayscale(.5); box-shadow: 0 2px 0 var(--ak-ink); }
+.hl-tool.is-hint { background: var(--ak-honey); }
+.hl-tool.is-blink { background: var(--ak-lav); }
+.hl-tool-icon { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-lav); display: grid; place-items: center; overflow: hidden; }
+.hl-tool-icon img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.hl-tool-icon svg { width: 20px; height: 20px; display: block; }
+.hl-tool-label { white-space: nowrap; }
+.hl-tool-count {
+  position: absolute; top: -8px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px;
+  display: grid; place-items: center; background: var(--ak-pink); color: var(--ak-ink); border: 2px solid var(--ak-ink);
+  font-family: var(--ak-mono); font-weight: 800; font-size: 12px; letter-spacing: 0;
+}
+.hl-tool.is-pop .hl-tool-count { animation: hl-pop .4s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes hl-pop { 40% { transform: scale(1.45); } }
+.hl-tool.is-compact .hl-tool-label { display: none; }
+.hl-tool.is-compact { padding: 0 6px; }
+.hl-blinking .hl-tool { opacity: 0; pointer-events: none; }
+.ak[data-ak-state='title'] .hl-tool, .ak[data-ak-state='over'] .hl-tool, .ak[data-ak-demo] .hl-tool { display: none; }
+@media (prefers-reduced-motion: reduce) { .hl-tool.is-pop .hl-tool-count { animation: none; } }
+
+/* the title's record line and its daily line */
+.hl-record { margin: 0; font-family: var(--ak-mono); font-size: 12.5px; font-weight: 650; letter-spacing: .06em; text-transform: uppercase; color: color-mix(in srgb, var(--ak-fg) 72%, transparent); }

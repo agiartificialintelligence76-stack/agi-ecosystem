@@ -1,0 +1,141 @@
+/* GRADIENT DESCENT (2026-11-08): its own pieces on top of the arcade kit's frame (src/games/kit/kit.css), in the same
+   sticker language: ink outlines, hard shadows, the AK fonts. Every rule names a gd- class (or the kit's root with it).
+   The playfield is a 3D loss plot at night; these are the words and buttons over it. */
+
+.ak[data-ak-game='gradient'] { --ak-bg: #07060f; --ak-accent: var(--ak-honey); --gd-ink: #170a36; }
+
+/* the 3D view, a soft vignette over it, the effects canvas on top (it takes the pointer: aim, turn, zoom) */
+.gd-gl { z-index: 0; }
+.gd-vignette {
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: radial-gradient(120% 95% at 50% 42%, rgba(7, 6, 15, 0) 55%, rgba(7, 6, 15, .55) 100%);
+}
+.gd-fx { z-index: 2; cursor: grab; }
+.gd-fx:active { cursor: grabbing; }
+.ak[data-ak-state='title'] .gd-fx { cursor: default; }
+
+/* the bar's three numbers fit a 360 px phone */
+@media (max-width: 439px) {
+  .ak[data-ak-game='gradient'] .ak-chip { padding: 0 8px; gap: 4px; }
+  .ak[data-ak-game='gradient'] .ak-chip-label { letter-spacing: .03em; }
+  .ak[data-ak-game='gradient'] .ak-hud { gap: 4px; }
+}
+@media (max-width: 379px) {
+  .ak[data-ak-game='gradient'] .ak-chip-value { font-size: 14px; }
+  .ak[data-ak-game='gradient'] .ak-chip { padding: 0 7px; }
+}
+
+/* ---------- the hole's title card ---------- */
+.gd-banner {
+  position: absolute; z-index: 4; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 10px);
+  display: grid; justify-items: center; gap: 2px; padding: 10px 20px 11px; border-radius: 20px;
+  width: max-content; max-width: min(calc(100% - 28px), 460px); text-align: center;
+  background: var(--ak-paper); color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 0 5px 0 var(--ak-ink);
+  opacity: 0; pointer-events: none;
+}
+.gd-banner-kick { font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ak-violet); }
+.gd-banner-name { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: clamp(20px, 5.6vw, 28px); line-height: 1.02; letter-spacing: .005em; text-transform: uppercase; }
+.gd-banner-pun { font-family: var(--ak-serif); font-style: italic; font-size: 17px; line-height: 1.2; color: var(--ak-ink2); }
+
+/* ---------- the result: a stamp in the middle ---------- */
+.gd-stamp {
+  position: absolute; z-index: 5; left: 50%; top: 27%; width: max-content; max-width: calc(100% - 28px);
+  display: grid; justify-items: center; gap: 4px; padding: 12px 22px 12px; border-radius: 18px;
+  background: var(--ak-honey); color: var(--ak-ink); border: 3.5px solid var(--ak-ink); box-shadow: 0 6px 0 var(--ak-ink);
+  opacity: 0; pointer-events: none; text-align: center;
+}
+.gd-stamp b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: clamp(24px, 6.6vw, 46px); line-height: .95; letter-spacing: .01em; text-transform: uppercase; white-space: normal; text-wrap: balance; }
+.gd-stamp span { font-family: var(--ak-mono); font-weight: 750; font-size: 13.5px; letter-spacing: 0; }
+.gd-stamp.is-pink { background: var(--ak-pink); }
+.gd-stamp.is-mint { background: var(--ak-mint); }
+.gd-stamp.is-honey { background: var(--ak-honey); }
+.gd-stamp.is-lav { background: var(--ak-lav); }
+
+/* ---------- AGI-1 says ---------- */
+.gd-say {
+  position: absolute; z-index: 4; left: 50%; bottom: calc(18px + var(--ak-safe-b));
+  display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(calc(100% - 132px), 440px);
+  padding: 5px 16px 5px 5px; border-radius: 999px;
+  background: #fff; color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  opacity: 0; pointer-events: none;
+}
+.gd-say img { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
+.gd-say p { margin: 0; font-family: var(--ak-serif); font-style: italic; font-size: 18px; line-height: 1.15; }
+
+/* ---------- the first hole's hint ---------- */
+.gd-hint {
+  position: absolute; z-index: 3; left: 50%; bottom: calc(84px + var(--ak-safe-b)); translate: -50% 0;
+  width: max-content; max-width: min(calc(100% - 150px), 420px);
+  padding: 9px 16px 8px; border-radius: 16px; background: var(--ak-ink); color: var(--ak-paper); border: 2px solid var(--ak-paper);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 112%; font-size: 12px; line-height: 1.3; letter-spacing: .08em; text-transform: uppercase; text-align: center;
+  opacity: 0; pointer-events: none; text-wrap: balance;
+}
+
+/* ---------- map and recentre: round stickers at the bottom right ---------- */
+.gd-tools {
+  position: absolute; z-index: 5; right: calc(14px + var(--ak-safe-r)); bottom: calc(16px + var(--ak-safe-b));
+  display: grid; gap: 10px; justify-items: end;
+}
+.gd-tool {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px; min-width: 50px; height: 50px; padding: 0 14px;
+  border-radius: 999px; background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; font-size: 12.5px; letter-spacing: .08em; text-transform: uppercase;
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease;
+}
+.gd-tool svg { width: 22px; height: 22px; flex: none; }
+.gd-tool:hover { background: #fff; }
+.gd-tool:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ak-ink); }
+.gd-tool[aria-pressed='true'] { background: var(--ak-mint); }
+@media (max-width: 479px) { .gd-tool-label { display: none; } .gd-tool { padding: 0; width: 50px; } }
+
+/* ---------- the scorecard ---------- */
+.gd-card { text-align: center; }
+.gd-card-title { margin-bottom: 4px; font-size: clamp(28px, 8vw, 38px); }
+.gd-card-title.is-pink { color: #d61f7d; }
+.gd-card-title.is-mint { color: #0f9e7c; }
+.gd-card-title.is-honey { color: #b78300; }
+.gd-card-sub { margin: 0; font-family: var(--ak-mono); font-weight: 650; font-size: 13.5px; color: var(--ak-ink2); }
+.gd-card-say { margin-top: 12px; }
+.gd-card-total { margin: 8px 0 0; font-size: 14px; color: var(--ak-ink2); }
+.gd-card-total b { font-family: var(--ak-mono); font-weight: 800; color: var(--ak-ink); }
+.gd-sc-wrap { margin: 12px 0 0; overflow-x: auto; }
+.gd-sc { width: 100%; border-collapse: separate; border-spacing: 3px; font-family: var(--ak-mono); font-variant-numeric: tabular-nums; }
+.gd-sc th, .gd-sc td { padding: 6px 2px; border-radius: 8px; text-align: center; font-size: 14px; line-height: 1; }
+.gd-sc th[scope='row'] { padding: 6px 6px 6px 2px; text-align: left; font-family: var(--ak-display); font-weight: 900; font-stretch: 120%; font-size: 9.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ak-ink2); }
+.gd-sc thead th { font-family: var(--ak-display); font-weight: 900; font-size: 11px; color: var(--ak-ink2); }
+.gd-sc thead th.is-now { color: var(--ak-ink); text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+.gd-sc-par td { color: var(--ak-ink2); font-weight: 650; }
+.gd-sc-you td { font-weight: 850; background: var(--ak-paper); border: 2px solid var(--ak-ink); }
+.gd-sc-you td.gd-sc-empty { border-style: dashed; border-color: color-mix(in srgb, var(--ak-ink) 30%, transparent); color: color-mix(in srgb, var(--ak-ink) 40%, transparent); }
+.gd-sc-cell.is-pink { background: var(--ak-pink); }
+.gd-sc-cell.is-mint { background: var(--ak-mint); }
+.gd-sc-cell.is-honey { background: var(--ak-honey); }
+.gd-sc-cell.is-lav { background: var(--ak-lav); }
+.gd-sc-cell.is-now { box-shadow: 0 3px 0 var(--ak-ink); }
+.gd-sc .gd-sc-tot { font-weight: 900; }
+.gd-sc-you .gd-sc-tot { background: var(--ak-ink); color: var(--ak-paper); }
+.ak-over-card .gd-sc-wrap { margin-top: 12px; }
+.gd-unlock {
+  display: inline-flex; align-items: center; gap: 8px; margin: 12px 0 0; padding: 6px 14px 5px; border-radius: 999px;
+  background: var(--ak-mint); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 115%; font-size: 12.5px; letter-spacing: .06em; text-transform: uppercase;
+}
+.gd-unlock b { font-weight: 900; }
+
+/* ---------- the title ---------- */
+.gd-title-say {
+  margin: 0; display: inline-flex; align-items: center; gap: 8px; padding: 4px 14px 4px 4px; border-radius: 999px;
+  background: #fff; color: var(--ak-ink); border: 2px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  font-family: var(--ak-serif); font-style: italic; font-size: 16.5px; line-height: 1.15;
+}
+.gd-title-say img { flex: none; width: 30px; height: 30px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
+.gd-title-note { margin: 0; font-size: 14px; color: color-mix(in srgb, var(--ak-fg) 82%, transparent); text-wrap: balance; }
+.ak[data-ak-game='gradient'] .ak-modes { grid-template-columns: 1fr 1fr; }
+.ak[data-ak-game='gradient'] .ak-title .ak-screen-scrim { background: radial-gradient(60% 55% at 50% 48%, rgba(7, 6, 15, .5) 30%, rgba(7, 6, 15, .08) 85%); }
+@media (max-height: 520px) {
+  .gd-title-say { display: none; }
+  .gd-banner { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 4px); padding: 7px 16px 8px; }
+  .gd-banner-pun { font-size: 15px; }
+  .gd-say { bottom: calc(10px + var(--ak-safe-b)); }
+  .gd-tools { grid-auto-flow: column; }
+}
