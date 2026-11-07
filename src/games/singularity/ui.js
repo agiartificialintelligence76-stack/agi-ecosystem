@@ -32,13 +32,13 @@ export function createUI(g) {
     el('p', 'sg-rate', el('span', 'sg-rate-plus', '+'), rateN, el('span', 'sg-per', '/s'), frenzyTag));
   const tapzone = el('button', { class: 'sg-tapzone', type: 'button', 'aria-label': 'Tap the core to make FLOPs' });
   const hint = el('p', { class: 'sg-hint', hidden: true, 'aria-hidden': 'true' }, 'Tap the spark');
-  const view = el('div', 'sg-view', tapzone, hint, readout);
-  // the Eureka spark's button follows the spark drawn on the canvas
-  const eurekaBtn = el('button', { class: 'sg-eureka', type: 'button', 'aria-label': 'Catch the Eureka spark', hidden: true });
-  // her speech bubble
+  // her speech bubble, at the top of the core's region
   const bubbleText = el('p', 'sg-bubble-text', '');
   const bubble = el('div', { class: 'sg-bubble', role: 'status', 'aria-live': 'polite', hidden: true },
-    el('img', { src: FACE, alt: '', width: 40, height: 40, decoding: 'async' }), el('p', 'sg-bubble-who', 'AGI-1'), bubbleText);
+    el('img', { src: FACE, alt: '', width: 40, height: 40, decoding: 'async' }), el('div', 'sg-bubble-body', el('p', 'sg-bubble-who', 'AGI-1'), bubbleText));
+  const view = el('div', 'sg-view', tapzone, hint, bubble, readout);
+  // the Eureka spark's button follows the spark drawn on the canvas
+  const eurekaBtn = el('button', { class: 'sg-eureka', type: 'button', 'aria-label': 'Catch the Eureka spark', hidden: true });
 
   // ---------- the panel: four tabs ----------
   const tabBtns = {}, panes = {}, badges = {};
@@ -64,7 +64,7 @@ export function createUI(g) {
     tabBtns[order[j]].focus();
   });
   const panel = el('section', { class: 'sg-panel', 'aria-label': 'Machines, upgrades, Insight and her log' }, tablist, ...Object.values(panes));
-  const root = el('div', 'sg', view, panel, eurekaBtn, bubble);
+  const root = el('div', 'sg', view, panel, eurekaBtn);
 
   // ---------- BUILD ----------
   const amountBtns = {};

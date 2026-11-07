@@ -414,8 +414,9 @@ function start() {
   if (started) return;
   started = true;
   shell.started();
-  shell.audio.music(music);
   ui.root.classList.remove('is-title');
+  if (DEMO) { setTab('build'); return; }
+  shell.audio.music(music);
   if (kept) {
     const away = (Date.now() - kept.at) / 1000;
     if (away >= AWAY.min) welcomeBack(away);
@@ -441,6 +442,7 @@ function toTitle() {
 
 // ---------- the loop ----------
 const W = { owned: null, rate: 0, frenzy: 0, frenzyMax: 0, progress: 0, eureka: null };
+let coreKey = 0;
 createLoop({
   update: step,
   render(_alpha, frameDt) {
@@ -450,9 +452,8 @@ createLoop({
     const ctx = view.begin(false);
     core.draw(ctx, W);
     if (eureka) ui.eurekaBtn.style.transform = `translate(${(eureka.x - 32).toFixed(1)}px, ${(eureka.y - 32).toFixed(1)}px)`;
-    ui.root.style.setProperty('--core-x', `${core.cx.toFixed(1)}px`);
-    ui.root.style.setProperty('--core-y', `${core.cy.toFixed(1)}px`);
-    ui.root.style.setProperty('--core-r', `${core.R.toFixed(1)}px`);
+    if (coreKey !== core.cy + core.R) { coreKey = core.cy + core.R; ui.root.style.setProperty('--core-top', `${(core.cy - core.view.y - core.R * 1.25).toFixed(1)}px`); }
+    ui.root.classList.toggle('is-title', shell.state === 'title');
     ui.frame();
     hud(frameDt);
   },
@@ -461,5 +462,5 @@ createLoop({
 
 layout();
 ui.showTab(tab);
-if (DEMO) { started = true; ui.root.classList.add('is-demo'); start(); }
+if (DEMO) { ui.root.classList.add('is-demo'); start(); }
 else toTitle();

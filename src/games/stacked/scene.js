@@ -254,8 +254,8 @@ export function createScene(canvas, { reduced = false } = {}) {
 
   // ---------- the camera ----------
   const view = { w: 1, h: 1, dpr: 1 };
-  const cam = { az: AZ, el: EL, fx: 0, fy: 1, fz: 0, tall: 12 };
-  const want = { az: AZ, el: EL, fx: 0, fy: 1, fz: 0, tall: 12 };
+  const cam = { az: AZ, el: EL, fx: 0, fy: 1, fz: 0, tall: 12, ox: 0 };
+  const want = { az: AZ, el: EL, fx: 0, fy: 1, fz: 0, tall: 12, ox: 0 };
   let mode = 'play', spinT = 0, bump = 0, bumpV = 0, shakeX = 0, shakeY = 0, time = 0, fogK = 1, journey = 0;
   const rightV = new THREE.Vector3(), upV = new THREE.Vector3(), dirV = new THREE.Vector3();
   function axes(az, el) {
@@ -267,7 +267,7 @@ export function createScene(canvas, { reduced = false } = {}) {
   // how many world units the screen is tall in play: a phone held up shows the tower's width, a wide screen its height
   function playTall() {
     const a = aspect();
-    return Math.max(8.4 / a, 10, view.h / 112);
+    return Math.max(8.4 / a, 10, view.h / 72);
   }
   // where the moving floor sits on the screen (0 = top): a little above the middle on a phone held up
   const focusAt = () => 0.4 + 0.1 * clamp01((aspect() - 0.6) / 1.0);
@@ -275,7 +275,7 @@ export function createScene(canvas, { reduced = false } = {}) {
   // play: follow the top of the tower (its centre, softly)
   function framePlay(topY, x, z, { snap = false } = {}) {
     mode = 'play';
-    want.az = AZ; want.el = EL; want.tall = playTall();
+    want.az = AZ; want.el = EL; want.tall = playTall(); want.ox = 0;
     want.fy = topY - (0.5 - focusAt()) * want.tall / Math.cos(EL);
     want.fx = x * 0.6; want.fz = z * 0.6;
     if (snap) Object.assign(cam, want);
@@ -299,12 +299,20 @@ export function createScene(canvas, { reduced = false } = {}) {
     const wView = 2 * r;
     const a = aspect();
     const barPad = 64 / view.h;                                  // the kit's bar
-    const tall = Math.max(hView * pad / (1 - barPad), (wView * pad) / a, playTall() * 0.9);
-    want.tall = tall; want.el = el; want.az = cam.az;
-    // its middle in the middle of what's below the bar
+    // a wide screen: the tower beside the words (the title's, the end card's), not behind them
+    const side = a > 1.15;
+    const share = side ? (title ? 0.36 : 0.3) : 1;               // the share of the width it gets
+    want.ox = side ? 1 - share - 0.04 : 0;                       // its centre, right of the middle (in half widths)
+    let tall = Math.max(hView * pad / (1 - barPad), (wView * pad) / (a * share), playTall() * (side ? 1 : 0.9));
     const midY = (yTop + yBot) / 2;
-    want.fx = cx; want.fz = cz;
-    want.fy = midY + (barPad * tall * 0.5) / Math.cos(el);
+    let fy = midY + (barPad * tall * 0.5) / Math.cos(el);
+    // a short screen (a phone held sideways): the title shows the top of the tower big rather than all of it small
+    if (title && view.h / tall < 15) {
+      tall = view.h / 15;
+      fy = yTop - (tall * (0.5 - barPad - 0.1)) / Math.cos(el);
+    }
+    want.tall = tall; want.el = el; want.az = cam.az;
+    want.fx = cx; want.fz = cz; want.fy = fy;
     if (snap) { Object.assign(cam, want); cam.az = AZ; }
   }
   function setJourney(v, snap = false) { journey = v; if (snap) S.uJourney.value = v; }
@@ -332,6 +340,7 @@ export function createScene(canvas, { reduced = false } = {}) {
     cam.fx = approach(cam.fx, want.fx, 3, dt);
     cam.fz = approach(cam.fz, want.fz, 3, dt);
     cam.el = approach(cam.el, want.el, 3, dt);
+    cam.ox = approach(cam.ox, want.ox, rate, dt);
     if (mode === 'title' || mode === 'end') cam.az = AZ + spinT * (reduced ? 0.04 : 0.1);
     else {
       // back to the play angle by the shortest way round
@@ -401,9 +410,10 @@ export function createScene(canvas, { reduced = false } = {}) {
     axes(cam.az + (mode === 'play' && !reduced ? Math.sin(time * 0.37) * 0.02 : 0), cam.el + (mode === 'play' && !reduced ? Math.sin(time * 0.29) * 0.01 : 0));
     const tall = cam.tall;
     const ppu = view.h / tall;                       // CSS px per world unit
+    const off = -cam.ox * (tall / 2) * aspect();     // the tower right of the middle: the camera looks left of it
     const fy = cam.fy - bump * 0.07 + (shakeY / ppu) * upV.y;
-    const fx = cam.fx + (shakeX / ppu) * rightV.x + (shakeY / ppu) * upV.x;
-    const fz = cam.fz + (shakeX / ppu) * rightV.z + (shakeY / ppu) * upV.z;
+    const fx = cam.fx + (shakeX / ppu + off) * rightV.x + (shakeY / ppu) * upV.x;
+    const fz = cam.fz + (shakeX / ppu + off) * rightV.z + (shakeY / ppu) * upV.z;
     camera.position.set(fx + dirV.x * 200, fy + dirV.y * 200, fz + dirV.z * 200);
     camera.up.set(0, 1, 0);
     camera.lookAt(fx, fy, fz);
