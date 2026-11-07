@@ -1,4 +1,5 @@
 // BLOCKCHAIN: a placeholder while the game is being built (replaced by the real game).
+import './style.css';
 import { createShell } from '../kit/shell.js';
 import { fitCanvas } from '../kit/canvas.js';
 import { createLoop } from '../kit/loop.js';
