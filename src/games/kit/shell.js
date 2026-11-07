@@ -360,7 +360,8 @@ export function createShell(opts) {
 
     // the run ended: { score, label, best (null: the shell keeps it: `bestKey`), lower (lower is better), stats: [[label,
     // value, { wide }]], line (AGI-1's words), title ('Game over'), share (the post's whole words: the game puts the score
-    // in them; without it, "I scored … in NAME on agi1.app"), onAgain, onMenu, extra (a node), again ('Play again') }
+    // in them; without it, "I scored … in NAME on agi1.app"), onAgain, onMenu, extra (a node), again ('Play again'),
+    // split (false: one column even on a short, wide screen, for a game with its own layout there) }
     over(o) {
       overOpts = o;
       state = 'over';
@@ -384,17 +385,23 @@ export function createShell(opts) {
       const share = el('a', { class: 'ak-btn ak-btn-sm ak-share', href: shareUrl({ text: shareText, path }), target: '_blank', rel: 'noopener noreferrer' }, icon('x'), 'Share');
       const stats = o.stats?.length ? el('dl', 'ak-stats', o.stats.map(([k, v, x]) => el('div', `ak-stat${x?.wide ? ' is-wide' : ''}`, el('dt', null, k), el('dd', null, v)))) : null;
       const line = o.line ? el('div', 'ak-say', el('img', { src: FACE, alt: '', width: 46, height: 46 }), el('p', null, el('span', 'ak-sr', 'AGI-1: '), o.line)) : null;
+      // two halves: the run (its score, best, stats) and what's next (her line, the buttons). One column as usual; side by
+      // side on a short, wide screen (a phone held sideways: Play again stays above the fold), unless `split: false`
       put(card,
-        el('p', 'ak-card-kicker', o.title || 'Game over'),
-        scoreEl,
-        el('p', 'ak-score-label', o.label || 'Score'),
-        isBest ? el('p', 'ak-newbest', 'New best!') : null,
-        !isBest && best != null ? el('p', 'ak-bestline', 'Your best ', el('b', null, show(best))) : null,
-        stats, line, o.extra || null,
-        el('div', 'ak-card-actions', again, el('div', 'ak-card-row', share, menu)),
-        el('div', 'ak-over-links', el('a', { class: 'ak-link', href: `/games#rate-${game}` }, 'Rate it'),
-          el('a', { class: 'ak-link', href: '/games' }, 'More AGI games')),
-        el('p', 'ak-fine', 'Scores stay on this device.'));
+        el('div', 'ak-over-main',
+          el('p', 'ak-card-kicker', o.title || 'Game over'),
+          scoreEl,
+          el('p', 'ak-score-label', o.label || 'Score'),
+          isBest ? el('p', 'ak-newbest', 'New best!') : null,
+          !isBest && best != null ? el('p', 'ak-bestline', 'Your best ', el('b', null, show(best))) : null,
+          stats),
+        el('div', 'ak-over-side',
+          line, o.extra || null,
+          el('div', 'ak-card-actions', again, el('div', 'ak-card-row', share, menu)),
+          el('div', 'ak-over-links', el('a', { class: 'ak-link', href: `/games#rate-${game}` }, 'Rate it'),
+            el('a', { class: 'ak-link', href: '/games' }, 'More AGI games')),
+          el('p', 'ak-fine', 'Scores stay on this device.')));
+      if (o.split !== false) card.classList.add('is-split');
       showLayer(card, { dim: true, label: `${o.title || 'Game over'}: ${show(o.score)}` });
       // the tap that ended the run never lands on the card's buttons as it appears
       card.addEventListener('click', (e) => { if (performance.now() - overAt < 450) { e.preventDefault(); e.stopPropagation(); } }, { capture: true });

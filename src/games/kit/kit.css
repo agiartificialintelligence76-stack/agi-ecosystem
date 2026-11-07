@@ -56,7 +56,7 @@ html.ak-page body { -webkit-tap-highlight-color: transparent; }
 .ak-bar > * { pointer-events: auto; }
 .ak-hud { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; pointer-events: none; }
 .ak-hud > * { pointer-events: auto; }
-.ak-tools { display: flex; gap: 8px; flex: none; }
+.ak-tools { display: flex; gap: 8px; flex: none; margin-left: auto; }   /* on the right even while the HUD is hidden (the title) */
 
 /* round sticker buttons */
 .ak-ibtn {
@@ -184,6 +184,8 @@ html.ak-page body { -webkit-tap-highlight-color: transparent; }
 .ak-card .ak-btn-ghost:hover { background: var(--ak-lav); }
 .ak-card .ak-link { color: var(--ak-ink); }
 .ak-close { position: absolute; top: 12px; right: 12px; min-width: 38px; height: 38px; box-shadow: 0 2px 0 var(--ak-ink); }
+/* a card with a close button keeps its first lines clear of it (a long title on a 360 px phone) */
+.ak-card:has(> .ak-close) > :is(.ak-card-kicker, .ak-card-title) { padding-right: 46px; }
 @media (prefers-reduced-motion: no-preference) {
   .ak-layer:not([hidden]) .ak-card { animation: ak-card-in .34s cubic-bezier(.2, 1.3, .4, 1) both; }
 }
@@ -238,6 +240,17 @@ html.ak-page body { -webkit-tap-highlight-color: transparent; }
 .ak-over-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; margin-top: 14px; }
 .ak-over-links .ak-link { font-size: 14px; }
 .ak-over-card .ak-fine { margin-top: 6px; }
+.ak-card .ak-fine { color: var(--ak-ink2); }   /* on a card's paper (light words are for the dark title) */
+.ak-over-main, .ak-over-side { display: contents; }   /* one column: as if they weren't there */
+/* a short, wide screen (a phone held sideways): the run on the left, what's next on the right, all above the fold */
+@media (max-height: 520px) and (min-width: 600px) {
+  .ak-over-card.is-split { width: min(760px, 100%); display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 0 22px; align-items: center; }
+  .ak-over-card.is-split > .ak-over-main, .ak-over-card.is-split > .ak-over-side { display: block; min-width: 0; }
+  .ak-over-card.is-split .ak-stats { grid-template-columns: 1fr 1fr; margin-top: 12px; }
+  .ak-over-card.is-split .ak-over-side > :first-child { margin-top: 0; }
+  .ak-over-card.is-split .ak-card-actions { margin-top: 12px; }
+  .ak-over-card.is-split .ak-over-links { margin-top: 10px; }
+}
 
 /* ---------- toasts ---------- */
 .ak-toasts { position: absolute; z-index: 40; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 6px); translate: -50% 0; display: grid; gap: 8px; justify-items: center; pointer-events: none; width: max-content; max-width: calc(100% - 32px); }
