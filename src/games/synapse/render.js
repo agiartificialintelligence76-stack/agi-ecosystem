@@ -2,7 +2,7 @@
 // below it on a phone held upright; the info on the left and the tools on the right on a wide screen), and a Board
 // (./rules.js) drawn into it: wells tinted where paths run, tubes that grow and shrink smoothly along the grid as the
 // head moves (and reach a little toward the finger), bridges with their overpass, gates, neurons, and the firing.
-import { CELL, DEAD, BRIDGE, GATE, DX, DY, dirOf } from './puzzle.js';
+import { DEAD, BRIDGE, GATE, DX, DY, dirOf } from './puzzle.js';
 import {
   COLORS, CORE, INK, MUTED, DISPLAY, MONO, colorOf, neuronSprite, glowSprite, deckSprite, boardSprite, backdropSprite,
 } from './art.js';
@@ -482,4 +482,3 @@ export function createRenderer() {
     shownLen: (c) => (disp[c] ? disp[c].len : 0),
   };
 }
-export { CELL };
