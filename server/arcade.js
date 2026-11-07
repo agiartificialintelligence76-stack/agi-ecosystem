@@ -172,9 +172,9 @@ export const LOOK_GAMES = Object.freeze({
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
   scamslayer: Object.freeze({
-    what: '"SCAM SLAYER", an arcade swipe game where you slice flying cartoon scams (fake airdrops, phishing links, '
-      + 'spam bots) and must not cut the hearts, with an anime girl, AGI-1: talk about slicing, scams, combos, bombs '
-      + 'and hearts in the game is part of reviewing it',
+    what: '"SCAM SLAYER", an arcade swipe game where you slice flying cartoon scams (fake airdrops, phishing hooks, '
+      + 'seed-phrase DMs, fake support) and must not cut the hearts or the rug, with an anime girl, AGI-1: talk about '
+      + 'slicing, scams, combos, the rug, hearts and power-ups in the game is part of reviewing it',
     promo: 'other games, real coins, tokens, channels, groups, services',
     advice: 'financial advice about real coins or real money (telling people to buy or sell something real, price targets, sure '
       + 'gains)',
@@ -188,7 +188,7 @@ export const LOOK_GAMES = Object.freeze({
   }),
   singularity: Object.freeze({
     what: '"SINGULARITY", an idle clicker game where you grow an AI, AGI-1, from a spark of compute with upgrades '
-      + '(GPUs, datacenters, rockets) toward the singularity; its numbers are the game\'s own compute, never money: '
+      + '(GPUs, datacenters, a Dyson swarm) toward the singularity; its numbers are the game\'s own compute, never money: '
       + 'talk about clicking, upgrades, prestige and big numbers in the game is part of reviewing it',
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
