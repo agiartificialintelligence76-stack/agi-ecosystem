@@ -220,6 +220,77 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  // (2026-11-08, the second night) ten more on the arcade kit
+  realorai: Object.freeze({
+    what: '"REAL OR AI?", a quiz game where you look at photos and guess whether each one is a real photo or an '
+      + 'AI-made picture, with an anime girl, AGI-1, pointing out the clues: talk about the pictures, guessing, '
+      + 'streaks, the clues and how hard it is to tell is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  notarobot: Object.freeze({
+    what: '"I\'M NOT A ROBOT", a fast microgame party game made of silly four-second "prove you\'re human" checks '
+      + '(tick a box, pick the pictures, drag a slider) that get faster and faster, with an anime girl, AGI-1: '
+      + 'talk about the checks, speed, lives and failing them is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  alignment: Object.freeze({
+    what: '"ALIGNMENT", a story game of yes-or-no cards where you run a cartoon AI lab for an anime girl, AGI-1, '
+      + 'and keep four meters (people, safety, compute and her heart) in balance, with many funny endings: talk '
+      + 'about the cards, the characters, the meters, the endings and losing is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  gradient: Object.freeze({
+    what: '"GRADIENT DESCENT", a 3D mini golf game where you putt a ball over hilly landscapes into the lowest '
+      + 'valley (its names are jokes about how AI learns): talk about putting, holes, par, strokes, the courses '
+      + 'and the physics is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  epochs: Object.freeze({
+    what: '"EPOCHS", a puzzle game where each attempt of an anime girl, AGI-1, replays as a ghostly echo that can '
+      + 'hold buttons and doors for the next one: talk about the puzzles, levels, echoes, being stuck and solving '
+      + 'them is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  synapse: Object.freeze({
+    what: '"SYNAPSE", a calm puzzle game where you draw paths between matching colored neurons on a grid so that '
+      + 'every cell is filled and no paths cross: talk about the boards, paths, levels, timers and solving them '
+      + 'is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  overclock: Object.freeze({
+    what: '"OVERCLOCK", a neon pinball game on a table drawn like a computer motherboard, with an anime girl, '
+      + 'AGI-1: talk about the flippers, the ball, ramps, multiball, missions, tilting and scores is part of '
+      + 'reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  beattheagi: Object.freeze({
+    what: '"BEAT THE AGI", a four-in-a-row board game against an anime girl, AGI-1, who plays at levels named like '
+      + 'AI model sizes (1B up to AGI): talk about the board, her levels, winning, losing and how she plays is '
+      + 'part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  hallucination: Object.freeze({
+    what: '"HALLUCINATION", a spot-the-difference game where an anime girl, AGI-1, redraws a cartoon scene from '
+      + 'memory and gets five things wrong (its name is a joke about AI): talk about the scenes, finding '
+      + 'differences, time, hints and levels is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  guardrails: Object.freeze({
+    what: '"GUARDRAILS", a tower defense game where you build cartoon towers that stop silly "jailbreak" attack '
+      + 'creatures on their way to an anime girl\'s (AGI-1\'s) core (its names are jokes about AI): talk about '
+      + 'towers, upgrades, waves, enemies, maps and losing is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];
