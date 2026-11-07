@@ -351,6 +351,14 @@
   .gm-soon { padding: 22px 20px 24px; }
   .gm-pick-star { width: 44px; height: 44px; }
 }
+/* a phone held sideways: a short hero, so the games show on the first screen */
+@media (max-height: 520px) and (orientation: landscape) {
+  .gm-hero { padding-block: 18px 22px; }
+  .gm-title { font-size: clamp(48px, 13vh, 76px); }
+  .gm-lede, .gm-art { display: none; }
+  .gm-sub { margin-top: 8px; }
+  .gm-say { margin-top: 10px; }
+}
 @media (max-width: 360px) {
   .gm-grid { gap: 10px; }
   .gm-tile-line { display: none; }

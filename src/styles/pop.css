@@ -930,6 +930,9 @@
 [data-skin='pop'][data-theme='dark'] .gm-pick-star svg { stroke: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-pick-star.is-on { color: var(--pop-honey); }
 [data-skin='pop'][data-theme='dark'] .gm-fine { border-top-width: 2px; }
+@media (max-height: 520px) and (orientation: landscape) {
+  [data-skin='pop'] .gm-hero { padding-top: calc(72px + 14px); padding-bottom: 22px; }
+}
 @media (max-width: 760px) {
   [data-skin='pop'] .gm-hero { margin-top: -64px; padding-top: calc(64px + 24px); }
   [data-skin='pop'] .gm-tile-link { border-width: 2.5px; border-radius: 16px; box-shadow: 0 5px 0 -1px var(--shade); }
