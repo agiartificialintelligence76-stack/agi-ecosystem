@@ -977,8 +977,9 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), a compact picker of 
   assert.doesNotMatch(tpl, /rideemagi|Ride 'Em/, 'nothing of one game in it');
   assert.match(textOf(rate), /Rating a game takes a connected wallet: a free signature, never a transaction\. Playing never does\./);
   // the page as it is once its panels are filled: every id once, every name for a field or a part points at one that's there
+  const tplInner = tpl.slice('<template id="gm-panel-tpl">'.length, -'</template>'.length);   // what a panel is filled with
   const filled = page.replace(/<div class="gm-panel" role="tabpanel" id="rate-(\w+)"([^>]*)><\/div>/g,
-    (_, id, rest) => `<div class="gm-panel" role="tabpanel" id="rate-${id}"${rest}>${tpl.replaceAll('GAMEID', id).replaceAll('GAMENAME', GAMES[id].name)}</div>`)
+    (_, id, rest) => `<div class="gm-panel" role="tabpanel" id="rate-${id}"${rest}>${tplInner.replaceAll('GAMEID', id).replaceAll('GAMENAME', GAMES[id].name)}</div>`)
     .replace(/<template id="gm-panel-tpl">[\s\S]*?<\/template>/, '');
   const ids = [...filled.matchAll(/\sid="([^"]+)"/g)].map((m) => m[1]);
   assert.deepEqual(ids.filter((x, i) => ids.indexOf(x) !== i), [], 'no id twice');
