@@ -845,60 +845,9 @@ export function createView(canvas, { mobile = false, reduced = false } = {}) {
     return { x: (pv.x * 0.5 + 0.5) * W, y: (-pv.y * 0.5 + 0.5) * H, behind: pv.z > 1 };
   }
 
-  // a picture of a character for the picker: rendered once, kept as an image
-  const thumbs = new Map();
-  function thumb(id, size = 160) {
-    if (thumbs.has(id)) return thumbs.get(id);
-    const S = size * 2;
-    const rt = new THREE.WebGLRenderTarget(S, S, { colorSpace: THREE.SRGBColorSpace, samples: 4 });
-    const sc = new THREE.Scene();
-    sc.add(new THREE.HemisphereLight('#ffffff', '#b9a8e6', 2.1));
-    const l = new THREE.DirectionalLight('#fff3e3', 2.0);
-    l.position.set(-1.2, 2, 2.4);
-    sc.add(l);
-    const g = geo(`char:${id}`, CHARACTER_MODELS[id] || CHARACTER_MODELS.agi, CHAR_UNIT, 0.5);
-    const grp = new THREE.Group();
-    grp.add(new THREE.Mesh(g.body, mats.pair), new THREE.Mesh(g.hull, mats.ink));
-    grp.rotation.y = Math.PI + 0.5;
-    sc.add(grp);
-    const box = g.body.boundingBox;
-    const h = box.max.y - box.min.y;
-    const cy = box.min.y + h * 0.52;
-    const cm = new THREE.PerspectiveCamera(24, 1, 0.1, 50);
-    const dd = (h * 0.62) / Math.tan(THREE.MathUtils.degToRad(12));
-    cm.position.set(0.15, cy + dd * 0.32, dd);
-    cm.lookAt(0, cy, 0);
-    const prevFog = sc.fog;
-    sc.background = null;
-    renderer.setRenderTarget(rt);
-    renderer.setClearColor('#000000', 0);
-    renderer.clear();
-    renderer.render(sc, cm);
-    const px = new Uint8Array(S * S * 4);
-    renderer.readRenderTargetPixels(rt, 0, 0, S, S, px);
-    renderer.setRenderTarget(null);
-    renderer.setClearColor(BG, 1);
-    rt.dispose();
-    void prevFog;
-    const c = document.createElement('canvas');
-    c.width = S; c.height = S;
-    const ctx = c.getContext('2d');
-    const img = ctx.createImageData(S, S);
-    for (let yy = 0; yy < S; yy++) img.data.set(px.subarray((S - 1 - yy) * S * 4, (S - yy) * S * 4), yy * S * 4);
-    ctx.putImageData(img, 0, 0);
-    const out = document.createElement('canvas');
-    out.width = size; out.height = size;
-    const o = out.getContext('2d');
-    o.imageSmoothingQuality = 'high';
-    o.drawImage(c, 0, 0, size, size);
-    const url = out.toDataURL('image/png');
-    thumbs.set(id, url);
-    return url;
-  }
-
   return {
     renderer, scene, camera,
-    resize, render, project, thumb, burst, ring, setCharacter,
+    resize, render, project, burst, ring, setCharacter,
     get pose() { return pose; },
     setBest(row) { if (row !== bestRow) { for (const k of [...decals.keys()]) if (k.startsWith('best')) dropDecal(k); bestRow = row; lo = 1e9; } },
     fontsLoaded() { fontsReady = true; lo = 1e9; },

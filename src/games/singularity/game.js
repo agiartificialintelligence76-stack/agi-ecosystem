@@ -452,7 +452,7 @@ createLoop({
     const ctx = view.begin(false);
     core.draw(ctx, W);
     if (eureka) ui.eurekaBtn.style.transform = `translate(${(eureka.x - 32).toFixed(1)}px, ${(eureka.y - 32).toFixed(1)}px)`;
-    if (coreKey !== core.cy + core.R) { coreKey = core.cy + core.R; ui.root.style.setProperty('--core-top', `${(core.cy - core.view.y - core.R * 1.25).toFixed(1)}px`); }
+    if (coreKey !== core.cy + core.R) { coreKey = core.cy + core.R; ui.root.style.setProperty('--core-bottom', `${(core.cy - core.view.y + core.R * 1.2).toFixed(1)}px`); }
     ui.root.classList.toggle('is-title', shell.state === 'title');
     ui.frame();
     hud(frameDt);

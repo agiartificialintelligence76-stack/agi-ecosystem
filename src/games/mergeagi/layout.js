@@ -27,18 +27,17 @@ export const PARTS = Object.freeze({
   }),
 });
 
-// → { kind, s (CSS px a unit), ox, oy (CSS px of the jar's corner, x 0 y 0), w, h }
-export function computeLayout(w, h, { top = 0, pad = 10, maxScale = 2.4 } = {}) {
-  const fit = (b) => {
-    const lw = b.maxX - b.minX, lh = b.maxY - b.minY;
-    return Math.min(Math.max(1, w - pad * 2) / lw, Math.max(1, h - top - pad) / lh, maxScale);
-  };
+// → { kind, s (CSS px a unit), ox, oy (CSS px of the jar's corner, x 0 y 0), w, h, parts }. `top` is what's over the
+// screen's top edge (the kit's bar), `left`/`right`/`bottom` the notch and home bar (safe areas), `pad` a margin
+export function computeLayout(w, h, { top = 0, pad = 10, left = 0, right = 0, bottom = 0, maxScale = 2.4, kind: force = null } = {}) {
+  const aw = Math.max(1, w - left - right - pad * 2), ah = Math.max(1, h - top - bottom - pad);
+  const fit = (b) => Math.min(aw / (b.maxX - b.minX), ah / (b.maxY - b.minY), maxScale);
   const sTall = fit(BOUNDS.tall), sWide = fit(BOUNDS.wide);
-  const kind = sWide >= sTall * 0.97 ? 'wide' : 'tall';
+  const kind = force || (sWide >= sTall * 0.97 ? 'wide' : 'tall');
   const b = BOUNDS[kind], s = kind === 'wide' ? sWide : sTall;
   const lw = (b.maxX - b.minX) * s, lh = (b.maxY - b.minY) * s;
-  const ox = pad + (w - pad * 2 - lw) / 2 - b.minX * s;
-  const oy = top + (h - top - pad - lh) / 2 - b.minY * s;
+  const ox = left + pad + (aw - lw) / 2 - b.minX * s;
+  const oy = top + (ah - lh) / 2 - b.minY * s;
   return { kind, s, ox, oy, w, h, parts: PARTS[kind] };
 }
 

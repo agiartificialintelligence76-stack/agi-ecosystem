@@ -268,9 +268,6 @@ export function createRenderer() {
           blit(g, spr.normal[p.color], spr, x, y, 1);
           g.globalAlpha = (0.2 + 0.25 * pulse) * ga3;
           blit(g, spr.white, spr, x, y, 1);
-        } else if (se.kb) {
-          g.globalAlpha = (0.62 + 0.2 * pulse) * ga3;
-          blit(g, spr.normal[p.color], spr, x, y, 1);
         } else {
           g.globalAlpha = (0.78 + 0.18 * pulse) * ga3;
           blit(g, spr.ghost[p.color], spr, x, y, 1);
@@ -751,6 +748,20 @@ export function createRenderer() {
 
   // ---------- the piece in hand ----------
   function drawDrag(g, se, now, bot) {
+    const kb = se.kb, gh = se.ghost;
+    if (kb && gh && !se.drag) {
+      // a piece picked with the keys hovers just above its landing spot, bobbing gently
+      const C = L.C, p = gh.t;
+      let jx = 0;
+      if (gh.shake != null) { const a = now - gh.shake; if (a < 0.3) jx = Math.sin(a * 60) * C * 0.1 * (1 - a / 0.3); }
+      const lift = C * (0.2 + (REDUCED ? 0 : 0.05 * Math.sin((now - kb.t0) * 4.2)));
+      const x = L.gx + (gh.x + p.w / 2) * C + jx, y = L.gy + (gh.y + p.h / 2) * C - lift;
+      g.globalAlpha = 0.3;
+      drawPiece(g, p, x + C * 0.08, y + lift + C * 0.06, C, spr, spr.shadow, 1);
+      g.globalAlpha = gh.ok ? 1 : 0.55;
+      drawPiece(g, p, x, y, C, spr, spr.normal[p.color], 1.03);
+      g.globalAlpha = 1;
+    }
     const d = se.drag;
     if (d) {
       const pos = se.dragPos(), C = L.C, p = d.p, k = pos.scale;

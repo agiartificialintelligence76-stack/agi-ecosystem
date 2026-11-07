@@ -1,47 +1,482 @@
-// temporary: a sprite sheet for checking the art
-import './style.css';
-import { createShell } from '../kit/shell.js';
+// SCAM SLAYER (2026-11-08): AGI-1 protects her chat. Cartoon scams are tossed up from below the screen; swipe to
+// slice them in mid-air, spare her hearts, never cut a rug. Classic (3 shields) and Blitz (60 seconds). Built on the
+// arcade kit (src/games/kit/): its frame, title, pause and end-of-run cards, local bests, sound and the play counter.
+// The rules are engine.js (pure), the throws waves.js, the demo's player demo.js; this file wires them to the page:
+// the canvas, fingers and mouse, the loop, and what every moment looks, sounds and feels like.
+import { createShell, el } from '../kit/shell.js';
 import { fitCanvas } from '../kit/canvas.js';
-import { buildSprites, createHalves } from './art.js';
-import { KINDS } from './kinds.js';
-import { buildScene } from './scene.js';
+import { createLoop } from '../kit/loop.js';
+import { pointer, keyboard } from '../kit/input.js';
+import { rng, fmt, clamp, approach } from '../kit/fx.js';
+import { DEMO, SEED } from '../kit/env.js';
+import { UNIT, KINDS } from './kinds.js';
+import { createWorld, stepWorld, bladeDown, bladeMove, bladeUp, releaseBlades, resizeWorld, summary } from './engine.js';
+import { createBot } from './demo.js';
+import { makeVoice, endKey, shareText } from './lines.js';
+import { createEffects } from './effects.js';
+import { createBlades, bladePalette } from './blade.js';
+import { createRenderer } from './render.js';
+import { createSounds, runMusic } from './sound.js';
+import { buildSprite, PAPER } from './art.js';
+import './style.css';             // after the kit's styles (kit.css comes with shell.js), so ours win
 
-const shell = createShell({ game: 'scamslayer', name: 'SCAM SLAYER', root: document.getElementById('ak-root') });
+const root = document.getElementById('ak-root');
+const shell = createShell({
+  game: 'scamslayer',
+  name: 'SCAM SLAYER',
+  root,
+  howTo: {
+    intro: 'Scams are flying into AGI-1’s chat. Swipe through them before they land.',
+    steps: [
+      ['Swipe to slice', 'Slash through the flying scams. Three or more in one swipe make a combo.'],
+      ['Spare the hearts', 'Purple hearts are AGI-1’s love letters. Cutting one cracks a shield (in Blitz: −5 s).'],
+      ['Never cut a rug', 'A rolled-up rug with a lit fuse ends a Classic run on the spot (in Blitz: −10 s).'],
+      ['Don’t let scams land', 'In Classic, every scam that falls back down cracks a shield. Lose all three and it’s over.'],
+      ['Power scams', 'Freeze slows everything down, Frenzy throws scams in from the sides, Double doubles your points.'],
+    ],
+    touch: [['Swipe', 'Slice'], ['More fingers', 'More blades']],
+    keys: [['Hold + drag', 'Slice with the mouse'], ['Space · P · Esc', 'Pause'], ['Enter', 'Play again']],
+  },
+  onPause: () => releaseAll(),
+  onRestart: () => newRun(mode),
+  onQuit: () => toTitle(),
+});
+
 const canvas = document.createElement('canvas');
+canvas.setAttribute('role', 'img');
+canvas.setAttribute('aria-label', 'SCAM SLAYER: swipe to slice the flying scams, spare the hearts, never cut a rug');
 shell.stage.append(canvas);
-const view = fitCanvas(canvas, { maxDpr: 2 });
-shell.started({ count: false });
-(async () => {
-  try { await Promise.all([document.fonts.load("900 40px 'AK Display'"), document.fonts.load("italic 20px 'AK Serif'")]); } catch { /* fine */ }
-  const ctx = view.begin();
-  ctx.fillStyle = '#1b0f38'; ctx.fillRect(0, 0, view.w, view.h);
-  if (new URLSearchParams(location.search).has('scene')) {
-    const sc = buildScene(view.w, view.h);
-    ctx.imageSmoothingQuality = 'high';
-    ctx.drawImage(sc.back, -sc.m, -sc.m, view.w + sc.m * 2, view.h + sc.m * 2);
-    ctx.drawImage(sc.room, -sc.m, -sc.m, view.w + sc.m * 2, view.h + sc.m * 2);
-    return;
+const safeProbe = el('div', { class: 'ss-safe', 'aria-hidden': 'true' });
+root.append(safeProbe);
+
+let dirty = true;
+const view = fitCanvas(canvas, { maxDpr: 2, onResize: () => { dirty = true; } });
+const renderer = createRenderer();
+const fx = createEffects();
+const blades = createBlades();
+const sounds = createSounds(shell.audio);
+const bestChip = shell.chip('Best', 0, { fmtFn: (v) => (v ? fmt(v) : '—') });
+
+// ---------- the run's state ----------
+let world = null, bot = null, phase = 'boot', dyingT = 0, ready = false;
+let mode = shell.store.read().mode === 'blitz' ? 'blitz' : 'classic';
+let W = UNIT, H = UNIT, top = 0, scale = 1;
+let vt = 0;                          // the visual clock (s)
+let shownScore = 0, best = 0, beatBest = false, freezeA = 0, lastSecond = 99;
+let lastLine = -99, kindsSeen = new Set(), botDown = false, demoRuns = 0, titleRuns = 0;
+const voice = makeVoice(DEMO ? rng((SEED || 7) * 13 + 5).next : Math.random);
+
+// ---------- the screen ----------
+function measure() {
+  dirty = false;
+  const w = view.w, h = view.h;
+  const cs = getComputedStyle(safeProbe);
+  const safe = { r: parseFloat(cs.paddingRight) || 0, l: parseFloat(cs.paddingLeft) || 0 };
+  const barBottom = DEMO ? 0 : Math.max(0, shell.bar.getBoundingClientRect().bottom);
+  const m = Math.min(w, h);
+  const layout = {
+    hudTop: DEMO ? 10 : Math.round(barBottom + 6),
+    fs: clamp(Math.round(m * 0.085), 30, 58),
+    av: clamp(Math.round(m * 0.112), 44, 70),
+    sh: clamp(Math.round(m * 0.05), 22, 34),
+    left: safe.l + 14, right: w - safe.r - 14,
+  };
+  renderer.resize(w, h, view.dpr, layout);
+  scale = m / UNIT;
+  W = w / scale; H = h / scale;
+  top = (DEMO ? 4 : barBottom + 2) / scale;
+  if (world) resizeWorld(world, W, H, top);
+}
+
+// ---------- AGI-1's lines (one at a time, not too often) ----------
+function say(key, { force = false, chance = 1 } = {}) {
+  if (phase !== 'run') return;
+  if (!force && (vt - lastLine < 3.6 || Math.random() > chance)) return;
+  const line = voice.pick(key);
+  if (!line) return;
+  lastLine = vt;
+  fx.say(line);
+}
+
+// ---------- runs ----------
+function releaseAll() {
+  if (world) releaseBlades(world);
+  blades.clear();
+  botDown = false;
+}
+
+function newRun(m = mode) {
+  if (!ready) return;
+  mode = m === 'blitz' ? 'blitz' : 'classic';
+  if (!DEMO) shell.store.update((d) => { d.mode = mode; });
+  const seed = DEMO ? (SEED || 7) + demoRuns * 101 : (Math.random() * 2 ** 31) >>> 0;
+  releaseAll();
+  world = createWorld({
+    mode, seed, W, H, top,
+    // the demo starts mid-game: a row to slice at once, the golden scam and a Frenzy within seconds
+    ...(DEMO ? { start: 40, opening: true, firstAt: 0.1, timers: { golden: 3.4, power: 6.2, powerKind: 'frenzy', rush: 15 } } : {}),
+  });
+  bot = DEMO ? createBot(seed * 31 + 1) : null;
+  fx.reset();
+  shownScore = 0; beatBest = false; freezeA = 0; lastSecond = 99; lastLine = -99; kindsSeen = new Set();
+  best = shell.store.best(mode === 'blitz' ? 'blitz' : 'best') || 0;
+  bestChip.set(best);
+  bestChip.node.classList.remove('is-accent');
+  phase = 'run';
+  shell.started();
+  if (!DEMO) {
+    sounds.start();
+    shell.audio.music(runMusic());
+    setTimeout(() => say('start', { force: true }), 500);
   }
-  const px = Number(new URLSearchParams(location.search).get('px') || 1.2);
-  const sprites = buildSprites(px * view.dpr);
-  const halves = createHalves();
-  const kinds = Object.keys(KINDS);
-  const cols = Math.max(3, Math.floor(view.w / (px * 150)));
-  kinds.forEach((k, i) => {
-    const sp = sprites[k];
-    const x = 20 + (i % cols) * px * 150, y = 80 + Math.floor(i / cols) * px * 150;
-    const s = sp.S / view.dpr;
-    ctx.globalAlpha = 0.5; ctx.drawImage(sp.shadow, x + 4, y + 6, s, s); ctx.globalAlpha = 1;
-    ctx.drawImage(sp.canvas, x, y, s, s);
+}
+
+function toTitle() {
+  if (!ready) return;
+  phase = 'title';
+  shell.audio.stopMusic();
+  releaseAll();
+  world = createWorld({ mode: 'attract', seed: 4242 + titleRuns * 17, W, H, top, start: 26, firstAt: 0.25 });
+  bot = createBot(99 + titleRuns, { relaxed: true });
+  titleRuns++;
+  fx.reset();
+  const s = shell.store;
+  shell.title({
+    logo: logo(),
+    tagline: 'Slice the scams. Spare the hearts.',
+    hidePlay: true,
+    modes: [
+      { label: 'Classic', sub: '3 shields · how long can you last', onClick: () => newRun('classic') },
+      { label: 'Blitz', sub: '60 seconds · slice everything', onClick: () => newRun('blitz') },
+    ],
+    onPlay: () => newRun(mode),
+    best: null,
+    extra: titleExtra(s.best('best'), s.best('blitz'), s.read().slain || 0),
   });
-  // halves of a few
-  const y0 = 80 + Math.ceil(kinds.length / cols) * px * 150;
-  ['airdrop', 'seed', 'rug', 'heart'].forEach((k, i) => {
-    const sp = sprites[k];
-    const s = sp.S / view.dpr;
-    for (const side of [1, -1]) {
-      const cv = halves.make(sp, 0.6, 6, side, KINDS[k].inner, px * view.dpr);
-      ctx.drawImage(cv, 20 + i * px * 170 + (side > 0 ? 18 : 0), y0 + (side > 0 ? 14 : 0), s, s);
+}
+
+function finish() {
+  if (DEMO) { demoRuns++; newRun('classic'); return; }
+  phase = 'over';
+  const s = summary(world);
+  const bestKey = mode === 'blitz' ? 'blitz' : 'best';
+  const prev = shell.store.best(bestKey);
+  shell.store.update((d) => { d.slain = (Number(d.slain) || 0) + s.slain; });
+  const titles = { rug: 'Rugged!', heart: 'Heartbroken', miss: 'Out of shields', time: 'Time!' };
+  shell.over({
+    score: s.score,
+    label: mode === 'blitz' ? 'Blitz score' : 'Classic score',
+    bestKey,
+    title: titles[s.reason] || 'Game over',
+    stats: [
+      ['Scams slain', fmt(s.slain)],
+      ['Best combo', s.bestCombo ? `×${s.bestCombo}` : '—'],
+      ['Hearts saved', fmt(s.heartsSaved)],
+      ['Accuracy', `${s.accuracy}%`],
+    ],
+    line: voice.pick(endKey({ reason: s.reason, score: s.score, best: prev, mode })),
+    share: shareText(s.slain),
+    onAgain: () => newRun(mode),
+    onMenu: () => toTitle(),
+  });
+}
+
+// ---------- what each moment looks, sounds and feels like ----------
+const POWER_BANNER = {
+  freeze: ['FREEZE', 'everything slows down', '#59c8ff'],
+  frenzy: ['FRENZY!', 'scams from every side', '#ffc933'],
+  double: ['DOUBLE', 'points ×2 for 8 seconds', '#3ff0c3'],
+};
+
+function handle(e) {
+  const live = phase === 'run';
+  switch (e.type) {
+    case 'launch':
+      if (live) sounds.launch();
+      break;
+    case 'slice': {
+      const o = e.o, k = KINDS[o.kind];
+      fx.addHalves(e, renderer.sprites, renderer.halves);
+      fx.shards(o, e.ang, e.crit ? 22 : 14);
+      fx.splat(o.x, o.y, k.colors[0], o.r);
+      if (o.role !== 'scam' && o.role !== 'power') break;
+      blades.combo(e.blade, e.n);
+      if (e.n >= 2) fx.combo = { n: e.n, x: o.x, y: o.y, t: 0 };
+      if (!live) break;
+      sounds.slice(e.n, { crit: e.crit, golden: o.kind === 'golden' });
+      shell.haptic(7);
+      fx.scorePop = 1;
+      const golden = o.kind === 'golden';
+      const color = golden ? '#ffc933' : e.crit ? '#ff4da6' : world.power.double > 0 ? '#3ff0c3' : PAPER;
+      fx.float(o.x, o.y - o.r * 0.4, `+${e.pts}`, { size: golden ? 46 : e.crit ? 38 : 30, color, big: golden || e.crit });
+      if (e.crit) {
+        fx.float(o.x, o.y - o.r * 1.25, 'CRIT!', { size: 30, color: '#ff4da6', delay: 0.06, life: 0.8 });
+        fx.top.burst({ x: o.x, y: o.y, count: 10, speed: [300, 700], life: [0.3, 0.6], size: [10, 18], colors: ['#ffffff', '#ff4da6'], shape: 'star', spin: 8, drag: 2.5 });
+        fx.doFlash('#ffffff', 0.12);
+        fx.shake.kick(0.16);
+      }
+      if (golden) {
+        fx.ring(o.x, o.y, '#ffc933', 190, 0.5, 14);
+        fx.top.burst({ x: o.x, y: o.y, count: 18, speed: [200, 760], life: [0.5, 1], size: [12, 22], colors: ['#ffc933', '#fff1b8', '#ffffff'], shape: 'star', spin: 6, drag: 1.6, gravity: 500 });
+        fx.shake.kick(0.28);
+        fx.mood('love', 1.8);
+        say('golden', { force: true });
+      } else if (o.role === 'scam' && !kindsSeen.has(o.kind)) {
+        kindsSeen.add(o.kind);
+        say(o.kind, { chance: 0.55 });
+      }
+      break;
     }
+    case 'combo': {
+      if (!live) break;
+      const col = bladePalette(e.n).body;
+      fx.float(e.x, e.y - 34, `COMBO ×${e.n}`, { size: 34 + Math.min(e.n, 9) * 3.5, color: col, big: true, life: 1.15, rise: 95 });
+      fx.float(e.x, e.y + 18, `+${e.bonus}`, { size: 30, color: PAPER, delay: 0.1, life: 0.95 });
+      fx.ring(e.x, e.y, col, 110 + Math.min(e.n, 9) * 22, 0.45, 12);
+      sounds.combo(e.n);
+      fx.shake.kick(0.1 + 0.03 * Math.min(e.n, 9));
+      shell.haptic(16);
+      fx.mood(e.n >= 5 ? 'love' : 'happy', 1.4);
+      if (e.n >= 6) say('bigCombo', { force: vt - lastLine > 1.5 }); else if (e.n >= 4) say('combo', { chance: 0.7 });
+      break;
+    }
+    case 'heart':
+      fx.parts.burst({ x: e.o.x, y: e.o.y, count: 16, speed: [160, 520], life: [0.5, 1], size: [10, 18], colors: ['#ff4da6', '#8b66ff', '#ffc2e0'], gravity: 900, drag: 1.5, shape: 'circle', stroke: '#170a36' });
+      if (!live) break;
+      fx.doFlash('#ff4da6', 0.32);
+      fx.shake.kick(0.42);
+      sounds.heart();
+      shell.haptic([30, 40, 30]);
+      fx.mood('sad', 2.2);
+      if (mode === 'classic') fx.float(e.o.x, e.o.y - 40, 'MY HEART!', { size: 32, color: '#ff4da6', big: true, life: 1 });
+      say('heart', { force: true });
+      break;
+    case 'rug':
+      fx.startRug(e.o, mode === 'classic' && phase === 'run');
+      if (!live) break;
+      sounds.rug(mode === 'classic');
+      shell.haptic([60, 40, 140]);
+      fx.mood('surprised', 2.6);
+      say(mode === 'blitz' ? 'rugBlitz' : 'rug', { force: true });
+      break;
+    case 'miss':
+      if (!live) break;
+      fx.float(e.x, H - 70, 'MISSED', { size: 28, color: '#ff5a5f', life: 0.9, rise: 50 });
+      fx.parts.burst({ x: e.x, y: H - 6, count: 10, speed: [120, 380], angle: [-Math.PI * 0.85, -Math.PI * 0.15], life: [0.3, 0.6], size: [6, 12], colors: ['#ff5a5f', '#fffaf0'], gravity: 1200, shape: 'square', stroke: '#170a36' });
+      sounds.miss();
+      fx.mood('surprised', 1.3);
+      say('miss', { chance: 0.45 });
+      break;
+    case 'life':
+      if (!live) break;
+      fx.crack(e.lives);
+      sounds.crack();
+      fx.shake.kick(0.22);
+      shell.haptic(24);
+      break;
+    case 'penalty':
+      if (!live) break;
+      fx.float(e.x, e.y - 50, `−${e.seconds}s`, { size: 46, color: '#ff5a5f', big: true, life: 1.1 });
+      fx.timerPop = 1;
+      break;
+    case 'power': {
+      const [text, sub, color] = POWER_BANNER[e.power];
+      if (live) {
+        fx.banner(text, sub, color, 1.35);
+        sounds.power(e.power);
+        fx.mood('happy', 1.6);
+        say(e.power, { force: vt - lastLine > 1.5 });
+        shell.haptic(20);
+      }
+      break;
+    }
+    case 'power-end':
+      if (live) sounds.powerEnd();
+      break;
+    case 'saved':
+      if (live) { fx.float(clamp(e.o.x, 60, W - 60), H - 60, 'SAVED', { size: 22, color: '#cdb8ff', life: 0.8, rise: 40 }); sounds.saved(); }
+      break;
+    case 'rush':
+      if (live) { fx.banner('RUSH!', 'here they come', '#ff4da6', 1.2); sounds.rush(); say('rush', { chance: 0.8 }); }
+      break;
+    case 'over': {
+      if (phase !== 'run') break;
+      phase = 'dying';
+      releaseAll();
+      shell.audio.stopMusic();
+      const r = e.reason;
+      dyingT = r === 'rug' ? 1.9 : r === 'time' ? 1.4 : 1.25;
+      if (r === 'rug') setTimeout(() => { if (phase === 'dying') fx.banner('RUGGED!', 'never cut the rug', '#ff5a5f', 1.4); }, 650);
+      else if (r === 'time') { fx.banner('TIME!', '', '#ffc933', 1.3); sounds.end(); }
+      else { fx.banner('OUT OF SHIELDS', '', '#ff4da6', 1.2); sounds.end(); fx.mood('sad', 3); }
+      break;
+    }
+    default: break;
+  }
+}
+
+// ---------- the fingers and the mouse ----------
+function feed(id, x, y, ms) {
+  bladeMove(world, id, x, y, ms);
+  blades.move(id, x, y, vt);
+  const b = world.blades.get(id);
+  if (b && b.speed > 1500) sounds.swish(b.speed / 2600);
+}
+pointer(canvas, {
+  down(p) {
+    if (phase !== 'run' || shell.state !== 'play' || !world || world.over) return;
+    const x = p.x / scale, y = p.y / scale;
+    bladeDown(world, p.id, x, y, p.event.timeStamp);
+    blades.down(p.id, x, y, vt);
+  },
+  move(p) {
+    if (phase !== 'run' || !world || world.over) return;
+    const list = typeof p.event.getCoalescedEvents === 'function' ? p.event.getCoalescedEvents() : null;
+    if (list && list.length > 1) {
+      const r = canvas.getBoundingClientRect();
+      for (const ev of list) feed(p.id, (ev.clientX - r.left) / scale, (ev.clientY - r.top) / scale, ev.timeStamp);
+    } else feed(p.id, p.x / scale, p.y / scale, p.event.timeStamp);
+  },
+  up(p) {
+    if (world) bladeUp(world, p.id);
+    blades.up(p.id);
+  },
+});
+// Space pauses a run (Esc and P too: the kit's)
+keyboard({ ' ': 'pause', Space: 'pause' }, {
+  down: () => { if (phase === 'run') shell.pause(); },
+  blocked: () => shell.state !== 'play' || DEMO,
+});
+
+// ---------- the title screen's pieces ----------
+function logo() {
+  const h1 = el('h1', { class: 'ak-logo ss-logo', 'aria-label': 'SCAM SLAYER' });
+  const scam = el('span', { class: 'ak-logo-line ss-scam', 'aria-hidden': 'true' },
+    el('span', 'ss-half ss-top', 'SCAM'), el('span', 'ss-half ss-bot', 'SCAM'), el('span', 'ss-slash'));
+  h1.append(scam, el('span', { class: 'ak-logo-line is-accent', 'aria-hidden': 'true' }, 'SLAYER'));
+  return h1;
+}
+
+function icon(kind) {
+  const css = 30, dpr = Math.min(2, window.devicePixelRatio || 1);
+  const sp = buildSprite(kind, (css / 2 / 1.42) * dpr);
+  const c = document.createElement('canvas');
+  c.width = Math.round(css * dpr); c.height = Math.round(css * dpr);
+  c.className = 'ss-icon';
+  c.setAttribute('aria-hidden', 'true');
+  c.getContext('2d').drawImage(sp.canvas, 0, 0, c.width, c.height);
+  return c;
+}
+
+function titleExtra(bestClassic, bestBlitz, slain) {
+  const key = (kinds, verb, noun, tone) => el('li', `ss-key is-${tone}`, kinds.map(icon), el('span', null, el('b', null, verb), ` ${noun}`));
+  const legend = el('ul', { class: 'ss-legend', 'aria-label': 'What to slice' },
+    key(['airdrop', 'seed', 'hook'], 'Slice', 'scams', 'go'),
+    key(['heart'], 'Spare', 'hearts', 'spare'),
+    key(['rug'], 'Never', 'cut rugs', 'never'));
+  const pill = (label, v) => el('span', 'ak-best', label, el('b', null, v ? fmt(v) : '—'));
+  const bests = el('div', 'ss-bests', pill('Classic best', bestClassic), pill('Blitz best', bestBlitz));
+  const total = slain > 0 ? el('p', 'ss-total', `${fmt(slain)} scam${slain === 1 ? '' : 's'} slain on this device so far`) : null;
+  return el('div', 'ss-extra', legend, bests, total);
+}
+
+// ---------- the loop ----------
+const fuseTip = { x: 0, y: 0 };
+function step(dt) {
+  if (!world) return;
+  if (bot) {
+    bot.update(world, dt);
+    const b = world.blades.get(bot.id);
+    if (b && b.down) {
+      if (!botDown) { blades.down(bot.id, b.x, b.y, vt); botDown = true; } else blades.move(bot.id, b.x, b.y, vt);
+    } else if (botDown) { blades.up(bot.id); botDown = false; }
+  }
+  stepWorld(world, dt);
+  if (world.events.length) {
+    for (const e of world.events) handle(e);
+    world.events.length = 0;
+  }
+  // a lit fuse sparks, the golden scam glitters
+  for (const o of world.objs) {
+    if (o.dead) continue;
+    if (o.role === 'rug') {
+      const c = Math.cos(o.rot), s = Math.sin(o.rot), lx = -1.12 * o.r, ly = -0.9 * o.r;
+      fuseTip.x = o.x + lx * c - ly * s; fuseTip.y = o.y + lx * s + ly * c;
+      if (Math.random() < 0.5) fx.parts.burst({ x: fuseTip.x, y: fuseTip.y, count: 1, speed: [80, 240], life: [0.15, 0.35], size: [3, 6], colors: ['#ffc933', '#ff5a5f', '#ffffff'], gravity: 300, drag: 2, shape: 'spark' });
+      if (phase === 'run') sounds.fuse();
+    }
+  }
+  fx.update(dt, world.ts, H);
+  if (phase === 'run' || phase === 'dying') {
+    // the score counts up, a new best is celebrated once
+    const target = world.score;
+    if (shownScore < target) shownScore = Math.min(target, Math.ceil(shownScore + Math.max(1, (target - shownScore) * dt * 14)));
+    if (!beatBest && best > 0 && world.score > best && phase === 'run') {
+      beatBest = true;
+      if (!DEMO) {
+        shell.toast('New best!', 'good');
+        sounds.best();
+        fx.mood('love', 2);
+        say('best', { force: true });
+      }
+      bestChip.node.classList.add('is-accent');
+    }
+    if (beatBest || !best) bestChip.set(Math.max(best, world.score));
+    if (mode === 'blitz' && phase === 'run') {
+      const sec = Math.ceil(world.timeLeft);
+      if (sec !== lastSecond) { if (sec <= 10 && sec > 0) sounds.tick(sec <= 5); lastSecond = sec; }
+    }
+  }
+  freezeA = approach(freezeA, world.power.freeze > 0 ? 1 : 0, 7, dt);
+  if (phase === 'dying') {
+    dyingT -= dt;
+    if (dyingT <= 0) finish();
+  }
+}
+
+function frame(alpha, frameDt) {
+  vt += Math.min(0.1, frameDt);
+  if (dirty) measure();
+  blades.update(vt);
+  // the room leans a little toward the blade (or drifts on its own)
+  const tip = blades.anyTip();
+  const tx = tip ? (tip.x / W) * 2 - 1 : Math.sin(vt * 0.21) * 0.35;
+  const ty = tip ? (tip.y / H) * 2 - 1 : Math.cos(vt * 0.17) * 0.25;
+  renderer.par.x = approach(renderer.par.x, -tx, 2.2, frameDt);
+  renderer.par.y = approach(renderer.par.y, -ty, 2.2, frameDt);
+  const ctx = view.begin();
+  if (!ctx) return;
+  const showHud = phase === 'run' || phase === 'dying' || phase === 'over';
+  const p = world?.power;
+  renderer.frame(ctx, {
+    world, fx, blades, t: vt, vt,
+    hud: showHud,
+    mode,
+    shownScore,
+    lives: world ? world.lives : 3,
+    timeLeft: world && mode === 'blitz' ? world.timeLeft : 60,
+    power: showHud ? p : null,
+    double: Boolean(p && p.double > 0),
+    beatBest,
+    freezeA,
+    palette: (n) => bladePalette(n, p ? (p.freeze > 0 ? 'freeze' : p.double > 0 ? 'double' : null) : null),
   });
-})();
+}
+
+createLoop({
+  update: step,
+  render: frame,
+  paused: () => shell.state === 'pause',
+}).start();
+
+// ---------- start: the fonts first (the stickers have words on them) ----------
+const fonts = ["900 40px 'AK Display'", "italic 20px 'AK Serif'", "750 20px 'AK Mono'"];
+Promise.race([
+  Promise.all(fonts.map((f) => document.fonts?.load?.(f))),
+  new Promise((r) => setTimeout(r, 2500)),
+]).catch(() => {}).then(() => {
+  ready = true;
+  measure();
+  renderer.refreshSprites();
+  if (DEMO) newRun('classic'); else toTitle();
+});

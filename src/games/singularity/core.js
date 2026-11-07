@@ -89,7 +89,7 @@ export class Core {
     this.cx = x + w / 2;
     this.cy = y + h / 2;
     const short = Math.min(w, h);
-    this.R = clamp(short * 0.14, 24, 112);
+    this.R = clamp(short * 0.165, 26, 120);
     this.ringMax = Math.max(this.R * 2.2, Math.min(w * 0.47, h * 0.62));
     this.satR = clamp(this.R * 0.27, 8.5, 15);
     this.bgDirty = true;

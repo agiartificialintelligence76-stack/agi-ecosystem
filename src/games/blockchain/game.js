@@ -118,7 +118,7 @@ function endRun(s) {
   });
   shell.over({
     score: st.score, label: 'points',
-    stats: [['Lines', fmt(st.lines)], ['Best chain', `×${Math.max(st.bestChain, 0)}`], ['Blocks placed', fmt(st.pieces)], ['Perfect clears', fmt(st.perfects)]],
+    stats: [['Lines', fmt(st.lines)], ['Best chain', `×${Math.max(st.bestChain, 0)}`], ['Blocks placed', fmt(st.pieces)], ['Perfects', fmt(st.perfects)]],
     line: endLine(st.score, isBest, pick),
     share: shareText(st),
     onAgain: () => newRun(),

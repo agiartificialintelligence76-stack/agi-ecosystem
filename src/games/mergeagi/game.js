@@ -49,7 +49,8 @@ const sound = createSound(shell.audio);
 shell.stage.classList.add('mg-stage');
 const canvas = el('canvas', { class: 'mg-canvas', role: 'img', 'aria-label': 'The compute jar: drag or move to aim, let go or click to drop' });
 const live = el('p', { class: 'mg-sr', 'aria-live': 'polite' });
-shell.stage.append(canvas, live);
+const safe = el('div', { class: 'mg-safe', 'aria-hidden': 'true' });   // reads the notch and home bar (safe areas)
+shell.stage.append(canvas, live, safe);
 let R = null;
 const view = fitCanvas(canvas, { maxDpr: 2, onResize: () => relayout() });
 R = createRenderer(view);
@@ -57,11 +58,23 @@ const scoreChip = shell.chip('Score', 0);
 const bestChip = shell.chip('Best', shell.store.best() ?? 0);
 
 function barHeight() {
-  if (DEMO) return 6;
   const h = shell.bar.getBoundingClientRect().height;
   return Math.max(48, Math.round(h)) + 2;
 }
-function relayout() { if (R) R.layout({ top: barHeight(), pad: DEMO ? 8 : 10 }); }
+// the jar as big as the screen allows. A short wide screen (a phone held sideways) is "compact": the score and best
+// leave the top bar for the right-hand card, so the jar can use the whole height between the bar's corner buttons.
+let compact = false;
+function relayout() {
+  if (!R) return;
+  const cs = getComputedStyle(safe), px = (v) => parseFloat(v) || 0;
+  const ins = { left: px(cs.paddingLeft), right: px(cs.paddingRight), bottom: px(cs.paddingBottom) };
+  const pad = DEMO ? 8 : 10;
+  let L = R.layout({ top: DEMO ? 6 : barHeight(), pad, ...ins });
+  const was = compact;
+  compact = !DEMO && L.kind === 'wide' && view.h < 600;
+  if (compact) L = R.layout({ top: 6 + px(cs.paddingTop), pad, ...ins, kind: 'wide' });
+  if (compact !== was) { scoreChip.hide(compact); bestChip.hide(compact); }
+}
 
 // ---------- state ----------
 let mode = 'boot';                  // boot · title · play · dying · demo
@@ -89,6 +102,8 @@ const scene = {
 const active = () => (mode === 'title' ? attract?.g : game);
 const playing = () => mode === 'play' && shell.state === 'play';
 const announce = (text) => { live.textContent = ''; requestAnimationFrame(() => { live.textContent = text; }); };
+// a size in jar units that's at least `min` CSS pixels on the screen (the jar can be drawn small)
+const fsz = (units, min) => Math.max(units, min / (R.L?.s || 1));
 
 // ---------- input: a finger anywhere aims (letting go drops), a mouse aims and clicks, keys aim and drop ----------
 function aimAtPx(px) {
@@ -186,6 +201,8 @@ const loop = createLoop({
     scene.warn = warn;
     scene.near = near;
     scene.score = g ? g.score : 0;
+    scene.showScore = DEMO || (compact && mode !== 'title');
+    scene.best = DEMO ? null : Math.max(bestChip.value || 0, scene.score);
     scene.dim = mode === 'title' ? 1 : 0;
     scene.blink = mode === 'dying';
     scene.stripFlash = stripFlash;
@@ -321,10 +338,10 @@ function onMerge(e, g, quiet) {
     colors: [COLORS[t - 1], COLORS[t], ACCENTS[t]], gravity: 760, drag: 2.4, stroke: INK });
   if (t >= 5) fx.parts.burst({ x, y, count: 4 + t, speed: [90, 220 + t * 14], life: [0.5, 0.9], size: [7, 11], colors: [PAPER, ACCENTS[t]], gravity: 300, drag: 2, shape: 'star', spin: 6, stroke: INK });
   if (quiet) return;
-  fx.floats.add({ x, y: y - r * 0.2, text: `+${e.points}`, color: PAPER, size: 19 + Math.min(10, t * 1.1), rise: 48, life: 0.95 });
+  fx.floats.add({ x, y: y - r * 0.2, text: `+${e.points}`, color: PAPER, size: fsz(19 + Math.min(10, t * 1.1), 15), rise: 48, life: 0.95 });
   if (e.chain >= 2) {
-    fx.floats.add({ x: clamp(x, 70, JAR.W - 70), y: y - r - 18, text: `CHAIN ×${e.chain}`, color: e.chain >= 4 ? PINK : e.chain >= 3 ? MINT : HONEY,
-      size: 24 + Math.min(16, e.chain * 4), rise: 70, life: 1.2 });
+    fx.floats.add({ x: clamp(x, 80, JAR.W - 80), y: Math.max(40, y - r - 18), text: `CHAIN ×${e.chain}`, color: e.chain >= 4 ? PINK : e.chain >= 3 ? MINT : HONEY,
+      size: fsz(24 + Math.min(16, e.chain * 4), 18 + e.chain * 2), rise: 70, life: 1.2 });
   }
   if (t >= 7) hitStop = Math.max(hitStop, 0.03 + (t - 7) * 0.012);
   fx.shake.kick(Math.min(0.75, 0.05 + (t - 1) * 0.034 + (e.chain - 1) * 0.05));
@@ -353,7 +370,7 @@ function onSingularity(e, g, quiet) {
   slowmo = 0.4;
   fx.shake.kick(1);
   if (quiet) return;
-  fx.floats.add({ x: JAR.W / 2, y: 190, text: `+${e.points}`, color: HONEY, size: 44, rise: 80, life: 1.6 });
+  fx.floats.add({ x: JAR.W / 2, y: 190, text: `+${e.points}`, color: HONEY, size: fsz(44, 30), rise: 80, life: 1.6 });
   banner('SINGULARITY', { kicker: 'YOU DID IT', color: LAV, big: true, dur: 2.8 });
   if (mode === 'play') {
     sound.singularity();

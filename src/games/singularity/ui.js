@@ -98,7 +98,8 @@ export function createUI(g) {
   const teaser = el('div', { class: 'sg-gen is-teaser', hidden: true, 'aria-hidden': 'true' },
     el('span', 'sg-icon', el('span', 'sg-disc', svg(glyphSVG('lock', C.lav2)))), el('span', 'sg-main', teaserName, teaserSub));
   list.append(teaser);
-  panes.build.append(amountBar, list);
+  const tip = el('p', { class: 'sg-tip', hidden: true }, 'Tap the spark above to make FLOPs. At ', el('b', null, '15'), ' you can build a Spark Notebook: it thinks for you, every second.');
+  panes.build.append(amountBar, tip, list);
 
   // ---------- UPGRADES ----------
   const upHead = el('p', 'sg-head', '');
@@ -214,6 +215,7 @@ export function createUI(g) {
       if (L.label !== label) { L.label = label; row.btn.setAttribute('aria-label', label); }
     }
     teaser.hidden = teaserAt < 0;
+    tip.hidden = !(s.sing === 0 && s.owned.every((n) => n === 0));
     if (teaserAt >= 0) set(teaserSub, `Build a ${GENS[teaserAt - 1].name} to discover it`);
     for (const [a, b] of Object.entries(amountBtns)) {
       const on = String(g.amount) === a;

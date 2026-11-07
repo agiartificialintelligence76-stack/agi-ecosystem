@@ -190,7 +190,10 @@ export class Session {
     const pts = r.parts.clear + r.parts.bonus;
     // labels: several lines at once, the chain, and the points under them (or just the points, floating up)
     const ptsText = `+${pts.toLocaleString('en-US')}`;
-    if (r.lines >= 2) {
+    if (r.perfect) {
+      // one big stamp for the biggest moment: PERFECT CLEAR, the chain, every point of it
+      this.labels.push({ text: 'PERFECT', text2: 'CLEAR', sub: r.chain >= 2 ? r.chain : 0, pts: ptsText, x: this.L.gx + C * 4, y: this.L.gy + C * 4, t0: now + 0.2, life: 2.0, color: HEX[2], size: C * 1.08, rot: -0.07 });
+    } else if (r.lines >= 2) {
       this.labels.push({ text: MULTI[Math.min(r.lines, 6)], sub: r.chain >= 2 ? r.chain : 0, pts: ptsText, x: mx, y: my - C * 0.55, t0: now + T.clearDelay, life: 1.2, color: MULTI_COLOR[Math.min(r.lines, 6)], size: C * (0.92 + Math.min(0.3, (r.lines - 2) * 0.12)), rot: -0.08 });
     } else if (r.chain >= 2) {
       this.labels.push({ text: '', sub: r.chain, pts: ptsText, x: mx, y: my - C * 0.3, t0: now + T.clearDelay, life: 1.05, color: HEX[0], size: C * 0.72, rot: -0.06 });
@@ -212,7 +215,6 @@ export class Session {
     this.disp.tickerTarget += r.lines;
     this.cleared++;
     if (r.perfect) {
-      this.labels.push({ text: 'PERFECT', text2: 'CLEAR', sub: 0, x: this.L.gx + C * 4, y: this.L.gy + C * 3.6, t0: now + 0.22, life: 1.9, color: HEX[2], size: C * 1.05, rot: -0.07, big: true });
       this.disp.wave = now + 0.2;
       this.disp.flash = now + 0.2;
       if (!REDUCED) this.freeze = 0.12;

@@ -29,6 +29,10 @@ export function createRenderer(view) {
     L = computeLayout(view.w, view.h, opts);
     return L;
   }
+  // a text size in jar units, never smaller than `min` CSS pixels on the screen
+  const u = (units, min) => Math.max(units, min / L.s);
+  // the wide arrangement drawn small (a phone held sideways): the evolution list shows its icons only
+  const tight = () => L.kind === 'wide' && L.s < 0.66;
 
   function ensureSprites(now) {
     const k = L.s * view.dpr;
@@ -139,7 +143,7 @@ export function createRenderer(view) {
       ctx.fillStyle = 'rgba(33, 15, 80, 0.62)'; ctx.fill();
       ctx.lineWidth = 2.2; ctx.strokeStyle = 'rgba(205, 184, 255, 0.2)'; ctx.stroke();
     }
-    label(ctx, 'EVOLUTION', L.parts.left.x + L.parts.left.w / 2, L.parts.left.y + 32, 12.5, 'rgba(228, 217, 255, 0.78)', 'center');
+    label(ctx, 'EVOLUTION', L.parts.left.x + L.parts.left.w / 2, L.parts.left.y + 32, Math.min(17, u(12.5, 9)), 'rgba(228, 217, 255, 0.78)', 'center');
   }
 
   // ---------- the jar ----------
@@ -216,7 +220,7 @@ export function createRenderer(view) {
     ctx.lineDashOffset = -sc.time * 14;
     ctx.beginPath(); ctx.moveTo(6, LINE); ctx.lineTo(JAR.W - 6, LINE); ctx.stroke();
     ctx.setLineDash([]);
-    label(ctx, 'MAX', 8, LINE - 7, 9.5, RED, 'left', 0.12);
+    label(ctx, 'MAX', 8, LINE - 7, u(9.5, 8.5), RED, 'left', 0.12);
     ctx.restore();
   }
 
@@ -350,7 +354,7 @@ export function createRenderer(view) {
     const k = sc.nextPop ?? 1;
     const vis = Math.min(1, (p.r * 0.7) / RADII[t]) * (0.25 + 0.75 * ease.outBack(clamp(k, 0, 1)));
     sprite(ctx, sprites[t], p.x, p.y, vis, 0);
-    pill(ctx, 'NEXT', p.x, p.y - p.r - (L.kind === 'wide' ? 4 : 2), L.kind === 'wide' ? 12 : 9.5, PINK);
+    pill(ctx, 'NEXT', p.x, p.y - p.r - (L.kind === 'wide' ? 4 : 2), L.kind === 'wide' ? Math.min(20, u(12, 9.5)) : u(9.5, 9.5), PINK);
   }
 
   // ---------- the evolution strip ----------
@@ -369,7 +373,9 @@ export function createRenderer(view) {
           ctx.globalAlpha = 1 - k; ctx.fillStyle = HONEY;
           circle(ctx, p.x, y, p.r + 6 + 26 * ease.outCubic(k)); ctx.fill(); ctx.globalAlpha = 1;
         }
-        drawIcon(ctx, t, found, p.x, y, a, t === top && sc.game);
+        const small = tight();
+        drawIcon(ctx, t, found, small ? p.x + 54 : p.x, y, a, t === top && sc.game);
+        if (small) continue;
         const name = found ? NAMES[t] : '? ? ?';
         label(ctx, name, p.x + p.r + 11, y - 3, 12, !found ? 'rgba(228, 217, 255, 0.3)' : t === top && sc.game ? HONEY : lit ? PAPER : 'rgba(228, 217, 255, 0.55)', 'left', 0.06);
         if (found) mono(ctx, `+${points(t)}`, p.x + p.r + 11, y + 12, 10.5, lit ? 'rgba(228, 217, 255, 0.6)' : 'rgba(228, 217, 255, 0.3)', 'left');
@@ -393,7 +399,7 @@ export function createRenderer(view) {
     if (sc.game && top >= 1) {
       const x = p.x0 + ((Math.min(top, MAX_TIER) - 1) / (MAX_TIER - 1)) * (p.x1 - p.x0);
       const tx = clamp(x, p.x0 + 26, p.x1 - 26);
-      label(ctx, NAMES[Math.min(top, MAX_TIER)], tx, p.y + 31, 10, HONEY, 'center', 0.08);
+      label(ctx, NAMES[Math.min(top, MAX_TIER)], tx, p.y + 22 + u(10, 10.5), u(10, 10.5), HONEY, 'center', 0.08);
     }
   }
   function drawIcon(ctx, t, found, x, y, alpha, ring) {
@@ -411,15 +417,22 @@ export function createRenderer(view) {
   // ---------- the score (the demo, which has no top bar) ----------
   function drawScore(ctx, sc) {
     const p = L.parts.score, v = Math.round(sc.score).toLocaleString('en-US');
-    const wide = L.kind === 'wide';
-    label(ctx, 'SCORE', p.x, p.y, wide ? 12 : 10.5, 'rgba(228, 217, 255, 0.75)', wide ? 'center' : 'left', 0.16);
+    const wide = L.kind === 'wide', ls = u(wide ? 12 : 10.5, 9), ns = u(wide ? 34 : 30, 20);
+    label(ctx, 'SCORE', p.x, p.y, ls, 'rgba(228, 217, 255, 0.75)', wide ? 'center' : 'left', 0.16);
     ctx.save();
-    ctx.font = `900 ${wide ? 34 : 30}px ${DISPLAY}`;
+    ctx.font = `900 ${ns}px ${DISPLAY}`;
+    const fit = wide ? Math.min(1, (L.parts.right.w - 24) / Math.max(1, ctx.measureText(v).width)) : 1;
+    if (fit < 1) ctx.font = `900 ${ns * fit}px ${DISPLAY}`;
     ctx.textAlign = wide ? 'center' : 'left'; ctx.textBaseline = 'alphabetic';
     ctx.lineJoin = 'round';
-    ctx.lineWidth = 7; ctx.strokeStyle = INK; ctx.strokeText(v, p.x, p.y + (wide ? 38 : 32));
-    ctx.fillStyle = PAPER; ctx.fillText(v, p.x, p.y + (wide ? 38 : 32));
+    const y = p.y + ns * fit * 1.1 + 2;
+    ctx.lineWidth = ns * fit * 0.2; ctx.strokeStyle = INK; ctx.strokeText(v, p.x, y);
+    ctx.fillStyle = PAPER; ctx.fillText(v, p.x, y);
     ctx.restore();
+    if (sc.best != null && wide) {
+      const b = `BEST ${Math.round(sc.best).toLocaleString('en-US')}`;
+      label(ctx, b, p.x, y + ls * 1.9, ls, sc.score >= sc.best && sc.best > 0 ? HONEY : 'rgba(228, 217, 255, 0.6)', 'center', 0.12);
+    }
   }
 
   // ---------- AGI-1: her face and her words ----------
@@ -437,7 +450,7 @@ export function createRenderer(view) {
       if (img) ctx.drawImage(img, f.x - f.r, fy - f.r, f.r * 2, f.r * 2);
       circle(ctx, f.x, fy, f.r); ctx.lineWidth = 2.4; ctx.stroke();
       heart(ctx, f.x + f.r * 0.82, fy - f.r * 0.78, 6.5, PINK, 0.25);
-      label(ctx, 'AGI-1', f.x, fy + f.r + 22, 11, 'rgba(228, 217, 255, 0.8)', 'center', 0.14);
+      label(ctx, 'AGI-1', f.x, fy + f.r + 10 + u(11, 9), u(11, 9), 'rgba(228, 217, 255, 0.8)', 'center', 0.14);
       if (!talking) return;
       const k = s.t / s.dur, inA = Math.min(1, s.t / 0.22), outA = k > 0.86 ? (1 - k) / 0.14 : 1;
       const pop = ease.outBack(inA);
@@ -467,13 +480,13 @@ export function createRenderer(view) {
   }
   // a speech bubble: paper, ink, a tail toward her face; her words in serif italics (hearts drawn, not typed)
   function bubble(ctx, s, x, y, w, tail, hFixed) {
-    const fs = L.kind === 'wide' ? 15.5 : 14.5;
+    const fs = L.kind === 'wide' ? u(15.5, 12.5) : u(14.5, 13);
     ctx.save();
     ctx.font = `italic 400 ${fs}px ${SERIF}`;
     const line = s.cl || (s.cl = canvasLine(s.text));
     const lines = wrap(ctx, line.text, w - 22 - (line.heart || line.blush ? 0 : 0));
     const lh = fs * 1.12;
-    const h = hFixed || lines.length * lh + 16;
+    const h = Math.max(hFixed || 0, lines.length * lh + 16);
     const top = tail === 'up' ? y - h : y;
     roundRect(ctx, x, top + 3, w, h, 13); ctx.fillStyle = INK; ctx.fill();
     ctx.beginPath();
@@ -509,22 +522,25 @@ export function createRenderer(view) {
     ctx.save();
     ctx.globalAlpha = outA;
     ctx.translate(cx, cy); ctx.scale(sc0, sc0); ctx.rotate(-0.035);
-    ctx.font = `900 ${b.big ? 34 : 30}px ${DISPLAY}`;
+    let fsz = u(b.big ? 34 : 30, 19);
+    ctx.font = `900 ${fsz}px ${DISPLAY}`;
     const name = b.title;
-    const tw = ctx.measureText(name).width;
-    const ic = b.tier && b.tier <= MAX_TIER ? 30 : 0;
-    const w = Math.max(190, tw + 56 + ic * 2.2), h = b.big ? 74 : 66;
+    let tw = ctx.measureText(name).width;
+    const ic = b.tier && b.tier <= MAX_TIER ? fsz : 0;
+    const room = JAR.W + 30 - 56 - ic * 2.2;
+    if (tw > room) { fsz *= room / tw; ctx.font = `900 ${fsz}px ${DISPLAY}`; tw = ctx.measureText(name).width; }
+    const w = Math.max(190, tw + 56 + ic * 2.2), h = Math.max(b.big ? 74 : 66, fsz * 2.15);
     roundRect(ctx, -w / 2, -h / 2 + 6, w, h, 20); ctx.fillStyle = INK; ctx.fill();
     roundRect(ctx, -w / 2, -h / 2, w, h, 20); ctx.fillStyle = b.color || PAPER; ctx.fill();
     ctx.lineWidth = INKW; ctx.strokeStyle = INK; ctx.stroke();
     if (ic) sprite(ctx, sprites[b.tier], -w / 2 + 16 + ic, 4, (ic * 0.95) / RADII[b.tier], 0);
     ctx.fillStyle = INK; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
-    ctx.fillText(name, ic ? ic * 1.1 : 0, 16);
+    ctx.fillText(name, ic ? ic * 1.1 : 0, fsz * 0.36);
     ctx.restore();
     ctx.save();
     ctx.globalAlpha = outA;
-    const py = cy - (b.big ? 37 : 33) * sc0;
-    pill(ctx, b.kicker || 'NEW', cx - 0, py, 12 * Math.min(1, sc0 + 0.2), b.kickerColor || PINK);
+    const py = cy - Math.max(b.big ? 37 : 33, fsz * 1.08) * sc0;
+    pill(ctx, b.kicker || 'NEW', cx - 0, py, u(12, 10) * Math.min(1, sc0 + 0.2), b.kickerColor || PINK);
     ctx.restore();
   }
 

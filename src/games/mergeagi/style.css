@@ -25,6 +25,8 @@
 .mg-canvas { cursor: crosshair; }
 .ak[data-ak-state='title'] .mg-canvas, .ak[data-ak-state='over'] .mg-canvas { cursor: default; }
 
+/* an invisible box whose padding is the notch and the home bar (the game reads it to keep the jar clear of them) */
+.mg-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
 .mg-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 /* ---------- the evolution strip (the title screen, the end of a run) ---------- */

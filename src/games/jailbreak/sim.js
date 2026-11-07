@@ -189,6 +189,7 @@ function stepPaddle(s, dt, input) {
   const tw = PADDLE.w * (s.fx.wide > 0 ? PADDLE.wide : s.fx.shrink > 0 ? PADDLE.shrink : 1);
   P.w += (tw - P.w) * (1 - Math.exp(-12 * dt));
   const half = P.w / 2, prev = P.x;
+  P.px = prev;
   if (P.stun > 0) { P.stun = Math.max(0, P.stun - dt); P.kv = 0; }
   else if (input.x != null && Number.isFinite(input.x)) { P.x = input.x; P.kv = 0; }
   else if (input.dir) {

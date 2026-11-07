@@ -20,6 +20,7 @@ import { charOf, looksOf, unlock, pick, bank, affordable, nextGoal, CHARACTERS }
 import { lineFor, shareText } from './lines.js';
 import { createSound, createMusic } from './sound.js';
 import { createHud, createDock, lookCard, heartIcon } from './ui.js';
+import { thumbOf } from './thumb.js';
 
 const root = document.getElementById('ak-root');
 const shell = createShell({
@@ -67,15 +68,14 @@ try {
     Object.assign(document.createElement('p'), { textContent: 'This browser can\'t draw 3D (WebGL is off or missing). Try another browser, or turn on hardware acceleration.' }));
   shell.stage.append(msg);
 }
-const fx = fitCanvas(fxCanvas, { maxDpr: 2, onResize: () => sized() });
 function barBottom() {
   if (DEMO) return 0;
   const s = shell.stage.getBoundingClientRect(), b = shell.bar.getBoundingClientRect();
   return Math.max(0, b.bottom - s.top);
 }
-function sized() {
-  view?.resize(fx.w, fx.h, { top: barBottom() });
-}
+const sizeTo = (v) => view?.resize(v.w, v.h, { top: barBottom() });
+const fx = fitCanvas(fxCanvas, { maxDpr: 2, onResize: sizeTo });
+const sized = () => sizeTo(fx);
 sized();
 
 const sound = createSound(shell.audio);
@@ -178,7 +178,7 @@ function endRun() {
 
 // ---------- the looks ----------
 const dock = createDock({
-  thumb: (id) => view?.thumb(id) || '',
+  thumb: (id) => thumbOf(id),
   onOpen: () => openLooks(),
   onCycle: (d) => {
     const s = looksOf(save);
@@ -193,7 +193,7 @@ function openLooks() {
   shell.audio.unlock();
   const lc = lookCard({
     save,
-    thumb: (id) => view?.thumb(id) || '',
+    thumb: (id) => thumbOf(id),
     onPick: (id) => {
       if (!id) { sound.error(); return save; }
       store(pick(save, id));
