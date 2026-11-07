@@ -1,5 +1,24 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Ten new AGI games and a compact /games (2026-11-08):** the owner, before going to sleep: "create 10 more high
+> quality new games … enjoyable, addicted and fun … the interface must not look like a vibecoded ai slop … optimized
+> both for mobile devices, iphone duo, pc … compact all the games so its easy to pick … a preview of gameplay on every
+> game … after ur done with everything publish it in production". Their choices: build from GitHub `main`, AGI-1 / $AGI
+> themed, local high scores only, ChatGPT images allowed (not used: the owner was asleep and its downloads can't reach
+> this project without a folder approval; covers use real gameplay and AGI-1's existing 2D art). **MERGE TO AGI** (merge
+> puzzle), **BLOCKCHAIN** (block puzzle), **HEARTBEAT** (rhythm, her seven songs), **SCAM SLAYER** (slicer), **LAST
+> MODEL STANDING** (bot-swarm survival), **SINGULARITY** (idle), **JAILBREAK** (brick breaker), **STACKED** (3D
+> stacker), **JAYWALK** (3D hopper) and **ROBOTAXI RUSH** (racing), at agi1.app/games/<id>, all on one shared arcade kit
+> (`src/games/kit/`: top bar, title, pause, how to play, the end card, settings, local saves `agi_arcade:<game>`, sound
+> made in the browser, `?demo` self-play). /games is now a compact picker: small tiles (2 / 3 / 4 a row) each with a
+> muted loop of its game playing itself, filters (All, New, Arcade, Action, Puzzle, 3D, Sim & idle) and sorts; one
+> ratings tab per game; its link preview a wall of the games (`cards/games-all.jpg`), each new game its own
+> (`cards/games/<id>.jpg`). Every game: phones both ways, tablets, a foldable's inner screen, computers; touch, mouse
+> and keyboard; "reduce motion"; the site's CSP; never money. Plays and reviews use the existing `/api/wallet` and
+> `arcade.sql`: **no new setting, SQL, function or service.** See "The arcade kit and ten new games" under "AGI games".
+> **Released to `main` on 2026-11-08** as one commit, after the full build passed the way Vercel runs it (1,829 tests:
+> 1,825 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check).
+
 > **Phomo fidelity, paper perpetuals and public KOLs (2026-11-03):** the owner compared Phomo with their
 > logged-in Fomo account and requested its typography, layout and features, then real KOLs in every non-Clank
 > Live terminal. The measured Aeonik desktop workspace now has the persistent social rail, matching token
@@ -9917,6 +9936,8 @@ coming-soon page for games until then, is AGI games' own page, with the owner's 
 before pushing it** (below). No new setting or service.
 
 **What visitors see at agi1.app/games** (`games.html`, `src/games/page.js`, `src/styles/games.css`):
+- (Since 2026-11-08 the page is a compact picker of fourteen games with a gameplay loop on each tile: see "The
+  arcade kit and ten new games" below. Its ratings, reviews and leaderboards work as described here.)
 - The site's top bar and footer ("Games" marked as the page you're on); its tab "GAME beta · AGI games".
 - **The top:** "AGI games", then a huge **GAME** with a small **beta** sticker stuck over the top right of its E, turned
   a little (one line, a real space between the words, so screen readers say "GAME beta"); it lands from about twice its
@@ -10257,6 +10278,103 @@ physics; everything above the city is drawn in code.
 controls, only its `RUNTIME` files shipped, its key art, its two CSP rules and nowhere else), `tests/page.test.js` (its card,
 stars and plays, its page, its addresses; the games page with four games), `tests/intro.test.js` (its cover and entry, as
 every game's), `tests/arcade.test.js`, `tests/clips.test.js`.
+
+### The arcade kit and ten new games (2026-11-08)
+
+**The owner's request** (2026-11-08, before going to sleep): "can you create 10 more high quality new games that are really
+good on the agi1.app/games like when they play it it will be enjoyable, addicted and fun. the interface must not look like a
+vibecoded ai slop even the game. optimized both for mobile devices, iphone duo, pc etc. … on the /games page can you compact
+all the games so its easy to pick like they have to scroll down a lot if theres so many games … and there should ba a preview
+of gameplay on every game … and after ur done with everything publish it in production". The owner's choices that night:
+build from GitHub `main` (the owner's folder was 44 commits behind), AGI-1 / $AGI themed games, local high scores only (no
+leaderboards), and ChatGPT image generation allowed (not used: see below).
+
+**The ten games** (each at agi1.app/games/<id>, its own page `<id>.html`, its code in `src/games/<id>/`, its tests
+`tests/<id>.test.js`; every picture drawn in code, every sound made in the browser; AGI-1 only as her 2D art):
+
+| Game | What it is | Its parts | Its controls |
+|---|---|---|---|
+| **MERGE TO AGI** (`mergeagi`, merge puzzle) | Drop orbs in a lab beaker; two of a kind merge into the next, up eleven tiers (BIT, BYTE, TOKEN, PROMPT, NEURON, CHIP, GPU, CLUSTER, DATACENTER, SUPERMIND, AGI-1); two AGI-1s make the **SINGULARITY** (a shockwave, slow motion, 1000 × the chain). Chains are causal (a merged orb merging again within 0.6 s); orbs over the red MAX line for 2 s end the run. Its own deterministic circle physics (8 substeps, sleeping, a spatial grid). AGI-1's 34 lines; the Evolution strip keeps the tiers found. | `tiers`, `physics`, `rules`, `ai`, `layout`, `art`, `render`, `sound`, `lines` | drag to aim, let go to drop; ←/→ or A/D, Space / ↓ / Enter to drop |
+| **BLOCKCHAIN** (`blockchain`, block puzzle) | An 8×8 board, a tray of 3 pieces (37 shapes, no rotation); a full row or column is "confirmed". Each clearing drop raises the **CHAIN** (×2, ×3…); 3 drops without a clear break it. A clear scores 10 × cells × lines × chain; a perfect clear +300 × chain; DOUBLE … GIGA. A seeded, fair dealer (always a piece that fits, big pieces capped early, a line-finisher on a crowded board). AGI-1's 31 lines; a lifetime "BLOCK #… CONFIRMED" count. | `rules`, `gen`, `run`, `ai`, `lines`, `session`, `bot`, `render`, `art`, `sound` | drag a piece (it floats above the finger); 1/2/3, arrows, Space/Enter, Esc |
+| **HEARTBEAT** (`heartbeat`, rhythm) | Four lanes of hearts to AGI-1's seven songs (Feel the AGI, SI (It's Better), Send It, MAINRUNNER, Save Slot 2, AGI. and After AGI: the same as her `/music`), each on Easy / Normal / Hard: 21 charts (14,023 notes, levels 2–12) made from the songs' own audio by `tools/games/heartbeat/chart.py` (the beat follows each song's drifting tempo; Hard adds holds and doubles). 45 / 90 / 135 ms windows, FEVER ×1.2 from a 50 combo, an all-perfect run is exactly 1,000,000, grades S+ to D with FULL COMBO and ALL PERFECT stamps. A setlist of ticket stubs with a 12 s preview of each song; pause rewinds 3 s and counts down; note speed, a sync offset (±200 ms) and a tap-along sync helper. The song is scheduled on the audio clock (`getOutputTimestamp`), presses placed by their own timestamps. AGI-1 performs on a stage under the stars. Its songs as AAC in `public/games/heartbeat/audio/` (about 20 MB in all, each loaded only when picked; `/music/<id>.mp3` if AAC can't play). | `rules`, `engine`, `chart`, `clock`, `autoplay`, `layout`, `lines`, `sprites`, `stage`, `highway`, `music`, `screens`, `charts/` (`tools/games/heartbeat/`: catalog, encode, chart, strip) | tap the lanes (multi-touch, holds); D F J K, the arrows or 1–4; the mouse |
+| **SCAM SLAYER** (`scamslayer`, slicer) | Swipe to slice the scams flying up (a fake airdrop, a seed-phrase DM, a phishing hook, a fake verified badge, "100x" signals, a magic hat, an impostor robot, fake support), spare the hearts, never cut the rug. **Classic** (3 shields, a rug ends it) and **Blitz** (60 s). Combos (5·n² for 3+ in a swipe), a golden scam ×5, crits, Slow-mo / Frenzy / Double; a hint the first time each kind shows up. Its share text ends "never share your seed phrase". | `kinds`, `geom`, `waves`, `engine`, `demo`, `lines`, `art`, `scene`, `sound`, `effects`, `blade`, `render` | swipe (several fingers, several blades); hold and drag with a mouse |
+| **LAST MODEL STANDING** (`lastmodel`, survival roguelite) | Survive ten minutes of spam bots in an 8-bit server room: you move, she attacks by herself. Eight weapons (PROMPT BOLT, FIREWALL, TOKEN STREAM, GRADIENT RAIN, ATTENTION HEADS, BACKPROP, HALLUCINATION FIELD, OVERCLOCK NOVA) and seven passives, five levels each; three-card level-ups (1/2/3, R rerolls). Six kinds of bots and elites; three bosses (BOTNET at 3:00, DATA BROKER at 6:00, THE OVERFIT at 9:00); a seeded spawn director capped at 350 bots; XP chips, hearts, magnets, purge bombs, caches, crates. At 10:00: keep going (overtime) or end the run. PATCHES from every run buy lasting upgrades in the Patch shop (6 × 5 ranks). Score: kills × 10 + a time bonus + level × 50. AGI-1's 41 lines. | `sim`, `rules`, `director`, `spatial`, `ai`, `render`, `art`, `sprites`, `effects`, `sound`, `ui`, `lines` (`tools/games/lastmodel/balance.mjs`) | drag anywhere (a floating stick); hold the mouse to steer; WASD / arrows (a gamepad's left stick too) |
+| **SINGULARITY** (`singularity`, idle) | Tap AGI-1's core for compute (FLOPs: never money), build 12 machines (Spark Notebook … Universe Sim), install 48 upgrades; catch Eureka sparks (a ×7 Frenzy for 30 s, or 15 minutes of thinking); six core forms (Spark … Her Heart) and her log of 30 lines. **The Singularity** (from 1e15 FLOPs): start over with Insight (+2% each, forever) and 8 perks. She keeps thinking while you're away (50% up to 8 h). A first Singularity in about 49 minutes of active play (`tools/games/singularity/sim.mjs`). Saves every 5 s (versioned, with migration). | `econ`, `data`, `core`, `ui`, `lines`, `save`, `format`, `icons`, `demo`, `audio` | tap; Space taps, 1–9 builds, B: ×1/×10/×100/MAX, U/I/L tabs, E catches a spark |
+| **JAILBREAK** (`jailbreak`, brick breaker) | Break AGI-1 out of the sandbox: 6 worlds × 5 handmade levels (AGI lettering, a cat, a spiral, a chip, a crown…), each world ending with THE WARDEN (shield plates that grow back, bombs that stun the paddle, an eye for triple damage). Tough, steel, explosive, glass, key/gate, portal and moving bricks; 7 power-ups and 2 striped hazards; a combo multiplier; 3 stars a level (clear, no life lost, under par: up to 90) and a level map; **Endless** after 1-5 (seeded layers, the Warden every 6th). Swept collisions; the game's AI clears all 30 levels in its tests. AGI-1's 2D art behind the wall, shattering free at a clear. | `physics`, `levels`, `sim`, `boss`, `ai`, `endless`, `progress`, `lines`, `sprites`, `bits`, `render`, `sound`, `ui` (`tools/games/jailbreak/simulate.mjs`) | drag anywhere (the paddle follows the finger's motion), tap to launch / fire; the mouse; ←/→ or A/D, Space / ↑ / W |
+| **STACKED** (`stacked`, 3D stacker) | Each floor slides in (along X, then Z); a tap keeps the overlap and the overhang tumbles away. A perfect drop (within 3.5%) snaps exactly, its tone climbing with the streak; from 6 in a row each perfect grows the floor back. Five zones change the sky and the floors (city night, rain clouds, above the clouds, the stratosphere, orbit); at the end the camera pulls back to the whole tower. AGI-1's 22 lines. three.js, an isometric diorama in the arcade's colors. | `logic`, `theme`, `scene`, `shaders`, `sound`, `lines` | tap / click anywhere, Space / Enter / ↓ |
+| **JAYWALK** (`jaywalk`, 3D hopper) | AGI-1 as a chibi hops across the streets of 2049: parks and sidewalks (props block cells), roads (cars, robotaxis, vans, buses both ways), bike lanes (fast delivery-bot scooters), data rivers (ride server-rack rafts and drone pads) and maglev lines (a red light and a bell, then a train). Seeded rows checked by a solver (every stretch can be crossed), an easy start, breathers. Five deaths with their own moments (Flattened!, Splash!, Carried away!, Zapped!, and Escorted out! by a drone after standing still too long or going 3 rows back). Near-miss "CLOSE!" pop-ups, a milestone every 25 rows, a BEST line painted on the street. Hearts (+1, golden +5) unlock six looks (AGI-1, Hoodie, Raincoat, Her Cat, Pajamas, Astronaut). three.js voxels, instanced, rows reused; real shadows on computers only. | `world`, `rules`, `pilot`, `voxel`, `models`, `scene`, `chars`, `lines`, `sound`, `ui`, `thumb` | tap to hop, swipe left / right / down; ↑/W/Space, ←/A, →/D, ↓/S |
+| **ROBOTAXI RUSH** (`robotaxi`, racing) | An endless pseudo-3D synthwave highway through four zones (Dusk, Night City, Rain, Sunrise Coast; a checkpoint every 2 km). Near misses (+250, "SO CLOSE!" +500) chain up to ×10 and fill the boost (4 s: rammed cars fly off for +150); three shields; passenger pins (+500) and shield pickups. A guardian check keeps a way through. AGI-1's hair shows through the rear window; 47 lines; her face on billboards. | `config`, `track`, `traffic`, `sim`, `ai`, `camera`, `decor`, `zones`, `sprites`, `scenery`, `render`, `hud`, `sound`, `lines` | hold a side or drag to steer, the BOOST button (a second finger); ←/→ or A/D, ↑/W/Space boost |
+
+Every one of them: a title screen that plays itself behind its words, how to play (the **?**), pause (Esc / P, and by itself
+when the tab is hidden), AGI-1's own lines in her voice during a run and on its end card, a share on X (its words, never a
+picture), its bests kept in this browser only (`agi_arcade:<game>`), and `?demo` (it plays itself: silent, nothing saved or
+counted; `?seed=n` repeats a run). Checked by their builders at 360 × 640 up to 2560 × 1440, phones held both ways, a tablet
+and a foldable's inner screen (884 × 1104), with "reduce motion" (no shake, flashes or pops), keyboard only, and the site's
+real CSP. **Never money** (hard rule 8): no $AGI, prices, buying or pumping in any of them (`tests/arcade-kit.test.js` reads
+every string); SINGULARITY's numbers are compute (FLOPs), BLOCKCHAIN's chain is a combo.
+
+**The arcade kit** (`src/games/kit/`, its README there): the frame every one of the ten shares, so they feel like one arcade:
+the top bar (← Arcade, the game's numbers as sticker chips, sound, full screen on computers, pause), the title screen
+(`shell.title`), pause, how to play, the end-of-run card (`shell.over`: the score counting up, "New best!", stats, AGI-1's line
+with her face, Play again, Share on X, Menu, "Rate it" → its tab on agi1.app/games, "More AGI games"; on a phone held
+sideways the run on the left and Play again on the right, `split: false` for a game with its own layout there), toasts, the
+arcade's settings (sound, music, vibration: `agi_arcade:settings`, the same in every game), each game's save
+(`agi_arcade:<game>`, this browser only), sound made in the browser (`audio.js`: effect presets, a small music sequencer),
+a fixed-step loop, a sharp canvas on any screen, taps / drags / swipes / keys, and juice (`fx.js`: particles drawn as paths,
+shake, floating numbers, tweens, seeded dice). The look: Pop mode as stickers (ink outlines, hard shadows, honey / pink /
+violet / mint, Anybody, Geist, Geist Mono, Instrument Serif), every rule an `ak-` class. `shell.started()` counts one play
+per run (`kit/site.js`: the same `game-play` as every AGI game: no sign-in, never who). The end card ignores the tap that
+ended the run, and a held key never restarts it.
+
+**agi1.app/games, compact** (`games.html`, `src/games/page.js`, `src/games/shelf.js`, `src/styles/games.css` + Pop mode in
+`pop.css`): a shorter hero ("fourteen games now 💜"), then **Pick a game**: every game a small tile (two a row on a phone,
+three on a tablet, four on a computer) that opens it, with **a muted loop of it playing itself** (the ones on screen play,
+a few at a time, nearest the middle first; on a computer the one under the mouse; never with "reduce motion" or the data
+saver: the stills stay), its kind, its line, its stars and plays ("New" for none yet) and a New / Play money sticker; filters
+(All, New, Arcade, Action, Puzzle, 3D, Sim & idle) and a sort (Featured, Newest, Most played, Top rated). The order and the
+words are `SHELF` in `shelf.js`. The leaderboards are as they were (Ride 'Em, AGI! and TRENCHING SIMULATOR). Ratings and
+reviews: one compact tab per game (a row that scrolls sideways on a phone), each panel filled from one
+`<template id="gm-panel-tpl">` (its ids made for its game: `GAMEID`, `GAMENAME`), everything else as before (`#rate` is
+still Ride 'Em, AGI!'s). Its link preview is a wall of its games (`public/cards/games-all.jpg`:
+`node tools/cards/games-all.mjs` from `tools/cards/games-all-card.html`); Ride 'Em, AGI! keeps `cards/games.jpg`.
+
+**The previews** (`public/images/games/<id>.mp4` and `.webp`, all fourteen games): `node tools/games/capture-previews.mjs
+[--base http://127.0.0.1:5173] [game …]` with the site running (`npx vite`): Chromium with a fake clock that stands still
+between frames, so each frame is exactly 1/30 s of play however slowly the machine draws, then ffmpeg (480 × 480 H.264,
+6 s, no sound, fast start; a 600 × 600 still). The kit games play themselves (`?demo&seed=7`, each tuned so its best moments
+land in the recorded window); Ride 'Em, AGI! with its own QA autopilot (`window.__auto`); SKYBREAK with its QA input
+replay (`?qa`, each frame stepped by hand); VLAD RUNNER 2049 with scripted presses; TRENCHING SIMULATOR on a trending coin's
+chart in free play. Run it again after a game's look or its demo changes (a dev server without file watching for long runs).
+
+**Their link previews** (`public/cards/games/<id>.jpg`, 1200 × 630): `node tools/games/covers.mjs [game …]`: the game's
+still in a sticker frame, its name in the arcade's letters (a long one shrinks to fit), its line, AGI-1 (her 2D art: the
+front's cutout). `scripts/share-pages.js` fills in the site's address and the build checks they're there (`neededGameArt()`).
+Each page's browser-bar color (`theme-color`) is the top of its own title screen on a phone.
+
+**Wiring a new kit game** (all ten are): `src/games/list.js` (`kit: true`), `<id>.html` (the intro's cover then
+`<main id="ak-root">`), `src/games/<id>/page.js` (`import '../intro.js'` first), `vite.config.js` (`KIT_GAMES`),
+`vercel.json` (its two rewrites), `src/owner/catalog.js`, `scripts/share-pages.js`, `server/arcade.js` (`LOOK_GAMES`: its
+reviews judged as reviews of it), `src/games/shelf.js` (its tile), `games.html` (its tile and tab), `package.json` (its
+tests). `tests/arcade-kit.test.js` checks all of it.
+
+**Not done, on purpose:** no leaderboards for the ten (the owner's choice: local bests); no new service, setting, SQL or
+function (plays and reviews use the existing `/api/wallet` and `arcade.sql`, which takes any game id). ChatGPT images
+weren't used: the owner was asleep and the browser's downloads can't reach this project without the owner approving a
+folder, so the covers use real gameplay and AGI-1's existing 2D art. Real phones weren't available: frame times were
+measured in a software renderer on a loaded machine (each game's own code a few milliseconds a frame at most; the 3D ones
+lower their resolution by themselves when frames run slow).
+
+**How it was built:** the kit and the page first, then each game by its own builder (one Claude agent a game, each with a
+written brief: its rules, juice, AGI-1's lines, its demo, its tests), each reviewed, wired in and committed on the branch
+`arcade-ten-games` (Vercel's previews off for it in `vercel.json` while it was being written), then one release commit on
+`main`.
+
+**Owner:** nothing to set up. Try a few on a phone and a computer; rate them (the ratings tabs are there for all fourteen).
+Tuning was against simulated players (each game's own AI), so real play may show a game too hard or too easy: say which.
+
+**Tests:** `tests/arcade-kit.test.js` (the kit, the wiring, the covers), each game's own file, `tests/page.test.js` (the picker,
+its tiles and previews, filters and sorts, the tabs and the panel template, the wall of games, the look in Pop mode),
+`tests/intro.test.js` (every game's page), `tests/arcade.test.js`, `tests/clips.test.js`, `tests/share.test.js`.
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 

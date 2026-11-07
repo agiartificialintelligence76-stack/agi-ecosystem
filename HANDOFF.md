@@ -1,5 +1,36 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Ten new AGI games and a compact /games — 2026-11-08
+
+The owner, before going to sleep: "can you create 10 more high quality new games … enjoyable, addicted and fun … the
+interface must not look like a vibecoded ai slop … optimized both for mobile devices, iphone duo, pc … compact all the
+games so its easy to pick … a preview of gameplay on every game … after ur done with everything publish it in
+production". Their choices: build from GitHub `main`, AGI-1 / $AGI themed, local high scores only, ChatGPT images
+allowed (not used).
+
+- **The games** (agi1.app/games/<id>): MERGE TO AGI (`mergeagi`), BLOCKCHAIN (`blockchain`), HEARTBEAT (`heartbeat`),
+  SCAM SLAYER (`scamslayer`), LAST MODEL STANDING (`lastmodel`), SINGULARITY (`singularity`), JAILBREAK (`jailbreak`),
+  STACKED (`stacked`), JAYWALK (`jaywalk`), ROBOTAXI RUSH (`robotaxi`). What each one is: CLAUDE.md, "AGI games" → "The
+  arcade kit and ten new games".
+- **The arcade kit** (`src/games/kit/`, README there): the shared top bar, title, pause, how to play, end card,
+  settings, saves (`agi_arcade:<game>`), sound, loop, input, juice, and `?demo` (each game plays itself, for its
+  preview).
+- **/games:** a compact picker (2/3/4 tiles a row) with a muted gameplay loop on each tile, filters and sorts; a ratings
+  tab per game; its link preview a wall of the games (`cards/games-all.jpg`).
+- **Previews and covers:** `node tools/games/capture-previews.mjs` (all fourteen), `node tools/games/covers.mjs` (the
+  ten), `node tools/cards/games-all.mjs` (the wall).
+- **Nothing to set up:** plays and reviews use the existing `/api/wallet` and `supabase/arcade.sql`; no new setting,
+  SQL, function or service.
+- **Built** on the branch `arcade-ten-games` (each game by its own Claude agent from a written brief, then reviewed and
+  wired in). **Released to `main` on 2026-11-08** as one commit.
+- **Checks:** the full build the way Vercel runs it (a clean copy, `npm ci`, Node 24, UTC, all 81 documented settings as
+  fakes): 1,829 tests, 1,825 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check (240 files) passed.
+  The ten games' own tests: 234, and the kit's 8. Each game's built page on a phone (390 × 844) and a computer (1440 ×
+  900) with the site's real headers: it starts, plays, and shows no page errors, console errors or CSP reports; /games
+  plays its tiles' previews with nothing missing.
+- **Left for the owner:** play a few on a real phone (tuning was against each game's own AI) and say which feel too hard
+  or too easy; rate them.
+
 ## Meme addition: AGI Symphony — 2026-10-29
 
 The owner: "i added a new 1 video to the memess folder can you add that to the meme library on the site", then "and
