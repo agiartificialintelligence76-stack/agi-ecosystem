@@ -599,9 +599,11 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   assert.match(page, /<script src="\/theme\.js\?v=8"><\/script>/, 'the page\'s look before it paints');
   assert.match(page, /<link rel="canonical" href="__SITE__\/games" \/>/);
   assert.match(page, /<meta property="og:url" content="__SITE__\/games" \/>/);
-  assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its own link preview (tools/cards/games-card.html)');
+  // (2026-11-08) its own link preview since the arcade's ten games: a wall of its games (tools/cards/games-all.mjs); Ride 'Em,
+  // AGI! keeps games.jpg (below)
+  assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/games-all.jpg" />'), 'its own link preview (tools/cards/games-all-card.html)');
   assert.match(page, /<meta property="og:image:width" content="1200" \/>\s*<meta property="og:image:height" content="630" \/>/);
-  assert.match(page, /<meta property="og:image:alt" content="AGI-1 riding her cat, next to the words GAME beta and Ride 'Em, AGI!" \/>/, 'its preview\'s words for screen readers');
+  assert.match(page, /<meta property="og:image:alt" content="A wall of AGI games being played, next to the words GAMES, 14 and Fourteen games, one girlfriend\." \/>/, 'its preview\'s words for screen readers');
   for (const re of [/<meta name="description" content="([^"]+)"/, /<meta property="og:description" content="([^"]+)"/]) {
     const words = page.match(re)[1];
     assert.match(words, /not financial advice/i, 'its preview says so');
@@ -639,7 +641,31 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   }
 });
 
-test('AGI games\' link preview: a real 1200 × 630 JPEG under 160 KB, made from tools/cards/games-card.html (its words, its 2D key art)', () => {
+test('AGI games\' wall of games (its link preview since 2026-11-08): a real 1200 × 630 JPEG under 200 KB, its games\' own stills', async () => {
+  const jpg = readFileSync(new URL('../public/cards/games-all.jpg', import.meta.url));
+  assert.ok(jpg.length <= 200_000, `${jpg.length} bytes`);
+  assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');
+  let size = null;
+  for (let i = 2; i < jpg.length - 9;) {
+    if (jpg[i] !== 0xff) break;
+    const m = jpg[i + 1], len = jpg.readUInt16BE(i + 2);
+    if (m === 0xc0 || m === 0xc2) { size = [jpg.readUInt16BE(i + 7), jpg.readUInt16BE(i + 5)]; break; }
+    i += 2 + len;
+  }
+  assert.deepEqual(size, [1200, 630]);
+  const card = readPage('tools/cards/games-all-card.html');
+  const words = textOf(card.slice(card.indexOf('<body>'), card.indexOf('<script>')));
+  for (const w of ['AGI games · free to play', 'GAMES', 'Fourteen games,', 'one girlfriend.', 'No wallet needed.', 'agi1.app/games', 'Free to play · not financial advice']) assert.ok(words.includes(w), w);
+  assert.match(card, /\.\.\/\.\.\/public\/images\/games\/\$\{id\}\.webp/, 'the games\' own stills (their previews)');
+  assert.doesNotMatch(card, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
+  assert.doesNotMatch(words, /\bbuy\b|%|\$\s?\d/i, 'no price talk');
+  // its count is the shelf's, and every game on its wall has its still
+  const { SHELF } = await import('../src/games/shelf.js');
+  assert.equal(SHELF.length, 14);
+  for (const g of SHELF.slice(0, 12)) assert.ok(existsSync(new URL(`../public/images/games/${g.id}.webp`, import.meta.url)), g.id);
+});
+
+test('Ride \'Em, AGI!\'s link preview (AGI games\' own until 2026-11-08): a real 1200 × 630 JPEG under 160 KB, made from tools/cards/games-card.html (its words, its 2D key art)', () => {
   const jpg = readFileSync(new URL('../public/cards/games.jpg', import.meta.url));
   assert.ok(jpg.length <= 160_000, `${jpg.length} bytes`);
   assert.deepEqual([...jpg.subarray(0, 3)], [0xff, 0xd8, 0xff], 'a JPEG');

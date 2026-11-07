@@ -62,10 +62,11 @@ export function allSharePages(site) {
 }
 
 // the card pictures every share page needs (public/cards/, see "Share cards" in CLAUDE.md; games.jpg since 2026-10-19, AGI
-// games' own, made from tools/cards/games-card.html; trenchingsimulator.jpg since 2026-10-20, its second game's, made from
-// tools/cards/trenchingsimulator-card.html)
+// games' own, made from tools/cards/games-card.html, Ride 'Em, AGI!'s since 2026-11-08; trenchingsimulator.jpg since
+// 2026-10-20, its second game's, made from tools/cards/trenchingsimulator-card.html; games-all.jpg since 2026-11-08, AGI
+// games' own again, its wall of games: tools/cards/games-all.mjs)
 export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
-  'games.jpg', 'trenchingsimulator.jpg'];
+  'games.jpg', 'trenchingsimulator.jpg', 'games-all.jpg'];
 // (2026-11-08) the arcade kit's ten games: each its own link preview, cards/games/<id>.jpg (tools/games/covers.mjs)
 const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi'];
 export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp', ...KIT_GAMES.map((id) => `cards/games/${id}.jpg`)];
