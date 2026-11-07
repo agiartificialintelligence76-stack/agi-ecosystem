@@ -7,21 +7,28 @@ import { fmt, fmtTime } from '../kit/fx.js';
 import { LEVELS, WORLDS } from './levels.js';
 import { normalize, isOpen, worldStars, totalStars, nextUp, endlessOpen, STARS_MAX } from './progress.js';
 
+// each icon: its <svg>'s attributes and its shapes, built with DOM methods (no markup parsed: the arcade's CSP rule)
 const SVG = {
-  star: '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.7 6.1 6.6.6-5 4.4 1.5 6.5L12 16.8 6.2 20.2l1.5-6.5-5-4.4 6.6-.6z" stroke-linejoin="round"/></svg>',
-  lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="10" rx="2.5" fill="currentColor"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>',
-  check: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
-  cross: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg>',
-  boss: '<svg viewBox="0 0 24 24"><path d="M12 2.5v3" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><rect x="3" y="6" width="18" height="13" rx="4.5" fill="currentColor"/><rect class="jb-eye" x="6" y="10" width="12" height="4.5" rx="2.25"/><circle cx="12" cy="2.6" r="1.8" fill="currentColor"/></svg>',
-  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5.2v13.6c0 .8.9 1.3 1.6.9l10.4-6.8c.6-.4.6-1.3 0-1.7L9.6 4.3C8.9 3.9 8 4.4 8 5.2z"/></svg>',
-  map: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round"><path d="M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z"/><path d="M9 4v13.5M15 6.5V20"/></svg>',
-  infinity: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6.5 8.5c-2 0-3.5 1.6-3.5 3.5s1.5 3.5 3.5 3.5c3.5 0 7.5-7 11-7 2 0 3.5 1.6 3.5 3.5s-1.5 3.5-3.5 3.5c-3.5 0-7.5-7-11-7z"/></svg>',
-  close: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  star: [{ viewBox: '0 0 24 24' }, [['path', { d: 'M12 2.6l2.7 6.1 6.6.6-5 4.4 1.5 6.5L12 16.8 6.2 20.2l1.5-6.5-5-4.4 6.6-.6z', 'stroke-linejoin': 'round' }]]],
+  lock: [{ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.6', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [['rect', { x: '5', y: '11', width: '14', height: '10', rx: '2.5', fill: 'currentColor' }], ['path', { d: 'M8 11V8a4 4 0 0 1 8 0v3' }]]],
+  check: [{ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '3.2', 'stroke-linecap': 'round', 'stroke-linejoin': 'round' }, [['path', { d: 'M5 12.5l4.5 4.5L19 7.5' }]]],
+  cross: [{ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '3', 'stroke-linecap': 'round' }, [['path', { d: 'M7 7l10 10M17 7L7 17' }]]],
+  boss: [{ viewBox: '0 0 24 24' }, [['path', { d: 'M12 2.5v3', stroke: 'currentColor', 'stroke-width': '2.2', 'stroke-linecap': 'round' }], ['rect', { x: '3', y: '6', width: '18', height: '13', rx: '4.5', fill: 'currentColor' }], ['rect', { class: 'jb-eye', x: '6', y: '10', width: '12', height: '4.5', rx: '2.25' }], ['circle', { cx: '12', cy: '2.6', r: '1.8', fill: 'currentColor' }]]],
+  play: [{ viewBox: '0 0 24 24', fill: 'currentColor' }, [['path', { d: 'M8 5.2v13.6c0 .8.9 1.3 1.6.9l10.4-6.8c.6-.4.6-1.3 0-1.7L9.6 4.3C8.9 3.9 8 4.4 8 5.2z' }]]],
+  map: [{ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.4', 'stroke-linejoin': 'round' }, [['path', { d: 'M3.5 6.5l5.5-2.5 6 2.5 5.5-2.5v13.5l-5.5 2.5-6-2.5-5.5 2.5z' }], ['path', { d: 'M9 4v13.5M15 6.5V20' }]]],
+  infinity: [{ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.6', 'stroke-linecap': 'round' }, [['path', { d: 'M6.5 8.5c-2 0-3.5 1.6-3.5 3.5s1.5 3.5 3.5 3.5c3.5 0 7.5-7 11-7 2 0 3.5 1.6 3.5 3.5s-1.5 3.5-3.5 3.5c-3.5 0-7.5-7-11-7z' }]]],
+  close: [{ viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', 'stroke-width': '2.6', 'stroke-linecap': 'round' }, [['path', { d: 'M6 6l12 12M18 6L6 18' }]]],
 };
+const SVG_NS = 'http://www.w3.org/2000/svg';
+function svgNode(tag, attrs) {
+  const n = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+  return n;
+}
 export function svg(name, cls) {
-  const t = document.createElement('template');
-  t.innerHTML = SVG[name];
-  const node = t.content.firstElementChild;
+  const [attrs, shapes] = SVG[name];
+  const node = svgNode('svg', attrs);
+  for (const [tag, a] of shapes) node.append(svgNode(tag, a));
   node.setAttribute('aria-hidden', 'true');
   node.setAttribute('focusable', 'false');
   if (cls) node.setAttribute('class', cls);

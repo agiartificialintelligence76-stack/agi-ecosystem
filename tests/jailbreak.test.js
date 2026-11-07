@@ -563,7 +563,8 @@ test('its code keeps the site\'s rules: no inline styles, no network, no eval, n
     assert.doesNotMatch(code, /setAttribute\(\s*['"]style|\sstyle\s*=\s*["']/, `${f}: no style attribute`);
     assert.doesNotMatch(code, /\beval\s*\(|new\s+Function\b|setTimeout\(\s*['"`]/, `${f}: no eval`);
     assert.doesNotMatch(code, /\bfetch\s*\(|XMLHttpRequest|WebSocket|EventSource|sendBeacon/, `${f}: no network`);
-    assert.doesNotMatch(code, /https?:\/\/(?!agi1\.app)/, `${f}: nothing from another site`);
+    // (the SVG namespace is a name, not a request)
+    assert.doesNotMatch(code, /https?:\/\/(?!agi1\.app|www\.w3\.org\/2000\/svg)/, `${f}: nothing from another site`);
     assert.doesNotMatch(code, /localStorage|sessionStorage|indexedDB/, `${f}: keeps things only through the kit's store`);
     assert.doesNotMatch(code, /\$AGI|\bbuy\b|\bsell\b|\bprice\b|\bprofit\b/i, `${f}: no money talk`);
     if (/\.css$/.test(f)) for (const m of code.matchAll(/z-index:\s*(-?\d+)/g)) assert.ok(Number(m[1]) < 1000, `${f}: under the intro`);

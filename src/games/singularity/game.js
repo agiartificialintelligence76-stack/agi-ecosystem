@@ -22,12 +22,10 @@ import { Core } from './core.js';
 import { createUI, FACE } from './ui.js';
 import { demoMind, DemoAI, DEMO_LOOP } from './demo.js';
 import { makeSounds, MUSIC } from './audio.js';
-import { glyphSVG } from './icons.js';
+import { glyphEl } from './icons.js';
 
 function glyphNode(name, color, cls = 'sg-chip-icon') {
-  const t = document.createElement('template');
-  t.innerHTML = glyphSVG(name, color);
-  const n = t.content.firstElementChild;
+  const n = glyphEl(name, color);
   if (cls) n.classList.add(cls);
   return n;
 }

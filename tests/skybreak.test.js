@@ -90,7 +90,10 @@ test('its files on the site: only what it loads, never the original city or its 
     const tags = [...html.matchAll(/\/images\/skybreak\/keyart\.webp" alt="[^"]*" width="(\d+)" height="(\d+)"/g)];
     for (const m of tags) assert.deepEqual([Number(m[1]), Number(m[2])], [1600, 900]);
   }
-  assert.equal([...read('games.html').matchAll(/\/images\/skybreak\/keyart\.webp" alt="[^"]*" width="1600" height="900"/g)].length, 2, 'its card and its tab');
+  // (2026-11-08) AGI games' compact picker shows a still of it playing (public/images/games/skybreak.webp, from its recorded
+  // preview) on its tile and its ratings tab; the key art stays its own page's link preview
+  assert.equal([...read('games.html').matchAll(/\/images\/skybreak\/keyart\.webp"/g)].length, 0, 'the picker shows its gameplay');
+  assert.equal([...read('games.html').matchAll(/\/images\/games\/skybreak\.webp" alt="" width="480" height="480"/g)].length, 2, 'its tile and its tab');
   assert.match(read('skybreak.html'), /<meta property="og:image:width" content="1600" \/>\s*<meta property="og:image:height" content="900" \/>/);
 });
 

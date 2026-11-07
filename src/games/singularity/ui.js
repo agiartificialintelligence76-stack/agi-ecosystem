@@ -10,10 +10,9 @@ import { GENS, N, UPGRADES, UPGRADE_BY_ID, PERKS, PERK_BY_ID, SING_AT, INSIGHT_B
 import * as E from './econ.js';
 import { LOG, shareText } from './lines.js';
 import * as F from './format.js';
-import { glyphSVG, GEN_COLORS, GLYPH_OF_GEN, GLYPH_OF_KIND, C } from './icons.js';
+import { glyphEl, svgEl, GEN_COLORS, GLYPH_OF_GEN, GLYPH_OF_KIND, C } from './icons.js';
 
 export const FACE = '/images/landing/agi1-face.webp';
-const svg = (markup) => { const t = document.createElement('template'); t.innerHTML = markup; return t.content.firstElementChild; };
 const AMOUNT_LABEL = { 1: '×1', 10: '×10', 100: '×100', max: 'MAX' };
 const TAB_NAMES = { build: 'Build', upgrades: 'Upgrades', insight: 'Insight', log: 'Log' };
 const set = (node, text) => { if (node.textContent !== text) node.textContent = text; };
@@ -78,7 +77,9 @@ export function createUI(g) {
     }));
   const list = el('div', 'sg-list');
   const rows = GENS.map((gen, k) => {
-    const fg = svg('<svg class="sg-ring" viewBox="0 0 48 48" aria-hidden="true" focusable="false"><circle class="sg-ring-bg" cx="24" cy="24" r="21.5"/><circle class="sg-ring-fg" cx="24" cy="24" r="21.5" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100" transform="rotate(-90 24 24)"/></svg>');
+    const fg = svgEl('svg', { class: 'sg-ring', viewBox: '0 0 48 48', 'aria-hidden': 'true', focusable: 'false' },
+      svgEl('circle', { class: 'sg-ring-bg', cx: 24, cy: 24, r: 21.5 }),
+      svgEl('circle', { class: 'sg-ring-fg', cx: 24, cy: 24, r: 21.5, pathLength: 100, 'stroke-dasharray': 100, 'stroke-dashoffset': 100, transform: 'rotate(-90 24 24)' }));
     const ringFg = fg.querySelector('.sg-ring-fg');
     const owned = el('b', 'sg-owned', '0');
     const name = el('span', 'sg-name', gen.name);
@@ -86,7 +87,7 @@ export function createUI(g) {
     const costN = el('span', 'sg-cost-n', F.need(gen.cost));
     const costX = el('span', 'sg-cost-x', '');
     const btn = el('button', { class: 'sg-gen', type: 'button', hidden: true },
-      el('span', 'sg-icon', fg, el('span', 'sg-disc', svg(glyphSVG(GLYPH_OF_GEN[k], GEN_COLORS[k]))), owned),
+      el('span', 'sg-icon', fg, el('span', 'sg-disc', glyphEl(GLYPH_OF_GEN[k], GEN_COLORS[k])), owned),
       el('span', 'sg-main', name, sub),
       el('span', 'sg-cost', costN, costX));
     btn.style.setProperty('--gen', GEN_COLORS[k]);
@@ -97,7 +98,7 @@ export function createUI(g) {
   const teaserName = el('span', 'sg-name', '???');
   const teaserSub = el('span', 'sg-sub', '');
   const teaser = el('div', { class: 'sg-gen is-teaser', hidden: true, 'aria-hidden': 'true' },
-    el('span', 'sg-icon', el('span', 'sg-disc', svg(glyphSVG('lock', C.lav2)))), el('span', 'sg-main', teaserName, teaserSub));
+    el('span', 'sg-icon', el('span', 'sg-disc', glyphEl('lock', C.lav2))), el('span', 'sg-main', teaserName, teaserSub));
   list.append(teaser);
   const tip = el('p', { class: 'sg-tip', hidden: true }, 'Tap the spark above to make FLOPs. At ', el('b', null, '15'), ' you can build a Spark Notebook: it thinks for you, every second.');
   panes.build.append(amountBar, tip, list);
@@ -133,15 +134,16 @@ export function createUI(g) {
     el('div', 'sg-ins', insightLeftN, el('span', null, 'to spend')));
   // the lines between perks: from under one's name to the top of the next one's disc (a row is 130 units, its node
   // about 96 tall: its disc's centre 18 above the node's, its name 48 below)
-  const treeLines = svg(`<svg class="sg-tree-lines" viewBox="0 0 300 520" preserveAspectRatio="none" aria-hidden="true" focusable="false">${PERKS.flatMap((p) => p.after.map((a) => {
-    const q = PERK_BY_ID[a];
-    return `<line data-from="${a}" data-to="${p.id}" x1="${(q.col + 0.5) * 100}" y1="${(q.row + 0.5) * 130 + 50}" x2="${(p.col + 0.5) * 100}" y2="${(p.row + 0.5) * 130 - 50}" vector-effect="non-scaling-stroke"/>`;
-  })).join('')}</svg>`);
+  const treeLines = svgEl('svg', { class: 'sg-tree-lines', viewBox: '0 0 300 520', preserveAspectRatio: 'none', 'aria-hidden': 'true', focusable: 'false' },
+    PERKS.flatMap((p) => p.after.map((a) => {
+      const q = PERK_BY_ID[a];
+      return svgEl('line', { 'data-from': a, 'data-to': p.id, x1: (q.col + 0.5) * 100, y1: (q.row + 0.5) * 130 + 50, x2: (p.col + 0.5) * 100, y2: (p.row + 0.5) * 130 - 50, 'vector-effect': 'non-scaling-stroke' });
+    })));
   const perkBtns = {};
   const tree = el('div', { class: 'sg-tree', role: 'group', 'aria-label': 'The Insight tree' }, treeLines);
   for (const p of PERKS) {
     const b = el('button', { class: 'sg-perk', type: 'button', 'aria-pressed': 'false' },
-      el('span', 'sg-perk-disc', svg(glyphSVG(p.id, PERK_COLORS[p.id] || C.honey))),
+      el('span', 'sg-perk-disc', glyphEl(p.id, PERK_COLORS[p.id] || C.honey)),
       el('span', 'sg-perk-name', p.name), el('span', 'sg-perk-cost', `${p.cost} Insight`));
     b.style.setProperty('--x', `${((p.col + 0.5) / 3) * 100}%`);
     b.style.setProperty('--y', `${((p.row + 0.5) / 4) * 100}%`);
@@ -156,7 +158,7 @@ export function createUI(g) {
   perkLearn.addEventListener('click', () => { if (selected) g.act.learn(selected); });
   const perkDetail = el('div', { class: 'sg-perk-detail', 'aria-live': 'polite' }, perkName, perkText, perkLearn);
   const statsList = el('dl', 'sg-stats');
-  const shareA = el('a', { class: 'ak-btn ak-btn-sm sg-share', href: '#', target: '_blank', rel: 'noopener noreferrer' }, svg('<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>'), 'Share');
+  const shareA = el('a', { class: 'ak-btn ak-btn-sm sg-share', href: '#', target: '_blank', rel: 'noopener noreferrer' }, svgEl('svg', { viewBox: '0 0 24 24', fill: 'currentColor', 'aria-hidden': 'true', focusable: 'false' }, svgEl('path', { d: 'M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z' })), 'Share');
   const eraseBtn = el('button', { class: 'ak-btn ak-btn-sm ak-btn-ghost sg-erase', type: 'button' }, 'Erase mind');
   eraseBtn.addEventListener('click', () => g.act.erase());
   const helpBtn = el('button', { class: 'ak-link sg-help', type: 'button' }, 'How to play');
@@ -237,7 +239,7 @@ export function createUI(g) {
       for (const u of shown) {
         let card = upCards.get(u.id);
         if (!card) {
-          const disc = el('span', 'sg-up-disc', svg(glyphSVG(upGlyph(u), upColor(u))));
+          const disc = el('span', 'sg-up-disc', glyphEl(upGlyph(u), upColor(u)));
           if (u.kind === 'gen') disc.append(el('b', 'sg-up-x', `×${u.x}`));
           card = el('button', { class: 'sg-up', type: 'button' }, disc,
             el('span', 'sg-up-main', el('span', 'sg-up-name', u.name), el('span', 'sg-up-text', u.text)),
@@ -265,7 +267,7 @@ export function createUI(g) {
       upOwnedKey = ok2;
       upOwnedList.replaceChildren(...ownedIds.map((id) => {
         const u = UPGRADE_BY_ID[id];
-        return el('span', { class: 'sg-chip', title: u.text }, el('span', 'sg-chip-disc', svg(glyphSVG(upGlyph(u), upColor(u)))), u.name);
+        return el('span', { class: 'sg-chip', title: u.text }, el('span', 'sg-chip-disc', glyphEl(upGlyph(u), upColor(u))), u.name);
       }));
       set(upOwnedSum, `Installed · ${ownedIds.length}`);
       upOwned.hidden = !ownedIds.length;
@@ -343,7 +345,7 @@ export function createUI(g) {
     logKey = key;
     const items = [];
     if (count < LOG.length) {
-      items.push(el('li', 'sg-entry is-locked', el('span', 'sg-entry-face', svg(glyphSVG('lock', C.lav2))),
+      items.push(el('li', 'sg-entry is-locked', el('span', 'sg-entry-face', glyphEl('lock', C.lav2)),
         el('div', 'sg-entry-main', el('p', 'sg-entry-line', 'She is still thinking about this one…'), el('p', 'sg-entry-at', `at ${F.need(LOG[count].at)} FLOPs ever`))));
     }
     for (let i = count - 1; i >= 0; i--) {

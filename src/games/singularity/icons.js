@@ -169,6 +169,28 @@ export const GLYPH_OF_KIND = { tap: 'tap', echo: 'echo', global: 'global', syn: 
 
 // ---------- SVG markup (the panels) ----------
 const fillOf = (f, accent) => (f === 'a' ? accent : f === 'nofill' || f == null ? 'none' : f);
+// An SVG element built with DOM methods (no markup parsed: the arcade's CSP rule), and a glyph as one: the same drawing
+// as glyphSVG's markup below (which the tests read).
+const SVG_NS = 'http://www.w3.org/2000/svg';
+export function svgEl(tag, attrs = {}, ...kids) {
+  const n = document.createElementNS(SVG_NS, tag);
+  for (const [k, v] of Object.entries(attrs)) if (v != null) n.setAttribute(k, String(v));
+  for (const k of kids.flat()) if (k) n.append(k);
+  return n;
+}
+export function glyphEl(name, accent = C.honey, { stroke = INK, width = 1.7 } = {}) {
+  const shapes = GLYPHS[name] || GLYPHS.spark;
+  const parts = shapes.map(([kind, ...a]) => {
+    const common = { fill: fillOf(a[a.length - 1], accent), stroke, 'stroke-width': width, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' };
+    if (kind === 'rect') return svgEl('rect', { x: a[0], y: a[1], width: a[2], height: a[3], rx: a[4], ...common });
+    if (kind === 'circle') return svgEl('circle', { cx: a[0], cy: a[1], r: a[2], ...common });
+    if (kind === 'ellipse') return svgEl('ellipse', { cx: a[0], cy: a[1], rx: a[2], ry: a[3], transform: `rotate(${a[4]} ${a[0]} ${a[1]})`, ...common });
+    if (kind === 'line') return svgEl('line', { x1: a[0], y1: a[1], x2: a[2], y2: a[3], ...common });
+    return svgEl('path', { d: a[0], ...common });
+  });
+  return svgEl('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true', focusable: 'false' }, parts);
+}
+
 export function glyphSVG(name, accent = C.honey, { stroke = INK, width = 1.7 } = {}) {
   const shapes = GLYPHS[name] || GLYPHS.spark;
   const parts = shapes.map(([kind, ...a]) => {
