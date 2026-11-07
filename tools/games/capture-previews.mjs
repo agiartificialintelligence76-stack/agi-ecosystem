@@ -28,7 +28,8 @@ const only = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWi
 const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } = {}) => ({ url: `/games/${id}?demo&seed=${seed}`, warm, dur, poster, shotTimeout: 180000, ...more });
 export const RECIPES = {
   mergeagi: kit('mergeagi'), blockchain: kit('blockchain'), heartbeat: kit('heartbeat'), scamslayer: kit('scamslayer'),
-  lastmodel: kit('lastmodel'), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),
+  // (its pixel art is small on a wide field: drawn twice as fine and cropped around her, so the bots read on a small tile)
+  lastmodel: kit('lastmodel', 7, { dpr: 2, crop: [110, 80, 260, 260] }), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),
   jaywalk: kit('jaywalk'), robotaxi: kit('robotaxi'),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
@@ -81,7 +82,7 @@ export const RECIPES = {
   },
 };
 
-const cropOf = (r) => (r.crop ? `crop=${r.crop.map((v) => Math.round(v * DPR)).join(':').replace(/^(\d+):(\d+):(\d+):(\d+)$/, '$3:$4:$1:$2')},` : '');
+const cropOf = (r) => (r.crop ? `crop=${r.crop.map((v) => Math.round(v * (r.dpr || DPR))).join(':').replace(/^(\d+):(\d+):(\d+):(\d+)$/, '$3:$4:$1:$2')},` : '');
 async function press(page, key) { await page.keyboard.down(key); await page.clock.runFor(60); await page.keyboard.up(key); }
 async function click(page, sel) { try { await page.click(sel, { force: true, timeout: 3000 }); } catch (e) { console.log(`  (no ${sel})`); } }
 
@@ -91,7 +92,7 @@ async function capture(browser, id, r) {
   mkdirSync(dir, { recursive: true });
   // a game made for a wide screen is recorded wide, then cropped square around its action (`vp`, `crop` in CSS pixels)
   const [vw, vh] = r.vp || [SIZE, SIZE];
-  const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: DPR, reducedMotion: 'no-preference', bypassCSP: true });
+  const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: r.dpr || DPR, reducedMotion: 'no-preference', bypassCSP: true });
   // the arcade's settings: silent; and the intro seen already in this tab (its short version)
   await ctx.addInitScript(`try { sessionStorage.setItem('agi_intro', '1'); localStorage.setItem('agi_arcade:settings', JSON.stringify({ sound: false, music: false, haptics: false })); } catch {}`);
   if (r.init) await ctx.addInitScript(r.init);
