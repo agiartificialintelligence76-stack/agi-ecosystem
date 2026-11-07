@@ -696,6 +696,8 @@ addEventListener('pointerdown', () => { keyUser = false; }, { capture: true });
 addEventListener('keydown', (e) => {
   if (e.ctrlKey || e.metaKey || e.altKey) return;
   if (e.target?.closest?.('input, textarea, select')) return;
+  // Esc closes the campaign's and the Daily's cards (the kit's own cards close themselves)
+  if (e.key === 'Escape' && cardOpen && shell.state !== 'pause') { e.preventDefault(); cardOpen = false; shell.closeCard(); return; }
   if (mode !== 'play' || shell.state !== 'play' || cardOpen || !sc) return;
   const k = e.key;
   const onButton = e.target?.closest?.('button, a');
