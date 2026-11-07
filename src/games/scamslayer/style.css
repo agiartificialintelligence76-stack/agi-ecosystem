@@ -1,0 +1,89 @@
+/* SCAM SLAYER: its own styles, on top of the arcade kit's frame (src/games/kit/kit.css). Every rule is scoped to the
+   game (.ak[data-ak-game="scamslayer"]) or uses its own ss- classes. The playfield itself is drawn on a canvas. */
+
+.ak[data-ak-game='scamslayer'] {
+  --ak-bg: #170b31;
+  --ak-accent: var(--ak-honey);
+}
+
+/* reads the notch's insets for the canvas HUD (env() only resolves in CSS) */
+.ss-safe {
+  position: absolute; top: 0; left: 0; width: 0; height: 0; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* ---------- the title's wordmark: SCAM, sliced in two ---------- */
+.ss-logo { position: relative; }
+.ak .ss-scam { display: grid; position: relative; justify-items: center; }
+.ss-half { grid-area: 1 / 1; display: block; }
+/* the cut runs from 80% down on the left to 24% down on the right, the halves pulled apart along it */
+.ss-top { clip-path: polygon(-8% -20%, 108% -20%, 108% 24%, -8% 80%); translate: -.03em -.05em; }
+.ss-bot { clip-path: polygon(-8% 80%, 108% 24%, 108% 120%, -8% 120%); translate: .05em .06em; rotate: 1.4deg; }
+/* the blade's streak along the cut: tapered at both ends, an ink edge (drop shadows on its wrapper follow its shape) */
+.ss-slash {
+  position: absolute; left: -12%; right: -12%; top: calc(52% - .04em); height: .08em;
+  rotate: -8deg; transform-origin: 50% 50%; pointer-events: none;
+  filter: drop-shadow(0 .022em 0 var(--ak-ink)) drop-shadow(0 -.016em 0 var(--ak-ink)) drop-shadow(.016em 0 0 var(--ak-ink)) drop-shadow(-.016em 0 0 var(--ak-ink));
+}
+.ss-slash::before {
+  content: ''; position: absolute; inset: 0; background: var(--ak-paper);
+  clip-path: polygon(0 55%, 18% 20%, 70% 0, 100% 45%, 70% 100%, 18% 80%);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ss-top { animation: ss-split-a .6s .45s cubic-bezier(.2, 1.5, .4, 1) both; }
+  .ss-bot { animation: ss-split-b .6s .45s cubic-bezier(.2, 1.5, .4, 1) both; }
+  .ss-slash { animation: ss-slash .55s .15s cubic-bezier(.3, .9, .3, 1) both; }
+}
+@keyframes ss-split-a { from { translate: 0 0; } }
+@keyframes ss-split-b { from { translate: 0 0; rotate: 0deg; } }
+@keyframes ss-slash { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 60% { clip-path: inset(0 0 0 0); opacity: 1; } 100% { clip-path: inset(0 0 0 0); opacity: .9; } }
+
+/* the two modes: Classic in honey, Blitz in pink */
+.ak[data-ak-game='scamslayer'] .ak-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); width: min(400px, 100%); }
+.ak[data-ak-game='scamslayer'] .ak-title-actions { width: min(400px, 100%); }
+.ak[data-ak-game='scamslayer'] .ak-btn-mode { min-height: 70px; font-size: 19px; letter-spacing: .06em; }
+.ak[data-ak-game='scamslayer'] .ak-btn-mode:first-child { background: var(--ak-honey); }
+.ak[data-ak-game='scamslayer'] .ak-btn-mode:last-child { background: var(--ak-pink); }
+.ak[data-ak-game='scamslayer'] .ak-btn-mode small { opacity: .82; }
+@media (prefers-reduced-motion: no-preference) {
+  .ak[data-ak-game='scamslayer'] .ak-btn-mode:first-child { animation: ak-breathe 2.4s ease-in-out infinite; }
+  .ak[data-ak-game='scamslayer'] .ak-btn-mode:first-child:hover,
+  .ak[data-ak-game='scamslayer'] .ak-btn-mode:first-child:active { animation: none; }
+}
+
+/* ---------- the title's extras: what to slice, the bests ---------- */
+.ss-extra { display: grid; gap: 12px; justify-items: center; width: 100%; }
+.ss-legend { list-style: none; margin: 2px 0 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 104px)); justify-content: center; gap: 8px; }
+.ss-key {
+  display: grid; justify-items: center; align-content: start; gap: 3px; padding: 8px 6px 8px; border-radius: 16px;
+  background: color-mix(in srgb, var(--ak-ink) 84%, transparent); border: 2px solid color-mix(in srgb, var(--ak-paper) 24%, transparent);
+  color: var(--ak-paper); text-align: center;
+}
+.ss-icons { display: flex; justify-content: center; height: 28px; margin-bottom: 2px; }
+.ss-icon { width: 28px; height: 28px; display: block; margin: 0 -4px; }
+.ss-key b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; line-height: 1.05; }
+.ss-key small { font-size: 11.5px; font-weight: 600; line-height: 1.1; color: color-mix(in srgb, var(--ak-paper) 78%, transparent); }
+.ss-key.is-go b { color: var(--ak-honey); }
+.ss-key.is-spare b { color: var(--ak-lav2); }
+.ss-key.is-never b { color: #ff8a8e; }
+.ak .ss-bests { margin: 0; flex-wrap: wrap; justify-content: center; gap: 6px 12px; }
+.ss-bests span { font-family: var(--ak-display); font-weight: 800; letter-spacing: .08em; color: color-mix(in srgb, var(--ak-paper) 80%, transparent); }
+.ss-total { margin: -2px 0 0; font-size: 13px; color: color-mix(in srgb, var(--ak-fg) 76%, transparent); }
+
+/* a soft night wash behind the title's column: the stickers flying behind it stay lively at the edges, the words
+   stay easy to read in the middle */
+.ak[data-ak-game='scamslayer'] .ak-title::before {
+  content: ''; position: absolute; inset: 0; z-index: -1; pointer-events: none;
+  background: radial-gradient(ellipse min(62vw, 420px) min(46vh, 430px) at 50% 52%, rgba(16, 7, 36, .74) 0%, rgba(16, 7, 36, .5) 52%, rgba(16, 7, 36, 0) 100%);
+}
+
+/* the bar's tools stay on the right while the title hides the run's numbers */
+.ak[data-ak-game='scamslayer'] .ak-tools { margin-left: auto; }
+
+/* a short screen (a phone held sideways): the legend steps aside */
+@media (max-height: 560px) {
+  .ss-legend { display: none; }
+  .ak[data-ak-game='scamslayer'] .ak-stat dt { letter-spacing: .04em; }
+  .ak[data-ak-game='scamslayer'] .ak-btn-mode { min-height: 56px; font-size: 16px; }
+  .ss-total { display: none; }
+}

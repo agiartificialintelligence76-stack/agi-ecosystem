@@ -71,6 +71,30 @@ export function cardStats(stats, { loading = false } = {}) {
   };
 }
 
+// A game's tile in the picker (2026-11-08): its rating as "4.8" with a star (or "New" without ratings yet) and its plays
+// compact ("1.2K plays"); "…" while they load, nothing at all when they aren't there (not set up yet, or our server didn't
+// answer): the tile still opens the game
+export function compactCount(n) {
+  if (!ok(n)) return '';
+  if (n < 1000) return String(n);
+  const units = [[1e9, 'B'], [1e6, 'M'], [1e3, 'K']];
+  for (const [v, u] of units) if (n >= v) { const x = n / v; return `${x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10}${u}`; }
+  return String(n);
+}
+export function tileStats(stats, { loading = false } = {}) {
+  if (loading) return { rating: { value: '…', star: false }, plays: '…' };
+  if (!stats) return { rating: { value: '', star: false }, plays: '' };
+  return {
+    rating: stats.ratings > 0 ? { value: avgText(stats.average), star: true } : { value: 'New', star: false },
+    plays: !ok(stats.plays) ? '' : stats.plays === 0 ? 'Be the first' : `${compactCount(stats.plays)} ${stats.plays === 1 ? 'play' : 'plays'}`,
+  };
+}
+// what the picker shows, for screen readers after a filter or a sort: "Showing 4 games: Action, sorted by Most played."
+export function shownText(n, filterLabel, sortLabel) {
+  const games = n === 1 ? '1 game' : `${n} games`;
+  return `Showing ${games}${filterLabel && filterLabel !== 'All' ? `: ${filterLabel}` : ''}, sorted by ${sortLabel}.`;
+}
+
 // a review's day, as people read it ("Oct 19, 2026"): the visitor's own time zone (tests pass one)
 export function dateText(iso, timeZone) {
   const d = new Date(iso);

@@ -62,11 +62,14 @@ export function allSharePages(site) {
 }
 
 // the card pictures every share page needs (public/cards/, see "Share cards" in CLAUDE.md; games.jpg since 2026-10-19, AGI
-// games' own, made from tools/cards/games-card.html; trenchingsimulator.jpg since 2026-10-20, its second game's, made from
-// tools/cards/trenchingsimulator-card.html)
+// games' own, made from tools/cards/games-card.html, Ride 'Em, AGI!'s since 2026-11-08; trenchingsimulator.jpg since
+// 2026-10-20, its second game's, made from tools/cards/trenchingsimulator-card.html; games-all.jpg since 2026-11-08, AGI
+// games' own again, its wall of games: tools/cards/games-all.mjs)
 export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
-  'games.jpg', 'trenchingsimulator.jpg'];
-export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp'];
+  'games.jpg', 'trenchingsimulator.jpg', 'games-all.jpg'];
+// (2026-11-08) the arcade kit's ten games: each its own link preview, cards/games/<id>.jpg (tools/games/covers.mjs)
+const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi'];
+export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp', ...KIT_GAMES.map((id) => `cards/games/${id}.jpg`)];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const site = siteUrl();
@@ -83,7 +86,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
-    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', 'dist/memes.html',
+    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', 'dist/mergeagi.html', 'dist/blockchain.html', 'dist/heartbeat.html', 'dist/scamslayer.html', 'dist/lastmodel.html', 'dist/singularity.html', 'dist/jailbreak.html', 'dist/stacked.html', 'dist/jaywalk.html', 'dist/robotaxi.html',
+    'dist/memes.html',
     'dist/pfp.html', 'dist/vote.html', 'dist/verify.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }

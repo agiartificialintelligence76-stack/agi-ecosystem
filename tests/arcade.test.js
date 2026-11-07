@@ -187,7 +187,9 @@ const reviewOk = (extra = {}) => ({ action: 'game-review', game: 'rideemagi', se
 test("the games' rules: its games and their ids, a player's id, plays a report, a review's limits, stars 1 to 5", () => {
   // the owner's Ride 'Em, AGI! (2026-10-19), then TRENCHING SIMULATOR (2026-10-20)
   // and VLAD RUNNER 2049 (2026-10-23: its stars, players and plays; no leaderboards), and SKYBREAK (2026-10-31: the same)
-  assert.deepEqual(Object.keys(GAMES), ['rideemagi', 'trenchingsimulator', 'vladrunner2049', 'skybreak']);
+  // and since 2026-11-08 the ten games built on the arcade kit (src/games/kit/: stars, players and plays; local bests only)
+  assert.deepEqual(Object.keys(GAMES), ['rideemagi', 'trenchingsimulator', 'vladrunner2049', 'skybreak', 'mergeagi', 'blockchain', 'heartbeat',
+    'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi']);
   assert.equal(GAMES.vladrunner2049.name, 'VLAD RUNNER 2049');
   assert.equal(GAMES.vladrunner2049.path, '/games/vladrunner2049');
   assert.equal(GAMES.skybreak.name, 'SKYBREAK');

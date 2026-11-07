@@ -7,6 +7,9 @@ import { defineConfig } from 'vite';
 // host's catch-all rewrite; here: an address with no file extension, outside /api and Vite's own)
 // AGI games (2026-10-19): agi1.app/games/rideemagi is the game's own page (rideemagi.html), like Vercel's rewrite, and
 // (2026-10-20) agi1.app/games/trenchingsimulator is TRENCHING SIMULATOR's (trenchingsimulator.html)
+// (2026-11-08) the ten games built on the arcade kit (src/games/kit/): agi1.app/games/<id> is <id>.html
+const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi'];
+const KIT_GAME = new RegExp(`^/games/(${KIT_GAMES.join('|')})/?$`);
 const STUDIO_HOST = /^studio\./i;
 const STUDIO_VIEW = /^\/(?!api\/|@|src\/|node_modules\/)(?:[^.]*)$/;
 const talkPage = () => {
@@ -19,6 +22,7 @@ const talkPage = () => {
     else if (/^\/games\/trenchingsimulator\/?$/.test(path)) req.url = `/trenchingsimulator.html${q}`;
     else if (/^\/games\/vladrunner2049\/?$/.test(path)) req.url = `/vladrunner2049.html${q}`;
     else if (/^\/games\/skybreak\/?$/.test(path)) req.url = `/skybreak.html${q}`;   // (2026-10-31) SKYBREAK
+    else if (KIT_GAME.test(path)) req.url = `/${path.match(KIT_GAME)[1]}.html${q}`;   // (2026-11-08) the arcade kit's ten games
     else if (/^\/vote\/owner\/?$/.test(path)) req.url = `/vote.html${q}`;   // (2026-10-24) the owner's votes page
     else if (/^\/discord\/verify\/?$/.test(path)) req.url = `/verify.html${q}`;   // (2026-10-29) her Discord holder roles' page
     else if (/^\/studio\/.+/.test(path)) req.url = `/studio.html${q}`;
@@ -98,6 +102,8 @@ export default defineConfig({
         memes: 'memes.html', pfp: 'pfp.html', vote: 'vote.html', owner: 'owner-command.html', content: 'content.html',
         // (2026-10-29) her Discord holder roles' page (agi1.app/discord/verify)
         verify: 'verify.html',
+        // (2026-11-08) the arcade kit's ten games (agi1.app/games/<id>)
+        ...Object.fromEntries(KIT_GAMES.map((id) => [id, `${id}.html`])),
         // (2026-10-24) the 404 NOT_FOUND page: Vercel serves dist/404.html for any address with no page
         notfound: '404.html' },
     },

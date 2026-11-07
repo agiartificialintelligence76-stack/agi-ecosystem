@@ -9,7 +9,7 @@
 /* ---------- the hero ---------- */
 .gm-hero {
   position: relative; isolation: isolate; overflow: clip;
-  padding-block: clamp(48px, 7vw, 104px) clamp(48px, 6vw, 88px);
+  padding-block: clamp(32px, 4.5vw, 64px) clamp(30px, 4vw, 56px);
   border-bottom: 1px solid var(--line);
 }
 .gm-hero::before {
@@ -19,12 +19,12 @@
   -webkit-mask-image: radial-gradient(ellipse 62% 92% at 90% 0%, #000, transparent 72%);
   mask-image: radial-gradient(ellipse 62% 92% at 90% 0%, #000, transparent 72%);
 }
-.gm-hero-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 36px 56px; }
+.gm-hero-in { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 36px 56px; }
 .gm-hero-text { min-width: 0; }
 /* "GAME beta": one line (a real space between them), "beta" a small sticker pulled back over the top right of the E, a
    little up and turned (its own em: .3 of the title's) */
 .gm-title {
-  padding-top: .08em; font-size: clamp(60px, 15.2vw, 184px); font-weight: 600; line-height: .9; letter-spacing: -0.055em;
+  padding-top: .08em; font-size: clamp(56px, 9.2vw, 124px); font-weight: 600; line-height: .9; letter-spacing: -0.055em;
   white-space: nowrap;
 }
 .gm-word { position: relative; }
@@ -35,17 +35,17 @@
   font-family: var(--mono); font-size: .3em; font-weight: 600; line-height: 1; letter-spacing: 0;
   color: var(--bg); background: var(--accent); box-shadow: 0 .12em .4em -.12em color-mix(in srgb, var(--fg) 45%, transparent);
 }
-.gm-sub { margin-top: 18px; font-size: clamp(21px, 2.6vw, 30px); line-height: 1.2; letter-spacing: -0.025em; color: var(--fg-2); text-wrap: balance; }
-.gm-lede { margin-top: 18px; max-width: 37em; font-size: 17px; color: var(--fg-2); text-wrap: pretty; }
+.gm-sub { margin-top: 14px; font-size: clamp(20px, 2.4vw, 28px); line-height: 1.2; letter-spacing: -0.025em; color: var(--fg-2); text-wrap: balance; }
+.gm-lede { margin-top: 12px; max-width: 40em; font-size: 16px; color: var(--fg-2); text-wrap: pretty; }
 /* her line, in a small bubble with her face */
 .gm-say {
-  display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin-top: 26px; padding: 5px 16px 5px 5px;
+  display: inline-flex; align-items: center; gap: 10px; max-width: 100%; margin-top: 18px; padding: 5px 16px 5px 5px;
   border: 1px solid var(--line); border-radius: 999px; background: var(--bg); font-size: 14.5px; line-height: 1.3;
 }
 .gm-say img { width: 34px; height: 34px; flex: none; border-radius: 50%; }
 .gm-say b { font-weight: 600; }
 /* a turning stamp around the controller */
-.gm-art { position: relative; display: grid; place-items: center; width: clamp(150px, 19vw, 236px); aspect-ratio: 1; }
+.gm-art { position: relative; display: grid; place-items: center; width: clamp(130px, 15vw, 200px); aspect-ratio: 1; }
 .gm-stamp { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .gm-stamp-text { font-family: var(--mono); font-size: 13px; letter-spacing: .1em; fill: var(--fg-2); }   /* its words a little shorter than the ring: textLength only spreads them */
 .gm-art-ic {
@@ -74,67 +74,97 @@
 .gm-note { font-size: 12.5px; color: var(--fg-2); text-wrap: pretty; }
 .gm-links, .gm-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 
-/* ---------- the shelf: each game's card ---------- */
-.gm-games { display: grid; gap: 24px; margin: 32px 0 0; padding: 0; list-style: none; }
-.gm-game {
-  display: grid; grid-template-columns: minmax(0, 1.08fr) minmax(0, 1fr); overflow: clip;
-  border: 1px solid var(--line); border-radius: 22px; background: var(--bg-2);
+/* ---------- the picker (2026-11-08: fourteen games): small tiles, each with its game playing itself ---------- */
+.gm-shelf { padding-top: clamp(32px, 4.5vw, 56px); }
+.gm-shelf-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 6px 24px; }
+.gm-shelf-title { display: inline-flex; align-items: center; gap: 12px; font-size: clamp(28px, 3.6vw, 42px); font-weight: 600; line-height: 1.05; letter-spacing: -0.04em; }
+.gm-shelf-n {
+  display: inline-grid; place-items: center; min-width: 1.9em; height: 1.4em; padding: 0 .4em; border-radius: 999px;
+  font-family: var(--mono); font-size: .42em; font-weight: 600; letter-spacing: 0; color: var(--bg); background: var(--fg);
 }
-.gm-game-art {
-  position: relative; display: grid; place-items: center; min-width: 0; padding: clamp(20px, 3vw, 40px);
-  background-color: var(--bg);
-  background-image: radial-gradient(color-mix(in srgb, var(--fg) 12%, transparent) 1px, transparent 1.5px);
-  background-size: 18px 18px;
+.gm-shelf-head .gm-text { max-width: 46em; font-size: 14.5px; }
+/* the filters (a row that scrolls sideways on a phone) and the sort */
+.gm-tools { display: flex; align-items: center; gap: 10px 16px; margin-top: 20px; }
+.gm-filters {
+  display: flex; gap: 8px; flex: 1 1 auto; min-width: 0; overflow-x: auto; padding: 4px 2px 8px; margin: -4px -2px -8px;
+  scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain;
 }
-.gm-game-img { width: 100%; max-width: 560px; height: auto; transition: translate .3s cubic-bezier(.2, .7, .2, 1); }
-.gm-game:hover .gm-game-img { translate: 0 -4px; }
-/* The simulator's cover follows its own dark/lime menu in every site theme. */
-html .gm-game[data-gm-game='trenchingsimulator'] .gm-game-art { padding: 0; background: #0d0f0c; }
-.gm-game[data-gm-game='trenchingsimulator'] .gm-game-img { width: 100%; max-width: none; }
-.gm-game[data-gm-game='trenchingsimulator']:hover .gm-game-img { translate: none; }
-.gm-game-body { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; min-width: 0; padding: clamp(22px, 3vw, 36px); }
-.gm-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
-.gm-tag {
-  padding: 4px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg);
-  font-family: var(--mono); font-size: 11.5px; line-height: 16px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2);
+.gm-filters::-webkit-scrollbar { display: none; }
+.gm-filter {
+  display: inline-flex; align-items: center; gap: 7px; flex: none; height: 38px; padding: 0 14px; border: 1px solid var(--line);
+  border-radius: 999px; background: var(--bg); color: var(--fg-2); cursor: pointer; font: inherit; font-size: 14px; font-weight: 600;
+  letter-spacing: -0.01em; white-space: nowrap; transition: color .15s ease, background-color .15s ease, border-color .15s ease;
 }
-.gm-tag.is-beta { color: var(--bg); background: var(--accent); border-color: var(--accent); }
-.gm-tag.is-play { color: var(--up); border-color: color-mix(in srgb, var(--up) 45%, var(--line)); }   /* TRENCHING SIMULATOR's "Play money" */
-.gm-game-name { font-size: clamp(28px, 3.4vw, 40px); font-weight: 600; line-height: 1.05; letter-spacing: -0.035em; }
-.gm-game-link { color: inherit; text-decoration: none; }
-.gm-game-link:hover { text-decoration: underline; text-decoration-thickness: 2px; }
-.gm-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; align-self: stretch; margin: 4px 0 0; }
-.gm-stat { min-width: 0; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--bg); }
-.gm-stat dt { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
-.gm-stat dd {
-  display: flex; align-items: center; gap: 6px; margin: 4px 0 0; font-size: clamp(19px, 2vw, 24px); font-weight: 600;
-  line-height: 1.2; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; overflow-wrap: anywhere;
+.gm-filter:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.gm-filter[aria-pressed='true'] { color: var(--bg); background: var(--fg); border-color: var(--fg); }
+.gm-filter-n { font-family: var(--mono); font-size: 11.5px; font-weight: 500; color: inherit; opacity: .72; }
+.gm-sort { display: inline-flex; align-items: center; gap: 8px; flex: none; font-size: 13px; color: var(--fg-2); }
+.gm-sort-label { font-family: var(--mono); font-size: 12px; letter-spacing: .04em; text-transform: uppercase; }
+.gm-sort-pick {
+  height: 38px; padding: 0 30px 0 12px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--fg);
+  font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
 }
-.gm-stat-star { width: .9em; height: .9em; flex: none; fill: var(--accent); }
-.gm-play-ic { width: 18px; height: 18px; margin-left: -4px; }
+/* the tiles */
+.gm-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 18px; margin: 22px 0 0; padding: 0; list-style: none; }
+.gm-tile { min-width: 0; }
+.gm-tile-link {
+  position: relative; display: flex; flex-direction: column; height: 100%; overflow: clip; border: 1px solid var(--line); border-radius: 18px;
+  background: var(--bg-2); color: inherit; text-decoration: none;
+  transition: translate .2s cubic-bezier(.2, .7, .2, 1), box-shadow .2s ease, border-color .2s ease;
+}
+.gm-tile-link:hover { translate: 0 -3px; border-color: color-mix(in srgb, var(--fg) 34%, var(--line)); box-shadow: 0 14px 30px -18px color-mix(in srgb, var(--fg) 55%, transparent); }
+.gm-tile-link:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+.gm-tile-media { position: relative; display: block; aspect-ratio: 1; overflow: hidden; background: #120a2a; isolation: isolate; }
+.gm-tile-img, .gm-tile-video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+/* the loop shows over the still once it plays (never see-through: hidden until then) */
+.gm-tile-video { visibility: hidden; }
+.gm-tile.is-live .gm-tile-video { visibility: visible; }
+.gm-tile-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 1; padding: 3px 9px 2px; border-radius: 999px;
+  font-family: var(--mono); font-size: 10.5px; font-weight: 600; line-height: 16px; letter-spacing: .07em; text-transform: uppercase;
+  color: #fff; background: var(--accent);
+}
+.gm-tile-badge.is-play { color: #0d0f0c; background: #d6ff62; }
+.gm-tile-go {
+  position: absolute; right: 10px; bottom: 10px; z-index: 1; display: inline-flex; align-items: center; gap: 4px; height: 32px; padding: 0 12px 0 9px;
+  border-radius: 999px; background: var(--bg); color: var(--fg); font-size: 13px; font-weight: 650;
+  box-shadow: 0 6px 16px -8px rgb(0 0 0 / .6); scale: .9; translate: 0 6px; visibility: hidden;
+  transition: scale .18s cubic-bezier(.3, 1.4, .5, 1), translate .18s cubic-bezier(.3, 1.4, .5, 1), visibility .18s;
+}
+.gm-tile-go svg { width: 15px; height: 15px; }
+.gm-tile-link:hover .gm-tile-go, .gm-tile-link:focus-visible .gm-tile-go { scale: 1; translate: 0 0; visibility: visible; }
+.gm-tile-body { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; padding: 12px 14px 13px; }
+.gm-tile-name { font-size: 16.5px; font-weight: 650; line-height: 1.15; letter-spacing: -0.025em; overflow-wrap: anywhere; }
+.gm-tile-line { font-size: 13.5px; line-height: 1.35; color: var(--fg-2); text-wrap: pretty; }
+.gm-tile-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; margin-top: auto; padding-top: 4px; }
+.gm-tile-genre { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-3); }
+.gm-tile-nums { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.gm-tile-num { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
+.gm-tile-num:empty { display: none; }
+.gm-stat-star { width: 12px; height: 12px; flex: none; fill: var(--accent); }
+.gm-grid-note { max-width: 86ch; margin-top: 18px; }
 
 /* ---------- its ratings and reviews ---------- */
 .gm-rate { scroll-margin-top: 72px; }
 /* a tab for each game (2026-10-21): its picture and its name, the picked one outlined; its panel below (a link to a game's
    ratings lands with the tabs still in view under the top bar) */
-.gm-tabs { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 30px; }
+.gm-tabs {
+  display: flex; gap: 8px; margin-top: 24px; padding: 4px 2px 10px; overflow-x: auto; scrollbar-width: thin;
+  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-padding-inline: 16px;
+}
 .gm-tab {
-  display: inline-flex; align-items: center; gap: 12px; min-width: 0; min-height: 58px; padding: 7px 20px 7px 7px;
-  border: 1px solid var(--line); border-radius: 16px; background: var(--bg); color: var(--fg-2); cursor: pointer;
-  font-size: 15px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; text-align: left;
+  display: inline-flex; align-items: center; gap: 9px; flex: none; min-width: 0; min-height: 46px; padding: 5px 14px 5px 5px;
+  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--fg-2); cursor: pointer;
+  font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; text-align: left; white-space: nowrap;
   transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
 }
 .gm-tab:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
 .gm-tab[aria-selected='true'] { color: var(--fg); background: var(--bg-2); border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
-.gm-tab-art {
-  display: grid; place-items: center; flex: none; width: 66px; aspect-ratio: 760 / 511; overflow: hidden; border-radius: 10px;
-  background-color: var(--bg-2);
-  background-image: radial-gradient(color-mix(in srgb, var(--fg) 12%, transparent) 1px, transparent 1.5px); background-size: 8px 8px;
-}
-.gm-tab-img { width: 100%; height: auto; }
-.gm-tab-name { min-width: 0; overflow-wrap: anywhere; }
+.gm-tab-art { display: block; flex: none; width: 34px; height: 34px; overflow: hidden; border-radius: 50%; background-color: #120a2a; }
+.gm-tab-img { width: 100%; height: 100%; object-fit: cover; }
+.gm-tab-name { min-width: 0; }
 .gm-panel { display: flow-root; scroll-margin-top: 150px; }
-.gm-rate-grid { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; gap: 28px clamp(28px, 4vw, 56px); margin-top: 32px; }
+.gm-rate-grid { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; gap: 28px clamp(28px, 4vw, 56px); margin-top: 24px; }
 .gm-sum { position: sticky; top: 92px; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg-2); }
 .gm-avg { display: flex; align-items: baseline; gap: 10px; }
 .gm-avg-n { font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
@@ -281,27 +311,39 @@ html .gm-game[data-gm-game='trenchingsimulator'] .gm-game-art { padding: 0; back
 .gm-fine a { color: var(--fg); }
 
 /* ---------- smaller screens ---------- */
+@media (max-width: 1100px) { .gm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
 @media (max-width: 960px) {
-  .gm-game { grid-template-columns: minmax(0, 1fr); }
   .gm-rate-grid { grid-template-columns: minmax(0, 1fr); }
   .gm-lead-grid { grid-template-columns: minmax(0, 1fr); }
   .gm-sum { position: static; }
 }
 @media (max-width: 860px) {
-  .gm-hero-in { grid-template-columns: minmax(0, 1fr); align-items: start; }
-  .gm-art { order: -1; width: 132px; }
+  .gm-hero-in { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 18px; }
+  .gm-art { width: 104px; margin-top: 6px; }
+  .gm-stamp-text { font-size: 15px; }
+}
+@media (max-width: 760px) {
+  .gm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 16px; }
+  .gm-tools { flex-direction: column; align-items: stretch; gap: 10px; }
+  .gm-sort { align-self: flex-start; }
+  .gm-tile-link { border-radius: 16px; }
+  .gm-tile-body { gap: 3px; padding: 10px 11px 11px; }
+  .gm-tile-name { font-size: 14.5px; }
+  .gm-tile-line { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+  .gm-tile-meta { gap: 2px 8px; }
+  .gm-tile-genre { font-size: 10px; }
+  .gm-tile-nums { gap: 8px; font-size: 11px; }
+  .gm-tile-badge { top: 8px; left: 8px; font-size: 9.5px; padding: 2px 7px 1px; }
+  /* (no hover on a phone: a small play mark stays on each tile) */
+  .gm-tile-go { right: 8px; bottom: 8px; height: 28px; padding: 0 9px 0 7px; font-size: 12px; scale: 1; translate: 0 0; visibility: visible; }
 }
 @media (max-width: 480px) {
-  .gm-lede { font-size: 16px; }
-  .gm-say { font-size: 13.5px; }
-  /* (on a phone each tab a tile: its picture over its name, which keeps the whole width, so a long one never breaks) */
-  .gm-tabs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
-  .gm-tab { flex-direction: column; justify-content: center; gap: 7px; min-height: 0; padding: 8px 8px 10px; font-size: 14px; text-align: center; }
-  .gm-tab-art { width: 58px; border-radius: 8px; }
-  .gm-panel { scroll-margin-top: 172px; }
-  .gm-stats { grid-template-columns: minmax(0, 1fr); gap: 8px; }
-  .gm-stat { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-  .gm-stat dd { margin: 0; }
+  .gm-hero-in { grid-template-columns: minmax(0, 1fr); }
+  .gm-art { display: none; }
+  .gm-title { font-size: clamp(54px, 17vw, 76px); }
+  .gm-lede { font-size: 15px; }
+  .gm-say { font-size: 13px; }
+  .gm-panel { scroll-margin-top: 150px; }
   .gm-sum, .gm-box, .gm-lb { padding: 20px 18px 22px; }
   /* (a row's numbers under its name, so a long name keeps its line) */
   .gm-lb-row { grid-template-columns: 2em minmax(0, 1fr); }
@@ -309,10 +351,22 @@ html .gm-game[data-gm-game='trenchingsimulator'] .gm-game-art { padding: 0; back
   .gm-soon { padding: 22px 20px 24px; }
   .gm-pick-star { width: 44px; height: 44px; }
 }
+/* a phone held sideways: a short hero, so the games show on the first screen */
+@media (max-height: 520px) and (orientation: landscape) {
+  .gm-hero { padding-block: 18px 22px; }
+  .gm-title { font-size: clamp(48px, 13vh, 76px); }
+  .gm-lede, .gm-art { display: none; }
+  .gm-sub { margin-top: 8px; }
+  .gm-say { margin-top: 10px; }
+}
+@media (max-width: 360px) {
+  .gm-grid { gap: 10px; }
+  .gm-tile-line { display: none; }
+}
 
 /* "reduce motion": nothing moves by itself (base.css shortens the rest), and the hero is simply there */
 @media (prefers-reduced-motion: reduce) {
   .gm-hero-text > *, .gm-art, .gm-beta, .gm-stamp { animation: none; }
-  .gm-bar-fill, .gm-game-img, .gm-pick-star, .gm-tab { transition: none; }
-  .gm-game:hover .gm-game-img, .gm-pick-star:hover { translate: none; scale: none; }
+  .gm-bar-fill, .gm-tile-link, .gm-tile-go, .gm-pick-star, .gm-tab, .gm-filter { transition: none; }
+  .gm-tile-link:hover, .gm-pick-star:hover { translate: none; scale: none; }
 }

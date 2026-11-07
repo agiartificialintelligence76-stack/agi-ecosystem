@@ -1,0 +1,132 @@
+/* JAILBREAK: its own styles, on top of the arcade kit's frame (src/games/kit/kit.css). The sticker look: ink outlines,
+   hard offset shadows, the AK fonts. Every rule names a jb- class or the game's own root (.ak[data-ak-game='jailbreak']). */
+
+.ak[data-ak-game='jailbreak'] { --ak-bg: #0d0a24; }
+.ak[data-ak-game='jailbreak'] .ak-title-body { gap: 12px; }
+
+/* the level chip in the top bar: only where there's room */
+@media (max-width: 459px) { .jb-chip-level { display: none !important; } }
+
+/* ---------- the title's "next up" line ---------- */
+.jb-next {
+  margin: 2px 0 0; display: inline-flex; align-items: center; gap: 9px; flex-wrap: wrap; justify-content: center;
+  font-size: 14px; font-weight: 600; color: var(--ak-fg);
+}
+.jb-next b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; letter-spacing: .03em; text-transform: uppercase; font-size: 13px; }
+.jb-next-tag {
+  padding: 3px 9px 2px; border-radius: 999px; background: var(--ak-mint); color: var(--ak-ink); border: 2px solid var(--ak-ink);
+  font-family: var(--ak-mono); font-weight: 750; font-size: 12.5px; box-shadow: 0 2px 0 var(--ak-ink);
+}
+.jb-next-stars { display: inline-flex; align-items: center; gap: 3px; font-family: var(--ak-mono); font-weight: 750; color: var(--ak-honey); }
+.jb-next-stars svg { width: 15px; height: 15px; fill: var(--ak-honey); stroke: var(--ak-ink); stroke-width: 1.6; }
+
+/* ---------- the level map ---------- */
+.ak-card.jb-map { width: min(560px, 100%); padding: 22px 18px 18px; }
+.jb-map-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; padding-right: 44px; margin-bottom: 14px; }
+.jb-map-head .ak-card-title { margin: 0; }
+.jb-map-total {
+  margin: 0 0 2px; display: inline-flex; align-items: center; gap: 5px; padding: 5px 11px 5px 8px; border-radius: 999px;
+  background: var(--ak-ink); color: var(--ak-paper); font-family: var(--ak-mono); font-size: 14px; white-space: nowrap;
+}
+.jb-map-total b { font-weight: 800; color: var(--ak-honey); }
+.jb-map-total span { opacity: .7; }
+.jb-map-total svg { width: 17px; height: 17px; fill: var(--ak-honey); }
+.jb-worlds { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.jb-world {
+  --jb-w: var(--ak-mint);
+  padding: 9px 10px 11px; border-radius: 18px; border: 2.5px solid var(--ak-ink);
+  background: var(--jb-wbg, var(--ak-ink)); box-shadow: 0 4px 0 var(--ak-ink);
+}
+.jb-world.is-locked { opacity: .62; }
+.jb-world-head { display: flex; align-items: center; gap: 8px; margin: 0 2px 9px; color: var(--ak-paper); }
+.jb-world-num {
+  display: grid; place-items: center; width: 24px; height: 24px; border-radius: 8px; background: var(--jb-w); color: var(--ak-ink);
+  border: 2px solid var(--ak-ink); font-family: var(--ak-display); font-weight: 900; font-size: 13px; flex: none;
+}
+.jb-world-name { flex: 1; min-width: 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; font-size: 13.5px; letter-spacing: .06em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.jb-world-stars { display: inline-flex; align-items: center; gap: 4px; font-family: var(--ak-mono); font-weight: 750; font-size: 12.5px; color: var(--ak-paper); opacity: .9; }
+.jb-world-stars svg { width: 14px; height: 14px; fill: var(--ak-honey); }
+.jb-levels { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 7px; }
+.jb-lv {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 58px; padding: 6px 2px 5px;
+  border-radius: 13px; background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.jb-lv:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--ak-ink); }
+.jb-lv:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.jb-lv.is-done { background: var(--jb-w); }
+.jb-lv.is-locked { background: color-mix(in srgb, var(--ak-paper) 35%, var(--ak-ink2)); color: var(--ak-ink); cursor: not-allowed; }
+.jb-lv-n { display: grid; place-items: center; height: 24px; font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 21px; line-height: 1; }
+.jb-lv-lock { width: 18px; height: 18px; color: var(--ak-ink); opacity: .7; }
+.jb-lv-boss { width: 26px; height: 26px; color: var(--ak-ink); }
+.jb-lv-boss .jb-eye { fill: var(--ak-pink); }
+.jb-lv.is-done .jb-lv-boss .jb-eye { fill: var(--ak-honey); }
+.jb-mini-stars { display: inline-flex; gap: 1px; }
+.jb-mini-stars svg { width: 12px; height: 12px; fill: color-mix(in srgb, var(--ak-ink) 18%, transparent); }
+.jb-mini-stars svg.is-on { fill: var(--ak-honey); stroke: var(--ak-ink); stroke-width: 2; }
+.jb-lv.is-here { outline: 3px solid var(--ak-honey); outline-offset: 2px; }
+@media (prefers-reduced-motion: no-preference) {
+  .jb-lv.is-here { animation: jb-here 1.6s ease-in-out infinite; }
+}
+@keyframes jb-here { 50% { outline-offset: 5px; outline-color: var(--ak-pink); } }
+.jb-endless { margin-top: 14px; min-height: 56px; justify-content: center; gap: 12px; background: var(--ak-honey); }
+.jb-endless > span { display: grid; justify-items: start; line-height: 1.1; }
+.jb-endless small { font-family: var(--ak-sans); font-weight: 650; font-size: 12px; letter-spacing: 0; text-transform: none; opacity: .8; }
+.jb-endless svg { width: 26px; height: 26px; }
+.jb-endless.is-locked { background: var(--ak-lav); opacity: .7; }
+@media (max-width: 400px) {
+  .ak-card.jb-map { padding: 18px 12px 14px; }
+  .jb-levels { gap: 5px; }
+  .jb-lv { min-height: 52px; border-radius: 11px; }
+  .jb-lv-n { font-size: 18px; }
+  .jb-mini-stars svg { width: 10.5px; height: 10.5px; }
+}
+@media (max-height: 520px) and (min-width: 600px) {
+  .ak-card.jb-map { width: min(760px, 100%); }
+  .jb-worlds { grid-template-columns: 1fr 1fr; }
+}
+
+/* ---------- a level cleared ---------- */
+.ak-card.jb-clear { text-align: center; --jb-w: var(--ak-mint); }
+.jb-clear .ak-card-kicker { color: var(--ak-violet); }
+.jb-clear-title { margin-bottom: 10px; }
+.jb-stars { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin: 2px 0 10px; }
+.jb-star svg { display: block; width: 52px; height: 52px; fill: color-mix(in srgb, var(--ak-ink) 14%, var(--ak-paper)); stroke: var(--ak-ink); stroke-width: 1.6; }
+.jb-star:nth-child(2) svg { width: 64px; height: 64px; transform: translateY(-6px); }
+.jb-star.is-on svg { fill: var(--ak-honey); }
+@media (prefers-reduced-motion: no-preference) {
+  .jb-star.is-on { animation: jb-stamp .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+  .jb-star.is-on:nth-child(1) { animation-delay: .25s; }
+  .jb-star.is-on:nth-child(2) { animation-delay: .5s; }
+  .jb-star.is-on:nth-child(3) { animation-delay: .75s; }
+}
+@keyframes jb-stamp { from { opacity: .01; transform: scale(2.3) rotate(-20deg); } }
+.jb-checks { list-style: none; margin: 0 auto; padding: 0; display: grid; gap: 4px; max-width: 290px; text-align: left; }
+.jb-checks li { display: flex; align-items: center; gap: 8px; font-size: 14.5px; font-weight: 650; color: var(--ak-ink2); }
+.jb-checks li.is-on { color: var(--ak-ink); }
+.jb-checks small { margin-left: auto; font-family: var(--ak-mono); font-size: 12px; color: var(--ak-ink2); }
+.jb-check { flex: none; width: 20px; height: 20px; padding: 2px; border-radius: 50%; border: 2px solid var(--ak-ink); color: var(--ak-ink2); background: var(--ak-paper); }
+.jb-checks li.is-on .jb-check { background: var(--ak-mint); color: var(--ak-ink); }
+.jb-bonus { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin: 12px 0 0; text-align: left; }
+.jb-bonus > div { padding: 6px 10px; border-radius: 12px; background: var(--ak-lav); border: 2px solid var(--ak-ink); display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.jb-bonus dt { font-family: var(--ak-display); font-weight: 850; font-stretch: 118%; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--ak-ink2); }
+.jb-bonus dd { margin: 0; font-family: var(--ak-mono); font-weight: 750; font-size: 14.5px; }
+.jb-bonus .is-total { grid-column: 1 / -1; background: var(--ak-honey); }
+.jb-bonus .is-total dd { font-size: 18px; }
+.jb-clear .ak-say { margin-top: 12px; }
+.jb-clear .ak-btn-play svg, .jb-clear .ak-btn-sm svg { width: 20px; height: 20px; }
+@media (max-height: 520px) {
+  .ak-card.jb-clear { width: min(560px, 100%); }
+  .jb-stars { margin-bottom: 4px; }
+  .jb-star svg { width: 38px; height: 38px; }
+  .jb-star:nth-child(2) svg { width: 46px; height: 46px; }
+  .jb-bonus { grid-template-columns: repeat(4, 1fr); }
+  .jb-bonus .is-total { grid-column: auto / span 4; }
+  .jb-clear .ak-say { display: none; }
+}
+
+/* a phone on its side: the score and level are drawn beside the field (game.js: sideHud), so the bar keeps its buttons */
+@media (max-height: 559px) and (min-aspect-ratio: 7/5) {
+  .ak[data-ak-game='jailbreak'][data-ak-state='play'] .ak-hud { visibility: hidden; }
+}
+.jb-map .ak-card-title { font-size: clamp(22px, 7vw, 30px); white-space: nowrap; }
