@@ -11,7 +11,13 @@
 > AGI** (four in a row, from 1B up to AGI, her search shown as attention bars), **HALLUCINATION** (spot the five things she
 > made up, scenes drawn in code) and **GUARDRAILS** (tower defense against jailbreak gremlins), at agi1.app/games/<id>,
 > all on the arcade kit. /games: 24 games, three small tiles a row on a phone and five on a wide screen; "New" is these ten.
-> **No new setting, SQL, function or service.** See "Ten more on the kit, night two" under "AGI games". RELEASE_LINE
+> **No new setting, SQL, function or service.** See "Ten more on the kit, night two" under "AGI games".
+> **Published as `0404ea5` to `main` on 2026-11-08**, after the full build passed the way Vercel runs it (1,978 tests:
+> 1,974 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check). Vercel: the branch's preview
+> `9vicGteKNsfM1C68kLLu13vjqueS`, then production `EvTP1zc17FowhWicthLQAhR3gjyo`, both Ready. Live: agi1.app/games
+> serves the picker (Pick a game 24; New 10; five a row on a computer), every new game's page, preview and cover and
+> REAL OR AI?'s 81 pictures answer 200, and in the owner's Chrome all ten open with no console errors and REAL OR AI?'s
+> Daily 10 plays.
 
 > **Ten new AGI games and a compact /games (2026-11-08):** the owner, before going to sleep: "create 10 more high
 > quality new games … enjoyable, addicted and fun … the interface must not look like a vibecoded ai slop … optimized

@@ -20,8 +20,16 @@ continue". Their choices: "Yes, both" (AI pictures made with ChatGPT in their Ch
   crop of her 2D art (`agi1-live-2d.webp`), not the 3D model's render (`agi1-portrait.webp`, still the chat's share cards).
 - **Nothing to set up:** no new setting, SQL, function or service.
 - **Built** on the branch `arcade-ten-more` (each game by its own Claude agent from a written brief, then reviewed and wired
-  in). RELEASE_LINE
-- **Checks:** TESTS_LINE
+  in). **Published as `0404ea5` to `main` on 2026-11-08** (one commit, through the branch `release-night2`). Vercel: the
+  branch's preview `9vicGteKNsfM1C68kLLu13vjqueS`, then production `EvTP1zc17FowhWicthLQAhR3gjyo`, both Ready. Live:
+  agi1.app/games serves the picker (Pick a game 24; New 10; five a row on a computer), every new game's page, preview
+  and cover and REAL OR AI?'s 81 pictures answer 200, and in the owner's Chrome all ten open with no console errors and
+  REAL OR AI?'s Daily 10 plays.
+- **Checks:** the full build the way Vercel runs it (a clean copy, `npm ci`, Node 24, UTC, all 81 documented settings as
+  fakes): 1,978 tests, 1,974 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check (274 files) passed.
+  The ten games' own tests: 149, and the kit's 8. Each game played itself for its preview (`?demo`). Each new game's
+  built page and /games on a phone (390 × 844) and a computer (1280 × 800) with the site's real headers: no page
+  errors, console errors or CSP reports; /games plays its tiles' previews.
 - **Left for the owner:** play a few on a real phone and say which feel too hard or too easy (all tuning was against each game's
   own AI); listen to the sound (nobody could hear it here); rate them.
 
