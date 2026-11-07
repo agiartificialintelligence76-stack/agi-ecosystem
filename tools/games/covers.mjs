@@ -45,7 +45,7 @@ body { position: relative; background: radial-gradient(120% 120% at 85% 20%, ${c
 .kicker { display: inline-flex; gap: 10px; align-items: center; font-weight: 900; font-stretch: 125%; font-size: 17px; letter-spacing: .16em; }
 .kicker b { padding: 4px 11px 3px; border-radius: 999px; background: #ff4da6; color: #170a36; border: 2.5px solid #170a36; font-size: 14px; letter-spacing: .08em; transform: rotate(-4deg); }
 h1 { margin-top: 26px; font-weight: 900; font-stretch: 118%; line-height: .86; letter-spacing: -0.02em; text-transform: uppercase; }
-h1 span { display: block; font-size: ${c.small ? 92 : 124}px; color: #fffaf0; -webkit-text-stroke: .055em #170a36; paint-order: stroke fill; text-shadow: 0 .08em 0 #170a36; }
+h1 span { display: block; white-space: nowrap; width: max-content; font-size: ${c.small ? 92 : 124}px; color: #fffaf0; -webkit-text-stroke: .055em #170a36; paint-order: stroke fill; text-shadow: 0 .08em 0 #170a36; }
 h1 span:last-child { color: ${c.accent}; }
 p.line { margin-top: 26px; width: 540px; font-family: S; font-style: italic; font-size: 34px; line-height: 1.12; color: #fffaf0; text-wrap: balance; }
 .pills { position: absolute; left: 64px; bottom: 56px; display: flex; gap: 10px; }
@@ -80,6 +80,13 @@ for (const id of ids) {
   const p = await ctx.newPage();
   await p.goto(`file://${file}`, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts.ready);
+  // a long name shrinks until it clears the gameplay frame (its letters' outline included)
+  await p.evaluate(() => {
+    for (const span of document.querySelectorAll('h1 span')) {
+      let size = parseFloat(getComputedStyle(span).fontSize);
+      while (span.getBoundingClientRect().width > 548 && size > 40) span.style.fontSize = `${(size -= 2)}px`;
+    }
+  });
   await p.waitForTimeout(250);
   const png = await p.screenshot({ type: 'png' });
   await p.close();
