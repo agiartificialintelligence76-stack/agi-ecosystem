@@ -359,8 +359,8 @@ export function createShell(opts) {
     },
 
     // the run ended: { score, label, best (null: the shell keeps it: `bestKey`), lower (lower is better), stats: [[label,
-    // value, { wide }]], line (AGI-1's words), title ('Game over'), share (the post's words; the score is added), onAgain,
-    // onMenu, extra (a node), again ('Play again') }
+    // value, { wide }]], line (AGI-1's words), title ('Game over'), share (the post's whole words: the game puts the score
+    // in them; without it, "I scored … in NAME on agi1.app"), onAgain, onMenu, extra (a node), again ('Play again') }
     over(o) {
       overOpts = o;
       state = 'over';
@@ -392,8 +392,9 @@ export function createShell(opts) {
         !isBest && best != null ? el('p', 'ak-bestline', 'Your best ', el('b', null, show(best))) : null,
         stats, line, o.extra || null,
         el('div', 'ak-card-actions', again, el('div', 'ak-card-row', share, menu)),
-        el('p', 'ak-fine', 'Scores stay on this device. ', el('a', { class: 'ak-link', href: `/games#rate-${game}` }, 'Rate it'), ' · ',
-          el('a', { class: 'ak-link', href: '/games' }, 'More AGI games')));
+        el('div', 'ak-over-links', el('a', { class: 'ak-link', href: `/games#rate-${game}` }, 'Rate it'),
+          el('a', { class: 'ak-link', href: '/games' }, 'More AGI games')),
+        el('p', 'ak-fine', 'Scores stay on this device.'));
       showLayer(card, { dim: true, label: `${o.title || 'Game over'}: ${show(o.score)}` });
       // the tap that ended the run never lands on the card's buttons as it appears
       card.addEventListener('click', (e) => { if (performance.now() - overAt < 450) { e.preventDefault(); e.stopPropagation(); } }, { capture: true });

@@ -86,7 +86,15 @@ html.ak-page body { -webkit-tap-highlight-color: transparent; }
 .ak-chip.is-accent { background: var(--ak-accent); }
 .ak-chip.is-pop .ak-chip-value { animation: ak-bump .28s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes ak-bump { 0% { transform: scale(1); } 40% { transform: scale(1.32); } 100% { transform: scale(1); } }
-@media (max-width: 379px) { .ak-chip { padding: 0 10px; gap: 5px; } .ak-chip-label { font-size: 9.5px; } .ak-chip-value { font-size: 15px; } }
+@media (max-width: 439px) {
+  .ak-bar { gap: 6px; }
+  .ak-tools { gap: 6px; }
+  .ak-hud { gap: 5px; }
+  .ak-chip { padding: 0 9px; gap: 4px; }
+  .ak-chip-label { font-size: 9px; letter-spacing: .05em; }
+  .ak-chip-value { font-size: 15px; }
+}
+@media (max-width: 359px) { .ak-chip-label { display: none; } }
 
 /* ---------- screens (title, end of run) ---------- */
 .ak-screen { position: absolute; inset: 0; z-index: 10; display: grid; overflow: hidden auto; }
@@ -227,6 +235,9 @@ html.ak-page body { -webkit-tap-highlight-color: transparent; }
 .ak-say img { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 2.5px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
 .ak-say p { position: relative; margin: 0; padding: 9px 13px; border-radius: 4px 16px 16px 16px; background: #fff; border: 2px solid var(--ak-ink); font-family: var(--ak-serif); font-style: italic; font-size: 18px; line-height: 1.25; color: var(--ak-ink); }
 .ak-share svg { width: 17px; height: 17px; }
+.ak-over-links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; margin-top: 14px; }
+.ak-over-links .ak-link { font-size: 14px; }
+.ak-over-card .ak-fine { margin-top: 6px; }
 
 /* ---------- toasts ---------- */
 .ak-toasts { position: absolute; z-index: 40; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 6px); translate: -50% 0; display: grid; gap: 8px; justify-items: center; pointer-events: none; width: max-content; max-width: calc(100% - 32px); }
