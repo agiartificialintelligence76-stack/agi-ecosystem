@@ -18,7 +18,7 @@ import { createRenderer } from './render.js';
 import { layout, columnAt } from './layout.js';
 import { createSfx, createMusic } from './sound.js';
 import { say, shareText, LINES } from './lines.js';
-import { LEVELS, TOP } from './levels.js';
+import { LEVELS } from './levels.js';
 import { readSave, recordResult, firstMover, record, fromPicture, PINK, MINT, other, count } from './rules.js';
 import { ladderCard, resultCard, miniLadder, undoButton } from './ui.js';
 import { DEMO_OPENINGS, DEMO_LEVELS, ATTRACT_OPENINGS, demoClock } from './demo.js';
@@ -503,6 +503,13 @@ if (QUERY.has('qa')) {
     get M() { return M; }, get L() { return L; }, get save() { return save; }, brain,
     stage(pic, turn = 'x') { M.fall = null; M.hidden = -1; M.think = null; M.cells = fromPicture(pic); M.turn = turn === 'x' ? PINK : MINT; M.nextTurn(); },
     unlock(n) { save.unlocked = n; save.level = n; persist(); },
+    // how long a frame takes to draw (ms each)
+    bench(n = 120) {
+      const g = view.ctx, m = M || attract, t0 = performance.now();
+      for (let i = 0; i < n; i++) renderer.draw(view.begin(), view, mode === 'title' ? Lt : L, m, { t: i / 60, levelLabel: '70B', parts, floats, shake, ladder: ladderInfo(m.level) });
+      void g;
+      return (performance.now() - t0) / n;
+    },
   };
 }
 
