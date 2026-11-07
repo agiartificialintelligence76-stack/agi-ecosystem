@@ -393,7 +393,8 @@ export function createShell(opts) {
           scoreEl,
           el('p', 'ak-score-label', o.label || 'Score'),
           isBest ? el('p', 'ak-newbest', 'New best!') : null,
-          !isBest && best != null ? el('p', 'ak-bestline', 'Your best ', el('b', null, show(best))) : null,
+          // (a best of 0, a first run that scored nothing, isn't worth showing)
+          !isBest && best != null && !(best === 0 && !o.lower) ? el('p', 'ak-bestline', 'Your best ', el('b', null, show(best))) : null,
           stats),
         el('div', 'ak-over-side',
           line, o.extra || null,
