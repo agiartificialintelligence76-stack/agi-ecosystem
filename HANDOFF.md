@@ -22,7 +22,11 @@ allowed (not used).
 - **Nothing to set up:** plays and reviews use the existing `/api/wallet` and `supabase/arcade.sql`; no new setting,
   SQL, function or service.
 - **Built** on the branch `arcade-ten-games` (each game by its own Claude agent from a written brief, then reviewed and
-  wired in). **Released to `main` on 2026-11-08** as one commit.
+  wired in). **Published as `8133d43` to `main` on 2026-11-08**, then `15fcbd1` (a stray QA screenshot and HEARTBEAT's
+  own cover tool removed). Vercel: the branch's preview `FbvfTDwMX6bE4tpTwNKJLbbEd9PT`, then production
+  `4BRRt9RbcfSkMnYhTq1VQqXyxFJh` and `EoC4VSzA2Xg6tFrC7S93xv6tasqJ`, all Ready. Live: agi1.app/games serves the picker
+  (Pick a game 14; New 10), every new game's page, preview, cover and HEARTBEAT's songs answer 200, and in the owner's
+  Chrome the tiles play their previews and MERGE TO AGI, JAYWALK and ROBOTAXI RUSH open with no console errors.
 - **Checks:** the full build the way Vercel runs it (a clean copy, `npm ci`, Node 24, UTC, all 81 documented settings as
   fakes): 1,829 tests, 1,825 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check (240 files) passed.
   The ten games' own tests: 234, and the kit's 8. Each game's built page on a phone (390 × 844) and a computer (1440 ×

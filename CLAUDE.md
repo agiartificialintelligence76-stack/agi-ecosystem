@@ -17,7 +17,12 @@
 > and keyboard; "reduce motion"; the site's CSP; never money. Plays and reviews use the existing `/api/wallet` and
 > `arcade.sql`: **no new setting, SQL, function or service.** See "The arcade kit and ten new games" under "AGI games".
 > **Released to `main` on 2026-11-08** as one commit, after the full build passed the way Vercel runs it (1,829 tests:
-> 1,825 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check).
+> 1,825 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check). **Published as `8133d43` to `main` on
+> 2026-11-08**, then `15fcbd1` (a stray QA screenshot and HEARTBEAT's own cover tool removed). Vercel: the branch's
+> preview `FbvfTDwMX6bE4tpTwNKJLbbEd9PT`, then production `4BRRt9RbcfSkMnYhTq1VQqXyxFJh` and
+> `EoC4VSzA2Xg6tFrC7S93xv6tasqJ`, all Ready. Live: agi1.app/games serves the picker (Pick a game 14; New 10), every new
+> game's page, preview, cover and HEARTBEAT's songs answer 200, and in the owner's Chrome the tiles play their previews
+> and MERGE TO AGI, JAYWALK and ROBOTAXI RUSH open with no console errors.
 
 > **Phomo fidelity, paper perpetuals and public KOLs (2026-11-03):** the owner compared Phomo with their
 > logged-in Fomo account and requested its typography, layout and features, then real KOLs in every non-Clank
