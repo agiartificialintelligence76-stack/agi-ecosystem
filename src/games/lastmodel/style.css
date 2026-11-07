@@ -1,0 +1,182 @@
+/* LAST MODEL STANDING: its own cards and bits (the arcade kit's frame is src/games/kit/kit.css): the level-up pick, the
+   Patch shop, the 10:00 win and the end card's PATCHES, in the kit's sticker language (ink outlines, hard shadows,
+   honey / pink / violet / mint, Anybody and Geist). Every rule names an lm- class, inside the kit's .ak root. */
+
+.ak[data-ak-game='lastmodel'] { --ak-bg: #0d1029; --ak-accent: var(--ak-honey); }
+.ak .lm-px { image-rendering: pixelated; image-rendering: crisp-edges; display: block; }
+.ak-stage canvas.lm-canvas { cursor: crosshair; }
+/* the clock turns pink in overtime */
+.ak .ak-chip.is-over { background: var(--ak-pink); }
+
+/* ---------- the level-up pick ---------- */
+.ak .ak-card.lm-pick { width: min(780px, 100%); padding: 20px 20px 18px; }
+.lm-pick-head { display: flex; align-items: center; gap: 14px; margin: 0 0 14px; }
+.lm-pick-head .ak-card-title { margin: 0; font-size: 34px; }
+.lm-pick-head .ak-card-kicker { margin: 0 0 2px; }
+.lm-hero { width: 31px; height: 62px; flex: none; transform-origin: 50% 100%; }
+@media (prefers-reduced-motion: no-preference) { .lm-hero { animation: lm-cheer .5s cubic-bezier(.3, 1.6, .5, 1) 2 both; } }
+@keyframes lm-cheer { 0% { transform: translateY(0) scaleY(1); } 35% { transform: translateY(-10px) scaleY(1.04); } 70% { transform: translateY(0) scaleY(.94); } 100% { transform: none; } }
+.lm-pick-say { margin: 4px 0 0; font-family: var(--ak-serif); font-style: italic; font-size: 17px; color: var(--ak-ink2); }
+
+.lm-opts { display: grid; grid-template-columns: 1fr; gap: 10px; }
+@media (min-width: 700px) { .lm-opts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+.lm-opt {
+  position: relative; display: grid; grid-template-columns: 58px 1fr; align-items: center; gap: 12px;
+  width: 100%; min-height: 84px; padding: 12px 14px 12px 12px; text-align: left; border-radius: 18px;
+  background: #fff; color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 0 5px 0 var(--ak-ink);
+  transition: transform .1s ease, box-shadow .1s ease, background-color .15s ease;
+}
+@media (min-width: 700px) {
+  .lm-opt { grid-template-columns: 1fr; justify-items: center; text-align: center; align-content: start; padding: 22px 14px 16px; min-height: 236px; }
+  .lm-opt-icon { width: 76px !important; height: 76px !important; margin-bottom: 4px; }
+  .lm-opt-icon .lm-px { width: 52px !important; height: 52px !important; }
+  .lm-opt-meta { justify-content: center; }
+  .lm-opt .lm-pips { justify-content: center; }
+}
+.lm-opt:hover { transform: translateY(-3px); box-shadow: 0 8px 0 var(--ak-ink); background: #fffdf6; }
+.lm-opt:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ak-ink); }
+.lm-opt:focus-visible { outline: 3px solid var(--ak-mint); outline-offset: 3px; }
+.lm-opt.is-weapon { background-image: linear-gradient(180deg, #fff6d6 0, #fff 46%); }
+.lm-opt.is-passive { background-image: linear-gradient(180deg, #efe7ff 0, #fff 46%); }
+.lm-opt.is-heal, .lm-opt.is-bonus { background-image: linear-gradient(180deg, #ddfdf3 0, #fff 46%); }
+.lm-opt.is-picked { background: var(--ak-honey); transform: translateY(2px) scale(.98); }
+.lm-key {
+  position: absolute; top: -11px; left: -9px; display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%;
+  background: var(--ak-honey); border: 2.5px solid var(--ak-ink); font-family: var(--ak-display); font-weight: 900; font-size: 14px;
+  box-shadow: 0 2px 0 var(--ak-ink);
+}
+.lm-opt-icon {
+  display: grid; place-items: center; width: 58px; height: 58px; border-radius: 14px; background: var(--ak-lav);
+  border: 2.5px solid var(--ak-ink);
+}
+.lm-opt.is-weapon .lm-opt-icon { background: #ffe9a8; }
+.lm-opt.is-heal .lm-opt-icon, .lm-opt.is-bonus .lm-opt-icon { background: #c9fbe9; }
+.lm-opt-icon .lm-px { width: 40px; height: 40px; }
+.lm-opt-body { display: grid; gap: 3px; min-width: 0; }
+.lm-opt-meta { display: flex; align-items: center; gap: 7px; }
+.lm-kind { font-family: var(--ak-display); font-weight: 850; font-stretch: 125%; font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--ak-ink2); }
+.lm-tag {
+  display: inline-block; padding: 2px 7px 1px; border-radius: 999px; border: 2px solid var(--ak-ink); background: var(--ak-lav);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 115%; font-size: 10px; letter-spacing: .08em; text-transform: uppercase;
+}
+.lm-tag.is-new { background: var(--ak-pink); transform: rotate(-4deg); }
+.lm-tag.is-bonus { background: var(--ak-mint); }
+.lm-opt-name { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 17px; line-height: 1.05; letter-spacing: .01em; text-transform: uppercase; overflow-wrap: anywhere; }
+.lm-opt-line { font-size: 14px; line-height: 1.35; color: var(--ak-ink2); text-wrap: pretty; }
+.lm-pips { display: flex; gap: 4px; margin-top: 3px; }
+.lm-pips i { width: 14px; height: 8px; border-radius: 3px; border: 2px solid var(--ak-ink); background: #fff; }
+.lm-pips i.is-on { background: var(--ak-mint); }
+.lm-pips i.is-next { background: var(--ak-honey); }
+@media (prefers-reduced-motion: no-preference) {
+  .lm-pips i.is-next { animation: lm-blink 1s steps(2, jump-none) infinite; }
+  .lm-opts > .lm-opt { animation: lm-deal .38s cubic-bezier(.2, 1.3, .4, 1) both; }
+  .lm-opts > .lm-opt:nth-child(2) { animation-delay: .06s; }
+  .lm-opts > .lm-opt:nth-child(3) { animation-delay: .12s; }
+}
+@keyframes lm-blink { 50% { background: #fff; } }
+@keyframes lm-deal { from { opacity: .01; transform: translateY(22px) rotate(-3deg) scale(.94); } }
+
+.lm-pick-foot { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; margin-top: 16px; }
+.ak .lm-reroll { width: auto; flex: none; gap: 8px; }
+.lm-count { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 999px; background: var(--ak-ink); color: var(--ak-paper); font-family: var(--ak-mono); font-size: 12px; }
+.ak .lm-reroll:disabled { opacity: .45; filter: grayscale(.6); box-shadow: 0 2px 0 var(--ak-ink); transform: none; cursor: default; }
+.lm-mini { display: flex; flex-wrap: wrap; gap: 5px; flex: 1 1 auto; min-width: 0; }
+.lm-mini-i { position: relative; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; background: #ffe9a8; border: 2px solid var(--ak-ink); }
+.lm-mini-i.is-p { background: var(--ak-lav); }
+.lm-mini-i .lm-px { width: 20px; height: 20px; }
+.lm-mini-i b { position: absolute; right: -6px; bottom: -6px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 999px; background: var(--ak-ink); color: var(--ak-paper); font-family: var(--ak-mono); font-size: 9.5px; line-height: 15px; text-align: center; }
+.lm-keys { margin: 0; font-family: var(--ak-mono); font-size: 11.5px; color: var(--ak-ink2); }
+.lm-keys kbd { display: inline-block; min-width: 18px; padding: 0 4px; margin-right: 2px; border-radius: 5px; border: 1.5px solid var(--ak-ink2); font: inherit; font-weight: 700; text-align: center; }
+@media (pointer: coarse) { .lm-keys, .lm-key { display: none; } }
+@media (prefers-reduced-motion: no-preference) { .lm-opts.is-shuffle > .lm-opt { animation: lm-deal .3s cubic-bezier(.2, 1.3, .4, 1) both; } }
+
+/* a short screen (a phone held sideways): the three cards side by side, tight */
+@media (max-height: 520px) {
+  .ak .ak-card.lm-pick { width: min(820px, 100%); padding: 12px 14px 12px; }
+  .lm-pick-head { margin-bottom: 8px; gap: 10px; }
+  .lm-pick-head .ak-card-title { font-size: 24px; }
+  .lm-pick-say { display: none; }
+  .lm-hero { width: 22px; height: 44px; }
+  .lm-opts { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .lm-opt { grid-template-columns: 1fr; justify-items: center; text-align: center; min-height: 0; padding: 12px 8px 10px; gap: 6px; }
+  .lm-opt-icon { width: 46px; height: 46px; }
+  .lm-opt-icon .lm-px { width: 32px; height: 32px; }
+  .lm-opt-meta { justify-content: center; }
+  .lm-opt .lm-pips { justify-content: center; }
+  .lm-opt-name { font-size: 14px; }
+  .lm-opt-line { font-size: 12.5px; }
+  .lm-pick-foot { margin-top: 10px; }
+  .lm-mini { display: none; }
+}
+
+/* ---------- the Patch shop ---------- */
+.ak .ak-card.lm-shop { width: min(520px, 100%); }
+.lm-shop-lede { margin: -8px 0 12px; font-size: 14.5px; line-height: 1.45; color: var(--ak-ink2); }
+.lm-stash {
+  display: inline-flex; align-items: center; gap: 8px; margin: 0 0 12px; padding: 6px 14px 6px 8px; border-radius: 999px;
+  background: var(--ak-honey); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+}
+.lm-stash b { font-family: var(--ak-mono); font-size: 18px; letter-spacing: 0; }
+.lm-stash .lm-px { width: 26px; height: 26px; }
+.lm-shop-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.lm-shop-row {
+  display: grid; grid-template-columns: 46px 1fr auto; align-items: center; gap: 12px; padding: 9px 10px; border-radius: 16px;
+  background: #fff; border: 2.5px solid var(--ak-ink);
+}
+.lm-shop-row.is-installed { animation: lm-pop .4s cubic-bezier(.2, 1.6, .4, 1); background: #fff8dc; }
+@keyframes lm-pop { 40% { transform: scale(1.03); } }
+.lm-shop-icon { display: grid; place-items: center; width: 46px; height: 46px; border-radius: 12px; background: var(--ak-lav); border: 2px solid var(--ak-ink); }
+.lm-shop-icon .lm-px { width: 32px; height: 32px; }
+.lm-shop-text { display: grid; gap: 2px; min-width: 0; }
+.lm-shop-text b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 15px; text-transform: uppercase; }
+.lm-shop-text > span { font-size: 13px; color: var(--ak-ink2); }
+.ak .lm-install { width: auto; min-height: 44px; padding: 6px 12px; gap: 6px; font-size: 12.5px; }
+.ak .lm-install:disabled { opacity: .5; filter: grayscale(.5); transform: none; box-shadow: 0 2px 0 var(--ak-ink); cursor: default; }
+.ak .lm-install.is-max { opacity: 1; filter: none; background: var(--ak-mint); }
+.lm-cost { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px 2px 8px; border-radius: 999px; background: var(--ak-ink); color: var(--ak-paper); font-family: var(--ak-mono); font-size: 13px; }
+.lm-cost .lm-px { width: 16px; height: 16px; }
+@media (max-width: 420px) {
+  .lm-shop-row { grid-template-columns: 38px 1fr auto; gap: 9px; padding: 8px; }
+  .lm-shop-icon { width: 38px; height: 38px; }
+  .lm-shop-icon .lm-px { width: 28px; height: 28px; }
+  .lm-shop-text > span { font-size: 12px; }
+  .ak .lm-install { padding: 6px 8px; }
+  .ak .lm-install > span:first-child:not(.lm-cost) { display: none; }   /* the cost says it; the label stays for screen readers */
+  .ak .ak-card.lm-shop .ak-card-title { font-size: 26px; }
+}
+
+/* ---------- 10:00 ---------- */
+.ak .ak-card.lm-win { text-align: center; background: linear-gradient(180deg, #fff2c2 0, var(--ak-paper) 38%); }
+.lm-win-title { font-size: clamp(30px, 8vw, 40px); line-height: .95; }
+.lm-win .ak-say { text-align: left; }
+.lm-win-note { margin: 14px 0 0; font-size: 14.5px; line-height: 1.45; color: var(--ak-ink2); }
+
+/* ---------- the end card: PATCHES earned ---------- */
+.lm-earned { display: flex; align-items: center; gap: 10px; margin: 14px 0 0; padding: 8px 12px; border-radius: 14px; background: #fff3c4; border: 2px solid var(--ak-ink); text-align: left; }
+.lm-earned .lm-px { width: 30px; height: 30px; flex: none; }
+.lm-earned p { margin: 0; font-size: 14px; line-height: 1.35; }
+.lm-earned b { font-family: var(--ak-mono); font-size: 16px; }
+
+/* the title screen's extra line */
+.lm-title-note { margin: 0; font-family: var(--ak-mono); font-size: 12.5px; color: color-mix(in srgb, var(--ak-fg) 80%, transparent); }
+.lm-title-note b { color: var(--ak-honey); }
+
+/* the end card on a short, wide screen (a phone held sideways): the kit's two halves (the run | what's next), a little
+   tighter so all of it, Play again included, fits above the fold */
+@media (max-height: 520px) and (min-width: 600px) {
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split { padding: 14px 18px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-score { font-size: 52px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-newbest { margin-top: 6px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-stats { gap: 6px; margin-top: 10px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-stat { padding: 5px 10px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-stat dd { font-size: 15px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-say img { width: 38px; height: 38px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .ak-say p { font-size: 16px; padding: 7px 11px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .lm-earned { margin-top: 10px; padding: 6px 10px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .lm-earned .lm-px { width: 24px; height: 24px; }
+  .ak[data-ak-game='lastmodel'] .ak-over-card.is-split .lm-earned p { font-size: 13px; }
+}
+
+/* a hold-to-move drag still going when a card appears never selects its words */
+.ak[data-ak-game='lastmodel'] .ak-card { -webkit-user-select: none; user-select: none; }
