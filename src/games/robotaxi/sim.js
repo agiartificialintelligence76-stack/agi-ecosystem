@@ -23,7 +23,7 @@ export function createRun({ seed = 1, startM = 0, demo = false, attract = false,
     t: 0, z, prevZ: z, x, prevX: x, vx: 0, lean: 0,
     speed: cruise * (demo || attract ? 0.97 : SPEED.launch), cruise,
     boost, boostT: 0, ready: boost >= 1,
-    shields: SHIELDS, grace: 0, spin: 0, spinDir: 1, spinSlide: 0, hitStop: 0,
+    shields: SHIELDS, grace: 0, hitAt: -9, spin: 0, spinDir: 1, spinSlide: 0, hitStop: 0,
     combo: 0, comboT: 0, bestCombo: 0, nearMisses: 0, closeCalls: 0,
     points: 0, fares: 0, rams: 0, checkpoints: 0, topSpeed: 0, score: 0, dist: 0,
     rumble: 0, wall: 0,
@@ -56,7 +56,8 @@ export function stepRun(run, dt, input) {
   if (run.boostT > 0) {
     run.boostT = Math.max(0, run.boostT - dt);
     run.boost = run.boostT / BOOST.time;
-    if (run.boostT <= 0) ev(run, 'boostEnd');
+    // a moment of ghosting as it ends: it's in the middle of the traffic it just plowed through
+    if (run.boostT <= 0) { run.grace = Math.max(run.grace, 0.8); ev(run, 'boostEnd'); }
   }
 
   // ---- speed: cruise (more while boosting), half while spinning out, nothing once wrecked
@@ -116,7 +117,8 @@ export function stepRun(run, dt, input) {
   traffic.update(dt, ctx);
 
   // ---- near misses, crashes, rams
-  if (run.grace > 0) run.grace = Math.max(0, run.grace - dt);
+  // the ghosting after a hit lasts until the robotaxi is back up to speed (at most a little longer)
+  if (run.grace > 0) run.grace = Math.max(0, run.grace - (run.speed < run.cruise * 0.82 && run.grace < 0.6 && run.t - run.hitAt < 3.6 ? dt * 0.15 : dt));
   if (run.spin > 0) run.spin = Math.max(0, run.spin - dt);
   for (const c of traffic.cars) {
     if (c.flying || c.gone) continue;
@@ -130,7 +132,7 @@ export function stepRun(run, dt, input) {
       }
       continue;
     }
-    if (c.hit) continue;
+    if (c.hit || c.ghost) continue;
     const dx = Math.abs(c.x - run.x);
     const gap = dx - (PLAYER.halfW + c.halfW);
     if (gap < c.minGap) c.minGap = gap;
@@ -214,6 +216,7 @@ function crash(run, c) {
     ev(run, 'wreck', { car: c, side });
   } else {
     run.grace = GRACE;
+    run.hitAt = run.t;
     run.spin = SPIN; run.spinSlide = side * 2600;
     run.speed *= 0.5;
     run.hitStop = 0.09;

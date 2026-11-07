@@ -144,7 +144,6 @@ def track_beats(on, dur, curve):
     a = int(np.argmax(contrast))
     anchor = curve[a][2]
     sm = smooth(on, 9)
-    strength = []
 
     def walk(t, direction):
         beats = []
@@ -186,13 +185,19 @@ def track_beats(on, dur, curve):
         t_s = spl(k)
         res = beats - t_s
         w = 1.0 / np.maximum(1.0, np.abs(res) / 0.02)
-    # the beats' own onset peaks (for the report)
-    for t in t_s:
+    return t_s
+
+
+def beat_errors(on, beats):
+    """each beat's distance to the strongest onset within 40 ms, and that onset's strength (for the report)"""
+    sm = smooth(on, 9)
+    out = []
+    for t in beats:
         lo, hi = int((t - 0.04) * FR), int((t + 0.04) * FR)
         if lo >= 0 and hi < len(sm):
             seg = sm[lo:hi]
-            strength.append(((lo + int(np.argmax(seg))) / FR - t, float(seg.max())))
-    return t_s, bpm_at, strength
+            out.append(((lo + int(np.argmax(seg))) / FR - t, float(seg.max())))
+    return out
 
 
 def downbeat_phase(beats, low, mid, high, chroma_at):
@@ -224,16 +229,40 @@ def downbeat_phase(beats, low, mid, high, chroma_at):
 # ---------- the song's character ----------
 
 class Song:
-    def __init__(self, sid, title):
+    KEYS = ('low', 'mid', 'high', 'on', 'ft', 'melraw', 'hdb', 'pitch', 'pconf', 'mspec', 'chroma', 'rdb', 'beats', 'curve')
+
+    def __init__(self, sid, title, cache=None):
         self.id, self.title = sid, title
-        y = decode(game_audio(sid))
-        self.y = y
+        path = os.path.join(cache, f'{sid}.npz') if cache else None
+        if path and os.path.exists(path) and os.path.getmtime(path) > os.path.getmtime(game_audio(sid)):
+            z = np.load(path)
+            for k in self.KEYS:
+                setattr(self, k, z[k])
+            self.dur = float(z['dur'])
+        else:
+            self.analyse()
+            if path:
+                os.makedirs(cache, exist_ok=True)
+                np.savez_compressed(path, dur=self.dur, **{k: np.asarray(getattr(self, k)) for k in self.KEYS})
+        # melody onsets over an adaptive threshold (the local median), so a busy mix doesn't read as one long onset
+        base = ndimage.median_filter(self.melraw, size=25, mode='nearest')
+        mel = np.maximum(0, self.melraw - 1.1 * base)
+        self.mel = mel / (np.percentile(mel[mel > 0], 99) + 1e-12)
+        self.mspec = self.mspec.astype(np.float64)
+        cen = np.array([c[0] for c in self.curve])
+        bpms = np.array([c[1] for c in self.curve])
+        self.bpm_at = lambda t: float(np.interp(t, cen, ndimage.median_filter(bpms, size=5, mode='nearest')))
+        self.beat_err = beat_errors(self.on, self.beats)
+        self.phase, self.phase_scores = downbeat_phase(self.beats, self.low, self.mid, self.high, self.chroma_between)
+        self.bpm = float(np.median(60 / np.diff(self.beats)))
+
+    def analyse(self):
+        y = decode(game_audio(self.id))
         self.dur = len(y) / SR
         self.low = band_onset(y, 30, 150)
         self.mid = band_onset(y, 150, 2500)
         self.high = band_onset(y, 5000, SR / 2 - 1)
-        on = self.low + self.mid + 0.5 * self.high
-        self.on = smooth(on, 7)
+        self.on = smooth(self.low + self.mid + 0.5 * self.high, 7)
         # the harmonic part: melody onsets, pitch, sustain
         import librosa
         S = np.abs(librosa.stft(y.astype(np.float32), n_fft=2048, hop_length=HOP))
@@ -244,24 +273,34 @@ class Song:
         LH = np.log1p(50 * H[band] / (H[band].max() + 1e-12))
         flux = np.diff(LH, axis=1, prepend=LH[:, :1])
         flux[flux < 0] = 0
-        mel = flux.sum(axis=0)
-        self.mel = mel / (np.percentile(mel, 99.5) + 1e-12)
+        self.melraw = flux.sum(axis=0)
         eh = (H[band] ** 2).sum(axis=0)
         self.hdb = 10 * np.log10(eh + 1e-12)
-        pb = (f >= 120) & (f < 1500)
-        Hp = H[pb] ** 2
-        semis = 12 * np.log2(f[pb] / 440.0)
-        self.pitch = ndimage.uniform_filter1d((Hp * semis[:, None]).sum(0) / (Hp.sum(0) + 1e-12), 3)
+        # the predominant pitch: harmonic summation over f0 candidates (90–900 Hz, a third of a semitone apart)
+        f0s = 440.0 * 2 ** (np.arange(-48, 12.01, 1 / 3) / 12)
+        A = np.sqrt(H)
+        sal = np.zeros((len(f0s), H.shape[1]))
+        df = f[1] - f[0]
+        for h in range(1, 7):
+            pos = f0s * h / df
+            i0 = np.clip(np.floor(pos).astype(int), 0, len(f) - 2)
+            fr = (pos - i0)[:, None]
+            sal += 0.8 ** (h - 1) * ((1 - fr) * A[i0] + fr * A[i0 + 1])
+        best = sal.argmax(axis=0)
+        self.pitch = ndimage.median_filter(12 * np.log2(f0s[best] / 440.0), size=3)
+        self.pconf = sal.max(axis=0) / (sal.mean(axis=0) + 1e-9)
+        # a coarse log-frequency picture of the harmonic part (sustained notes: it stays the same)
+        M = librosa.feature.melspectrogram(S=H ** 2, sr=SR, n_mels=40, fmin=150, fmax=4000)
+        M = np.log1p(M / (M.max() + 1e-12) * 1000)
+        M = M / (np.linalg.norm(M, axis=0, keepdims=True) + 1e-9)
+        self.mspec = M.astype(np.float16)
         self.chroma = librosa.feature.chroma_stft(S=H ** 2, sr=SR, hop_length=HOP)
         rms = librosa.feature.rms(y=y.astype(np.float32), frame_length=2048, hop_length=HOP)[0]
         self.rdb = 20 * np.log10(rms + 1e-9)
         # the beat grid
         g = global_tempo(self.on)
-        curve = tempo_curve(self.on, self.dur, g)
-        self.curve = curve
-        self.beats, self.bpm_at, self.beat_err = track_beats(self.on, self.dur, curve)
-        self.phase, self.phase_scores = downbeat_phase(self.beats, self.low, self.mid, self.high, self.chroma_between)
-        self.bpm = float(np.median(60 / np.diff(self.beats)))
+        self.curve = np.array(tempo_curve(self.on, self.dur, g))
+        self.beats = track_beats(self.on, self.dur, self.curve)
 
     def frame(self, t):
         return int(np.clip(round(t * SR / HOP), 0, len(self.ft) - 1))
@@ -306,20 +345,21 @@ def features(song, cands):
         F['mid'][i] = song.peak(song.mid, t)
         F['high'][i] = song.peak(song.high, t)
         F['mel'][i] = song.mel_at(t)
-        fi = song.frame(t + 0.06)
-        F['pitch'][i] = song.pitch[fi]
+        a, z = song.frame(t + 0.03), song.frame(t + 0.15) + 1
+        F['pitch'][i] = float(np.median(song.pitch[a:z]))
         F['energy'][i] = np.clip((loud[song.frame(t)] - lo) / (hi - lo + 1e-9), 0, 1)
-    # sustain: how long (s) the harmonic level stays within 6 dB of its level just after the onset, with no new strong
-    # melody onset (a held vocal or synth note)
-    hd = ndimage.uniform_filter1d(song.hdb, 3)
+    # sustain: how long (s) the predominant pitch holds (within a semitone) after the onset, loud enough and with no
+    # new strong melody onset: a held vocal or synth note
+    hd = song.hdb
+    P = ndimage.median_filter(song.pitch, size=5)
     for i, (t, level, k, j) in enumerate(cands):
-        a = song.frame(t + 0.05)
-        ref = hd[a]
+        a = song.frame(t + 0.06)
+        ref, lvl = P[a], hd[a]
         z = a + 1
-        limit = song.frame(t + 3.0)
-        while z < limit and hd[z] > ref - 6 and song.mel[z] < 0.45:
+        limit = min(len(song.ft) - 1, song.frame(t + 3.0))
+        while z < limit and abs(P[z] - ref) <= 1.0 and hd[z] > lvl - 8 and song.mel[z] < 0.6:
             z += 1
-        F['sustain'][i] = song.ft[z] - t if z < len(song.ft) else 0
+        F['sustain'][i] = song.ft[min(z, len(song.ft) - 1)] - t
     return F
 
 
@@ -340,61 +380,55 @@ def salience(F, cands, song):
 # ---------- picking the notes ----------
 
 RULES = {
-    # max level (0 beats, 1 8ths, 2 16ths), min spacing in 16ths, density curve (low, high) before scaling, its shape
-    'easy': dict(level=1, space=4, lo=0.35, hi=1.0, gamma=1.3, eighth=0.30, sixteenth=9),
-    'normal': dict(level=1, space=2, lo=0.30, hi=1.0, gamma=1.2, eighth=0.0, sixteenth=9),
-    'hard': dict(level=2, space=1, lo=0.32, hi=1.0, gamma=1.0, eighth=0.0, sixteenth=0.06),
+    # level: the finest place allowed (0 beats, 1 8ths, 2 16ths); space: min 16ths between notes; lo/hi/gamma: notes a
+    # second against the section's energy (0..1), before the song-wide scaling; eighth/sixteenth: what a weaker place
+    # costs in the bar's ranking
+    'easy': dict(level=1, space=4, lo=0.45, hi=1.0, gamma=1.3, eighth=0.30, sixteenth=9),
+    'normal': dict(level=1, space=2, lo=0.40, hi=1.0, gamma=1.2, eighth=0.02, sixteenth=9),
+    'hard': dict(level=2, space=1, lo=0.40, hi=1.0, gamma=1.0, eighth=0.0, sixteenth=0.08),
 }
 
 
-def pick(song, cands, F, S, diff, mult):
-    r = RULES[diff]
+def bars_of(song, cands):
     bars = {}
     for i, (t, level, k, j) in enumerate(cands):
-        bar = (k - song.phase) // 4
-        bars.setdefault(bar, []).append(i)
+        bars.setdefault((k - song.phase) // 4, []).append(i)
+    return bars
+
+
+def pick(song, cands, F, S, diff, mult, bars):
+    r = RULES[diff]
     chosen = []
-    last_t = -9
+    hist = []
     for bar in sorted(bars):
         idx = bars[bar]
         t0 = cands[idx[0]][0]
         t1 = cands[idx[-1]][0] + (cands[idx[-1]][0] - cands[idx[0]][0]) / max(1, len(idx) - 1)
         E = float(np.mean([F['energy'][i] for i in idx]))
         loudest = max(S[i] for i in idx)
-        if E < 0.06 or loudest < 0.18:
-            continue                                    # the song breathes (or is silent): a rest
+        prev = np.mean(hist[-2:]) if hist else E
+        hist.append(E)
+        if loudest < 0.3:
+            continue                                    # nothing playing: a rest
         rate = mult * (r['lo'] + (r['hi'] - r['lo']) * E ** r['gamma'])
         want = int(round(rate * (t1 - t0)))
-        # the bar's candidates by score (penalties for weaker metrical places)
+        if prev > 0.45 and E < 0.55 * prev:
+            want = min(want, 2)                         # the song takes a breath
         pool = []
         for i in idx:
             t, level, k, j = cands[i]
-            if level > r['level']:
+            if level > r['level'] or S[i] < 0.2:
                 continue
-            sc = S[i]
-            if level == 1:
-                sc -= r['eighth']
-            if level == 2:
-                sc -= r['sixteenth']
-            if S[i] < 0.12:
-                continue
+            sc = S[i] - (r['eighth'] if level == 1 else r['sixteenth'] if level == 2 else 0)
             pool.append((sc, i))
         pool.sort(key=lambda x: (-x[0], x[1]))
         taken = []
         for sc, i in pool:
             if len(taken) >= want:
                 break
-            gi = i
-            ok = all(abs(gi - o) >= r['space'] for o in taken)
-            if ok and taken == [] and chosen:
-                ok = gi - chosen[-1] >= r['space']
-            if ok:
-                taken.append(gi)
-        taken.sort()
-        if chosen and taken and taken[0] - chosen[-1] < r['space']:
-            taken = taken[1:]
-        chosen.extend(taken)
-        last_t = cands[chosen[-1]][0] if chosen else last_t
+            if all(abs(i - o) >= r['space'] for o in taken) and (not chosen or i - chosen[-1] >= r['space']):
+                taken.append(i)
+        chosen.extend(sorted(taken))
     return chosen
 
 
@@ -404,21 +438,103 @@ def density(times):
     return len(times) / (times[-1] - times[0])
 
 
-def pick_scaled(song, cands, F, S, diff):
-    lo, hi = 0.2, 12.0
+def pick_scaled(song, cands, F, S, diff, bars, target):
+    lo, hi = 0.2, 14.0
     best = None
     for _ in range(40):
         mid = (lo + hi) / 2
-        ch = pick(song, cands, F, S, diff, mid)
+        ch = pick(song, cands, F, S, diff, mid, bars)
         d = density([cands[i][0] for i in ch])
-        best = (ch, d, mid)
-        if abs(d - TARGET[diff]) < 0.02:
+        if best is None or abs(d - target) < abs(best[1] - target):
+            best = (ch, d, mid)
+        if abs(d - target) < 0.015:
             break
-        if d < TARGET[diff]:
+        if d < target:
             lo = mid
         else:
             hi = mid
     return best
+
+
+# ---------- holds and doubles ----------
+
+def choose_holds(song, cands, F, chosen, diff):
+    """{grid index: hold seconds}. Held vocal or synth notes become holds; while one is held, the other hand keeps
+    playing (thinned: beats on NORMAL, up to 8ths on HARD) and there are no doubles."""
+    if diff == 'easy':
+        return {}, chosen
+    min_beats = 1.0 if diff == 'normal' else 0.75
+    gap_bars = 5 if diff == 'normal' else 3
+    cand = []
+    for g in chosen:
+        t, level, k, j = cands[g]
+        if level == 2 or F['mel'][g] < 0.2 or F['energy'][g] < 0.08:
+            continue
+        beat = (song.beats[min(k + 1, len(song.beats) - 1)] - song.beats[k]) or 60 / song.bpm
+        sb = F['sustain'][g] / beat
+        if sb >= min_beats:
+            cand.append((sb * (0.6 + F['mel'][g]), g, sb))
+    cand.sort(key=lambda x: (-x[0], x[1]))
+    holds = {}
+    used_bars = []
+    for _, g, sb in cand:
+        t, level, k, j = cands[g]
+        bar = (k - song.phase) // 4
+        if any(abs(bar - b) < gap_bars for b in used_bars):
+            continue
+        steps = int(min(sb, 4.0) * 2)                   # 8ths, at most 4 beats
+        end_i = g + steps * 2
+        if end_i >= len(cands):
+            continue
+        dur = cands[end_i][0] - t
+        if dur < 0.4:
+            continue
+        holds[g] = round(dur, 3)
+        used_bars.append(bar)
+    # thin what's under each hold
+    keep = []
+    spans = sorted((g, g + int(round(holds[g] / ((song.beats[min(cands[g][2] + 1, len(song.beats) - 1)] - song.beats[cands[g][2]]) / 4)))) for g in holds)
+    for g in chosen:
+        inside = any(a < g <= z + 1 for a, z in spans)
+        lvl = cands[g][1]
+        if inside and (lvl > (0 if diff == 'normal' else 1)):
+            continue
+        keep.append(g)
+    return holds, keep
+
+
+def hold_spans(cands, holds):
+    return [(cands[g][0], cands[g][0] + h) for g, h in holds.items()]
+
+
+def choose_doubles(song, cands, F, chosen, diff, holds):
+    if diff == 'easy':
+        return set()
+    spans = hold_spans(cands, holds)
+    out = set()
+    every = 4 if diff == 'normal' else 1
+    last_bar = -99
+    prev_e = 0.0
+    for g in chosen:
+        t, level, k, j = cands[g]
+        E = F['energy'][g]
+        jump = E - prev_e > 0.2
+        prev_e = 0.8 * prev_e + 0.2 * E
+        if g in holds or any(a - 0.05 <= t <= z + 0.05 for a, z in spans):
+            continue
+        bar = (k - song.phase) // 4
+        pos = (k - song.phase) % 4
+        hit = F['low'][g] + F['high'][g]
+        if level != 0:
+            continue
+        if diff == 'normal':
+            if pos == 0 and E > 0.5 and hit > 0.9 and (bar - last_bar >= every or (jump and bar - last_bar >= 2)):
+                out.add(g)
+                last_bar = bar
+        elif pos in (0, 2) and E > 0.45 and hit > 0.85 and bar - last_bar >= every:
+            out.add(g)
+            last_bar = bar
+    return out
 
 
 # ---------- lanes ----------
@@ -426,216 +542,181 @@ def pick_scaled(song, cands, F, S, diff):
 PAIRS = [(0, 3), (1, 2), (0, 2), (1, 3)]
 
 
-def lanes_for(song, cands, F, S, chosen, diff, holds, doubles):
-    """→ list of (time, [lanes], hold seconds)"""
-    notes = []
-    last_lane = 1
-    last_t = -9.0
-    last_pitch = None
-    lane_free = [-9.0] * 4          # a lane is free from this time (a hold keeps it)
-    lane_last = [-9.0] * 4          # when each lane last had a note
-    zig = 1
-    repeat = 0
-    memory = {}                     # a bar's rhythm → its lanes, how many times it came
-    bar_notes = {}
-    for gi in chosen:
-        t, level, k, j = cands[gi]
-        bar = (k - song.phase) // 4
-        bar_notes.setdefault(bar, []).append(gi)
-    run_dir = 1
+def note_kind(F, g):
+    drum = max(F['low'][g], 0.9 * F['mid'][g], 0.6 * F['high'][g])
+    if F['mel'][g] >= 0.75 * drum:
+        return 'mel'
+    if F['low'][g] >= max(F['mid'][g], F['high'][g]):
+        return 'kick'
+    return 'snare'
 
-    def usable(lane, t):
-        return lane_free[lane] <= t and t - lane_last[lane] >= JACK
 
-    for bar in sorted(bar_notes):
-        gis = bar_notes[bar]
-        start_k = song.phase + bar * 4
-        sig = tuple(((cands[g][2] - start_k) * 4 + cands[g][3], g in doubles, g in holds) for g in gis)
-        contour = []
-        prev_p = None
-        for g in gis:
+def lanes_for(song, cands, F, chosen, diff, holds, doubles):
+    """→ [(time, [lanes], hold seconds)]: the melody moves the lanes (up → right, down ← left), kicks lean left and
+    snares right, fast runs alternate hands as stairs and trills, a bar heard before repeats or mirrors its lanes."""
+    out = []
+    lane_free = [-9.0] * 4          # free from this time (after a hold)
+    lane_last = [-9.0] * 4          # its last note
+    use = [0] * 4
+    L, L2 = 1, 2                    # the last two lanes
+    t_prev, p_prev = -9.0, None
+    step_prev = 0
+    memory = {}
+    bars = {}
+    for g in chosen:
+        bars.setdefault((cands[g][2] - song.phase) // 4, []).append(g)
+
+    def free(c, t):
+        return lane_free[c] <= t + 1e-6 and t - lane_last[c] >= JACK
+
+    def place(c, t, hold=0.0):
+        lane_last[c] = t + hold
+        if hold:
+            lane_free[c] = t + hold + 0.06
+        use[c] += 1
+
+    for bar in sorted(bars):
+        gs = bars[bar]
+        k0 = song.phase + bar * 4
+        sig = tuple(((cands[g][2] - k0) * 4 + cands[g][3], g in doubles, g in holds) for g in gs)
+        contour, pp = [], None
+        for g in gs:
             p = F['pitch'][g]
-            contour.append(0 if prev_p is None else int(np.sign(round((p - prev_p) / 1.5))))
-            prev_p = p
+            contour.append(0 if pp is None else int(np.clip(round((p - pp) / 2), -1, 1)))
+            pp = p
         key = (sig, tuple(contour))
-        reuse = None
-        if key in memory and diff != 'easy':
-            lanes_prev, count = memory[key]
-            for variant in ([3 - l for l in lanes_prev], lanes_prev) if count % 2 else (lanes_prev, [3 - l for l in lanes_prev]):
-                ok = True
-                for g, l in zip(gis, variant):
-                    if not usable(l, cands[g][0]):
-                        ok = False
-                        break
-                if ok:
-                    reuse = variant
+        plan = None
+        if key in memory and diff != 'easy' and len(gs) >= 3:
+            prev_lanes, count = memory[key]
+            order = [[3 - x for x in prev_lanes], prev_lanes] if count % 2 else [prev_lanes, [3 - x for x in prev_lanes]]
+            for variant in order:
+                if all(free(c, cands[g][0]) for g, c in zip(gs, variant) if g not in doubles):
+                    plan = variant
                     break
-        bar_lanes = []
-        for n_i, g in enumerate(gis):
+        lanes_here = []
+        for n_i, g in enumerate(gs):
             t, level, k, j = cands[g]
             hold = holds.get(g, 0.0)
+            dt = t - t_prev
             if g in doubles:
-                choice = None
+                pair = None
                 for pi in range(4):
-                    pair = PAIRS[(bar + pi + (k % 2)) % 4]
-                    if all(usable(l, t) for l in pair):
-                        choice = list(pair)
+                    cand_pair = PAIRS[(bar + pi) % 4]
+                    if all(free(c, t) for c in cand_pair) and not (dt < 0.25 and L in cand_pair):
+                        pair = cand_pair
                         break
-                if choice is None:
-                    choice = None
-                if choice:
-                    for l in choice:
-                        lane_last[l] = t
-                    notes.append((t, choice, 0.0))
-                    bar_lanes.append(choice[0])
-                    last_lane = choice[1] if choice[0] == last_lane else choice[0]
-                    last_t = t
-                    last_pitch = F['pitch'][g]
+                if pair is None:
+                    for cand_pair in PAIRS:
+                        if all(free(c, t) for c in cand_pair):
+                            pair = cand_pair
+                            break
+                if pair is not None:
+                    for c in pair:
+                        place(c, t)
+                    out.append((t, list(pair), 0.0))
+                    lanes_here.append(pair[0])
+                    L2, L = L, (pair[1] if step_prev >= 0 else pair[0])
+                    t_prev, p_prev = t, F['pitch'][g]
                     continue
-            if reuse is not None:
-                lane = reuse[n_i]
+            p = F['pitch'][g]
+            dp = 0.0 if (p_prev is None or dt > 1.6) else p - p_prev
+            kind = note_kind(F, g)
+            if plan is not None and free(plan[n_i], t):
+                c = plan[n_i]
             else:
-                dt = t - last_t
-                p = F['pitch'][g]
-                dp = 0 if last_pitch is None else p - last_pitch
-                drum = max(F['low'][g], F['mid'][g], F['high'][g])
-                melodic = F['mel'][g] >= 0.6 * drum
-                if dt < 0.21:
-                    # a run: keep going the way it goes (stairs) and bounce at the edges, or trill across hands
-                    if abs(dp) >= 1.0:
-                        run_dir = 1 if dp > 0 else -1
-                    lane = last_lane + run_dir
-                    if lane < 0 or lane > 3:
-                        run_dir = -run_dir
-                        lane = last_lane + run_dir
-                    if diff == 'hard' and abs(dp) < 1.0 and (k + j) % 4 in (1, 3):
-                        lane = (last_lane + 2) % 4       # a trill across both hands
-                elif melodic and abs(dp) >= 1.0:
-                    step = 2 if abs(dp) >= 5 else 1
-                    lane = last_lane + (step if dp > 0 else -step)
-                    if lane < 0 or lane > 3:
-                        lane = last_lane - (step if dp > 0 else -step)
-                elif not melodic and F['low'][g] >= max(F['mid'][g], F['high'][g]) * 1.1:
-                    lane = 0 if last_lane != 0 else 1        # kicks lean left
-                    if dt > 0.45 and last_lane in (0, 1):
-                        lane = 1 - last_lane if (bar + n_i) % 3 else last_lane
-                elif not melodic and F['mid'][g] >= F['low'][g]:
-                    lane = 3 if last_lane != 3 else 2        # snares lean right
-                    if dt > 0.45 and last_lane in (2, 3):
-                        lane = 5 - last_lane if (bar + n_i) % 3 else last_lane
-                else:
-                    zig = -zig
-                    lane = last_lane + zig
-                    if lane < 0 or lane > 3:
-                        lane = last_lane - zig
-                if lane == last_lane:
-                    repeat += 1
-                    if repeat >= 2 or dt < 0.3:
-                        lane = last_lane + (1 if last_lane < 2 else -1)
-                        repeat = 0
-                else:
-                    repeat = 0
-            lane = int(np.clip(lane, 0, 3))
-            if not usable(lane, t):
-                # the nearest free lane
-                for d in (1, -1, 2, -2, 3, -3):
-                    c = lane + d
-                    if 0 <= c <= 3 and usable(c, t):
-                        lane = c
-                        break
-                else:
-                    continue                            # nowhere to put it: dropped
-            if hold > 0:
-                lane_free[lane] = t + hold + 0.1
-            lane_last[lane] = t + hold
-            notes.append((t, [lane], hold))
-            bar_lanes.append(lane)
-            last_lane, last_t, last_pitch = lane, t, F['pitch'][g]
-        if len(bar_lanes) == len(gis):
+                best, c = -1e9, None
+                for cand in range(4):
+                    if not free(cand, t):
+                        continue
+                    d = cand - L
+                    sc = 0.0
+                    if abs(dp) >= 0.8:
+                        want = 1 if dp > 0 else -1
+                        if d * want > 0:
+                            sc += 1.2 + (0.4 if (abs(d) == 2) == (abs(dp) >= 4) else 0)
+                        elif d == 0:
+                            sc -= 0.6
+                        else:
+                            sc -= 1.0
+                    else:
+                        if d == 0:
+                            sc += 0.7 if dt >= 0.3 else -0.5
+                            if L == L2:
+                                sc -= 2.0
+                        elif cand == L2 and dt < 0.3:
+                            sc += 0.6                    # a trill
+                        elif abs(d) == 1:
+                            sc += 0.3
+                    if kind == 'kick':
+                        sc += 0.5 if cand <= 1 else 0
+                    elif kind == 'snare':
+                        sc += 0.5 if cand >= 2 else 0
+                    if dt < 0.17:
+                        sc += 1.0 if cand // 2 != L // 2 else -0.8
+                        if d != 0 and d == L - L2 and abs(d) == 1:
+                            sc += 0.5                    # stairs keep going
+                    if abs(d) == 3:
+                        sc -= 0.2 if dt >= 0.4 else 0.7
+                    elif abs(d) == 2:
+                        sc -= 0.1
+                    if diff == 'easy' and abs(d) >= 2:
+                        sc -= 0.4
+                    sc -= 0.04 * (use[cand] - sum(use) / 4)
+                    sc += 0.001 * ((cand * 7 + bar * 3 + n_i) % 5)     # a fixed, fair tie-break
+                    if sc > best:
+                        best, c = sc, cand
+                if c is None:
+                    continue                            # nowhere free: dropped
+            place(c, t, hold)
+            out.append((t, [c], hold))
+            lanes_here.append(c)
+            step_prev = c - L
+            L2, L = L, c
+            t_prev, p_prev = t, p
+        if len(lanes_here) == len(gs):
             prev = memory.get(key)
-            memory[key] = (bar_lanes if prev is None else prev[0], (prev[1] + 1) if prev else 1)
-    return notes
-
-
-# ---------- holds and doubles ----------
-
-def choose_holds(song, cands, F, S, chosen, diff):
-    if diff == 'easy':
-        return {}
-    holds = {}
-    min_len = 0.75 if diff == 'normal' else 0.5          # in beats
-    every = 7 if diff == 'normal' else 3                  # at most one hold in this many bars
-    last_bar = -99
-    chosen_set = sorted(chosen)
-    for n, g in enumerate(chosen_set):
-        t, level, k, j = cands[g]
-        bar = (k - song.phase) // 4
-        if bar - last_bar < every:
-            continue
-        if F['mel'][g] < 0.35 or F['energy'][g] < 0.15:
-            continue
-        beat = 60 / song.bpm_at(t)
-        sus = F['sustain'][g]
-        if sus < min_len * beat:
-            continue
-        # until the next chosen note on a beat or an 8th that's strong, at most 2 bars, ending on an 8th
-        nxt = chosen_set[n + 1] if n + 1 < len(chosen_set) else None
-        end = t + min(sus, 8 * beat)
-        if nxt is not None and diff == 'normal':
-            end = min(end, cands[nxt][0] - 0.5 * beat)
-        steps = int(np.floor((end - t) / (beat / 2)))
-        if steps < 2 * min_len:
-            continue
-        dur = steps * beat / 2
-        if dur < 0.35:
-            continue
-        holds[g] = round(dur, 3)
-        last_bar = bar
-    return holds
-
-
-def choose_doubles(song, cands, F, S, chosen, diff, holds):
-    if diff == 'easy':
-        return set()
-    out = set()
-    every = 4 if diff == 'normal' else 1
-    last_bar = -99
-    prev_e = 0
-    for g in sorted(chosen):
-        if g in holds:
-            continue
-        t, level, k, j = cands[g]
-        bar = (k - song.phase) // 4
-        on_one = level == 0 and (k - song.phase) % 4 == 0
-        on_beat = level == 0
-        E = F['energy'][g]
-        hit = F['low'][g] + F['high'][g]
-        jump = E - prev_e > 0.18
-        prev_e = 0.7 * prev_e + 0.3 * E
-        if diff == 'normal':
-            if on_one and E > 0.55 and hit > 1.0 and (bar - last_bar >= every or jump):
-                out.add(g)
-                last_bar = bar
-        else:
-            if on_beat and E > 0.45 and hit > 0.9 and (on_one or (k - song.phase) % 4 == 2) and bar - last_bar >= every:
-                out.add(g)
-                last_bar = bar
+            memory[key] = (lanes_here if prev is None else prev[0], (prev[1] + 1) if prev else 1)
     return out
 
 
 # ---------- the whole chart ----------
 
 def make_chart(song, cands, F, S, diff):
-    chosen, d, mult = pick_scaled(song, cands, F, S, diff)
-    holds = choose_holds(song, cands, F, S, chosen, diff)
-    doubles = choose_doubles(song, cands, F, S, chosen, diff, holds)
-    notes = lanes_for(song, cands, F, S, chosen, diff, holds, doubles)
+    bars = bars_of(song, cands)
+    target = TARGET[diff]
+    for _ in range(4):
+        chosen, d, mult = pick_scaled(song, cands, F, S, diff, bars, target)
+        holds, chosen = choose_holds(song, cands, F, chosen, diff)
+        doubles = choose_doubles(song, cands, F, chosen, diff, holds)
+        notes = lanes_for(song, cands, F, chosen, diff, holds, doubles)
+        heads = sorted(set(round(t, 3) for t, _, _ in notes))
+        real = density(heads)
+        if abs(real - TARGET[diff]) < 0.06:
+            break
+        target += TARGET[diff] - real                   # thinning under holds: ask for a little more
     out = []
     for t, lanes, hold in notes:
         for l in lanes:
             out.append([round(float(t), 3), int(l)] + ([round(float(hold), 3)] if hold > 0 else []))
     out.sort(key=lambda n: (n[0], n[1]))
     return out, mult
+
+
+def lane_stats(chart):
+    heads = {}
+    for n in chart:
+        heads.setdefault(n[0], []).append(n[1])
+    singles = [(t, ls[0]) for t, ls in sorted(heads.items()) if len(ls) == 1]
+    use = np.bincount([n[1] for n in chart], minlength=4) / len(chart)
+    same = fast = alt = 0
+    jumps = np.zeros(4)
+    for (t0, a), (t1, b) in zip(singles, singles[1:]):
+        jumps[abs(b - a)] += 1
+        same += a == b
+        if t1 - t0 < 0.17:
+            fast += 1
+            alt += (a // 2) != (b // 2)
+    return use, jumps / max(1, jumps.sum()), same / max(1, len(singles) - 1), (alt / fast if fast else 1.0)
 
 
 def check(chart, diff, dur):
@@ -669,7 +750,7 @@ def check(chart, diff, dur):
 
 def preview_range(song, cands, F):
     # the loudest 12 s that start on a downbeat, in the first three quarters (the first chorus, usually)
-    best, best_t = -1, 0.0
+    best, best_t = -np.inf, 0.0
     downs = [song.beats[k] for k in range(song.phase, len(song.beats), 4)]
     for t in downs:
         if t + PREVIEW > song.dur * 0.78 or t < 8:
@@ -693,8 +774,8 @@ def energy_string(song, F, cands):
     return ''.join(out)
 
 
-def build(sid, title, plots=None, sonify=None):
-    song = Song(sid, title)
+def build(sid, title, plots=None, sonify=None, cache=None):
+    song = Song(sid, title, cache)
     cands = grid(song)
     F = features(song, cands)
     S = salience(F, cands, song)
@@ -707,8 +788,10 @@ def build(sid, title, plots=None, sonify=None):
         chart, mult = make_chart(song, cands, F, S, diff)
         problems, d, chords = check(chart, diff, song.dur)
         holds = sum(1 for n in chart if len(n) > 2)
-        print(f'   {diff:6s} {len(chart):4d} notes, {d:.2f}/s (x{mult:.2f}), {chords} doubles, {holds} holds'
-              + (f'  PROBLEMS: {problems[:6]}' if problems else ''))
+        use, jumps, same, alt = lane_stats(chart)
+        print(f'   {diff:6s} {len(chart):4d} notes, {d:.2f}/s (x{mult:.2f}), {chords} doubles, {holds} holds, lanes '
+              f'{"/".join(f"{u * 100:.0f}" for u in use)}%, moves 0/1/2/3 {"/".join(f"{j * 100:.0f}" for j in jumps)}%, '
+              f'fast hand swaps {alt * 100:.0f}%' + (f'  PROBLEMS: {problems[:6]}' if problems else ''))
         charts[diff] = chart
     data = {
         'id': sid, 'title': title, 'bpm': round(song.bpm, 2),
@@ -809,11 +892,12 @@ def main():
     ap.add_argument('songs', nargs='*')
     ap.add_argument('--plots')
     ap.add_argument('--sonify')
+    ap.add_argument('--cache', help='keep each song\'s analysis here (faster reruns)')
     a = ap.parse_args()
     os.makedirs(CHARTS, exist_ok=True)
     todo = [(s, t) for s, t in SONGS if not a.songs or s in a.songs]
     for sid, title in todo:
-        build(sid, title, a.plots, a.sonify)
+        build(sid, title, a.plots, a.sonify, a.cache)
     # the song select's list: every song, from its chart file
     index = []
     for sid, title in SONGS:

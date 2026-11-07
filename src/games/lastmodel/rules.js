@@ -9,7 +9,7 @@ export const ENEMY_CAP = 350;         // bots alive at once, at most
 export const PLAYER_HP = 100;
 export const PLAYER_SPEED = 86;       // world px a second
 export const PLAYER_RADIUS = 6;       // her hurtbox: small and forgiving
-export const PICKUP_RADIUS = 34;
+export const PICKUP_RADIUS = 40;
 export const IFRAMES = 0.6;           // invulnerable this long after a hit
 export const CRIT_CHANCE = 0.05;
 
@@ -17,32 +17,32 @@ export const CRIT_CHANCE = 0.05;
 // Stats: dmg (per hit), cd (seconds between shots), count, pierce, r (area radius), len/w (beam), speed, range, tick, slow
 export const WEAPONS = [
   { id: 'bolt', name: 'PROMPT BOLT', blurb: 'Zaps the nearest bot, again and again.', levels: [
-    { dmg: 10, cd: 0.9, count: 1, pierce: 0, speed: 270, up: 'Zaps the nearest bot, again and again.' },
-    { dmg: 10, cd: 0.9, count: 2, pierce: 0, speed: 270, up: '+1 bolt each burst.' },
-    { dmg: 15, cd: 0.85, count: 2, pierce: 1, speed: 290, up: 'Damage 10 → 15, pierces a bot.' },
-    { dmg: 15, cd: 0.8, count: 3, pierce: 1, speed: 290, up: '+1 bolt, fires faster.' },
+    { dmg: 12, cd: 0.8, count: 1, pierce: 0, speed: 270, up: 'Zaps the nearest bot, again and again.' },
+    { dmg: 12, cd: 0.8, count: 2, pierce: 0, speed: 280, up: '+1 bolt each burst.' },
+    { dmg: 16, cd: 0.8, count: 2, pierce: 1, speed: 290, up: 'Damage 12 → 16, pierces a bot.' },
+    { dmg: 16, cd: 0.75, count: 3, pierce: 1, speed: 290, up: '+1 bolt, fires faster.' },
     { dmg: 21, cd: 0.7, count: 4, pierce: 2, speed: 310, up: '+1 bolt, damage 21, pierces 2.' },
   ] },
   { id: 'firewall', name: 'FIREWALL', blurb: 'Burning blocks orbit around you.', levels: [
-    { dmg: 9, count: 2, r: 38, spin: 3.1, on: 4, off: 1.6, up: 'Burning blocks orbit around you.' },
-    { dmg: 13, count: 2, r: 38, spin: 3.1, on: 4.5, off: 1.5, up: 'Damage 9 → 13, stays up longer.' },
-    { dmg: 13, count: 3, r: 42, spin: 3.3, on: 4.5, off: 1.4, up: '+1 block, wider orbit.' },
-    { dmg: 18, count: 3, r: 46, spin: 3.7, on: 5, off: 1.3, up: 'Damage 18, spins faster.' },
-    { dmg: 24, count: 4, r: 50, spin: 3.9, on: 99, off: 0, up: '+1 block, never goes down.' },
+    { dmg: 12, count: 2, r: 44, spin: 3.2, on: 4, off: 1.5, up: 'Burning blocks orbit around you.' },
+    { dmg: 16, count: 2, r: 46, spin: 3.3, on: 4.5, off: 1.4, up: 'Damage 12 → 16, stays up longer.' },
+    { dmg: 16, count: 3, r: 50, spin: 3.5, on: 4.5, off: 1.3, up: '+1 block, wider orbit.' },
+    { dmg: 22, count: 3, r: 54, spin: 3.9, on: 5, off: 1.2, up: 'Damage 22, spins faster.' },
+    { dmg: 30, count: 4, r: 60, spin: 4.1, on: 99, off: 0, up: '+1 block, never goes down.' },
   ] },
   { id: 'stream', name: 'TOKEN STREAM', blurb: 'A piercing beam where you’re heading.', levels: [
-    { dmg: 17, cd: 1.3, len: 110, w: 7, dual: false, up: 'A piercing beam where you’re heading.' },
-    { dmg: 17, cd: 1.2, len: 140, w: 7, dual: false, up: 'Longer beam, fires faster.' },
-    { dmg: 25, cd: 1.2, len: 140, w: 9, dual: false, up: 'Damage 17 → 25, thicker beam.' },
-    { dmg: 25, cd: 1.1, len: 155, w: 9, dual: true, up: 'Fires behind you too.' },
-    { dmg: 34, cd: 0.95, len: 175, w: 11, dual: true, up: 'Damage 34, longest beam.' },
+    { dmg: 22, cd: 1.05, len: 135, w: 8, dual: false, up: 'A piercing beam where you’re heading.' },
+    { dmg: 22, cd: 0.95, len: 165, w: 8, dual: false, up: 'Longer beam, fires faster.' },
+    { dmg: 32, cd: 0.9, len: 165, w: 10, dual: false, up: 'Damage 22 → 32, thicker beam.' },
+    { dmg: 32, cd: 0.85, len: 180, w: 10, dual: true, up: 'Fires behind you too.' },
+    { dmg: 44, cd: 0.75, len: 210, w: 12, dual: true, up: 'Damage 44, longest beam.' },
   ] },
   { id: 'rain', name: 'GRADIENT RAIN', blurb: 'Strikes random bots from above.', levels: [
-    { dmg: 16, cd: 1.8, count: 2, r: 15, up: 'Strikes random bots from above.' },
-    { dmg: 16, cd: 1.7, count: 3, r: 15, up: '+1 strike.' },
-    { dmg: 23, cd: 1.7, count: 3, r: 18, up: 'Damage 16 → 23, bigger splash.' },
-    { dmg: 23, cd: 1.55, count: 4, r: 20, up: '+1 strike, falls more often.' },
-    { dmg: 31, cd: 1.45, count: 5, r: 22, up: '+1 strike, damage 31.' },
+    { dmg: 15, cd: 1.8, count: 2, r: 15, up: 'Strikes random bots from above.' },
+    { dmg: 15, cd: 1.7, count: 3, r: 15, up: '+1 strike.' },
+    { dmg: 21, cd: 1.7, count: 3, r: 18, up: 'Damage 15 → 21, bigger splash.' },
+    { dmg: 21, cd: 1.55, count: 4, r: 20, up: '+1 strike, falls more often.' },
+    { dmg: 28, cd: 1.45, count: 5, r: 22, up: '+1 strike, damage 28.' },
   ] },
   { id: 'heads', name: 'ATTENTION HEADS', blurb: 'Homing eyes that never look away.', levels: [
     { dmg: 22, cd: 1.7, count: 1, r: 16, speed: 150, up: 'Homing eyes that never look away.' },
@@ -52,25 +52,25 @@ export const WEAPONS = [
     { dmg: 40, cd: 1.35, count: 4, r: 24, speed: 180, up: '+1 eye, damage 40.' },
   ] },
   { id: 'backprop', name: 'BACKPROP', blurb: 'A boomerang that comes back for more.', levels: [
-    { dmg: 15, cd: 1.9, count: 1, r: 7, range: 120, up: 'A boomerang that comes back for more.' },
-    { dmg: 20, cd: 1.8, count: 1, r: 8, range: 125, up: 'Damage 15 → 20, bigger.' },
-    { dmg: 20, cd: 1.8, count: 2, r: 8, range: 130, up: '+1 boomerang.' },
-    { dmg: 27, cd: 1.65, count: 2, r: 9, range: 150, up: 'Damage 27, flies further.' },
-    { dmg: 34, cd: 1.5, count: 3, r: 10, range: 160, up: '+1 boomerang, damage 34.' },
+    { dmg: 17, cd: 1.8, count: 1, r: 7, range: 120, up: 'A boomerang that comes back for more.' },
+    { dmg: 23, cd: 1.7, count: 1, r: 8, range: 125, up: 'Damage 17 → 23, bigger.' },
+    { dmg: 23, cd: 1.7, count: 2, r: 8, range: 130, up: '+1 boomerang.' },
+    { dmg: 31, cd: 1.55, count: 2, r: 9, range: 150, up: 'Damage 31, flies further.' },
+    { dmg: 40, cd: 1.4, count: 3, r: 10, range: 160, up: '+1 boomerang, damage 40.' },
   ] },
   { id: 'field', name: 'HALLUCINATION FIELD', blurb: 'Hurts every bot that gets too close.', levels: [
-    { dmg: 5, tick: 0.42, r: 34, slow: 0, up: 'Hurts every bot that gets too close.' },
-    { dmg: 6, tick: 0.4, r: 41, slow: 0, up: 'Bigger field.' },
-    { dmg: 8, tick: 0.34, r: 44, slow: 0.1, up: 'Hurts more often, slows bots.' },
-    { dmg: 10, tick: 0.32, r: 50, slow: 0.2, up: 'Bigger field, slows more.' },
-    { dmg: 13, tick: 0.28, r: 58, slow: 0.3, up: 'Biggest field, damage 13.' },
+    { dmg: 7, tick: 0.38, r: 38, slow: 0, up: 'Hurts every bot that gets too close.' },
+    { dmg: 9, tick: 0.36, r: 44, slow: 0, up: 'Bigger field, hurts more.' },
+    { dmg: 11, tick: 0.32, r: 48, slow: 0.12, up: 'Hurts more often, slows bots.' },
+    { dmg: 14, tick: 0.3, r: 54, slow: 0.22, up: 'Bigger field, slows more.' },
+    { dmg: 18, tick: 0.26, r: 62, slow: 0.32, up: 'Biggest field, damage 18.' },
   ] },
   { id: 'nova', name: 'OVERCLOCK NOVA', blurb: 'A shockwave that shoves the crowd.', levels: [
-    { dmg: 26, cd: 3.8, r: 72, stun: 0, up: 'A shockwave that shoves the crowd.' },
-    { dmg: 36, cd: 3.6, r: 76, stun: 0, up: 'Damage 26 → 36.' },
-    { dmg: 36, cd: 3.4, r: 94, stun: 0.25, up: 'Bigger wave, stuns bots.' },
-    { dmg: 50, cd: 3.1, r: 100, stun: 0.3, up: 'Damage 50, comes faster.' },
-    { dmg: 66, cd: 2.8, r: 120, stun: 0.45, up: 'Biggest wave, damage 66.' },
+    { dmg: 22, cd: 4, r: 70, stun: 0, up: 'A shockwave that shoves the crowd.' },
+    { dmg: 30, cd: 3.8, r: 74, stun: 0, up: 'Damage 22 → 30.' },
+    { dmg: 30, cd: 3.6, r: 90, stun: 0.25, up: 'Bigger wave, stuns bots.' },
+    { dmg: 42, cd: 3.3, r: 96, stun: 0.3, up: 'Damage 42, comes faster.' },
+    { dmg: 56, cd: 3, r: 114, stun: 0.45, up: 'Biggest wave, damage 56.' },
   ] },
 ];
 
@@ -98,9 +98,9 @@ export const ENEMIES = {
   troll:   { id: 3, name: 'TROLL', r: 6, speed: 36, hp: 17, dmg: 5, xp: 2, cost: 3, mass: 0.2 },
   ghost:   { id: 4, name: 'FUD GHOST', r: 6, speed: 47, hp: 14, dmg: 7, xp: 2, cost: 2, mass: 0.1 },
   swarm:   { id: 5, name: 'SWARMLET', r: 3.5, speed: 66, hp: 2, dmg: 3, xp: 1, cost: 0.4, mass: 0 },
-  botnet:  { id: 6, name: 'BOTNET', r: 17, speed: 32, hp: 1500, dmg: 15, xp: 60, cost: 0, mass: 1, boss: true },
+  botnet:  { id: 6, name: 'BOTNET', r: 17, speed: 32, hp: 1250, dmg: 15, xp: 60, cost: 0, mass: 1, boss: true },
   broker:  { id: 7, name: 'DATA BROKER', r: 14, speed: 42, hp: 4200, dmg: 18, xp: 120, cost: 0, mass: 1, boss: true },
-  overfit: { id: 8, name: 'THE OVERFIT', r: 20, speed: 24, hp: 9500, dmg: 22, xp: 200, cost: 0, mass: 1, boss: true },
+  overfit: { id: 8, name: 'THE OVERFIT', r: 20, speed: 24, hp: 6000, dmg: 22, xp: 200, cost: 0, mass: 1, boss: true },
 };
 export const KINDS = ['spam', 'crawler', 'captcha', 'troll', 'ghost', 'swarm', 'botnet', 'broker', 'overfit'];
 export const BOSSES = [
@@ -114,9 +114,11 @@ export const ELITE = { hpMul: 9, scale: 2, dmgMul: 1.4, speedMul: 0.92, xp: 18 }
 export const minutes = (t) => Math.max(0, t) / 60;
 export function hpMul(t) {
   const m = minutes(t), o = Math.max(0, m - 10);
-  return 1 + 0.22 * m + 0.06 * m * m + 0.6 * o * o;
+  return 1 + 0.12 * m + 0.072 * m * m + 0.6 * o * o;
 }
 export const dmgMul = (t) => 1 + 0.06 * minutes(t) + 0.08 * Math.max(0, minutes(t) - 10);
+// and a little quicker (+2.5% a minute)
+export const speedMul = (t) => 1 + 0.025 * Math.min(minutes(t), 14);
 
 // ---------- the XP curve ----------
 // XP to go from `level` to the next: quick at first (the first level-up within seconds), steadier later

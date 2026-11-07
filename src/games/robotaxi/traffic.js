@@ -42,16 +42,55 @@ const changing = (c) => c.blinkT > 0 || c.shiftT > 0;
 export const spanL = (c) => (changing(c) ? Math.min(LANE_X[c.lane], LANE_X[c.laneTo], c.x) : c.x) - c.halfW * HIT_W;
 export const spanR = (c) => (changing(c) ? Math.max(LANE_X[c.lane], LANE_X[c.laneTo], c.x) : c.x) + c.halfW * HIT_W;
 
-// Drive an ideal robotaxi from z0 to z1 through `cars` (as they stand), moving sideways at most `slope` units per unit
-// forward: the z where no position is left (a wall), or Infinity. `extra` is one more car to try (it isn't in `cars`).
-export function sweep(cars, z0, z1, slope = 0.6, { step = 100, extra = null, margin = 34 } = {}) {
+// where a car will be sideways t seconds from now (its lane change played out; a scooter's weave)
+export function predictX(c, t) {
+  if (c.blinkT > 0) {
+    if (t < c.blinkT) return c.x;
+    const p = Math.min(1, (t - c.blinkT) / SHIFT);
+    return LANE_X[c.lane] + (LANE_X[c.laneTo] - LANE_X[c.lane]) * smooth(p);
+  }
+  if (c.shiftT > 0) {
+    const p = Math.min(1, (c.shiftT + t) / SHIFT);
+    return LANE_X[c.lane] + (LANE_X[c.laneTo] - LANE_X[c.lane]) * smooth(p);
+  }
+  if (c.type === 'scooter') return LANE_X[c.lane] + Math.sin(c.wob + 1.7 * t) * 120;
+  return c.x;
+}
+// the room it takes t seconds from now: both lanes until its lane change is over, its weave for a scooter
+function spanAt(c, t, side) {
+  const hw = c.halfW * HIT_W;
+  if (changing(c) && t < c.blinkT + SHIFT - c.shiftT + 0.15) {
+    const a = LANE_X[c.lane], b = LANE_X[c.laneTo];
+    return side < 0 ? Math.min(a, b) - hw : Math.max(a, b) + hw;
+  }
+  const x = changing(c) ? LANE_X[c.laneTo] : c.type === 'scooter' ? LANE_X[c.lane] : c.x;
+  const w = c.type === 'scooter' ? 120 + hw : hw;
+  return side < 0 ? x - w : x + w;
+}
+
+// The guardian's question: an ideal robotaxi leaving z0 at speed `speed` (anywhere across the road), steering sideways
+// no faster than `lat` units a second, with every car going on at its own speed: is there a moment it has nowhere left
+// to be? → that moment's { t, z } (z: where the robotaxi would be), or null. `extra` is one more car to try.
+const wallOut = { t: 0, z: 0 };
+export function sweep(cars, z0, speed, { from = 1800, horizon = SPAWN_AHEAD + 9000, extra = null, lat = SPEED.lat * 0.72, margin = 34, tMax = 11 } = {}) {
   reachA.fill(1);
   let reach = reachA, next = reachB;
-  const spread = Math.max(1, Math.round((slope * step) / CELL));
+  const dt = 110 / Math.max(2000, speed);
+  const spread = Math.max(1, Math.round((lat * dt) / CELL));
   const pw = PLAYER.hitHalfW + margin;
   const n = cars.length + (extra ? 1 : 0);
-  for (let z = z0; z <= z1; z += step) {
-    // where it could be by now: anywhere within `spread` cells of where it could be before
+  // stop once every car that's in range now has been passed (or tMax)
+  let tEnd = 0;
+  for (let k = 0; k < n; k++) {
+    const c = k < cars.length ? cars[k] : extra;
+    if (c.gone || c.flying || c.z > z0 + horizon) continue;
+    const rel = speed - c.v;
+    tEnd = Math.max(tEnd, rel > 200 ? (c.z - z0 + c.len) / rel : tMax);
+  }
+  tEnd = Math.min(tEnd, tMax);
+  for (let t = 0; t <= tEnd; t += dt) {
+    const zp = z0 + speed * t;
+    if (zp < z0 + from) continue;            // too close to do anything about: it starts anywhere from here
     let run = 0;
     for (let i = 0; i < Math.min(spread, NCELL); i++) run += reach[i];
     for (let i = 0; i < NCELL; i++) {
@@ -60,26 +99,24 @@ export function sweep(cars, z0, z1, slope = 0.6, { step = 100, extra = null, mar
       if (drop >= 0) run -= reach[drop];
       next[i] = run > 0 ? 1 : 0;
     }
-    // minus where a car is
     blocked.fill(0);
     for (let k = 0; k < n; k++) {
       const c = k < cars.length ? cars[k] : extra;
-      if (c.gone || c.flying) continue;
+      if (c.gone || c.flying || c.z > z0 + horizon) continue;
+      const cz = c.z + c.v * t;
       const reachZ = (c.len + PLAYER.len) * 0.47;
-      if (z < c.z - reachZ || z > c.z + reachZ) continue;
-      const a = Math.max(0, Math.floor((spanL(c) - pw - XMIN) / CELL)), b = Math.min(NCELL - 1, Math.ceil((spanR(c) + pw - XMIN) / CELL));
+      if (zp < cz - reachZ || zp > cz + reachZ) continue;
+      const a = Math.max(0, Math.floor((spanAt(c, t, -1) - pw - XMIN) / CELL));
+      const b = Math.min(NCELL - 1, Math.ceil((spanAt(c, t, 1) + pw - XMIN) / CELL));
       for (let i = a; i <= b; i++) blocked[i] = 1;
     }
     let any = false;
     for (let i = 0; i < NCELL; i++) { const v = next[i] & (blocked[i] ^ 1); next[i] = v; if (v) any = true; }
-    if (!any) return z;
-    const t = reach; reach = next; next = t;
+    if (!any) { wallOut.t = t; wallOut.z = zp; return wallOut; }
+    const tmp = reach; reach = next; next = tmp;
   }
-  return Infinity;
+  return null;
 }
-
-// how far sideways the ideal robotaxi may move per unit forward, at a robotaxi speed and a traffic speed
-export const slopeFor = (speed, flow) => clamp((0.78 * SPEED.lat) / Math.max(1500, speed - flow), 0.32, 1.1) * 0.8;
 
 // ---------- the traffic ----------
 const byZ = (a, b) => b.z - a.z;
@@ -138,8 +175,7 @@ export function createTraffic(seed = 1, { demo = false } = {}) {
     const T = TYPES[type];
     if (crowded(lane, z, T)) return null;
     const c = make(type, lane, z, opts);
-    const wall = sweep(cars, ctx.z + 1500, ctx.z + SPAWN_AHEAD + 9000, ctx.slope, { extra: c });
-    if (wall !== Infinity) { release(c); return null; }
+    if (sweep(cars, ctx.z, ctx.speed, { from: 1500, extra: c })) { release(c); return null; }
     cars.push(c);
     return c;
   }
@@ -240,33 +276,36 @@ export function createTraffic(seed = 1, { demo = false } = {}) {
       }
       if (!free) continue;
       c.laneTo = to; c.blinkT = BLINK;
-      if (sweep(cars, ctx.z + 1500, ctx.z + SPAWN_AHEAD + 4000, ctx.slope) !== Infinity) { c.laneTo = c.lane; c.blinkT = 0; continue; }
+      if (sweep(cars, ctx.z, ctx.speed, { from: 1500 })) { c.laneTo = c.lane; c.blinkT = 0; continue; }
       c.changed = true;
       return;
     }
   }
 
-  // a wall has formed at zWall: pull it apart (the cars in front speed up, the one at the back slows down; one still in
-  // the haze simply isn't there any more)
-  function unwall(zWall, ctx) {
+  // a wall is coming (t seconds from now, where the robotaxi will be at z): pull it apart before it gets there. A car that
+  // is still deep in the haze simply isn't there any more; otherwise the front car of the knot (and anything ahead of it in
+  // its lane) speeds up for a moment, and the back one, if it's still far off, slows down.
+  function unwall(w, ctx) {
     let front = null, back = null;
     for (const c of cars) {
-      if (c.flying || c.z < zWall - 2600 || c.z > zWall + 900) continue;
-      if (!front || c.z > front.z) front = c;
-      if (!back || c.z < back.z) back = c;
+      if (c.flying) continue;
+      const cz = c.z + c.v * w.t;
+      if (cz < w.z - 2600 || cz > w.z + 1200) continue;
+      if (!front || cz > front.z + front.v * w.t) front = c;
+      if (!back || cz < back.z + back.v * w.t) back = c;
     }
     if (!front) return;
-    if (front.z > ctx.z + SPAWN_AHEAD * 0.86 && front !== back) { release(front); cars.splice(cars.indexOf(front), 1); return; }
-    for (const c of cars) if (!c.flying && c !== back && c.z >= zWall - 2600 && c.z <= zWall + 900) c.rush = 2.4;
-    if (back && back !== front && back.z - ctx.z > 9000) back.slow = 2.4;
-    else if (back === front) front.rush = 2.4;
+    if (front.z > ctx.z + SPAWN_AHEAD * 0.84 && front !== back) { release(front); cars.splice(cars.indexOf(front), 1); return; }
+    front.rush = 2.6; front.slow = 0;
+    const l = spanL(front), rr = spanR(front);
+    for (const o of cars) if (o !== front && !o.flying && o.z > front.z && o.z < front.z + 4000 && spanR(o) > l && spanL(o) < rr) { o.rush = 2.6; o.slow = 0; }
+    if (back && back !== front && back.z - ctx.z > 7000) { back.slow = 2.6; back.rush = 0; }
   }
 
   // ctx: { z, speed, cruise, x, lane, dt-free numbers }
   function update(dt, ctx) {
     flow = ctx.cruise * FLOW;
     ctx.d = difficultyAt(ctx.z * MPU);
-    ctx.slope = slopeFor(ctx.cruise, flow);
     ctx.lane = nearestLane(ctx.x);
     if (!started) prefill(ctx);
 
@@ -307,8 +346,8 @@ export function createTraffic(seed = 1, { demo = false } = {}) {
         if (room < FOLLOW_GAP * 1.6) want = Math.min(want, lead.v * (room < FOLLOW_GAP ? 0.92 : 1));
         if (room < FOLLOW_GAP * 0.4) c.z = lead.z - (lead.len + c.len) / 2 - FOLLOW_GAP * 0.4;
       }
-      // traffic the robotaxi has passed never runs into it from behind (after a spin-out, say)
-      if (c.z < ctx.z - 200) want = Math.min(want, ctx.speed * 0.9);
+      // traffic beside or behind the robotaxi never overtakes it (after a spin-out, say)
+      if (c.z < ctx.z + (c.len + PLAYER.len) / 2 + 300) want = Math.min(want, ctx.speed * 0.92);
       c.v += clamp(want - c.v, -2600 * dt, 1500 * dt);
       c.z += c.v * dt;
 
@@ -342,15 +381,15 @@ export function createTraffic(seed = 1, { demo = false } = {}) {
     guardT -= dt;
     if (guardT <= 0) {
       guardT = 0.1;
-      const wall = sweep(cars, ctx.z + 1800, ctx.z + SPAWN_AHEAD + 2000, ctx.slope);
-      if (wall !== Infinity) unwall(wall, ctx);
+      const wall = sweep(cars, ctx.z, ctx.speed);
+      if (wall) unwall(wall, ctx);
     }
   }
 
   return {
     cars, items,
     get flow() { return flow; },
-    update, prefill: (ctx) => { ctx.d = difficultyAt(ctx.z * MPU); ctx.slope = slopeFor(ctx.cruise, ctx.cruise * FLOW); ctx.lane = nearestLane(ctx.x); prefill(ctx); },
+    update, prefill: (ctx) => { ctx.d = difficultyAt(ctx.z * MPU); ctx.lane = nearestLane(ctx.x); prefill(ctx); },
     // a car rammed by the boosting robotaxi: it flies off (and stops being traffic)
     fling(c, side, speed) {
       c.flying = true;

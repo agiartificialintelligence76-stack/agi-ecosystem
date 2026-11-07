@@ -306,7 +306,7 @@ export function createScene(canvas, { reduced = false } = {}) {
     want.fy = midY + (barPad * tall * 0.5) / Math.cos(el);
     if (snap) { Object.assign(cam, want); cam.az = AZ; }
   }
-  function setJourney(v) { journey = v; }
+  function setJourney(v, snap = false) { journey = v; if (snap) S.uJourney.value = v; }
 
   function resize(w, h, dpr) {
     view.w = Math.max(1, w); view.h = Math.max(1, h); view.dpr = dpr;
@@ -317,11 +317,10 @@ export function createScene(canvas, { reduced = false } = {}) {
   }
 
   // ---------- each frame ----------
-  function update(dt, { sway = true, kick = 0 } = {}) {
+  function update(dt) {
     time += dt;
     S.uTime.value = time;
-    if (kick) bumpV -= kick;
-    // the drop's little camera nudge: a spring back to rest
+    // the drop's little nudge (the tower dips under the new floor): a spring back to rest
     bumpV += (-bump * 220 - bumpV * 22) * dt;
     bump += bumpV * dt;
 
@@ -394,7 +393,6 @@ export function createScene(canvas, { reduced = false } = {}) {
       r.mesh.scale.set(r.w + 1.4, 1, r.d + 1.4);
       r.mesh.visible = r.t < 1;
     }
-    sway = sway && !reduced && mode === 'play';
     S.uAlt.value = cam.fy;
   }
 
@@ -402,7 +400,7 @@ export function createScene(canvas, { reduced = false } = {}) {
     axes(cam.az + (mode === 'play' && !reduced ? Math.sin(time * 0.37) * 0.02 : 0), cam.el + (mode === 'play' && !reduced ? Math.sin(time * 0.29) * 0.01 : 0));
     const tall = cam.tall;
     const ppu = view.h / tall;                       // CSS px per world unit
-    const fy = cam.fy + bump * 0.06 + (shakeY / ppu) * upV.y;
+    const fy = cam.fy - bump * 0.07 + (shakeY / ppu) * upV.y;
     const fx = cam.fx + (shakeX / ppu) * rightV.x + (shakeY / ppu) * upV.x;
     const fz = cam.fz + (shakeX / ppu) * rightV.z + (shakeY / ppu) * upV.z;
     camera.position.set(fx + dirV.x * 200, fy + dirV.y * 200, fz + dirV.z * 200);
@@ -448,6 +446,7 @@ export function createScene(canvas, { reduced = false } = {}) {
     renderer, camera, resize, update, render, project, setTheme, framePlay, frameAll, setJourney,
     buildTower, clearTower, setMoving, hideMoving, land, miss, ring, patOf,
     setShake(x, y) { shakeX = x; shakeY = y; },
+    kick(v = 1) { if (!reduced) bumpV -= v * 18; },
     setLightning(v) { S.uFlashL.value = v; },
     setZoneAlt(v) { S.uZoneAlt.value = v; },
     get floors() { return floors; },

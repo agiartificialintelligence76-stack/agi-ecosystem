@@ -70,10 +70,12 @@ export const RECIPES = {
   },
   // the climb: its QA input replay walks and jumps her up the chart (its QA panel hidden from the picture)
   skybreak: {
-    url: '/games/skybreak?qa&step=40', css: '#qa, #qa-info { display: none !important; }', warm: 9000, dur: 6000, poster: 0.5, vp: [720, 480], crop: [120, 0, 480, 480],
+    url: '/games/skybreak?qa&step=40', css: '#qa, #qa-info { display: none !important; }', warm: 6000, dur: 6000, poster: 0.5, vp: [720, 480], crop: [120, 0, 480, 480], fps: 15, shotTimeout: 240000,
     steps: async (page) => {
       // its 3D city and her character load first (Begin Ascent turns on), then its QA replay starts a run and climbs
       for (let i = 0; i < 240 && !(await page.$('#start:not([disabled])')); i++) await page.clock.runFor(500);
+      // its low quality (the 40,000-splat city), so a software-drawn frame takes seconds, not minutes
+      await page.evaluate(() => { const q = document.getElementById('quality'); q?.click(); q?.click(); });
       await page.evaluate(() => document.getElementById('qa-replay')?.click());
     },
   },
@@ -104,18 +106,19 @@ async function capture(browser, id, r) {
   await page.keyboard.press('Shift');
   if (r.steps) await r.steps(page);
   for (let t = 0; t < r.warm; t += 250) await page.clock.runFor(250);
-  const n = Math.round((r.dur / 1000) * FPS);
+  const fps = r.fps || FPS;
+  const n = Math.round((r.dur / 1000) * fps);
   const t0 = Date.now();
   for (let i = 0; i < n; i++) {
     if (r.frame) await r.frame(page, i);
-    await page.clock.runFor(1000 / FPS);
-    await page.screenshot({ path: join(dir, `f${String(i).padStart(4, '0')}.jpg`), type: 'jpeg', quality: 94 });
+    await page.clock.runFor(1000 / fps);
+    await page.screenshot({ path: join(dir, `f${String(i).padStart(4, '0')}.jpg`), type: 'jpeg', quality: 94, timeout: r.shotTimeout || 30000 });
   }
   await ctx.close();
   console.log(`  ${n} frames in ${((Date.now() - t0) / 1000).toFixed(1)} s${errors.length ? ` · page errors: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   mkdirSync(OUT, { recursive: true });
   const mp4 = join(OUT, `${id}.mp4`), webp = join(OUT, `${id}.webp`);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(FPS), '-i', join(dir, 'f%04d.jpg'),
+  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(dir, 'f%04d.jpg'), '-r', String(FPS),
     '-vf', `${cropOf(r)}scale=${SIZE}:${SIZE}:flags=lanczos,format=yuv420p`, '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.0',
     '-preset', 'slow', '-crf', '27', '-g', String(FPS * 2), '-movflags', '+faststart', '-an', mp4]);
   const pick = join(dir, `f${String(Math.min(n - 1, Math.round(n * r.poster))).padStart(4, '0')}.jpg`);

@@ -5,7 +5,7 @@
 // cleared once a frame by ./game.js. Hot loops allocate nothing: bots, shots, chips and events live in pools.
 import {
   WEAPONS, WEAPON, ENEMIES, KINDS, ELITE, BOSSES, WIN_TIME, ENEMY_CAP, PLAYER_RADIUS, IFRAMES, CRIT_CHANCE,
-  hpMul, dmgMul, xpToNext, chipTier, hitDamage, playerDamage, derived, newLoadout, makeOffers, applyOffer, offerPool,
+  hpMul, dmgMul, speedMul, xpToNext, chipTier, hitDamage, playerDamage, derived, newLoadout, makeOffers, applyOffer, offerPool,
   metaBonuses,
 } from './rules.js';
 import { SpatialHash } from './spatial.js';
@@ -108,7 +108,7 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
     e.scale = elite ? ELITE.scale : 1;
     e.r = (def ? def.r : 7) * e.scale;
     e.maxHp = e.hp = def ? Math.round(def.hp * mul * (elite ? ELITE.hpMul : 1)) : 1;
-    e.speed = def ? def.speed * (elite ? ELITE.speedMul : 1) * (0.92 + rng.next() * 0.16) : 0;
+    e.speed = def ? def.speed * (elite ? ELITE.speedMul : 1) * (def.boss ? 1 : speedMul(sim.t)) * (0.92 + rng.next() * 0.16) : 0;
     e.dmg = def ? def.dmg * (elite ? ELITE.dmgMul : 1) : 0;
     e.xp = def ? (elite ? ELITE.xp : def.xp) : 0;
     e.mass = def ? (elite ? Math.max(0.6, def.mass) : def.mass) : 1;
@@ -138,12 +138,13 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
       const [x, y] = edgePoint(o.ang, 30);
       const hx = P.x - x, hy = P.y - y, hd = Math.hypot(hx, hy) || 1;
       const flock = sim.nextId;
-      for (let i = 0; i < o.n; i++) {
+      const n = Math.min(o.n, Math.max(4, ENEMY_CAP + 20 - sim.en));
+      for (let i = 0; i < n; i++) {
         const e = spawn('swarm', x + rng.range(-26, 26), y + rng.range(-26, 26));
         if (!e) break;
         e.hx = hx / hd; e.hy = hy / hd; e.flock = flock;
       }
-      emit(EV.FLOCK, x, y, o.n);
+      emit(EV.FLOCK, x, y, n);
     } else {
       const [x, y] = edgePoint(o.ang);
       const e = spawn(o.kind, x, y, { elite: o.elite });
@@ -381,7 +382,7 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
       fw.n = lv.count; fw.r = lv.r * D.area;
       fw.ang += lv.spin * dt;
       if (fw.on) {
-        const br = 7 * Math.sqrt(D.area);
+        const br = 8 * Math.sqrt(D.area);
         for (let b = 0; b < lv.count; b++) {
           const a = fw.ang + (b / lv.count) * TAU;
           const bx = P.x + Math.cos(a) * fw.r, by = P.y - 6 + Math.sin(a) * fw.r;
@@ -404,11 +405,20 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
       if ((w.cd -= dt) <= 0) {
         w.cd = lv.cd * D.cdMul;
         const id = ++sim.streamN;
+        // where she's heading, locked onto the nearest bot within 50° of it (or straight ahead)
+        let ax = P.fx, ay = P.fy, best = 1e9;
+        for (let j = 0; j < sim.en; j++) {
+          const e = E[j];
+          if (e.dead || e.hidden || e.noTarget) continue;
+          const dx = e.x - P.x, dy = e.y - P.y, d = Math.hypot(dx, dy) || 1;
+          if (d > lv.len * D.area || d >= best || (dx * P.fx + dy * P.fy) / d < 0.64) continue;
+          best = d; ax = dx / d; ay = dy / d;
+        }
         for (let k = 0; k < (lv.dual ? 2 : 1); k++) {
           const dir = k ? -1 : 1;
-          sim.beams.push({ id, dx: P.fx * dir, dy: P.fy * dir, len: lv.len * D.area, w: lv.w * Math.sqrt(D.area), t: 0, life: 0.26, dmg: lv.dmg });
+          sim.beams.push({ id, dx: ax * dir, dy: ay * dir, len: lv.len * D.area, w: lv.w * Math.sqrt(D.area), t: 0, life: 0.26, dmg: lv.dmg });
         }
-        emit(EV.FIRE, P.x, P.y, W_INDEX.stream, Math.atan2(P.fy, P.fx));
+        emit(EV.FIRE, P.x, P.y, W_INDEX.stream, Math.atan2(ay, ax));
       }
     }
     for (let i = sim.beams.length - 1; i >= 0; i--) {
@@ -775,8 +785,8 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
   function bossBotnet(e, dt, d) {
     // summons swarmlets around itself, and bursts of packets after a glow
     if ((e.cd -= dt) <= 0) {
-      e.cd = 4.2;
-      const k = 6;
+      e.cd = 4.6;
+      const k = sim.en < ENEMY_CAP ? 5 : 0;
       for (let i = 0; i < k; i++) {
         const a = (i / k) * TAU + e.t;
         const s = spawn('swarm', e.x + Math.cos(a) * 26, e.y + Math.sin(a) * 26);
@@ -1010,7 +1020,15 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
   sim.resumeAfterWin = () => { sim.winPause = false; };
   sim.consume = () => { sim.nev = 0; };
 
-  // ---------- a run that starts later (the demo): her loadout, then a crowd already around her ----------
+  // ---------- a fresh run: a few spam bots already on their way (the first chips land close, the first level-up comes
+  // in seconds); a run that starts later (the demo): her loadout, then a crowd already around her ----------
+  if (!start) {
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * TAU + rng.range(-0.3, 0.3), r = rng.range(105, 165);
+      const e = spawn('spam', Math.cos(a) * r, Math.sin(a) * r);
+      if (e) e.ang = 0;
+    }
+  }
   if (start) {
     if (start.level) { P.level = start.level; P.need = xpToNext(P.level); }
     if (start.loadout) sim.loadout = { weapons: { ...start.loadout.weapons }, passives: { ...start.loadout.passives } };

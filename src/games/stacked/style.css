@@ -1,1 +1,94 @@
-/* stacked: its own styles (the arcade kit's frame is src/games/kit/kit.css) */
+/* STACKED (2026-11-08): its own styles on top of the arcade kit's frame (src/games/kit/kit.css). Every rule names an
+   st- class or the game's root. The playfield is the 3D canvas; the HUD is the giant floor number at the top. */
+
+.ak[data-ak-game='stacked'] { --ak-bg: #0a0b26; --ak-accent: var(--ak-honey); }
+
+.st-gl, .st-fx { position: absolute; inset: 0; display: block; width: 100%; height: 100%; }
+.st-fx { pointer-events: none; z-index: 1; }
+
+/* ---------- the HUD: the floor number, and the altitude and zone under it ---------- */
+.st-hud {
+  position: absolute; z-index: 2; left: 0; right: 0;
+  top: calc(var(--ak-bar-h) + var(--ak-safe-t) - 2px);
+  display: grid; justify-items: center; gap: 6px; pointer-events: none;
+}
+.st-floor {
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 112%;
+  font-size: clamp(64px, 19vw, 118px); line-height: .86; letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+.st-floor-num {
+  display: inline-block; color: var(--ak-paper);
+  -webkit-text-stroke: .062em var(--ak-ink); paint-order: stroke fill;
+  text-shadow: 0 .065em 0 var(--ak-ink);
+  transform-origin: 50% 60%; will-change: transform;
+}
+.st-meta {
+  display: inline-flex; align-items: center; gap: 8px; padding: 5px 12px 5px 11px; border-radius: 999px;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2px solid color-mix(in srgb, var(--ak-paper) 26%, transparent);
+  white-space: nowrap;
+}
+.st-alt { font-family: var(--ak-mono); font-weight: 750; font-size: 13px; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; color: var(--ak-honey); }
+.st-zone { font-family: var(--ak-display); font-weight: 850; font-stretch: 118%; font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; }
+.st-dot { width: 5px; height: 5px; border-radius: 50%; background: color-mix(in srgb, var(--ak-paper) 45%, transparent); }
+
+/* a phone held sideways: the number on the left, out of the tower's way */
+@media (orientation: landscape) and (max-height: 520px) {
+  .st-hud { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 4px); left: calc(18px + var(--ak-safe-l)); right: auto; justify-items: start; }
+  .st-floor { font-size: clamp(54px, 15vh, 80px); }
+}
+
+/* ---------- a new zone: a sticker banner under the number ---------- */
+.st-banner {
+  position: absolute; z-index: 3; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + clamp(112px, 26vw, 160px));
+  display: grid; justify-items: center; gap: 1px; padding: 9px 20px 10px; border-radius: 18px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 0 5px 0 var(--ak-ink);
+  opacity: 0; pointer-events: none; white-space: nowrap;
+}
+.st-banner small { font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ak-violet); }
+.st-banner b { font-family: var(--ak-display); font-weight: 900; font-stretch: 115%; font-size: clamp(19px, 5.4vw, 26px); line-height: 1.05; letter-spacing: .01em; text-transform: uppercase; }
+@media (orientation: landscape) and (max-height: 520px) {
+  .st-banner { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 8px); }
+}
+
+/* ---------- AGI-1 says: her face and a line, at the bottom ---------- */
+.st-say {
+  position: absolute; z-index: 3; left: 50%; bottom: calc(16px + var(--ak-safe-b));
+  display: flex; align-items: center; gap: 10px; width: max-content; max-width: min(calc(100% - 28px), 440px);
+  padding: 5px 16px 5px 5px; border-radius: 999px;
+  background: #fff; color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  opacity: 0; pointer-events: none;
+}
+.st-say img { flex: none; width: 40px; height: 40px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
+.st-say p { margin: 0; font-family: var(--ak-serif); font-style: italic; font-size: 18px; line-height: 1.15; }
+
+/* ---------- the first floor's hint ---------- */
+.st-hint {
+  position: absolute; z-index: 3; left: 50%; bottom: calc(16% + var(--ak-safe-b)); translate: -50% 0;
+  padding: 9px 16px 8px; border-radius: 999px; background: var(--ak-ink); color: var(--ak-paper); border: 2px solid var(--ak-paper);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 118%; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;
+  opacity: 0; pointer-events: none; white-space: nowrap;
+}
+
+/* ---------- the title: the word in the tower's colours ---------- */
+.st-logo .ak-logo-line { font-size: clamp(44px, 12.6vw, 100px); white-space: nowrap; }
+.st-l { display: inline-block; }
+.st-l0 { color: #ffc933; } .st-l1 { color: #ff9a3d; } .st-l2 { color: #ff5f6d; } .st-l3 { color: #ff4da6; }
+.st-l4 { color: #b45cff; } .st-l5 { color: #7f8cff; } .st-l6 { color: #4cc3ff; }
+.st-l1, .st-l3, .st-l5 { transform: translateY(-.035em); }
+.st-title-note { margin: 0; font-size: 14px; color: color-mix(in srgb, var(--ak-fg) 82%, transparent); text-wrap: balance; }
+.st-title-note b { font-family: var(--ak-mono); color: var(--ak-honey); }
+@media (max-height: 520px) { .st-logo .ak-logo-line { font-size: clamp(38px, 10vh, 66px); } }
+
+/* ---------- the over card: the climb through the five zones ---------- */
+.st-track { margin: 14px 0 0; text-align: left; }
+.st-track-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+.st-seg { position: relative; height: 12px; border-radius: 999px; background: var(--ak-lav); border: 2px solid var(--ak-ink); overflow: hidden; }
+.st-seg i { position: absolute; inset: 0; transform-origin: 0 50%; transform: scaleX(var(--fill, 0)); }
+.st-seg:nth-child(1) i { background: #ffc933; }
+.st-seg:nth-child(2) i { background: #ff4da6; }
+.st-seg:nth-child(3) i { background: #ff9a6b; }
+.st-seg:nth-child(4) i { background: #4cc3ff; }
+.st-seg:nth-child(5) i { background: #8b66ff; }
+.st-track-words { margin: 7px 0 0; font-size: 13.5px; line-height: 1.35; color: var(--ak-ink2); }
+.st-track-words b { font-family: var(--ak-display); font-weight: 900; font-stretch: 115%; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ak-ink); }

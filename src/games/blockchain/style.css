@@ -1,1 +1,12 @@
-/* blockchain: its own styles (the arcade kit's frame is src/games/kit/kit.css) */
+/* BLOCKCHAIN (2026-11-08): its own few styles; the arcade kit's frame is src/games/kit/kit.css. Its playfield is drawn
+   on a canvas (./render.js). */
+.ak[data-ak-game='blockchain'] {
+  --ak-bg: #191d4d;
+  --ak-accent: #ffc933;
+}
+/* the notch and the rounded corners: read by game.js to keep the board clear of them */
+.bc-safe {
+  position: absolute; inset: 0; z-index: -1; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+.ak[data-ak-game='blockchain'] .ak-logo-line.is-accent { color: var(--ak-honey); }

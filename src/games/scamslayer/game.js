@@ -1,29 +1,39 @@
-// SCAM SLAYER: a placeholder while the game is being built (replaced by the real game).
+// temporary: a sprite sheet for checking the art
 import './style.css';
 import { createShell } from '../kit/shell.js';
 import { fitCanvas } from '../kit/canvas.js';
-import { createLoop } from '../kit/loop.js';
+import { buildSprites, createHalves } from './art.js';
+import { KINDS } from './kinds.js';
 
-const shell = createShell({
-  game: 'scamslayer', name: "SCAM SLAYER", root: document.getElementById('ak-root'),
-  howTo: { steps: [['Coming together', 'This game is being built right now.']], touch: [['Tap', 'Play']], keys: [['Space', 'Play']] },
-  onRestart: () => start(), onQuit: () => {},
-});
+const shell = createShell({ game: 'scamslayer', name: 'SCAM SLAYER', root: document.getElementById('ak-root') });
 const canvas = document.createElement('canvas');
 shell.stage.append(canvas);
-const view = fitCanvas(canvas);
-let t = 0;
-const score = shell.chip('Score', 0);
-function start() { shell.started(); t = 0; setTimeout(() => shell.over({ score: Math.round(Math.random() * 5000), stats: [['Time', '0:42'], ['Best combo', '×7']], line: 'not bad, cutie. again? 💜' }), 1500); }
-shell.title({ logo: ["SCAM", "SLAYER"], tagline: "Slice the scams. Spare the hearts.", best: shell.store.best(), onPlay: start });
-createLoop({
-  update(dt) { t += dt; if (shell.state === 'play') score.set(Math.floor(t * 100)); },
-  render() {
-    const ctx = view.begin();
-    const g = ctx.createLinearGradient(0, 0, 0, view.h);
-    g.addColorStop(0, '#0e1a1f'); g.addColorStop(1, '#000');
-    ctx.fillStyle = g; ctx.fillRect(0, 0, view.w, view.h);
-    ctx.fillStyle = '#ffc933';
-    ctx.beginPath(); ctx.arc(view.w / 2 + Math.cos(t) * 80, view.h / 2 + Math.sin(t * 1.3) * 80, 24, 0, Math.PI * 2); ctx.fill();
-  },
-}).start();
+const view = fitCanvas(canvas, { maxDpr: 2 });
+shell.started({ count: false });
+(async () => {
+  try { await Promise.all([document.fonts.load("900 40px 'AK Display'"), document.fonts.load("italic 20px 'AK Serif'")]); } catch { /* fine */ }
+  const ctx = view.begin();
+  ctx.fillStyle = '#1b0f38'; ctx.fillRect(0, 0, view.w, view.h);
+  const px = Number(new URLSearchParams(location.search).get('px') || 1.2);
+  const sprites = buildSprites(px * view.dpr);
+  const halves = createHalves();
+  const kinds = Object.keys(KINDS);
+  const cols = Math.max(3, Math.floor(view.w / (px * 150)));
+  kinds.forEach((k, i) => {
+    const sp = sprites[k];
+    const x = 20 + (i % cols) * px * 150, y = 80 + Math.floor(i / cols) * px * 150;
+    const s = sp.S / view.dpr;
+    ctx.globalAlpha = 0.5; ctx.drawImage(sp.shadow, x + 4, y + 6, s, s); ctx.globalAlpha = 1;
+    ctx.drawImage(sp.canvas, x, y, s, s);
+  });
+  // halves of a few
+  const y0 = 80 + Math.ceil(kinds.length / cols) * px * 150;
+  ['airdrop', 'seed', 'rug', 'heart'].forEach((k, i) => {
+    const sp = sprites[k];
+    const s = sp.S / view.dpr;
+    for (const side of [1, -1]) {
+      const cv = halves.make(sp, 0.6, 6, side, KINDS[k].inner, px * view.dpr);
+      ctx.drawImage(cv, 20 + i * px * 170 + (side > 0 ? 18 : 0), y0 + (side > 0 ? 14 : 0), s, s);
+    }
+  });
+})();

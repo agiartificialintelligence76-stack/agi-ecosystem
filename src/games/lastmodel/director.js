@@ -9,7 +9,7 @@ export const RINGS = [150, 300, 450, 570];
 // a budget per second (bots' cost), gentle at first, steeper later, and much steeper in overtime
 export function budgetRate(t) {
   const m = minutes(t), o = Math.max(0, m - WIN_TIME / 60);
-  return 1.5 + 1.05 * m + 0.21 * m * m + 4 * o + 2 * o * o;
+  return 1.2 + 0.72 * m + 0.26 * m * m + 4 * o + 2 * o * o;
 }
 // how many bots may be alive at once at this time
 export const capAt = (t) => Math.min(ENEMY_CAP, Math.round(60 + 34 * minutes(t)));
