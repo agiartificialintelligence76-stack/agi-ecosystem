@@ -25,7 +25,7 @@ const OUT = opt('out', 'public/images/games');
 const FPS = 30, SIZE = 480, DPR = 1.25;
 const only = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWith('--'));
 
-const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45 } = {}) => ({ url: `/games/${id}?demo&seed=${seed}`, warm, dur, poster });
+const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } = {}) => ({ url: `/games/${id}?demo&seed=${seed}`, warm, dur, poster, shotTimeout: 180000, ...more });
 export const RECIPES = {
   mergeagi: kit('mergeagi'), blockchain: kit('blockchain'), heartbeat: kit('heartbeat'), scamslayer: kit('scamslayer'),
   lastmodel: kit('lastmodel'), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),
@@ -100,7 +100,8 @@ async function capture(browser, id, r) {
   page.on('pageerror', (e) => errors.push(e.message));
   // (a game too heavy for a fake clock, SKYBREAK's 3D: real time until it plays, then each frame stepped by hand)
   const tick = r.manual ? (ms) => page.evaluate((m) => window.__step(m), ms) : (ms) => page.clock.runFor(ms);
-  if (!r.manual) await page.clock.install({ time: new Date('2026-11-08T12:00:00Z') });
+  // the clock stands still between frames (installed, then paused: otherwise it flows while a slow frame is drawn)
+  if (!r.manual) { await page.clock.install({ time: new Date('2026-11-08T12:00:00Z') }); await page.clock.pauseAt(new Date('2026-11-08T12:00:01Z')); }
   else page.clock = { runFor: (ms) => page.waitForTimeout(ms) };
   await page.goto(BASE + r.url, { waitUntil: 'load', timeout: 120000 });
   if (r.css) await page.addStyleTag({ content: r.css });

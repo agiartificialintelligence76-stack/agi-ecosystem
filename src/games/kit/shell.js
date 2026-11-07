@@ -261,7 +261,7 @@ export function createShell(opts) {
     if (k === 'Escape' && !layer.hidden && howToOpenFromTitle) { e.preventDefault(); hideHowTo(); return; }
     const onButton = e.target?.closest?.('button, a, input, select, textarea');
     if ((k === 'Enter' || k === ' ') && state === 'title' && layer.hidden && !onButton) { e.preventDefault(); titleOpts?.onPlay?.(); }
-    if ((k === 'Enter' || k === ' ' || k === 'r' || k === 'R') && state === 'over' && performance.now() - overAt > 700 && !onButton) {
+    if ((k === 'Enter' || k === ' ' || k === 'r' || k === 'R') && state === 'over' && performance.now() - overAt > 700 && !onButton && !e.repeat) {
       e.preventDefault(); overOpts?.onAgain?.();
     }
   });
@@ -395,6 +395,8 @@ export function createShell(opts) {
         el('p', 'ak-fine', 'Scores stay on this device. ', el('a', { class: 'ak-link', href: `/games#rate-${game}` }, 'Rate it'), ' · ',
           el('a', { class: 'ak-link', href: '/games' }, 'More AGI games')));
       showLayer(card, { dim: true, label: `${o.title || 'Game over'}: ${show(o.score)}` });
+      // the tap that ended the run never lands on the card's buttons as it appears
+      card.addEventListener('click', (e) => { if (performance.now() - overAt < 450) { e.preventDefault(); e.stopPropagation(); } }, { capture: true });
       // the score counts up
       const target = typeof o.score === 'number' ? o.score : null;
       if (target == null || DEMO) { scoreEl.textContent = show(o.score); return; }
