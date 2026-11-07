@@ -91,7 +91,7 @@ async function capture(browser, id, r) {
   mkdirSync(dir, { recursive: true });
   // a game made for a wide screen is recorded wide, then cropped square around its action (`vp`, `crop` in CSS pixels)
   const [vw, vh] = r.vp || [SIZE, SIZE];
-  const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: DPR, reducedMotion: 'no-preference' });
+  const ctx = await browser.newContext({ viewport: { width: vw, height: vh }, deviceScaleFactor: DPR, reducedMotion: 'no-preference', bypassCSP: true });
   // the arcade's settings: silent; and the intro seen already in this tab (its short version)
   await ctx.addInitScript(`try { sessionStorage.setItem('agi_intro', '1'); localStorage.setItem('agi_arcade:settings', JSON.stringify({ sound: false, music: false, haptics: false })); } catch {}`);
   if (r.init) await ctx.addInitScript(r.init);

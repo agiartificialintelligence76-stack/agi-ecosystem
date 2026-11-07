@@ -144,20 +144,19 @@ export function createRenderer() {
       if (s !== 1) ctx.scale(s, s);
       ctx.drawImage(sp.canvas, -half, -half, half * 2, half * 2);
       if (o.kind === 'golden') {
-        // a shine sweeping across it
-        const k = ((t * 0.9 + o.id * 0.37) % 1.4) / 1.4;
-        if (k < 0.5) {
-          ctx.globalCompositeOperation = 'source-atop';
-          ctx.restore(); ctx.save();
-          ctx.translate(o.x, o.y); ctx.rotate(o.rot);
-          ctx.globalAlpha = 0.6 * Math.sin((k / 0.5) * Math.PI);
-          ctx.fillStyle = '#ffffff';
-          const sx = -o.r + k * 4 * o.r;
-          ctx.beginPath(); ctx.moveTo(sx, -o.r * 1.2); ctx.lineTo(sx + o.r * 0.28, -o.r * 1.2); ctx.lineTo(sx - o.r * 0.2, o.r * 1.1); ctx.lineTo(sx - o.r * 0.48, o.r * 1.1); ctx.closePath();
-          ctx.save(); ctx.beginPath(); ctx.arc(0, -o.r * 0.15, o.r * 0.68, 0, Math.PI * 2); ctx.clip();
-          ctx.beginPath(); ctx.moveTo(sx, -o.r * 1.2); ctx.lineTo(sx + o.r * 0.28, -o.r * 1.2); ctx.lineTo(sx - o.r * 0.2, o.r * 1.1); ctx.lineTo(sx - o.r * 0.48, o.r * 1.1); ctx.closePath(); ctx.fill();
-          ctx.restore();
-          ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+        // twinkles circling it (screen-upright)
+        ctx.rotate(-o.rot);
+        for (let i = 0; i < 3; i++) {
+          const a = t * 1.8 + (i * Math.PI * 2) / 3, d = o.r * 1.45;
+          const tw = 0.55 + 0.45 * Math.sin(t * 9 + i * 2.1);
+          const q = o.r * 0.2 * tw;
+          const sx = Math.cos(a) * d, sy = Math.sin(a) * d * 0.9;
+          ctx.beginPath();
+          ctx.moveTo(sx, sy - q); ctx.quadraticCurveTo(sx + q * 0.18, sy - q * 0.18, sx + q, sy);
+          ctx.quadraticCurveTo(sx + q * 0.18, sy + q * 0.18, sx, sy + q); ctx.quadraticCurveTo(sx - q * 0.18, sy + q * 0.18, sx - q, sy);
+          ctx.quadraticCurveTo(sx - q * 0.18, sy - q * 0.18, sx, sy - q);
+          ctx.fillStyle = i === 1 ? PAPER : '#ffc933'; ctx.fill();
+          ctx.lineWidth = 2.5; ctx.strokeStyle = INK; ctx.stroke();
         }
       }
       if (o.role === 'rug') {
