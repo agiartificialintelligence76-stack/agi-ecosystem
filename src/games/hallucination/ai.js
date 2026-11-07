@@ -1,7 +1,7 @@
 // HALLUCINATION (2026-11-08): the demo's player (`?demo`): it looks around like a person (a glance somewhere else first,
 // a little wobble), taps each hallucination at a human pace, and gets one wrong per scene. Pure: a scene and a seeded
 // dice in, a list of timed taps out (page units, which picture).
-import { boxOf, grow } from './objects.js';
+import { boxOf } from './objects.js';
 import { distToRect } from './scene.js';
 
 const center = (b) => [(b[0] + b[2]) / 2, (b[1] + b[3]) / 2];
@@ -41,4 +41,3 @@ export function planDemo(sc, r, { found = [], start = 0, pace = 1.1, times = nul
 }
 // the first scene of a recorded preview: its taps at fixed moments of the page's clock (the recorder films 5.7 … 11.7 s)
 export const PREVIEW_TIMES = Object.freeze([6.0, 7.1, 8.2, 9.25]);
-export { grow };

@@ -111,6 +111,7 @@ function start() {
       b.style.left = `${Math.round(x)}px`; b.style.top = `${Math.round(s.y + (s.h - h) / 2)}px`;
       b.style.width = `${Math.round(w)}px`; b.style.height = `${Math.round(h)}px`;
       b.classList.toggle('is-compact', w < 112);
+      b.classList.toggle('is-big', h >= 60);
     }
   }
   function ensurePictures(force = false) {
@@ -258,7 +259,7 @@ function start() {
     sfx.wrong();
     G.shake.kick(0.32);
     shell.haptic([12, 40, 12]);
-    const [sx, sy] = screenOf(pic, x, y);
+    const [sx, sy0] = screenOf(pic, x, y), sy = Math.max(sy0, L.block.y + 44);
     G.floats.add({ x: sx, y: sy - 18, text: G.run.mode === 'daily' ? `+${RULES.wrong}s` : `−${RULES.wrong}s`, color: C.pink, size: 20, rise: 30, life: 0.8 });
     if (Math.random() < 0.3 || G.mode === 'demo') speak(pick(LINES.wrong), 2);
     announce(`Not that one. ${G.run.mode === 'daily' ? 'Plus' : 'Minus'} 3 seconds.`);

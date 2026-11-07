@@ -560,28 +560,29 @@ export function createRenderer({ reduced = false } = {}) {
     drawLadder(g, L, opts);
     opts.parts?.draw(g);
     opts.floats?.draw(g);
-    if (opts.glitch > 0 && !reduced) glitch(g, view, L, opts.glitch);
+    if (opts.glitch > 0 && !reduced) glitch(g, view, L, opts.glitch, t);
   }
 
-  // her win: the board glitches softly for a moment (a few slices of the picture slide sideways)
-  function glitch(g, view, L, k) {
+  // her win: the board glitches for a moment: a few bands of the picture tear sideways (a new tear every ~70 ms, smaller
+  // as it fades), each edged with a pink or mint line
+  function glitch(g, view, L, k, t) {
     const b = L.board, cv = view.canvas, d = view.dpr;
-    const n = 7;
-    const seed = Math.floor(k * 40);
+    const seed = Math.floor(t * 14);
+    const frac = (v) => v - Math.floor(v);
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
-    for (let i = 0; i < n; i++) {
-      const r = Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453;
-      const f = r - Math.floor(r);
-      if (f < 0.45) continue;
-      const sy = (b.y + (b.h * i) / n) * d, sh = (b.h / n) * d * (0.35 + f * 0.4);
-      const dx = (f - 0.7) * L.C * 0.5 * k * d;
-      g.globalAlpha = 0.85;
-      g.drawImage(cv, b.x * d, sy, b.w * d, sh, b.x * d + dx, sy, b.w * d, sh);
+    for (let i = 0; i < 4; i++) {
+      const r = frac(Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453);
+      const r2 = frac(Math.sin(seed * 4.1414 + i * 13.37) * 9182.3127);
+      if (r < 0.3) continue;
+      const x = (b.x - L.C * 0.3) * d, w = (b.w + L.C * 0.6) * d;
+      const sy = Math.round((b.y + b.h * r2 * 0.92) * d), sh = Math.round(Math.max(3, b.h * (0.03 + 0.07 * r)) * d);
+      const dx = Math.round((r - 0.65) * L.C * 0.9 * k * d);
+      if (!dx) continue;
+      g.drawImage(cv, x, sy, w, sh, x + dx, sy, w, sh);
+      g.fillStyle = i % 2 ? COL.mint : COL.pink;
+      g.fillRect(x + dx + L.C * 0.3 * d, sy, w - L.C * 0.6 * d, Math.max(1, Math.round(1.5 * d)));
     }
-    g.globalAlpha = 0.12 * k;
-    g.fillStyle = COL.mint;
-    g.fillRect(b.x * d, b.y * d, b.w * d, b.h * d);
     g.restore();
   }
 

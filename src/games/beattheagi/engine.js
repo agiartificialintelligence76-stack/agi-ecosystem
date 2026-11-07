@@ -326,10 +326,11 @@ export function createSearcher({ bits = 18 } = {}) {
 
   // Think about `cells` with `color` (1 or 2) to move. Options: maxDepth, budget (ms, with `now`), onDepth(snapshot)
   // after each finished depth, margin (root moves this far below the best only get a bound), evalKind 'full' | 'simple',
-  // tt (use the table), extend (forced replies cost no depth). → { move, scores[7] (null: a full column), score, depth,
-  // nodes, exact }
+  // tt (use the table), extend (forced replies cost no depth), settle (stop once the result is proven; false: keep
+  // going to maxDepth, so a fixed-depth model always shows its whole climb). → { move, scores[7] (null: a full column),
+  // score, depth, nodes, exact }
   function think(cells, color, opts = {}) {
-    const { maxDepth = 42, budget = 0, now = () => Date.now(), onDepth = null, margin = 90, evalKind = 'full', tt = true, extend = true } = opts;
+    const { maxDepth = 42, budget = 0, now = () => Date.now(), onDepth = null, margin = 90, evalKind = 'full', tt = true, extend = true, settle = true } = opts;
     useTT = tt; extendForced = extend; fullEval = evalKind === 'full'; threatOrder = opts.order !== false;
     load(cells, color);
     clock = now;
@@ -366,7 +367,7 @@ export function createSearcher({ bits = 18 } = {}) {
       onDepth?.({ depth: d, scores: sc.slice(), best: bestC, score: best, nodes });
       // the next depth looks at the best first (ties keep the centre first)
       order = order.slice().sort((a, b) => sc[b] - sc[a]);
-      if (best > MATE || best < -MATE) break;                       // proven: deeper changes nothing
+      if (settle && (best > MATE || best < -MATE)) break;           // proven: deeper changes nothing (`settle: false` looks on)
       if (budget && d >= 2 && now() - start > budget * 0.55) break;  // the next depth wouldn't finish in time
     }
     return { ...done, move: done.best, ms: now() - start, nodes };

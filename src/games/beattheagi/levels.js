@@ -125,6 +125,9 @@ export function decide(searcher, cells, color, level, opts = {}) {
     maxDepth: opts.maxDepth ?? setup.maxDepth,
     budget: level === TOP ? (opts.budget ?? 700) : 0,
     now: opts.now, evalKind: setup.evalKind, tt: setup.tt, extend: setup.extend, margin: setup.margin,
+    // the fixed-depth models always look as deep as they can (her bars change color mid-think when she finds it);
+    // AGI stops as soon as she's sure, inside her time
+    settle: level === TOP,
     onDepth: onDepth ? (s) => onDepth(setup.shown ? { ...s, scores: noisy(s.scores, r, setup.shown / Math.sqrt(s.depth)) } : s) : null,
   });
   // a proven result isn't blurred by noise; otherwise a small model wobbles between close moves

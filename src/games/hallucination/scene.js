@@ -221,7 +221,8 @@ function makeDiffs(r, sc, D) {
     else {
       const list = cands(kind);
       if (!list.length) continue;
-      o = r.pick(list);
+      // early levels change the bigger things, later ones the smaller things
+      o = r.weighted(list, (q) => Math.pow(Math.max(150, area(boxOf(q))), 0.4 - D.d * 0.85));
       made = tryKind(o, kind);
     }
     if (!made) continue;

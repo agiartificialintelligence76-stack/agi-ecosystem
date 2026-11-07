@@ -10,6 +10,8 @@ import { clamp, ease, rgba, roundRect } from '../kit/fx.js';
 import { REDUCED } from '../kit/env.js';
 
 const FRAME = 0.34;   // the board's frame around its grid, in cells (each side)
+// a well's tint where a path runs (half for a bridge with one lane taken)
+const TINT = COLORS.map((c) => rgba(c.hex, 0.17)), TINT_HALF = COLORS.map((c) => rgba(c.hex, 0.1));
 
 // the layout of a W × H canvas, `ins` kept clear (the top bar, the notch), for an n × n board
 export function computeLayout(W, H, ins, n, { demo = false, title = false } = {}) {
@@ -25,7 +27,7 @@ export function computeLayout(W, H, ins, n, { demo = false, title = false } = {}
   let info = 0;
   const toolsS = 78;
   if (!demo && !title) {
-    info = clamp(aw * 0.24, 168, 300);
+    info = clamp(aw * 0.24, 200, 300);
     const cS = Math.min((aw - info - toolsS - 28) / span, (ah - 6) / span, cmax);
     if (cS > C * 1.05) { mode = 'S'; C = cS; }
   }
@@ -55,6 +57,7 @@ export function computeLayout(W, H, ins, n, { demo = false, title = false } = {}
     L.y = Math.round(ins.top + (ah - size) / 2);
     L.info = { x: left, y: L.y - frame * 0.4, w: info, h: size + frame * 0.8 };
     L.head = { x: left, y: L.y + 6, w: info };
+    L.headBig = clamp(Math.min(info / 10, C * 0.36), 15, 30);
     L.tools = { x: L.x + size + frame + 14, y: ins.top + 4, w: toolsS, h: ah - 8, dir: 'col' };
     L.say = { x: left + info / 2, y: L.y + size * 0.5, w: info, side: true };
   }
@@ -144,7 +147,8 @@ export function createRenderer() {
     g.moveTo(pts[0], pts[1]);
     for (let k = 1; k < m; k++) g.lineTo(pts[k * 2], pts[k * 2 + 1]);
   }
-  function tube(g, m, c, { width = 0.42, alpha = 1 } = {}) {
+  // a tube along the points; `flow` (gate boards): little sparks running along it, +1 the way it was drawn, −1 back
+  function tube(g, m, c, { width = 0.42, alpha = 1, flow = 0, t = 0 } = {}) {
     if (m < 2) return;
     const C = L.C, tw = C * width, ow = Math.max(1.8, C * 0.05), off = C * 0.055;
     if (alpha < 1) g.globalAlpha = alpha;
@@ -154,6 +158,13 @@ export function createRenderer() {
     g.translate(-off, -off);
     g.lineWidth = tw * 0.3; g.strokeStyle = CORE[c]; g.stroke();
     g.translate(off, off);
+    if (flow) {
+      g.setLineDash([C * 0.04, C * 0.46]);
+      g.lineDashOffset = REDUCED ? 0 : -flow * ((t * C * 0.9) % (C * 0.5));
+      g.lineWidth = tw * 0.34; g.strokeStyle = 'rgba(255,255,255,0.85)'; g.stroke();
+      g.setLineDash([]);
+      g.lineDashOffset = 0;
+    }
     if (alpha < 1) g.globalAlpha = 1;
   }
 
@@ -213,7 +224,7 @@ export function createRenderer() {
       const c = h >= 0 ? h : v;
       if (c < 0) continue;
       const x = L.x + (i % n) * C + inset, y = L.y + ((i / n) | 0) * C + inset;
-      g.fillStyle = rgba(colorOf(c).hex, k === BRIDGE && (h < 0 || v < 0) ? 0.1 : 0.17);
+      g.fillStyle = k === BRIDGE && (h < 0 || v < 0) ? TINT_HALF[c % TINT.length] : TINT[c % TINT.length];
       roundRect(g, x, y, ws, ws, C * 0.2); g.fill();
     }
     // gates with nothing on them: their arrows in the well
@@ -254,9 +265,10 @@ export function createRenderer() {
         lead = { x: (horiz ? Math.sign(dx) : 0) * len, y: (horiz ? 0 : Math.sign(dy)) * len };
       }
     }
+    const flowOf = (c) => (o.sources && disp[c] && disp[c].path.length ? (disp[c].path[0] === pz.pairs[c].s ? 1 : -1) : 0);
     for (let c = 0; c < board.K; c++) {
       const m = points(c, c === dc ? lead : null);
-      tube(g, m, c, { width: c === dc ? 0.46 : 0.42 });
+      tube(g, m, c, { width: c === dc ? 0.46 : 0.42, flow: flowOf(c), t: o.t });
     }
     // bridges: the deck over the lane that goes under, then the lane that goes over, on top of it
     for (let i = 0; i < N2; i++) {
@@ -266,7 +278,7 @@ export function createRenderer() {
       if (v >= 0) {
         g.save();
         g.beginPath(); g.rect(L.x + (i % n) * C + C * 0.15, L.y + ((i / n) | 0) * C - 1, C * 0.7, C + 2); g.clip();
-        tube(g, points(v), v, { width: v === dc ? 0.46 : 0.42 });
+        tube(g, points(v), v, { width: v === dc ? 0.46 : 0.42, flow: flowOf(v), t: o.t });
         g.restore();
       }
     }
@@ -289,7 +301,9 @@ export function createRenderer() {
     for (let c = 0; c < board.K; c++) {
       const p = pz.pairs[c];
       const press = dc === c ? 0.06 : 0;
-      const k = 1 + press + Math.sin(clamp(pop[c], 0, 1) * Math.PI) * 0.22;
+      // a pair still apart breathes a little (it wants connecting); a connected one is still
+      const breathe = REDUCED || o.fire || board.connected(c) ? 0 : Math.sin(o.t * 2.4 + c * 1.3) * 0.022;
+      const k = 1 + press + breathe + Math.sin(clamp(pop[c], 0, 1) * Math.PI) * 0.22;
       neuron(g, c, p.s, k);
       neuron(g, c, p.t, k);
       if (o.sources) {
@@ -412,7 +426,7 @@ export function createRenderer() {
     } else {
       // the side panel: the board's name, what it is, then the two numbers, sized with the board
       const x = L.head.x, y = L.head.y;
-      const big = clamp(Math.min(L.head.w / 10, C * 0.36), 15, 30);
+      const big = L.headBig;
       g.textAlign = 'left';
       g.font = `900 ${Math.round(big)}px ${DISPLAY}`;
       g.fillStyle = '#fffaf0';
@@ -422,7 +436,7 @@ export function createRenderer() {
         g.fillStyle = 'rgba(205,184,255,0.8)';
         fitText(g, o.sub, x, y + big * 1.75, L.head.w);
       }
-      statBlock(g, x, y + big * 3.1, big * 0.9, pairs, total, pct, popPairs, popPct);
+      if (!o.solvedPanel) statBlock(g, x, y + big * 3.1, big * 0.9, pairs, total, pct, popPairs, popPct);
     }
     g.restore();
   }

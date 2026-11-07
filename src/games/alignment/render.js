@@ -20,7 +20,7 @@ const MONO = "'AK Mono', ui-monospace, monospace";
 // her own portrait, for her cards
 const portrait = typeof Image === 'function' ? new Image() : null;
 let portraitReady = false;
-if (portrait) { portrait.decoding = 'async'; portrait.onload = () => { portraitReady = true; }; portrait.src = '/images/agi1-portrait.webp'; }
+if (portrait) { portrait.decoding = 'async'; portrait.onload = () => { portraitReady = true; }; portrait.src = '/images/agi1-portrait-2d.webp'; }
 export const portraitLoaded = () => portraitReady;
 
 const ROMAN = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']];

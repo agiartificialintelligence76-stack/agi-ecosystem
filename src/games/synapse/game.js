@@ -223,7 +223,8 @@ function lesson() {
     sc.ghost = { c, cells: pz.sol[c], len: 0, t: -0.6 };
     setTimeout(() => { if (sc && sc.ghost) bubble.show(say('tutorial', pick), 0); }, 500);
   } else {
-    setTimeout(() => bubble.show(say(kind, pick), 5200), 450);
+    const s = sc;
+    setTimeout(() => { if (sc === s && mode === 'play') bubble.show(say(kind, pick), 5200); }, 450);
     shell.store.update((s) => { s.seen = { ...(s.seen || {}), [kind]: 1 }; });
   }
 }
@@ -267,6 +268,9 @@ function updateChips(force = false) {
     chipBoard.set(label);
     chipMoves.set(sc.board.moves);
   }
+  // Undo and Reset only when there's something to take back
+  const b = sc.board;
+  tools.setEnabled({ undo: b.history.length > 0 || Boolean(b.drag), reset: b.paths.some((P) => P.length) || Boolean(b.drag) });
 }
 
 // ---------- what happens as a path is drawn (the player's, the demo's) ----------
@@ -292,6 +296,8 @@ function onStep(s, r, cell, c, k = 0) {
     renderer.pop(c, 1);
     s.parts.burst({ x: p.x, y: p.y, count: 16, speed: [60, 220], life: [0.3, 0.6], size: [2, 5], colors: [COLORS[c].hex, '#ffffff'], shape: 'spark', drag: 3 });
     if (!s.quiet) { sfx.connect(b.n, cell, c); shell.haptic(14); }
+    // the last connection: the network fires at once (no need to let go)
+    if (s.phase === 'play' && b.drag && b.solved()) { onRelease(s, b.end()); return; }
   }
   const cutting = b.cutting().length;
   if (cutting > s.cutCount && !s.quiet) sfx.cut();
@@ -303,6 +309,7 @@ function onRelease(s, res) {
   const b = s.board;
   if (res.cleared && !s.quiet) sfx.clear();
   if (s === sc && mode === 'play') updateChips();
+  if (s.phase !== 'play') return;
   if (b.solved()) { solved(s); return; }
   if (s.quiet || mode !== 'play') return;
   if (res.connected) {
@@ -382,9 +389,7 @@ function afterBloom(s) {
     tools.place(L, false);
     if (perfect) {
       sfx.perfect();
-      const p = renderer.center(s.pz.pairs[0].s);
       s.parts.burst({ x: L.cx, y: L.cy, count: 26, speed: [120, 380], life: [0.6, 1.1], size: [7, 13], colors: ['#ffc933', '#fffaf0'], shape: 'star', spin: 6, drag: 2.2, stroke: '#170a36' });
-      void p;
     }
     if (Math.random() < 0.85 || perfect) bubble.show(say(perfect ? 'perfect' : 'solved', pick), 3400);
     if (keyUser) tools.next.focus({ preventScroll: true });
@@ -478,7 +483,11 @@ function doNext() {
       return showPackDone(run.p);
     }
     let i = run.i + 1;
-    if (i >= size) return showPackDone(run.p);
+    if (i >= size) {
+      // the end of the pack: back to a board still to solve, or the pack's card when every one is
+      if (pr.solvedIn(run.p) === size) return showPackDone(run.p);
+      i = pr.next(run.p);
+    }
     startCampaign(run.p, i);
   } else if (run.kind === 'daily') {
     const day = dailyState();
@@ -508,8 +517,10 @@ function finishDaily(day) {
   });
 }
 function restartFromPause() {
-  if (run && run.kind === 'rush') { startRush(); return; }
-  if (sc && mode === 'play') { sc.board.restart(); updateChips(); }
+  if (!run) return;
+  if (run.kind === 'rush') startRush();
+  else if (run.kind === 'daily') startDaily(run.slot);
+  else startCampaign(run.p, run.i);
 }
 
 // ---------- menus ----------
@@ -812,7 +823,7 @@ const loop = createLoop({
     sc.floats.draw(g);
     if (mode !== 'title') {
       const st = sc.stats;
-      renderer.drawHead(g, { label: (sc.label || '').toUpperCase(), sub: sc.sub, pairs: st.pairs, total: st.total, pct: st.pct, popPairs: sc.popPairs, popPct: sc.popPct });
+      renderer.drawHead(g, { label: (sc.label || '').toUpperCase(), sub: sc.sub, pairs: st.pairs, total: st.total, pct: st.pct, popPairs: sc.popPairs, popPct: sc.popPct, solvedPanel: mode === 'play' && sc.phase === 'done' });
     }
     if (mode === 'play' && sc.phase === 'play') updateChips();
   },

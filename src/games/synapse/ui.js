@@ -76,7 +76,7 @@ export function createTools(stage, on) {
       hint.classList.toggle('is-empty', count <= 0);
       hint.setAttribute('aria-label', `Hint (${count} left)`);
     },
-    setEnabled({ undo: u = true, reset: r = true } = {}) { undo.disabled = !u; reset.disabled = !r; },
+    setEnabled({ undo: u = true, reset: r = true } = {}) { if (undo.disabled !== !u) undo.disabled = !u; if (reset.disabled !== !r) reset.disabled = !r; },
     show(v) { bar.hidden = !v; },
     place(L, demo) {
       if (demo || !L || !L.tools) { bar.hidden = true; done.hidden = true; return; }
@@ -88,8 +88,9 @@ export function createTools(stage, on) {
         Object.assign(done.style, { left: `${t.x + (t.w - w) / 2}px`, top: `${t.y - 14}px`, width: `${w}px`, height: '' });
         done.classList.remove('is-side');
       } else {
+        // under the board's name (its numbers make way: everything is filled by now)
         const inf = L.info;
-        Object.assign(done.style, { left: `${inf.x}px`, top: `${inf.y + inf.h * 0.42}px`, width: `${inf.w}px`, height: '' });
+        Object.assign(done.style, { left: `${inf.x}px`, top: `${L.head.y + L.headBig * 2.6}px`, width: `${inf.w}px`, height: '' });
         done.classList.add('is-side');
       }
     },

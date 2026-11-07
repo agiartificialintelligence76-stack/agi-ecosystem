@@ -37,10 +37,12 @@
 }
 .hl-tool.is-pop .hl-tool-count { animation: hl-pop .4s cubic-bezier(.3, 1.6, .5, 1); }
 @keyframes hl-pop { 40% { transform: scale(1.45); } }
+.hl-tool.is-big { font-size: 15px; }
+.hl-tool.is-big .hl-tool-icon { width: 36px; height: 36px; }
 .hl-tool.is-compact .hl-tool-label { display: none; }
 .hl-tool.is-compact { padding: 0 6px; }
 .hl-blinking .hl-tool { opacity: 0; pointer-events: none; }
-.ak[data-ak-state='title'] .hl-tool, .ak[data-ak-state='over'] .hl-tool, .ak[data-ak-demo] .hl-tool { display: none; }
+.ak[data-ak-state='boot'] .hl-tool, .ak[data-ak-state='title'] .hl-tool, .ak[data-ak-state='over'] .hl-tool, .ak[data-ak-demo] .hl-tool { display: none; }
 @media (prefers-reduced-motion: reduce) { .hl-tool.is-pop .hl-tool-count { animation: none; } }
 
 /* the title's record line and its daily line */

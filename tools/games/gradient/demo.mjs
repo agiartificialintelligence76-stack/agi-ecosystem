@@ -21,7 +21,7 @@ for (let x = -hx + 1; x <= hx - 1; x += 0.9) {
     // a spot where a ball rests (it would roll away otherwise)
     const still = simulate(hole, x, z, 0, 0.0001, { maxT: 1.5 });
     if (Math.hypot(still.x - x, still.z - z) > 0.05) continue;
-    const plan = planShot(hole, x, z, { rand: rng(seed), noise: 0.6, coarse: 0 });
+    const plan = planShot(hole, x, z, { rand: rng(seed), noise: 0.6 });
     const r = plan.result;
     if (r.done !== 'sink' || r.t < 2.8 || r.t > 4.4) continue;
     // how much it curves: the angle between the putt and its last approach to the cup

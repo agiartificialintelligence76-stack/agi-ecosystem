@@ -32,7 +32,7 @@ export const RECIPES = {
   lastmodel: kit('lastmodel', 7, { dpr: 2, crop: [110, 80, 260, 260] }), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),
   jaywalk: kit('jaywalk'), robotaxi: kit('robotaxi'),
   // (2026-11-08, the second night)
-  realorai: kit('realorai'), notarobot: kit('notarobot'), alignment: kit('alignment'), gradient: kit('gradient'), epochs: kit('epochs'),
+  realorai: kit('realorai'), notarobot: kit('notarobot', 7, { poster: 0.2 }), alignment: kit('alignment'), gradient: kit('gradient'), epochs: kit('epochs'),
   synapse: kit('synapse'), overclock: kit('overclock'), beattheagi: kit('beattheagi'), hallucination: kit('hallucination'), guardrails: kit('guardrails'),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {

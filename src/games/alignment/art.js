@@ -1,7 +1,8 @@
 // ALIGNMENT's pictures, all drawn in code in one flat style: ink outlines of one weight, three or four flat colours a
 // character, no gradients. The lab's people as head-and-shoulders busts (a 100 × 100 box, standing on its bottom edge),
 // their corner glyphs, the four meters' sticker icons, the card back, and the sixteen endings' little scenes.
-// AGI-1's own portrait is her real art (/images/agi1-portrait.webp), drawn by render.js.
+// AGI-1's own portrait is her real 2D art (/images/agi1-portrait-2d.webp: a square crop of /images/agi1-live-2d.webp; never
+// the 3D model's render), drawn by render.js.
 import { roundRect, star } from '../kit/fx.js';
 
 export const INK = '#170a36';

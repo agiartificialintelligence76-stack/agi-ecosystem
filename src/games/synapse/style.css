@@ -77,6 +77,8 @@
 .sy-done .sy-next { flex: 1 1 auto; width: auto; min-height: 54px; padding: 10px 20px; font-size: 18px; }
 .sy-done .sy-done-boards { flex: none; width: 58px; min-height: 54px; padding: 0; }
 .sy-done .sy-done-boards .sy-ico { width: 22px; height: 22px; }
+.sy-done.is-side .sy-next { min-width: 0; padding: 8px 12px; font-size: 16px; gap: 6px; }
+.sy-done.is-side .sy-done-boards { width: 50px; }
 @media (prefers-reduced-motion: no-preference) {
   .sy-done.is-in { animation: sy-pop-in .42s cubic-bezier(.2, 1.4, .4, 1) both; }
 }
@@ -179,3 +181,9 @@
 
 /* a narrow phone: the board's chip shows just its size and number */
 @media (max-width: 420px) { .sy-chip-board .ak-chip-label { display: none; } }
+/* a short, wide screen (a phone held sideways): the three modes in one row, so the title fits */
+@media (max-height: 520px) and (min-width: 600px) {
+  .ak[data-ak-game='synapse'] .ak-title-actions { width: min(560px, 100%); }
+  .ak[data-ak-game='synapse'] .ak-modes { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .ak[data-ak-game='synapse'] .ak-modes > :last-child:nth-child(odd) { grid-column: auto; }
+}

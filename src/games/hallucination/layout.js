@@ -8,7 +8,7 @@ export function computeLayout(w, h, ins = { top: 0, right: 0, bottom: 0, left: 0
   const pad = demo ? 8 : clamp(Math.round(Math.min(w, h) * 0.025), 8, 20);
   const ax0 = ins.left + pad, ay0 = ins.top + (demo ? pad : 4), ax1 = w - ins.right - pad, ay1 = h - ins.bottom - (demo ? pad : Math.max(8, pad - 4));
   const AW = Math.max(120, ax1 - ax0), AH = Math.max(120, ay1 - ay0);
-  const stripH = demo ? 24 : clamp(Math.round(Math.min(AW, AH) * 0.12), 48, 60);
+  const stripH = demo ? 24 : clamp(Math.round(Math.min(AW, AH) * 0.11), 48, 72);
   const sg = demo ? 6 : clamp(Math.round(AH * 0.014), 8, 14);
   const gap = demo ? 7 : clamp(Math.round(Math.min(AW, AH) * 0.022), 8, 18);
   const sh = demo ? 3 : 5;                                     // the cards' hard shadow
@@ -19,7 +19,7 @@ export function computeLayout(w, h, ins = { top: 0, right: 0, bottom: 0, left: 0
         ? Math.min(AW - 2 * f - sh, ((AH - stripH - sg - gap - 2 * sh) / 2 - f - fb) / ASPECT)
         : Math.min((AW - gap - 2 * sh) / 2 - 2 * f, (AH - stripH - sg - sh - f - fb) / ASPECT);
       f = clamp(Math.round(pw * 0.018), 4, 10);
-      fb = demo ? 21 : clamp(Math.round(pw * 0.068), 20, 32);
+      fb = demo ? 21 : clamp(Math.round(pw * 0.062), 20, 46);
     }
     return { pw: Math.max(40, Math.floor(pw)), f, fb };
   };
@@ -37,9 +37,9 @@ export function computeLayout(w, h, ins = { top: 0, right: 0, bottom: 0, left: 0
     : [{ x: bx, y: by, w: cw, h: ch }, { x: bx + cw + gap, y: by, w: cw, h: ch }];
   const pics = cards.map((c) => ({ x: c.x + f, y: c.y + f, w: pw, h: ph }));
   // the strip: the hint button, the clock (found dots, the bar, the time), the blink button
-  const sw = Math.min(blockW, Math.max(cw, 640));
+  const sw = Math.min(blockW, Math.max(cw, clamp(pw * 1.05, 600, 920)));
   const strip = { x: Math.round(bx + (blockW - sw) / 2), y: by + cardsH + sg, w: Math.round(sw), h: stripH };
-  const btnW = demo ? 0 : clamp(Math.round(strip.w * 0.27), stripH, 150);
+  const btnW = demo ? 0 : clamp(Math.round(strip.w * 0.27), stripH, 170);
   // the blink view: one big picture over the whole play area
   const bh = Math.min(AH - stripH - sg, AW * ASPECT), bw = bh / ASPECT;
   const blinkView = { x: Math.round(ax0 + (AW - bw) / 2), y: Math.round(ay0 + (AH - stripH - sg - bh) / 2), w: Math.round(bw), h: Math.round(bh) };

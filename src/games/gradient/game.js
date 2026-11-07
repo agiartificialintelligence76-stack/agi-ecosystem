@@ -48,6 +48,7 @@ const shell = createShell({
 const sound = createSound(shell.audio);
 const music = courseMusic();
 const holeChip = shell.chip('Hole', '1/6');
+holeChip.node.classList.add('gd-chip-hole');
 const parChip = shell.chip('Par', 3);
 const strokeChip = shell.chip('Strokes', 0, { accent: true });
 
@@ -95,6 +96,8 @@ function aimYaw() {
   return Math.atan2(-dx, -dz);
 }
 function groundY(x, z) { return hole ? hole.field.h(x, z) : 0; }
+// the putt's direction straight at the cup (the angle in the ground's x, z)
+function cupAngle() { return Math.atan2(hole.cup[1] - ball.z, hole.cup[0] - ball.x); }
 function setGoal() {
   if (!hole) return;
   const by = groundY(ball.x, ball.z) + PHYS.R;
@@ -133,7 +136,7 @@ function setGoal() {
   }
   // aiming (and the intro's landing): behind the ball, looking towards the cup, the ball low in the picture
   if (!userTurned) goal.yaw = aimYaw();
-  goal.pitch = userTurned ? goal.pitch : (DEMO ? 0.86 : 0.62);
+  goal.pitch = userTurned ? goal.pitch : (DEMO ? 0.86 : 0.7);
   goal.dist = baseDist() * (DEMO ? 1.15 : 1);
   const ahead = goal.dist * 0.3;
   goal.ax = ball.x - Math.sin(goal.yaw) * ahead; goal.ay = by; goal.az = ball.z - Math.cos(goal.yaw) * ahead;
@@ -528,7 +531,7 @@ fxCanvas.addEventListener('pointerdown', (e) => {
   let kind = 'orbit';
   if (!orbitButton && canAim() && !aimPtr && ptrs.size === 0 && Math.hypot(x - b.x, y - b.y) < grabRadius()) kind = 'aim';
   ptrs.set(e.pointerId, { x, y, x0: x, y0: y, kind });
-  if (kind === 'aim') { aimPtr = e.pointerId; aim = { angle: aimYaw() + Math.PI, power: 0, from: 'pointer' }; kbAim = false; hintT = 99; }
+  if (kind === 'aim') { aimPtr = e.pointerId; aim = { angle: cupAngle(), power: 0, from: 'pointer' }; kbAim = false; hintT = 99; }
   const orbiting = [...ptrs.values()].filter((p) => p.kind === 'orbit');
   if (orbiting.length === 2) {
     const [a, c] = orbiting;
@@ -614,7 +617,7 @@ addEventListener('keydown', (e) => {
   if (name) {
     e.preventDefault();
     held.add(name);
-    if (canAim() && !aimPtr && (!aim || aim.from !== 'keys')) { aim = { angle: aimYaw() + Math.PI, power: 0.45, from: 'keys' }; kbAim = true; hintT = 99; showAim(); }
+    if (canAim() && !aimPtr && (!aim || aim.from !== 'keys')) { aim = { angle: cupAngle(), power: 0.45, from: 'keys' }; kbAim = true; hintT = 99; showAim(); }
     return;
   }
   if (k === ' ' || k === 'Enter') {
@@ -622,7 +625,7 @@ addEventListener('keydown', (e) => {
     e.preventDefault();
     if (e.repeat || !canAim()) return;
     if (aim && aim.from === 'keys') takeShot(aim.angle, aim.power);
-    else { aim = { angle: aimYaw() + Math.PI, power: 0.45, from: 'keys' }; kbAim = true; hintT = 99; showAim(); }
+    else { aim = { angle: cupAngle(), power: 0.45, from: 'keys' }; kbAim = true; hintT = 99; showAim(); }
     return;
   }
   if (k === 'm' || k === 'M') { e.preventDefault(); toggleMap(); }

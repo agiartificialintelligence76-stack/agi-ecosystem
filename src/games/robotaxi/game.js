@@ -527,7 +527,7 @@ if (import.meta.env.DEV) window.__rt = { get run() { return run; }, wreck() { if
 
 // ---------- start: fonts and pictures first, then the road ----------
 const portrait = new Image();
-portrait.src = '/images/agi1-portrait.webp';
+portrait.src = '/images/agi1-portrait-2d.webp';
 const loaded = (img) => (img.decode ? img.decode().then(() => img, () => null) : Promise.resolve(null));
 const timeout = (ms) => new Promise((res) => setTimeout(() => res(null), ms));
 (async () => {

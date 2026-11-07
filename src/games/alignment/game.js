@@ -560,7 +560,7 @@ function drawPlay(ctx) {
       R.drawCardAt(ctx, L, e.face.canvas, { x: C.cx, y, rot: (1 - k) * 0.12, lift: 1 - k * 0.5 });
       if (e.isNew && e.t >= 1.75) {
         const wide = L.kind === 'wide';
-        R.drawStamp(ctx, C.cx + C.w * (wide ? 0.36 : 0.32), y + C.h * (wide ? 0.34 : -0.44), 'NEW!', Math.max(14, Math.min(C.w, C.h * 1.5) * 0.06), e.t - 1.75);
+        R.drawStamp(ctx, C.cx + C.w * (wide ? 0.36 : 0.34), y + C.h * (wide ? 0.34 : -0.5) + (wide ? 0 : 4), 'NEW!', Math.max(14, Math.min(C.w, C.h * 1.5) * 0.06), e.t - 1.75);
       }
     }
   }
@@ -587,7 +587,7 @@ async function boot() {
     await Promise.all([
       document.fonts.load("900 40px 'AK Display'"), document.fonts.load("800 20px 'AK Display'"),
       document.fonts.load("500 16px 'AK Sans'"), document.fonts.load("italic 20px 'AK Serif'"), document.fonts.load("600 14px 'AK Mono'"),
-      new Promise((res) => { const im = new Image(); im.onload = res; im.onerror = res; im.src = '/images/agi1-portrait.webp'; setTimeout(res, 2500); }),
+      new Promise((res) => { const im = new Image(); im.onload = res; im.onerror = res; im.src = '/images/agi1-portrait-2d.webp'; setTimeout(res, 2500); }),
     ]);
   } catch { /* draw with what we have */ }
   for (let i = 0; i < 40 && !R.portraitLoaded(); i++) await new Promise((r) => setTimeout(r, 25));

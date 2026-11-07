@@ -20,9 +20,9 @@
   .ak[data-ak-game='gradient'] .ak-chip-label { letter-spacing: .03em; }
   .ak[data-ak-game='gradient'] .ak-hud { gap: 4px; }
 }
+/* a very narrow phone: the hole's number is on its title card and the scorecard, so its chip steps aside */
 @media (max-width: 379px) {
-  .ak[data-ak-game='gradient'] .ak-chip-value { font-size: 14px; }
-  .ak[data-ak-game='gradient'] .ak-chip { padding: 0 7px; }
+  .ak[data-ak-game='gradient'] .gd-chip-hole { display: none; }
 }
 
 /* ---------- the hole's title card ---------- */

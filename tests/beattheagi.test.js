@@ -11,7 +11,7 @@ import {
 } from '../src/games/beattheagi/rules.js';
 import { Match } from '../src/games/beattheagi/match.js';
 import { createBrain } from '../src/games/beattheagi/brain.js';
-import { DEMO_OPENINGS, DEMO_TARGET, DEMO_LEVELS, ATTRACT_OPENINGS } from '../src/games/beattheagi/demo.js';
+import { DEMO_OPENINGS, DEMO_LEVELS, DEMO_THINK_AT, ATTRACT_OPENINGS, demoClock } from '../src/games/beattheagi/demo.js';
 import { LINES, say, shareText } from '../src/games/beattheagi/lines.js';
 import { layout, columnAt } from '../src/games/beattheagi/layout.js';
 import { rng } from '../src/games/kit/fx.js';
@@ -352,20 +352,33 @@ test('the demo\'s boards: real positions, nobody about to win, and the first pla
     assert.equal(findFour(cells), null);
     assert.equal(threatsNow(cells, o.turn === 'x' ? PINK : MINT).length, 0, 'the side to move can\'t just win');
   }
-  // the one ?demo&seed=7 records, played with the real clock (its first game is timed to DEMO_TARGET)
+  // the one ?demo&seed=7 records, played with the real clock: the think in which she finds her win starts as the
+  // recording does, and her four lands inside it
   const op = DEMO_OPENINGS[7 % DEMO_OPENINGS.length];
+  const clock = demoClock(op);
   const r = rng(1);
+  const brain = syncBrain();
+  let realized = null;
   const m = new Match({
     mode: 'demo', level: DEMO_LEVELS.her, pinkLevel: DEMO_LEVELS.you, cells: fromPicture(op.pic), turn: op.turn === 'x' ? PINK : MINT, seed: op.seed,
-    hooks: { think: syncBrain(), line: () => null, chance: (p) => r.next() < p },
+    hooks: {
+      think: (req) => brain(req.color === MINT ? { ...req, onDepth: (x) => { if (realized == null && x.score > MATE) realized = thinkStart; req.onDepth?.(x); } } : req),
+      line: () => null, chance: (p) => r.next() < p,
+    },
   });
+  let thinkStart = 0;
+  const start = m.startThink.bind(m);
+  m.startThink = () => { thinkStart = m.t; start(); };
+  m.speed = clock.speed;
   m.start();
   runUntil(m, (x) => x.phase === 'end', 20);
-  assert.equal(m.winner, PINK, 'you win the demo');
-  assert.ok(Math.abs(m.t - op.at) < 0.05, `the four lands at ${m.t.toFixed(2)} s (expected ${op.at})`);
-  const speed = Math.max(0.8, Math.min(1.3, op.at / (DEMO_TARGET - 0.15)));
-  const page = m.t / speed;
-  assert.ok(page > 7 && page < 10.5, `in the preview's window: ${page.toFixed(2)} s`);
+  assert.equal(m.winner, MINT, 'she wins the demo');
+  const page = (gameT) => clock.start + gameT / clock.speed;
+  assert.ok(realized != null, 'she finds her win mid-think');
+  // (a faster or slower clock steps its phases at slightly different instants: a few hundredths of a second each)
+  assert.ok(Math.abs(realized - op.R) < 0.3 && Math.abs(m.t - op.A) < 0.3, `the board plays as the tool recorded it (${realized.toFixed(3)} ~ ${op.R}, ${m.t.toFixed(3)} ~ ${op.A})`);
+  assert.ok(Math.abs(page(realized) - DEMO_THINK_AT) < 0.3, `her realization starts at ${page(realized).toFixed(2)} s`);
+  assert.ok(page(m.t) > 8.6 && page(m.t) < 11, `her four lands at ${page(m.t).toFixed(2)} s, inside the recording (5.7 to 11.7 s)`);
 });
 
 // ---------- the layout ----------

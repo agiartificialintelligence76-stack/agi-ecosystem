@@ -208,7 +208,7 @@ export function createRenderer() {
   // the bottom margin of a card: its name, or her words; her face sticker on the redraw
   function caption(ctx, G, L, i, c, now) {
     const fb = L.fb, y = c.y + c.h - fb / 2 + 0.5, x = c.x + L.f + 2;
-    const size = clamp(fb * 0.46, 9.5, 14);
+    const size = clamp(fb * 0.44, 9.5, 19);
     ctx.save();
     ctx.textBaseline = 'middle'; ctx.textAlign = 'left';
     if (i === 0) {
@@ -219,7 +219,7 @@ export function createRenderer() {
       setSpacing(ctx, 0);
       if (G.capLeft) { ctx.textAlign = 'right'; ctx.font = `700 ${size * 0.92}px ${MONO}`; ctx.fillStyle = C.ink2; ctx.fillText(G.capLeft, c.x + c.w - L.f - 2, y + 0.5); }
     } else {
-      const fr = Math.min(fb * 0.86, 22), fx = c.x + c.w - L.f - fr + 2, fy = c.y + c.h - fb / 2 - 1;
+      const fr = Math.min(fb * 0.86, 30), fx = c.x + c.w - L.f - fr + 2, fy = c.y + c.h - fb / 2 - 1;
       const talk = G.say && now - G.say.t0 < G.say.dur ? G.say : null;
       const ta = talk ? clamp((now - talk.t0) / 0.18, 0, 1) * clamp((talk.dur - (now - talk.t0)) / 0.3, 0, 1) : 0;
       if (ta < 1) {
@@ -232,7 +232,7 @@ export function createRenderer() {
       }
       if (ta > 0) {
         ctx.globalAlpha = ta;
-        let fs = clamp(fb * 0.62, 12, 19);
+        let fs = clamp(fb * 0.6, 12, 26);
         ctx.font = `italic 400 ${fs}px ${SERIF}`;
         const maxW = fx - fr - x - 6;
         while (fs > 10 && ctx.measureText(talk.text).width > maxW) { fs -= 1; ctx.font = `italic 400 ${fs}px ${SERIF}`; }
@@ -266,7 +266,7 @@ export function createRenderer() {
     const daily = run.mode === 'daily';
     const low = !daily && run.timeLeft < 10 && !run.cleared;
     const twoRows = mw < 250 && !L.demo;
-    const dotR = L.demo ? 5 : clamp(S.h * 0.13, 6, 8);
+    const dotR = L.demo ? 5 : clamp(S.h * 0.13, 6, 9.5);
     const dotsW = 5 * dotR * 2 + 4 * dotR * 0.8;
     const rowY1 = twoRows ? S.y + S.h * 0.3 : cy, rowY2 = twoRows ? S.y + S.h * 0.74 : cy;
     // the found dots ●●●○○
@@ -282,7 +282,7 @@ export function createRenderer() {
       if (got) { ctx.beginPath(); ctx.moveTo(x - dotR * 0.45, rowY1); ctx.lineTo(x - dotR * 0.1, rowY1 + dotR * 0.38); ctx.lineTo(x + dotR * 0.5, rowY1 - dotR * 0.4); ctx.lineWidth = 2; ctx.strokeStyle = C.paper; ctx.lineCap = 'round'; ctx.stroke(); }
     }
     // the time
-    const tsz = L.demo ? 13 : clamp(S.h * 0.33, 14, 19);
+    const tsz = L.demo ? 13 : clamp(S.h * 0.33, 14, 23);
     ctx.font = `750 ${tsz}px ${MONO}`; ctx.textBaseline = 'middle'; ctx.textAlign = 'right';
     const secs = daily ? run.elapsed : run.timeLeft;
     const txt = daily ? fmtTenths(secs) : fmtClock(secs);

@@ -1037,11 +1037,14 @@ test('AGI games\' look: every rule names a gm- class; "beta" stuck over GAME; Po
   assert.match(rule(".gm-tab[aria-selected='true']"), /border-color: var\(--fg\)/);
   assert.match(rule('.gm-panel'), /scroll-margin-top: 150px/);
   assert.match(rule('.gm-tile-badge.is-play'), /background: #d6ff62/, 'TRENCHING SIMULATOR\'s "Play money" sticker, its own lime');
-  // (2026-11-08) the picker: four tiles a row on a computer, three on a tablet, two on a phone; a loop shows over its still
-  // only once it plays (hidden, never see-through)
+  // (2026-11-08) the picker: four tiles a row on a computer, three on a tablet; since the second night (24 games) five on a
+  // wide screen and three small ones on a phone (its name and kind only); a loop shows over its still only once it plays
+  // (hidden, never see-through)
   assert.match(rule('.gm-grid'), /grid-template-columns: repeat\(4, minmax\(0, 1fr\)\)/);
+  assert.match(rule('.gm-grid', '@media (min-width: 1240px)'), /repeat\(5, minmax\(0, 1fr\)\)/);
   assert.match(rule('.gm-grid', '@media (max-width: 1100px)'), /repeat\(3, minmax\(0, 1fr\)\)/);
-  assert.match(rule('.gm-grid', '@media (max-width: 760px)'), /repeat\(2, minmax\(0, 1fr\)\)/);
+  assert.match(rule('.gm-grid', '@media (max-width: 760px)'), /repeat\(3, minmax\(0, 1fr\)\)/);
+  assert.match(rule('.gm-tile-line, .gm-tile-nums, .gm-tile-go', '@media (max-width: 560px)'), /display: none/, 'a phone: the name and the kind');
   assert.match(rule('.gm-tile-video'), /visibility: hidden/);
   assert.match(rule('.gm-tile.is-live .gm-tile-video'), /visibility: visible/);
   assert.match(rule('.gm-tile-media'), /aspect-ratio: 1/);

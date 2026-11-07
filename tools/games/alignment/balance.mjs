@@ -2,7 +2,7 @@
 // they last and which endings they find. Run: node tools/games/alignment/balance.mjs [runs]
 import { createRun, draw, choose } from '../../../src/games/alignment/engine.js';
 import { pickSide } from '../../../src/games/alignment/ai.js';
-import { CARDS, ENDINGS } from '../../../src/games/alignment/cards.js';
+import { CARDS, ENDINGS, HELLOS } from '../../../src/games/alignment/cards.js';
 import { rng } from '../../../src/games/kit/fx.js';
 
 const N = Number(process.argv[2]) || 3000;
@@ -20,7 +20,7 @@ const seen = new Set();
 for (const [name, policy] of Object.entries(POLICIES)) {
   const lens = [], ends = {};
   for (let i = 1; i <= N; i++) {
-    const run = createRun(i * 7919), r = rng(i * 104729);
+    const run = createRun(i * 7919, { first: HELLOS[i % HELLOS.length] }), r = rng(i * 104729);
     while (!run.over && run.day < (name === "greedy" ? 600 : 2000)) { draw(run); seen.add(run.card.id); choose(run, policy(run, r)); }
     lens.push(run.day);
     const e = run.over?.ending || 'none';

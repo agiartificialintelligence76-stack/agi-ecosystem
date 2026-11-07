@@ -21,7 +21,7 @@ import { say, shareText, LINES } from './lines.js';
 import { LEVELS, TOP } from './levels.js';
 import { readSave, recordResult, firstMover, record, fromPicture, PINK, MINT, other, count } from './rules.js';
 import { ladderCard, resultCard, miniLadder, undoButton } from './ui.js';
-import { DEMO_OPENINGS, DEMO_TARGET, DEMO_LEVELS, ATTRACT_OPENINGS } from './demo.js';
+import { DEMO_OPENINGS, DEMO_LEVELS, ATTRACT_OPENINGS, demoClock } from './demo.js';
 import { C as COL } from './art.js';
 
 const root = document.getElementById('ak-root');
@@ -68,6 +68,7 @@ let mode = 'boot';            // title · ladder · pp · demo
 let M = null;                 // the game on the board
 let attract = null;           // the title's quiet game
 let L = null;
+let Lt = null;                // the title's layout: the quiet game's board centred behind the words
 let t = 0;
 let glitchT = 0;
 let ladderOpen = false, resultUp = false, lastCard = null;
@@ -97,6 +98,7 @@ function insets() {
 function relayout() {
   if (!view?.w) return;
   L = layout(view.w, view.h, insets(), { demo: DEMO });
+  Lt = layout(view.w, view.h, insets(), { demo: true });
   recordChip.hide(view.w < 400 || mode === 'pp');
   placeUndo();
 }
@@ -220,7 +222,7 @@ function gameOver(result) {
     [`Record at ${LEVELS[level].id}`, record(st)],
     ['Win streak', `${st.streak}${st.best > st.streak ? ` (best ${st.best})` : ''}`],
     ['Your stones', String(yours)],
-    ['Her deepest look', M.deepest ? `${M.deepest} moves` : 'one glance'],
+    ['Her deepest look', level <= 1 || !M.deepest ? 'one glance' : `${M.deepest} moves`],
   ];
   // the shell's end state (Enter, Space or R: a rematch; no pause), with this game's own card on top
   shell.over({ score: null, title: 'Game over', onAgain: () => playLevel(level, { rematch: true }), onMenu: () => toTitle() });
@@ -295,7 +297,7 @@ function toTitle() {
     onPlay: () => playLevel(save.level),
     modes: [
       { label: 'Ladder', sub: beaten ? `${beaten} of ${LEVELS.length} beaten` : 'Six of her to beat', onClick: () => openLadder() },
-      { label: 'Pass & play', sub: 'Two people, one screen', onClick: () => playPP() },
+      { label: 'Pass & play', sub: 'Two players, one screen', onClick: () => playPP() },
     ],
     extra: miniLadder(save),
     best: null,
@@ -330,23 +332,30 @@ function closeLadder() {
 function closeCards() { ladderOpen = false; resultUp = false; }
 
 // ---------- the demo (?demo): 13B playing "you" against her at 400B, from a board that ends in the preview's window ----------
+let demoWait = 0;
 function startDemo() {
   const op = DEMO_OPENINGS[(demoIndex + (SEED || 7)) % DEMO_OPENINGS.length];
   demoIndex++;
   parts.clear(); floats.clear(); glitchT = 0;
   M = new Match({
     mode: 'demo', level: DEMO_LEVELS.her, pinkLevel: DEMO_LEVELS.you, cells: fromPicture(op.pic), turn: op.turn === 'x' ? PINK : MINT, seed: op.seed,
-    hooks: hooksFor('demo'), pace: { think: 1, aim: 1 },
+    hooks: hooksFor('demo'),
   });
   mode = 'demo';
   M.gx = 3;
-  M.start();
+  demoWait = 0;
   if (demoGames++ === 0) {
-    // the first game's four lands at DEMO_TARGET seconds after the page opened (the preview's recording window)
-    M.speed = Math.max(0.8, Math.min(1.3, op.at / (DEMO_TARGET - 0.15)));
+    // the first game runs on the page's clock: the think in which she finds her win starts as the preview's recording
+    // does, and her four lands a few seconds later (demo.js: demoClock)
+    const clock = demoClock(op);
+    M.speed = clock.speed;
     const since = (typeof performance !== 'undefined' ? performance.now() : 0) / 1000;
-    M.advance(Math.min(since, 3));
+    if (clock.start > since) { demoWait = clock.start - since; return; }
+    M.start();
+    M.advance(since - clock.start);
+    return;
   }
+  M.start();
 }
 function nextDemo() { startDemo(); }
 
@@ -449,7 +458,11 @@ function titleScrim(g) {
 function step(dt) {
   t += dt;
   const m = mode === 'title' ? attract : M;
-  m?.update(dt);
+  if (mode === 'demo' && demoWait > 0) {
+    // the board waits (the intro covers most of it), then the game starts on time
+    demoWait -= dt;
+    if (demoWait <= 0) { M.start(); M.advance(-demoWait); demoWait = 0; }
+  } else m?.update(dt);
   parts.update(dt);
   floats.update(dt);
   shake.update(dt);
@@ -468,7 +481,7 @@ const loop = createLoop({
     const levelLabel = m.mode === 'pp' ? 'host' : LEVELS[m.level].id;
     if (mode === 'title') {
       // the quiet game, dimmed behind the title
-      renderer.draw(g, view, L, m, { t, levelLabel, title: true });
+      renderer.draw(g, view, Lt, m, { t, levelLabel, title: true });
       g.fillStyle = titleScrim(g);
       g.fillRect(0, 0, view.w, view.h);
       return;

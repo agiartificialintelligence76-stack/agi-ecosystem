@@ -408,7 +408,7 @@ export function createScene(canvas, { reduced = false } = {}) {
       if (!aim || !hole) { arrow.visible = false; return; }
       arrow.visible = true;
       const c = Math.cos(aim.angle), s = Math.sin(aim.angle);
-      const len = 0.6 + aim.power * 3.6, head = Math.min(0.8, 0.42 + len * 0.16), shaftW = 0.17 + aim.power * 0.05, headW = 0.48 + aim.power * 0.1;
+      const len = 0.9 + aim.power * 4.4, head = Math.min(0.85, 0.45 + len * 0.14), shaftW = 0.17 + aim.power * 0.05, headW = 0.48 + aim.power * 0.1;
       const start = PHYS.R + 0.18;
       const lift = 0.09;
       const put = (k, along, side, edge) => {
@@ -496,7 +496,6 @@ export function createScene(canvas, { reduced = false } = {}) {
     },
     render() { renderer.render(scene, camera); },
     get size() { return { w: W, h: H, dpr: DPR }; },
-    _debug: { arrow, dots, aPos },
   };
   const tmpV = new THREE.Vector3();
   const ndc = new THREE.Vector2();
