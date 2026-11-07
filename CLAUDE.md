@@ -10431,8 +10431,11 @@ prompts asked for photorealistic scenes with the kinds of detail image models st
 signs, bicycles, chess boards), each picture looked at for its giveaways (`clues`: honest observations, and where a
 picture is simply flawless the clue and AGI-1 say so); the real ones are CC0 photos on Wikimedia Commons (from Unsplash's
 CC0 years), cropped square at their subject. Both kinds were made the same size and format, so file details don't give
-them away (except an AI-made one's own "AI-made" tag, kept on purpose). Sources at full size, with each real photo's
-`credits.json` (title, photographer, license, page): the owner's `Downloads/agi-realorai-sources/`.
+them away (except an AI-made one's own "AI-made" tag, kept on purpose). In the owner's `Downloads/agi-realorai-sources/`:
+the sources at full size (`agi-realorai-ai-t1.zip` … `t4.zip`, the AI pictures as ChatGPT gave them, some twice;
+`agi-realorai-real-photos.zip`, the real ones with `credits.json`: title, photographer, license, page) and the 1024 px
+squares the build script reads (`agi-realorai-squares-ai.zip` holds `aiu/`, `agi-realorai-squares-real.zip` holds `sq/`:
+unzip both into one folder and pass it to `build-pictures.mjs`).
 
 **/games for 24** (`games.html`, `src/games/shelf.js`, `games.css`, `pop.css`): five tiles a row on a wide screen (1240 px
 and up), four and three below it, and **three small tiles a row on a phone** (560 px and under: its loop, name and kind;

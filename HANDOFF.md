@@ -14,7 +14,8 @@ continue". Their choices: "Yes, both" (AI pictures made with ChatGPT in their Ch
 - **REAL OR AI?'s pictures:** 39 made that night in the owner's ChatGPT (four chats in their Chrome), 42 CC0 photos from
   Wikimedia Commons (first on Unsplash; each photographer credited in the game). Sources (full size, with `credits.json`):
   the owner's `Downloads/agi-realorai-sources/`. Data: `tools/games/realorai/pictures.json`; rebuild with
-  `node tools/games/realorai/build-pictures.mjs <folder with aiu/ and sq/>` (the 1024 px squares made from those sources).
+  `node tools/games/realorai/build-pictures.mjs <folder with aiu/ and sq/>` (the 1024 px squares made from those sources:
+  `agi-realorai-squares-ai.zip` and `agi-realorai-squares-real.zip` in the same folder, unzipped into one folder).
 - **/games:** 24 games; three small tiles a row on a phone (name and kind), five on a wide screen; "New" is these ten.
 - **AGI-1's 2D art only:** ALIGNMENT and ROBOTAXI RUSH (its billboards) now use `public/images/agi1-portrait-2d.webp`, a square
   crop of her 2D art (`agi1-live-2d.webp`), not the 3D model's render (`agi1-portrait.webp`, still the chat's share cards).
