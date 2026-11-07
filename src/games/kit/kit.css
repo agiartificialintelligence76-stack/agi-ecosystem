@@ -1,0 +1,266 @@
+/* AGI arcade kit (2026-11-08): the frame every new AGI game shares: its top bar (back to the arcade, the game's numbers,
+   sound, full screen, pause), its title screen, the pause and how-to-play cards, the end-of-run card, toasts.
+   The look is the site's Pop mode as stickers: ink outlines, hard offset shadows, honey / pink / violet / mint blocks,
+   the wide Anybody display type, Geist for words, Geist Mono for numbers, Instrument Serif italics for AGI-1's voice.
+   Every rule names an ak- class (or the page's own root), so a game's own styles never collide with it. A game sets its
+   colors on .ak (--ak-bg, --ak-accent…) and draws its playfield inside .ak-stage. */
+
+@font-face { font-family: 'AK Display'; src: url('/fonts/Anybody-Variable.woff2') format('woff2'); font-weight: 100 900; font-stretch: 50% 150%; font-display: swap; }
+@font-face { font-family: 'AK Sans'; src: url('/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'AK Mono'; src: url('/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'AK Serif'; src: url('/fonts/InstrumentSerif-Italic.woff2') format('woff2'); font-style: italic; font-display: swap; }
+
+html.ak-page, html.ak-page body { margin: 0; height: 100%; overflow: hidden; background: #0f0826; overscroll-behavior: none; }
+html.ak-page { color-scheme: dark; -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+html.ak-page body { -webkit-tap-highlight-color: transparent; }
+
+.ak {
+  --ak-ink: #170a36; --ak-ink2: #4a3d6e; --ak-paper: #fffaf0; --ak-lav: #e4d9ff; --ak-lav2: #cdb8ff;
+  --ak-violet: #6b3bff; --ak-violet2: #8b66ff; --ak-pink: #ff4da6; --ak-honey: #ffc933; --ak-mint: #3ff0c3; --ak-red: #ff5a5f;
+  --ak-bg: #120a2a;                 /* behind the playfield */
+  --ak-fg: #fffaf0;                 /* words straight on the background */
+  --ak-accent: var(--ak-honey);     /* the PLAY button */
+  --ak-accent-ink: var(--ak-ink);
+  --ak-display: 'AK Display', 'Arial Black', system-ui, sans-serif;
+  --ak-sans: 'AK Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --ak-mono: 'AK Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  --ak-serif: 'AK Serif', 'Iowan Old Style', Georgia, serif;
+  --ak-safe-t: env(safe-area-inset-top, 0px); --ak-safe-r: env(safe-area-inset-right, 0px);
+  --ak-safe-b: env(safe-area-inset-bottom, 0px); --ak-safe-l: env(safe-area-inset-left, 0px);
+  --ak-bar-h: 60px;
+  position: fixed; inset: 0; overflow: hidden; isolation: isolate;
+  font-family: var(--ak-sans); color: var(--ak-fg); background: var(--ak-bg);
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
+  font-synthesis: none; text-rendering: optimizeLegibility;
+}
+:where(.ak) *, :where(.ak) *::before, :where(.ak) *::after { box-sizing: border-box; }
+.ak [hidden] { display: none !important; }
+.ak-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+/* resets with no weight (:where), so every ak- class below wins over them */
+:where(.ak) :where(button, a) { -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+:where(.ak) :where(button) { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+:where(.ak) :where(a) { color: inherit; }
+:where(.ak) :where(:focus-visible) { outline: 3px solid var(--ak-mint); outline-offset: 3px; }
+
+/* ---------- the playfield ---------- */
+.ak-stage { position: absolute; inset: 0; z-index: 0; overflow: hidden; touch-action: none; }
+.ak-stage canvas { position: absolute; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; outline: none; }
+
+/* ---------- the top bar ---------- */
+.ak-bar {
+  position: absolute; z-index: 20; top: 0; left: 0; right: 0;
+  display: flex; align-items: center; gap: 10px;
+  padding: calc(10px + var(--ak-safe-t)) calc(12px + var(--ak-safe-r)) 10px calc(12px + var(--ak-safe-l));
+  pointer-events: none;
+}
+.ak-bar > * { pointer-events: auto; }
+.ak-hud { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; justify-content: center; gap: 8px; pointer-events: none; }
+.ak-hud > * { pointer-events: auto; }
+.ak-tools { display: flex; gap: 8px; flex: none; }
+
+/* round sticker buttons */
+.ak-ibtn {
+  position: relative; display: inline-grid; place-items: center; flex: none;
+  min-width: 42px; height: 42px; padding: 0 11px; border-radius: 999px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink);
+  box-shadow: 0 3px 0 var(--ak-ink); text-decoration: none;
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease;
+}
+.ak-ibtn svg { width: 20px; height: 20px; display: block; }
+.ak-ibtn:hover { background: #fff; }
+.ak-ibtn:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.ak-ibtn[aria-pressed='false'] { background: var(--ak-lav); }
+.ak-back { display: inline-flex; gap: 6px; padding: 0 14px 0 10px; font-family: var(--ak-display); font-weight: 850; font-stretch: 110%; font-size: 13px; letter-spacing: .02em; text-transform: uppercase; }
+.ak-back svg { width: 18px; height: 18px; }
+@media (max-width: 479px) { .ak-back-label { display: none; } .ak-back { padding: 0 11px; } }
+
+/* the game's numbers in the bar: a sticker pill each */
+.ak-chip {
+  display: inline-flex; align-items: baseline; gap: 7px; min-width: 0;
+  height: 42px; padding: 0 14px; border-radius: 999px; align-items: center;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  white-space: nowrap;
+}
+.ak-chip-label { font-family: var(--ak-display); font-size: 10.5px; font-weight: 850; font-stretch: 120%; letter-spacing: .08em; text-transform: uppercase; color: var(--ak-ink2); }
+.ak-chip-value { font-family: var(--ak-mono); font-size: 17px; font-weight: 750; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; display: inline-block; }
+.ak-chip.is-accent { background: var(--ak-accent); }
+.ak-chip.is-pop .ak-chip-value { animation: ak-bump .28s cubic-bezier(.3, 1.6, .5, 1); }
+@keyframes ak-bump { 0% { transform: scale(1); } 40% { transform: scale(1.32); } 100% { transform: scale(1); } }
+@media (max-width: 379px) { .ak-chip { padding: 0 10px; gap: 5px; } .ak-chip-label { font-size: 9.5px; } .ak-chip-value { font-size: 15px; } }
+
+/* ---------- screens (title, end of run) ---------- */
+.ak-screen { position: absolute; inset: 0; z-index: 10; display: grid; overflow: hidden auto; }
+.ak-screen-scrim { position: absolute; inset: 0; z-index: -1; background: radial-gradient(120% 80% at 50% 110%, color-mix(in srgb, var(--ak-bg) 92%, #000) 20%, transparent 70%); pointer-events: none; }
+
+/* the title screen */
+.ak-title { place-items: center; padding: calc(var(--ak-bar-h) + var(--ak-safe-t) + 8px) calc(20px + var(--ak-safe-r)) calc(24px + var(--ak-safe-b)) calc(20px + var(--ak-safe-l)); }
+.ak-title-art { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
+.ak-title-art > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+.ak-title-body { width: min(560px, 100%); display: grid; justify-items: center; text-align: center; gap: 14px; }
+.ak-kicker {
+  margin: 0; display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 125%; font-size: 12px; letter-spacing: .16em; text-transform: uppercase;
+  color: var(--ak-fg); opacity: .92;
+}
+.ak-kicker b { padding: 3px 8px 2px; border-radius: 999px; background: var(--ak-pink); color: var(--ak-ink); border: 2px solid var(--ak-ink); letter-spacing: .08em; font-size: 10.5px; transform: rotate(-4deg); }
+/* the wordmark: the game's name in wide, heavy letters with an ink outline and a hard shadow */
+.ak-logo { margin: 0; display: grid; justify-items: center; line-height: .86; font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; letter-spacing: -0.02em; text-transform: uppercase; }
+.ak-logo-line {
+  display: block; font-size: clamp(44px, 13vw, 92px); color: var(--ak-paper);
+  -webkit-text-stroke: .055em var(--ak-ink); paint-order: stroke fill;
+  text-shadow: 0 .075em 0 var(--ak-ink);
+}
+.ak-logo-line.is-small { font-size: clamp(22px, 6vw, 38px); letter-spacing: .04em; font-stretch: 130%; }
+.ak-logo-line.is-accent { color: var(--ak-accent); }
+.ak-logo-line.is-pink { color: var(--ak-pink); }
+.ak-logo-line.is-mint { color: var(--ak-mint); }
+.ak-logo-line.is-violet { color: var(--ak-violet2); }
+.ak-tagline { margin: 2px 0 6px; max-width: 30em; font-family: var(--ak-serif); font-style: italic; font-size: clamp(19px, 4.6vw, 24px); line-height: 1.2; color: var(--ak-fg); text-wrap: balance; }
+.ak-title-actions { display: grid; gap: 12px; justify-items: center; width: min(360px, 100%); margin-top: 6px; }
+.ak-modes { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; width: 100%; }
+.ak-title-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; margin-top: 4px; }
+.ak-best {
+  display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px;
+  background: color-mix(in srgb, var(--ak-ink) 70%, transparent); border: 2px solid color-mix(in srgb, var(--ak-paper) 30%, transparent);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ak-paper);
+}
+.ak-best b { font-family: var(--ak-mono); font-weight: 750; font-size: 14px; letter-spacing: 0; color: var(--ak-honey); }
+.ak-link { font-weight: 650; font-size: 14.5px; text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; color: var(--ak-fg); }
+.ak-link:hover { color: var(--ak-honey); }
+.ak-fine { margin: 6px 0 0; font-size: 12.5px; line-height: 1.4; color: color-mix(in srgb, var(--ak-fg) 72%, transparent); }
+.ak-keys-hint { margin: 0; font-family: var(--ak-mono); font-size: 12px; color: color-mix(in srgb, var(--ak-fg) 66%, transparent); }
+.ak-keys-hint kbd { display: inline-block; padding: 1px 6px; border-radius: 6px; border: 1.5px solid color-mix(in srgb, var(--ak-fg) 40%, transparent); font: inherit; font-weight: 700; }
+
+/* ---------- buttons ---------- */
+.ak-btn {
+  position: relative; display: inline-flex; align-items: center; justify-content: center; gap: 10px;
+  min-height: 52px; padding: 12px 26px; border-radius: 999px; width: 100%;
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; font-size: 17px; letter-spacing: .04em; text-transform: uppercase;
+  background: var(--ak-paper); color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 0 5px 0 var(--ak-ink);
+  text-decoration: none; transition: transform .08s ease, box-shadow .08s ease, filter .15s ease;
+}
+.ak-btn svg { width: 20px; height: 20px; flex: none; }
+.ak-btn:hover { filter: brightness(1.04); transform: translateY(-1px); box-shadow: 0 6px 0 var(--ak-ink); }
+.ak-btn:active { transform: translateY(4px); box-shadow: 0 1px 0 var(--ak-ink); }
+.ak-btn-primary { background: var(--ak-accent); color: var(--ak-accent-ink); }
+.ak-btn-play { min-height: 64px; font-size: 22px; letter-spacing: .06em; padding-inline: 34px; }
+.ak-btn-play svg { width: 24px; height: 24px; }
+.ak-btn-ghost { background: transparent; color: var(--ak-fg); border-color: color-mix(in srgb, var(--ak-fg) 55%, transparent); box-shadow: none; }
+.ak-btn-ghost:hover { box-shadow: none; background: color-mix(in srgb, var(--ak-fg) 10%, transparent); }
+.ak-btn-ghost:active { box-shadow: none; }
+.ak-btn-sm { min-height: 42px; padding: 8px 16px; font-size: 13.5px; box-shadow: 0 4px 0 var(--ak-ink); }
+.ak-btn-mode { min-height: 58px; flex-direction: column; gap: 2px; padding: 9px 14px; font-size: 15px; }
+.ak-btn-mode small { font-family: var(--ak-sans); font-size: 11.5px; font-weight: 600; letter-spacing: 0; text-transform: none; opacity: .75; }
+.ak-btn-mode.is-locked { opacity: .55; filter: grayscale(.6); }
+@media (prefers-reduced-motion: no-preference) {
+  .ak-btn-play { animation: ak-breathe 2.4s ease-in-out infinite; }
+  .ak-btn-play:hover, .ak-btn-play:active { animation: none; }
+}
+@keyframes ak-breathe { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); box-shadow: 0 8px 0 var(--ak-ink); } }
+
+/* ---------- cards: pause, how to play, the end of a run ---------- */
+.ak-layer { position: absolute; inset: 0; z-index: 30; display: grid; place-items: center; padding: calc(16px + var(--ak-safe-t)) calc(16px + var(--ak-safe-r)) calc(16px + var(--ak-safe-b)) calc(16px + var(--ak-safe-l)); overflow: hidden auto; }
+.ak-layer.is-dim { background: color-mix(in srgb, #0a0418 62%, transparent); -webkit-backdrop-filter: blur(3px); backdrop-filter: blur(3px); }
+.ak-card:focus { outline: none; }
+.ak-card {
+  position: relative; width: min(440px, 100%); max-height: 100%; overflow: auto; overscroll-behavior: contain;
+  padding: 26px 22px 22px; border-radius: 26px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 8px 9px 0 var(--ak-ink);
+  -webkit-user-select: text; user-select: text;
+}
+.ak-card-kicker { margin: 0 0 4px; font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 12px; letter-spacing: .18em; text-transform: uppercase; color: var(--ak-violet); }
+.ak-card-title { margin: 0 0 16px; font-family: var(--ak-display); font-weight: 900; font-stretch: 116%; font-size: 30px; line-height: 1; letter-spacing: -0.01em; text-transform: uppercase; }
+.ak-card-actions { display: grid; gap: 12px; margin-top: 18px; }
+.ak-card-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(0, 1fr)); gap: 10px; }
+.ak-card .ak-btn-ghost { color: var(--ak-ink); border-color: var(--ak-ink); }
+.ak-card .ak-btn-ghost:hover { background: var(--ak-lav); }
+.ak-card .ak-link { color: var(--ak-ink); }
+.ak-close { position: absolute; top: 12px; right: 12px; min-width: 38px; height: 38px; box-shadow: 0 2px 0 var(--ak-ink); }
+@media (prefers-reduced-motion: no-preference) {
+  .ak-layer:not([hidden]) .ak-card { animation: ak-card-in .34s cubic-bezier(.2, 1.3, .4, 1) both; }
+}
+@keyframes ak-card-in { from { opacity: .01; transform: translateY(28px) scale(.96); } }
+
+/* settings switches */
+.ak-switches { display: grid; gap: 2px; margin: 4px 0 2px; padding: 4px 0; border-top: 2px dashed color-mix(in srgb, var(--ak-ink) 22%, transparent); border-bottom: 2px dashed color-mix(in srgb, var(--ak-ink) 22%, transparent); }
+.ak-switch { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 9px 2px; font-weight: 650; font-size: 15.5px; text-align: left; width: 100%; }
+.ak-switch-ui { position: relative; flex: none; width: 50px; height: 30px; border-radius: 999px; border: 2.5px solid var(--ak-ink); background: var(--ak-lav); transition: background-color .15s ease; }
+.ak-switch-ui::after { content: ''; position: absolute; top: 2px; left: 2px; width: 21px; height: 21px; border-radius: 50%; background: var(--ak-paper); border: 2.5px solid var(--ak-ink); transition: translate .18s cubic-bezier(.3, 1.4, .5, 1); }
+.ak-switch[aria-checked='true'] .ak-switch-ui { background: var(--ak-mint); }
+.ak-switch[aria-checked='true'] .ak-switch-ui::after { translate: 20px 0; }
+
+/* how to play */
+.ak-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; counter-reset: ak-step; }
+.ak-step { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: start; }
+.ak-step::before {
+  counter-increment: ak-step; content: counter(ak-step);
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%;
+  background: var(--ak-honey); border: 2.5px solid var(--ak-ink); font-family: var(--ak-display); font-weight: 900; font-size: 15px;
+}
+.ak-step b { display: block; font-family: var(--ak-display); font-weight: 850; font-stretch: 110%; font-size: 15px; text-transform: uppercase; letter-spacing: .02em; margin: 6px 0 2px; }
+.ak-step span { display: block; font-size: 14.5px; line-height: 1.45; color: var(--ak-ink2); }
+.ak-controls { margin: 16px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 7px 12px; font-size: 14px; align-items: baseline; }
+.ak-controls dt { font-family: var(--ak-mono); font-weight: 750; font-size: 12.5px; padding: 2px 8px; border-radius: 7px; background: var(--ak-lav); border: 2px solid var(--ak-ink); justify-self: start; white-space: nowrap; }
+.ak-controls dd { margin: 0; color: var(--ak-ink2); }
+.ak-controls-title { grid-column: 1 / -1; margin: 8px 0 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 11px; letter-spacing: .16em; text-transform: uppercase; color: var(--ak-violet); }
+
+/* ---------- the end of a run ---------- */
+.ak-over-card { text-align: center; }
+.ak-score { margin: 2px 0 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: clamp(56px, 17vw, 84px); line-height: .95; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.ak-score-label { margin: 2px 0 0; font-family: var(--ak-display); font-weight: 850; font-stretch: 125%; font-size: 11.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ak-ink2); }
+.ak-newbest {
+  display: inline-block; margin: 10px 0 0; padding: 6px 14px 5px; border-radius: 999px; transform: rotate(-5deg);
+  background: var(--ak-pink); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 13px; letter-spacing: .12em; text-transform: uppercase;
+}
+@media (prefers-reduced-motion: no-preference) { .ak-newbest { animation: ak-stamp .5s .25s cubic-bezier(.2, 1.6, .4, 1) both; } }
+@keyframes ak-stamp { from { opacity: .01; transform: rotate(-18deg) scale(2.2); } }
+.ak-bestline { margin: 8px 0 0; font-size: 14px; color: var(--ak-ink2); }
+.ak-bestline b { font-family: var(--ak-mono); color: var(--ak-ink); }
+.ak-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 16px 0 0; text-align: left; }
+.ak-stat { padding: 9px 12px; border-radius: 14px; background: var(--ak-lav); border: 2px solid var(--ak-ink); min-width: 0; }
+.ak-stat dt { font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ak-ink2); }
+.ak-stat dd { margin: 2px 0 0; font-family: var(--ak-mono); font-weight: 750; font-size: 17px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ak-stat.is-wide { grid-column: 1 / -1; }
+/* AGI-1's line: her face and a bubble */
+.ak-say { display: flex; align-items: flex-start; gap: 10px; margin: 16px 0 0; text-align: left; }
+.ak-say img { flex: none; width: 46px; height: 46px; border-radius: 50%; border: 2.5px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
+.ak-say p { position: relative; margin: 0; padding: 9px 13px; border-radius: 4px 16px 16px 16px; background: #fff; border: 2px solid var(--ak-ink); font-family: var(--ak-serif); font-style: italic; font-size: 18px; line-height: 1.25; color: var(--ak-ink); }
+.ak-share svg { width: 17px; height: 17px; }
+
+/* ---------- toasts ---------- */
+.ak-toasts { position: absolute; z-index: 40; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 6px); translate: -50% 0; display: grid; gap: 8px; justify-items: center; pointer-events: none; width: max-content; max-width: calc(100% - 32px); }
+.ak-toast {
+  padding: 8px 16px; border-radius: 999px; background: var(--ak-ink); color: var(--ak-paper); border: 2px solid var(--ak-paper);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 115%; font-size: 13px; letter-spacing: .06em; text-transform: uppercase; text-align: center;
+  box-shadow: 0 4px 0 color-mix(in srgb, var(--ak-ink) 60%, transparent);
+}
+.ak-toast.is-good { background: var(--ak-mint); color: var(--ak-ink); border-color: var(--ak-ink); }
+.ak-toast.is-warn { background: var(--ak-pink); color: var(--ak-ink); border-color: var(--ak-ink); }
+@media (prefers-reduced-motion: no-preference) { .ak-toast { animation: ak-toast-in .3s cubic-bezier(.2, 1.4, .4, 1) both; } .ak-toast.is-out { animation: ak-toast-out .25s ease both; } }
+@keyframes ak-toast-in { from { opacity: .01; transform: translateY(-10px) scale(.9); } }
+@keyframes ak-toast-out { to { opacity: .01; transform: translateY(-6px) scale(.96); } }
+
+/* the device turned the wrong way for a game that needs the other (a game opts in with shell.needs('portrait')) */
+.ak-turn { position: absolute; inset: 0; z-index: 50; display: none; place-items: center; text-align: center; padding: 24px; background: var(--ak-bg); }
+.ak-turn p { max-width: 18em; font-family: var(--ak-display); font-weight: 850; font-stretch: 115%; font-size: 18px; text-transform: uppercase; letter-spacing: .03em; }
+
+/* a short screen (a phone held sideways): tighter title and cards */
+@media (max-height: 520px) {
+  .ak { --ak-bar-h: 54px; }
+  .ak-bar { padding-top: calc(6px + var(--ak-safe-t)); padding-bottom: 6px; }
+  .ak-ibtn, .ak-chip { height: 38px; min-width: 38px; }
+  .ak-title-body { gap: 8px; }
+  .ak-logo-line { font-size: clamp(34px, 9vh, 64px); }
+  .ak-btn-play { min-height: 52px; font-size: 18px; }
+  .ak-card { padding: 18px 18px 16px; }
+  .ak-card-title { font-size: 24px; margin-bottom: 10px; }
+  .ak-score { font-size: 52px; }
+  .ak-stats { grid-template-columns: repeat(4, 1fr); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ak *, .ak *::before, .ak *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+
+/* a recorded demo (?demo): only the playfield (the previews on agi1.app/games) */
+.ak[data-ak-demo] .ak-bar, .ak[data-ak-demo] .ak-toasts, .ak[data-ak-demo] .ak-screen, .ak[data-ak-demo] .ak-layer { display: none !important; }

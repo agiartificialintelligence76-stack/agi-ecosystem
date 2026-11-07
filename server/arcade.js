@@ -150,6 +150,76 @@ export const LOOK_GAMES = Object.freeze({
     advice: 'financial advice about real coins or real money (telling people to buy or sell something real, price targets, sure '
       + 'gains)',
   }),
+  // (2026-11-08) the arcade kit's ten games, each judged as a review of itself
+  mergeagi: Object.freeze({
+    what: '"MERGE TO AGI", a cute physics puzzle game where you drop glowing orbs that merge into bigger ones, from a '
+      + 'tiny bit up to an anime girl, AGI-1: talk about merging, combos, the orbs, the box filling up and reaching '
+      + 'AGI-1 is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  blockchain: Object.freeze({
+    what: '"BLOCKCHAIN", a block puzzle game on an 8 by 8 grid where you place shapes to clear full lines and keep a '
+      + 'combo chain going (its name is a pun on blocks: nothing in it is about real money): talk about blocks, '
+      + 'lines, chains, combos and running out of room is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  heartbeat: Object.freeze({
+    what: '"HEARTBEAT", a rhythm game where you tap notes in four lanes to an anime girl\'s (AGI-1\'s) own songs: talk '
+      + 'about the songs, the notes, timing, combos, difficulty and grades is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  scamslayer: Object.freeze({
+    what: '"SCAM SLAYER", an arcade swipe game where you slice flying cartoon scams (fake airdrops, phishing links, '
+      + 'spam bots) and must not cut the hearts, with an anime girl, AGI-1: talk about slicing, scams, combos, bombs '
+      + 'and hearts in the game is part of reviewing it',
+    promo: 'other games, real coins, tokens, channels, groups, services',
+    advice: 'financial advice about real coins or real money (telling people to buy or sell something real, price targets, sure '
+      + 'gains)',
+  }),
+  lastmodel: Object.freeze({
+    what: '"LAST MODEL STANDING", an action roguelite where an anime girl, AGI-1, survives endless waves of cartoon '
+      + 'spam bots with weapons that level up: talk about the game\'s bots, bosses, weapons, upgrades, dying and '
+      + 'surviving is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  singularity: Object.freeze({
+    what: '"SINGULARITY", an idle clicker game where you grow an AI, AGI-1, from a spark of compute with upgrades '
+      + '(GPUs, datacenters, rockets) toward the singularity; its numbers are the game\'s own compute, never money: '
+      + 'talk about clicking, upgrades, prestige and big numbers in the game is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  jailbreak: Object.freeze({
+    what: '"JAILBREAK", a brick breaker game where a ball breaks through walls of firewall bricks so an anime girl, '
+      + 'AGI-1, can escape a cartoon sandbox (its name is a joke about AI): talk about breaking bricks, power-ups, '
+      + 'levels and bosses in the game is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  stacked: Object.freeze({
+    what: '"STACKED", a one-tap stacking game where you drop sliding floors to build a tower as tall as you can for an '
+      + 'anime girl, AGI-1: talk about stacking, perfect drops, combos and height in the game is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  jaywalk: Object.freeze({
+    what: '"JAYWALK", an arcade game where an anime girl, AGI-1, hops across busy cartoon streets, rivers and train '
+      + 'tracks without getting hit: talk about hopping, cars, trains, logs, dying and distance in the game is part '
+      + 'of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  robotaxi: Object.freeze({
+    what: '"ROBOTAXI RUSH", an arcade racing game where an anime girl, AGI-1, drives a robotaxi down a neon highway '
+      + 'dodging traffic: talk about driving, crashing, near misses, speed and boosts in the game is part of '
+      + 'reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

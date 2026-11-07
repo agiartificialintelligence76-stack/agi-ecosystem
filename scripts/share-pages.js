@@ -83,7 +83,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
-    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', 'dist/memes.html',
+    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', 'dist/mergeagi.html', 'dist/blockchain.html', 'dist/heartbeat.html', 'dist/scamslayer.html', 'dist/lastmodel.html', 'dist/singularity.html', 'dist/jailbreak.html', 'dist/stacked.html', 'dist/jaywalk.html', 'dist/robotaxi.html',
+    'dist/memes.html',
     'dist/pfp.html', 'dist/vote.html', 'dist/verify.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
   }

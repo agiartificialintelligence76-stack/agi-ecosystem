@@ -10,6 +10,18 @@ export const GAMES = {
   // since 2026-10-31: the fourth game, AGI-1's 3D chart climb to the Moon (see CLAUDE.md, "SKYBREAK"; stars, players and
   // plays; no leaderboards: its best times stay on the device)
   skybreak: { name: 'SKYBREAK', path: '/games/skybreak' },
+  // since 2026-11-08: ten more, built on the arcade kit (src/games/kit/): local bests only, no leaderboards (see CLAUDE.md,
+  // "The arcade kit and ten new games")
+  mergeagi: { name: "MERGE TO AGI", path: '/games/mergeagi', genre: 'Puzzle', kit: true },
+  blockchain: { name: "BLOCKCHAIN", path: '/games/blockchain', genre: 'Puzzle', kit: true },
+  heartbeat: { name: "HEARTBEAT", path: '/games/heartbeat', genre: 'Rhythm', kit: true },
+  scamslayer: { name: "SCAM SLAYER", path: '/games/scamslayer', genre: 'Action', kit: true },
+  lastmodel: { name: "LAST MODEL STANDING", path: '/games/lastmodel', genre: 'Action', kit: true },
+  singularity: { name: "SINGULARITY", path: '/games/singularity', genre: 'Idle', kit: true },
+  jailbreak: { name: "JAILBREAK", path: '/games/jailbreak', genre: 'Arcade', kit: true },
+  stacked: { name: "STACKED", path: '/games/stacked', genre: 'Arcade', kit: true },
+  jaywalk: { name: "JAYWALK", path: '/games/jaywalk', genre: 'Arcade', kit: true },
+  robotaxi: { name: "ROBOTAXI RUSH", path: '/games/robotaxi', genre: 'Racing', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);
