@@ -3,8 +3,8 @@
 // unlocked by beating the one before, and pass & play for two people on one screen. While she thinks, her attention
 // shows over the columns as bars that sharpen as she looks deeper ("depth 7 · 8 · 9"), and her portrait reacts.
 // This file wires the kit's frame, the input, the loop, her brain (./brain.js: a Web Worker for the big models) and
-// the ways it runs: your games, the title's quiet game, and ?demo (the arcade's preview: two of her playing, seeded,
-// silent, forever).
+// the ways it runs: your games, the title's quiet game, and ?demo (the arcade's preview: a 13B playing "you" against
+// her at 400B, seeded, silent, forever, its first game timed to the preview's recording).
 import './style.css';
 import { createShell, el } from '../kit/shell.js';
 import { fitCanvas } from '../kit/canvas.js';
@@ -71,7 +71,7 @@ let L = null;
 let Lt = null;                // the title's layout: the quiet game's board centred behind the words
 let t = 0;
 let glitchT = 0;
-let ladderOpen = false, resultUp = false, lastCard = null;
+let ladderOpen = false, lastCard = null;
 let ppFirst = PINK;
 let demoIndex = 0, demoGames = 0;
 let keyCol = -1;
@@ -126,7 +126,7 @@ function hooksFor(kind) {
     toast: (text, tone) => { if (loud) shell.toast(text, tone, 1700); },
     announce: (text) => { if (loud) live.textContent = text; },
     confetti: (who) => { if (kind !== 'attract') confetti(who); },
-    glitch: () => { if (kind !== 'attract') glitchT = 0.7; },
+    glitch: () => { if (kind !== 'attract') glitchT = 0.5; },
     chance: (p) => die() < p,
     land: (col, row, who, rows) => { if (kind !== 'attract') landRing(col, row, who, rows); },
     float: (text, col, who, big) => { if (kind !== 'attract') callout(text, col, who, big); },
@@ -214,7 +214,6 @@ function gameOver(result) {
   shell.audio.stopMusic();
   let line;
   if (r.firstAgi) line = LINES.firstAgi;
-  else if (r.promoted) line = `${say('yourWin', level, pick)}`;
   else if (result === 'win') line = say('yourWin', level, pick);
   else if (result === 'loss') line = say('herWin', level, pick);
   else line = say('draw', level, pick);
@@ -228,7 +227,6 @@ function gameOver(result) {
   ];
   // the shell's end state (Enter, Space or R: a rematch; no pause), with this game's own card on top
   shell.over({ score: null, title: 'Game over', onAgain: () => playLevel(level, { rematch: true }), onMenu: () => toTitle() });
-  resultUp = true;
   shell.card(lastCard = resultCard({
     mode: 'ladder', result, level, save, promoted: r.promoted, next: r.next, firstAgi: r.firstAgi, line, stats,
     share: shareText(result, level),
@@ -268,8 +266,7 @@ function ppOver(result) {
   undoBtn.hidden = true;
   const line = result === 'draw' ? say('ppDraw', 0, pick) : say('ppWin', 0, pick, { who: result });
   shell.over({ score: null, title: 'Game over', onAgain: () => playPP({ swap: true }), onMenu: () => toTitle() });
-  resultUp = true;
-  shell.card(resultCard({
+  shell.card(lastCard = resultCard({
     mode: 'pp', result, level: 0, save, line,
     stats: [['Pink wins', String(save.pp.pink)], ['Mint wins', String(save.pp.mint)], ['Draws', String(save.pp.draws)], ['Stones played', String(count(M.cells))]],
     onRematch: () => playPP({ swap: true }), onMenu: () => toTitle(),
@@ -309,7 +306,8 @@ function toTitle() {
 function startAttract() {
   const o = pick(ATTRACT_OPENINGS);
   attract = new Match({
-    mode: 'attract', level: 3, pinkLevel: 2, cells: fromPicture(o.pic), turn: o.turn === 'x' ? PINK : MINT,
+    // (a cheap pair: their searches run on the main thread while the title animates)
+    mode: 'attract', level: 2, pinkLevel: 1, cells: fromPicture(o.pic), turn: o.turn === 'x' ? PINK : MINT,
     seed: newSeed(), hooks: hooksFor('attract'), pace: { think: 1.7, aim: 2.2 },
   });
   attract.start();
@@ -332,7 +330,7 @@ function closeLadder() {
   if (shell.state === 'over' && lastCard) { shell.card(lastCard, { label: 'Game over' }); return; }
   shell.closeCard();
 }
-function closeCards() { ladderOpen = false; resultUp = false; }
+function closeCards() { ladderOpen = false; lastCard = null; }
 
 // ---------- the demo (?demo): 13B playing "you" against her at 400B, from a board that ends in the preview's window ----------
 let demoWait = 0;
@@ -490,7 +488,7 @@ const loop = createLoop({
       return;
     }
     renderer.draw(g, view, L, m, {
-      t, levelLabel, shake, parts, floats, glitch: glitchT / 0.7, demo: DEMO, coachText: TOUCH ? 'Tap a column' : keyCol >= 0 ? 'Space drops it' : 'Click a column',
+      t, levelLabel, shake, parts, floats, glitch: glitchT / 0.5, demo: DEMO, coachText: TOUCH ? 'Tap a column' : keyCol >= 0 ? 'Space drops it' : 'Click a column',
       ladder: m.mode === 'ladder' ? ladderInfo(m.level) : null,
     });
   },

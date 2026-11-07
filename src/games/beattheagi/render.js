@@ -572,13 +572,13 @@ export function createRenderer({ reduced = false } = {}) {
     const frac = (v) => v - Math.floor(v);
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < 3; i++) {
       const r = frac(Math.sin(seed * 12.9898 + i * 78.233) * 43758.5453);
       const r2 = frac(Math.sin(seed * 4.1414 + i * 13.37) * 9182.3127);
-      if (r < 0.3) continue;
+      if (r < 0.45) continue;
       const x = (b.x - L.C * 0.3) * d, w = (b.w + L.C * 0.6) * d;
       const sy = Math.round((b.y + b.h * r2 * 0.92) * d), sh = Math.round(Math.max(3, b.h * (0.03 + 0.07 * r)) * d);
-      const dx = Math.round((r - 0.65) * L.C * 0.9 * k * d);
+      const dx = Math.round((r - 0.72) * L.C * 0.75 * k * d);
       if (!dx) continue;
       g.drawImage(cv, x, sy, w, sh, x + dx, sy, w, sh);
       g.fillStyle = i % 2 ? COL.mint : COL.pink;

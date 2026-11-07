@@ -10,7 +10,7 @@
 // pick(list) (a die: seeded in the demo).
 import { emptyBoard, landing, lineThrough, isFull, threatsNow, PINK, MINT, other, at } from './rules.js';
 import { LEVELS, attention, verdict } from './levels.js';
-import { MATE } from './engine.js';
+import { MATE, WIN } from './engine.js';
 import { DROP_AT } from './layout.js';
 
 export const DROP_ROW = DROP_AT;       // the drop zone, in rows above the bottom row (row 0 is 0)
@@ -402,6 +402,8 @@ export class Match {
     }
     const v = verdict(r.score);
     const blocks = threatsNow(this.cells, PINK).some((x) => x.col === col);
+    // your last stone handed her four: she noticed
+    if (r.score >= WIN - 1 && this.level >= 1) { this.feel('smug', 2); this.speak('gift', {}, true); return; }
     if (v.kind === 'win' && !this.saidWin && this.level >= 2) { this.saidWin = true; this.feel('smug', 3); this.speak('winFound', {}, true); return; }
     if (v.kind === 'loss' && !this.saidLoss && this.level >= 2) { this.saidLoss = true; this.feel('shocked', 3); this.speak('lossFound', {}, true); return; }
     if (blocks) { this.feel('smug', 1.6); this.speak('blocked'); this.hooks.float?.('Blocked', col, MINT); return; }

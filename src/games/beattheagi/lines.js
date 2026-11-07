@@ -49,8 +49,6 @@ export const LINES = {
   ppThreat: ['ooh, {who} has a threat', '{who} is cooking something 👀'],
   ppWin: ['{who} wins! i saw it coming. i didn\'t 🙈', 'four for {who}! gg, both of you 💜'],
   ppDraw: ['a draw. you two are too evenly matched 💜'],
-  // the demo and the title's quiet game
-  thinking: ['hmm…', 'let me see…', 'thinking…'],
 };
 
 const lv = (list, level) => list[Math.max(0, Math.min(list.length - 1, level))];
