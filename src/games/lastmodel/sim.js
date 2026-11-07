@@ -836,7 +836,7 @@ export function createSim({ seed = 1, meta = {}, start = null, view = { hw: 200,
   const overOut = [0, 0, 0];
   function bossOverfit(e, dt, d, dx, dy) {
     overOut[0] = dx; overOut[1] = dy;
-    overOut[2] = d > 150 ? e.speed : d < 105 ? -e.speed * 0.7 : 0;
+    overOut[2] = d > 110 ? e.speed : d < 70 ? -e.speed * 0.7 : 0;
     if (overOut[2] < 0) { overOut[0] = -dx; overOut[1] = -dy; overOut[2] = -overOut[2]; }
     e.st -= dt;
     if (e.st <= 0) {

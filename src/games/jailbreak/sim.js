@@ -12,7 +12,10 @@ export const BALL_R = 7;
 // wider than it looks it catches (forgiving)
 export const PADDLE = { w: 80, h: 14, gap: 92, wide: 1.45, shrink: 0.62, keySpeed: 980, keyAccel: 5200, keyStart: 300, grace: 3 };
 // the ball's speed: each world's to start with, a little faster the longer a level goes (heat), a cap
-export const SPEED = { worlds: [360, 378, 395, 410, 425, 440], cap: 760, heat: 0.0035, heatMax: 0.3, slow: 0.7, fast: 1.32, ease: 5 };
+export const SPEED = { worlds: [430, 448, 464, 478, 492, 506], cap: 800, heat: 0.003, heatMax: 0.25, slow: 0.7, fast: 1.3, ease: 5 };
+// the last few bricks: once only this many are left and nothing has broken for `after` seconds, a rising ball bends
+// gently toward the nearest one (at most `turn` radians a second), so the end of a level never drags
+export const HOMING = { left: 4, after: 5, turn: 0.65 };
 export const DUR = { wide: 15, shrink: 10, laser: 8, sticky: 12, slow: 10, fire: 6, fast: 8 };
 export const TIMING = { intro: 0.9, serveAuto: 3, lost: 1.05, stickyHold: 2.5, laserEvery: 0.42, laserCd: 0.15, blast: 0.075, calm: 9, stun: 0.85 };
 export const LIVES = { start: 3, max: 5 };
@@ -46,7 +49,7 @@ export function createSim({ seed = 1, H = 700, mode = 'story' } = {}) {
     paddle: { x: FIELD_W / 2, y: H - PADDLE.gap, w: PADDLE.w, h: PADDLE.h, kv: 0, vx: 0, stun: 0, squash: 0, flash: 0, fire: 0 },
     fx: { wide: 0, shrink: 0, laser: 0, sticky: 0, slow: 0, fire: 0, fast: 0 },
     lives: LIVES.start, score: 0, combo: 0, bestCombo: 0, broken: 0, levelLost: 0, runLost: 0, pickups: 0,
-    baseSpeed: SPEED.worlds[0], laserT: 0, laserCd: 0, hitStop: 0, lastBreak: null, allLost: false, nextId: 1,
+    baseSpeed: SPEED.worlds[0], laserT: 0, laserCd: 0, hitStop: 0, lastBreak: null, lastBreakT: 0, allLost: false, nextId: 1,
     events: [],
   };
 }
@@ -87,7 +90,7 @@ export function startLevel(s, def, { H = s.H, intro = TIMING.intro } = {}) {
   for (const k of Object.keys(s.fx)) s.fx[k] = 0;
   const P = s.paddle;
   P.y = s.H - PADDLE.gap; P.x = s.W / 2; P.w = PADDLE.w; P.kv = 0; P.vx = 0; P.stun = 0; P.squash = 0; P.flash = 0;
-  s.levelT = 0; s.playT = 0; s.levelLost = 0; s.combo = 0; s.lastBreak = null; s.allLost = false; s.hitStop = 0;
+  s.levelT = 0; s.playT = 0; s.levelLost = 0; s.combo = 0; s.lastBreak = null; s.lastBreakT = 0; s.allLost = false; s.hitStop = 0;
   s.baseSpeed = def.speed || SPEED.worlds[clamp(s.world - 1, 0, 5)];
   s.phase = 'intro'; s.phaseT = 0; s.introLen = intro;
   serveBall(s);
@@ -264,6 +267,7 @@ function stepBalls(s, dt, input) {
     const want = targetSpeed(s);
     const next = sp + (want - sp) * (1 - Math.exp(-SPEED.ease * dt));
     b.vx *= next / sp; b.vy *= next / sp;
+    if (b.vy < 0 && homing(s)) home(s, b, dt);
     pushOut(s, b);
     sweepBall(s, b, dt);
     b.portalCd = Math.max(0, b.portalCd - dt);
@@ -285,6 +289,37 @@ function stepBalls(s, dt, input) {
     }
   }
   if (s.phase === 'live' && s.balls.length === 0) s.allLost = true;
+}
+
+export const homing = (s) => !s.boss && s.required > 0 && s.required <= HOMING.left && s.playT - s.lastBreakT > HOMING.after;
+// nothing that stops a ball (steel, a shut gate) on the straight line from the ball to the brick
+function inSight(s, b, k) {
+  const tx = k.x + k.w / 2, ty = k.y + k.h / 2;
+  const n = Math.ceil(Math.hypot(tx - b.x, ty - b.y) / 8);
+  for (let i = 1; i < n; i++) {
+    const x = b.x + ((tx - b.x) * i) / n, y = b.y + ((ty - b.y) * i) / n;
+    for (const o of s.bricks) {
+      if (!o.alive || o === k || !(o.kind === 'steel' || o.kind === 'gate')) continue;
+      if (x >= o.x - b.r && x <= o.x + o.w + b.r && y >= o.y - b.r && y <= o.y + o.h + b.r) return false;
+    }
+  }
+  return true;
+}
+function home(s, b, dt) {
+  let best = null, bd = Infinity;
+  for (const k of s.bricks) {
+    if (!k.alive || !k.required) continue;
+    const dx = k.x + k.w / 2 - b.x, dy = k.y + k.h / 2 - b.y, d = dx * dx + dy * dy;
+    if (dy < 0 && d < bd && inSight(s, b, k)) { bd = d; best = k; }
+  }
+  if (!best) return;
+  const want = Math.atan2(best.y + best.h / 2 - b.y, best.x + best.w / 2 - b.x), have = Math.atan2(b.vy, b.vx);
+  let d = want - have;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  const turn = Math.max(-HOMING.turn * dt, Math.min(HOMING.turn * dt, d));
+  rotate(b, turn);
+  minClimb(b);
 }
 
 // a moving brick, a plate or the Warden moved into a ball: out it goes (the shallowest way) and off it bounces
@@ -377,7 +412,6 @@ function paddleHit(s, b, nx, ny) {
     const off = paddleOffset(b.x, P.x, P.w / 2 + b.r * 0.6);
     s.combo = 0;
     P.squash = 1;
-    b.calm = 0;
     if (s.fx.sticky > 0) {
       b.stuck = true; b.off = clamp((b.x - P.x) / (P.w / 2), -0.95, 0.95); b.stuckT = 0; b.vx = 0; b.vy = 0;
       b.y = P.y - b.r - 0.5;
@@ -442,7 +476,7 @@ function breakBrick(s, k, how) {
   s.score += pts;
   s.broken++;
   const cx = k.x + k.w / 2, cy = k.y + k.h / 2;
-  if (k.required) { s.required--; s.lastBreak = { x: cx, y: cy }; }
+  if (k.required) { s.required--; s.lastBreak = { x: cx, y: cy }; s.lastBreakT = s.playT; }
   ev(s, 'break', { x: cx, y: cy, brick: k, pts, mult, combo: s.combo, how });
   if (s.combo >= 5 && s.combo % 5 === 0) ev(s, 'combo', { n: s.combo, x: cx, y: cy });
   if (k.kind === 'key') {

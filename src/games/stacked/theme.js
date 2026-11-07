@@ -11,31 +11,31 @@ export const INK = '#170a36';
 
 // the floors' colour by floor number: keyframes, interpolated; past the last one it cycles
 export const RAMP = Object.freeze([
-  [0, '#ffc933'],    // honey
-  [9, '#ff9a3d'],    // tangerine
-  [18, '#ff5f6d'],   // coral
-  [27, '#ff4da6'],   // pink
-  [37, '#b45cff'],   // orchid
-  [47, '#6b7bff'],   // periwinkle
-  [56, '#4cc3ff'],   // sky
-  [68, '#3ff0c3'],   // mint
-  [80, '#8fe86a'],   // lime
-  [90, '#ffc933'],   // honey again for the blue stratosphere
-  [104, '#ff9a3d'],
-  [118, '#ff5f6d'],
-  [132, '#ff4da6'],
-  [142, '#b45cff'],  // orbit: the whole palette, round and round
-  [152, '#6b7bff'],
-  [162, '#4cc3ff'],
-  [172, '#3ff0c3'],
-  [182, '#8fe86a'],
-  [192, '#ffc933'],
-  [202, '#ff9a3d'],
-  [212, '#ff5f6d'],
-  [222, '#ff4da6'],
-  [232, '#b45cff'],  // = floor 142's: the cycle closes
+  [0, '#ffc933'],    // honey          city night: warm floors on the dark
+  [10, '#ff9a3d'],   // tangerine
+  [20, '#ff5f6d'],   // coral
+  [30, '#ff4da6'],   // pink           rain clouds: still warm on the slate
+  [42, '#ff5fd2'],   // rose
+  [52, '#b45cff'],   // orchid         sunrise: cool floors on the peach sky
+  [62, '#6b7bff'],   // periwinkle
+  [72, '#4cc3ff'],   // sky
+  [82, '#3ff0c3'],   // mint
+  [92, '#8fe86a'],   // lime           stratosphere: warm again on the blue
+  [104, '#ffc933'],
+  [116, '#ff9a3d'],
+  [128, '#ff5f6d'],
+  [140, '#ff4da6'],  // orbit: the whole palette, round and round
+  [150, '#b45cff'],
+  [160, '#6b7bff'],
+  [170, '#4cc3ff'],
+  [180, '#3ff0c3'],
+  [190, '#8fe86a'],
+  [200, '#ffc933'],
+  [210, '#ff9a3d'],
+  [220, '#ff5f6d'],
+  [230, '#ff4da6'],  // = floor 140's: the cycle closes
 ]);
-const CYCLE_FROM = 142, CYCLE = 232 - 142;
+const CYCLE_FROM = 140, CYCLE = 230 - 140;
 
 export function hexToRgb(hex) {
   const n = parseInt(hex.replace('#', ''), 16);
@@ -77,10 +77,10 @@ export const THEMES = Object.freeze([
     earth: 0, earthR: 6, earthY: -0.36, earthCol: '#2a63c8', limb: '#bff3ff',
     island: '#3a2f68', park: '#21443e', islandSide: '#22183f' },
   { id: 'rain',
-    top: '#171a30', mid: '#343854', bot: '#646886', midAt: 0.55,
-    light: '#e4e6ff', lightK: 0.5, ambTop: '#8f92bd', ambBot: '#2b2c47',
-    glass: '#28304f', lit: 0.46, winA: '#ffc94d', winB: '#6ff5d0', winC: '#ff7ab8',
-    stars: 0, skyline: 0, moon: 0, rain: 1, clouds: 1, cloudA: '#4a4e6e', cloudB: '#7d809f',
+    top: '#121b26', mid: '#2a3a4b', bot: '#5d7083', midAt: 0.55,
+    light: '#eef3ff', lightK: 0.58, ambTop: '#a3b2c8', ambBot: '#28323f',
+    glass: '#22303f', lit: 0.46, winA: '#ffc94d', winB: '#6ff5d0', winC: '#ff7ab8',
+    stars: 0, skyline: 0, moon: 0, rain: 1, clouds: 1, cloudA: '#3f5163', cloudB: '#7a8b9c',
     sun: 0, sunCol: '#fff3c9', sea: 0, seaA: '#ffffff', seaB: '#ffd1c2',
     earth: 0, earthR: 6, earthY: -0.36, earthCol: '#2a63c8', limb: '#bff3ff',
     island: '#3a2f68', park: '#21443e', islandSide: '#22183f' },

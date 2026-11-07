@@ -98,9 +98,9 @@ export const ENEMIES = {
   troll:   { id: 3, name: 'TROLL', r: 6, speed: 36, hp: 17, dmg: 5, xp: 2, cost: 3, mass: 0.2 },
   ghost:   { id: 4, name: 'FUD GHOST', r: 6, speed: 47, hp: 14, dmg: 7, xp: 2, cost: 2, mass: 0.1 },
   swarm:   { id: 5, name: 'SWARMLET', r: 3.5, speed: 66, hp: 2, dmg: 3, xp: 1, cost: 0.4, mass: 0 },
-  botnet:  { id: 6, name: 'BOTNET', r: 17, speed: 32, hp: 1250, dmg: 15, xp: 60, cost: 0, mass: 1, boss: true },
+  botnet:  { id: 6, name: 'BOTNET', r: 17, speed: 32, hp: 1050, dmg: 15, xp: 60, cost: 0, mass: 1, boss: true },
   broker:  { id: 7, name: 'DATA BROKER', r: 14, speed: 42, hp: 4200, dmg: 18, xp: 120, cost: 0, mass: 1, boss: true },
-  overfit: { id: 8, name: 'THE OVERFIT', r: 20, speed: 24, hp: 6000, dmg: 22, xp: 200, cost: 0, mass: 1, boss: true },
+  overfit: { id: 8, name: 'THE OVERFIT', r: 20, speed: 26, hp: 5200, dmg: 22, xp: 200, cost: 0, mass: 1, boss: true },
 };
 export const KINDS = ['spam', 'crawler', 'captcha', 'troll', 'ghost', 'swarm', 'botnet', 'broker', 'overfit'];
 export const BOSSES = [

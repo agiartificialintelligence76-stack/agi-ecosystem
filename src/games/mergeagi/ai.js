@@ -3,9 +3,10 @@
 // the orb lands (./physics.js landing()) and scores the spot: a match there is worth a lot, a match beside it too, a low
 // and flat pile is good, burying a smaller orb or going near the red line is bad. Pure (no DOM, no Math.random: its dice
 // are a seeded kit rng), so a seed repeats the demo exactly.
+import { rng, approach } from '../kit/fx.js';
 import { JAR, landing, TICK } from './physics.js';
 import { RADII, DROP_MAX } from './tiers.js';
-import { LINE, drop, step, canDrop, clampX } from './rules.js';
+import { LINE, createGame, drop, step, canDrop, clampX } from './rules.js';
 
 const STEP_X = 10;
 const spot = { y: 0, hit: null };
@@ -49,20 +50,22 @@ export function scoreAt(orbs, x, t, r) {
   return s;
 }
 
-// the demo's lucky dropper: now and then it hands out a tier that's lying on top of the pile, so merges keep coming
-export function luckyPicker(rand, chance = 0.55) {
+// the demo's lucky dropper: most of the time it hands out the tier (1–5) that has the best spot waiting for it on the
+// pile right now (a match on top, a chain beside it), so the preview keeps merging; otherwise the usual dice
+export function luckyPicker(rand, chance = 0.7) {
   return (g) => {
-    if (!rand.chance(chance)) return null;
-    const orbs = g.world.orbs, top = [];
-    for (const o of orbs) {
-      if (o.tier > DROP_MAX) continue;
-      landing(orbs, o.x, o.r, spot);
-      if (spot.hit === o) top.push(o.tier);
+    if (!rand.chance(chance) || g.queued < 3) return null;
+    const orbs = g.world.orbs;
+    let best = -Infinity, bestT = null;
+    for (let t = 1; t <= DROP_MAX; t++) {
+      const r = RADII[t];
+      let s = -Infinity;
+      for (let x = r; x <= JAR.W - r + 0.01; x += 20) s = Math.max(s, scoreAt(orbs, x, t, r));
+      for (const o of orbs) if (o.tier === t) s = Math.max(s, scoreAt(orbs, clampX(o.x, t), t, r));
+      s += t * 6 + rand.next() * 20;          // bigger merges are bigger moments
+      if (s > best) { best = s; bestT = t; }
     }
-    if (!top.length) return null;
-    top.sort((a, b) => b - a);
-    // the bigger ones a little more often: bigger merges, bigger moments
-    return top[Math.min(top.length - 1, Math.floor(rand.next() ** 1.6 * top.length))];
+    return bestT;
   };
 }
 
@@ -89,4 +92,30 @@ export function pileTop(g) {
   let top = JAR.H;
   for (const o of g.world.orbs) if (o.vx * o.vx + o.vy * o.vy < 80 * 80) top = Math.min(top, o.y - o.r);
   return top;
+}
+
+// ---------- the auto player (the demo, the title screen): a mid-game jar, then one physics tick at a time ----------
+export const DEMO_FILL = Object.freeze({ drops: 70, stopAt: 0.52 });
+export function createAuto(seed, fill = DEMO_FILL, { lucky = false } = {}) {
+  const g = createGame({ seed, pick: lucky ? luckyPicker(rng((seed * 7919 + 5) >>> 0)) : null });
+  const r = rng((seed * 977 + 13) >>> 0);
+  prefill(g, r, fill);
+  return { g, r, aim: JAR.W / 2, aimV: 0, target: null, wait: 0, overT: 0 };
+}
+// its decision this tick: aim at the best column, then drop once it's there (a beat later); → the dropped orb, or null
+export function autoTick(a) {
+  const g = a.g;
+  let dropped = null;
+  if (canDrop(g)) {
+    if (a.target == null) { a.target = chooseX(g, a.r); a.wait = 0.06 + a.r.next() * 0.1; }
+    a.wait -= TICK;
+    if (Math.abs(a.aim - a.target) < 1.5 && a.wait <= 0) {
+      dropped = drop(g, a.target);
+      a.target = null;
+    }
+  }
+  const prev = a.aim;
+  if (a.target != null) a.aim = approach(a.aim, a.target, 13, TICK);
+  a.aimV = approach(a.aimV, (a.aim - prev) / TICK / 900, 12, TICK);
+  return dropped;
 }

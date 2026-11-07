@@ -62,6 +62,7 @@ export class Session {
     this.cleared = 0;
     this.line = null;               // AGI-1's line on the screen: { text, t0 }
     this.lastLine = -99;
+    this.lineGone = -99;
     this.grey = null;               // the end: when each cell turns grey
     this.checkDanger(true);
   }
@@ -110,7 +111,7 @@ export class Session {
       d.tickerStep -= vdt;
       if (d.tickerStep <= 0) { d.ticker++; d.tickerStep = 0.075; d.tickerFlash = this.time; }
     }
-    if (this.line && this.time > this.line.t0 + T.say) this.line = null;
+    if (this.line && this.time > this.line.t0 + T.say) { this.line = null; this.lineGone = this.time; }
     // a drag lifts quickly; it leans the way it moves
     if (this.drag) {
       const g = this.drag;
@@ -178,7 +179,8 @@ export class Session {
       let at = now + T.clearDelay + T.sweep * (dist / N);
       const land = landing.get(i);
       if (land != null) at = Math.max(at, land + T.pop * 0.45);
-      this.clearing.push({ i, c, at, burst: false, land: land ?? null, dx: land != null ? dx : 0, dy: land != null ? dy : 0 });
+      // the line takes the dropped piece's color (as its preview showed), then bursts in it
+      this.clearing.push({ i, c: p.color, was: c, at, burst: false, land: land ?? null, dx: land != null ? dx : 0, dy: land != null ? dy : 0 });
       sx += this.cellX(i); sy += this.cellY(i);
     }
     for (const k of rows) this.beams.push({ row: true, k, o: cx, t0: now + T.clearDelay * 0.5, color });
@@ -186,14 +188,16 @@ export class Session {
     const n = r.cleared.length;
     const mx = clamp(sx / n, this.L.gx + C * 1.6, this.L.gx + C * 6.4), my = clamp(sy / n, this.L.gy + C * 1.2, this.L.gy + C * 6.8);
     const pts = r.parts.clear + r.parts.bonus;
-    this.after(T.clearDelay + 0.05, () => {
-      this.floats.add({ x: mx, y: my + C * 0.9, text: `+${pts.toLocaleString('en-US')}`, color: PAPER, size: C * (0.52 + Math.min(0.3, r.lines * 0.06)), life: 1.1, rise: C * 1.1, font: `900 1em ${DISPLAY}` });
-    });
-    // labels: several lines at once, and the chain
+    // labels: several lines at once, the chain, and the points under them (or just the points, floating up)
+    const ptsText = `+${pts.toLocaleString('en-US')}`;
     if (r.lines >= 2) {
-      this.labels.push({ text: MULTI[Math.min(r.lines, 6)], sub: r.chain >= 2 ? r.chain : 0, x: mx, y: my - C * 0.15, t0: now + T.clearDelay, life: 1.15, color: MULTI_COLOR[Math.min(r.lines, 6)], size: C * (0.92 + Math.min(0.3, (r.lines - 2) * 0.12)), rot: -0.08 });
+      this.labels.push({ text: MULTI[Math.min(r.lines, 6)], sub: r.chain >= 2 ? r.chain : 0, pts: ptsText, x: mx, y: my - C * 0.55, t0: now + T.clearDelay, life: 1.2, color: MULTI_COLOR[Math.min(r.lines, 6)], size: C * (0.92 + Math.min(0.3, (r.lines - 2) * 0.12)), rot: -0.08 });
     } else if (r.chain >= 2) {
-      this.labels.push({ text: '', sub: r.chain, x: mx, y: my - C * 0.2, t0: now + T.clearDelay, life: 1.0, color: HEX[0], size: C * 0.8, rot: -0.06 });
+      this.labels.push({ text: '', sub: r.chain, pts: ptsText, x: mx, y: my - C * 0.3, t0: now + T.clearDelay, life: 1.05, color: HEX[0], size: C * 0.72, rot: -0.06 });
+    } else {
+      this.after(T.clearDelay + 0.05, () => {
+        this.floats.add({ x: mx, y: my, text: ptsText, color: PAPER, size: C * 0.56, life: 1.0, rise: C * 0.9, font: `900 1em ${DISPLAY}` });
+      });
     }
     this.sfx('clear', r.lines, r.chain);
     if (r.chain > r.chainBefore && r.chain >= 2) this.after(0.12, () => this.sfx('chainUp', r.chain));

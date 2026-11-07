@@ -302,8 +302,9 @@ const clampAbs = (v, m) => (v > m ? m : v < -m ? -m : v);
 function grow32(arr, n) { const a = new Int32Array(n); a.set(arr.subarray(0, Math.min(arr.length, n))); return a; }
 
 // Where a circle of radius r dropped straight down at x first touches something: { y (its centre then), hit (the orb
-// it lands on, or null for the glass) }. The guide line and the demo's player both use it. `out` is filled (no garbage).
-export function landing(orbs, x, r, out = { y: 0, hit: null }) {
+// it lands on, or null for the glass) }. The guide line and the demo's player both use it. `out` is filled (no garbage);
+// `skipFalling` leaves out an orb that was just dropped and is still falling (the guide, which shouldn't flicker).
+export function landing(orbs, x, r, out = { y: 0, hit: null }, skipFalling = false) {
   const W = JAR.W, H = JAR.H, C = JAR.CORNER;
   let y = H - r, hit = null;
   if (r < C) {
@@ -317,6 +318,7 @@ export function landing(orbs, x, r, out = { y: 0, hit: null }) {
   for (const o of orbs) {
     const dx = x - o.x, rr = r + o.r;
     if (dx >= rr || dx <= -rr) continue;
+    if (skipFalling && o.exempt > 0 && o.vy > 160) continue;   // one just dropped, still on its way down
     const yc = o.y - Math.sqrt(rr * rr - dx * dx);
     if (yc < y) { y = yc; hit = o; }
   }

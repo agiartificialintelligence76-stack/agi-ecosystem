@@ -70,6 +70,11 @@ let zoneCur = 0, zonePrev = 0, zoneT = 1, zoneAlt = 0;
 let lightning = 0, boltIn = 5, boltTwice = 0;
 let firstDrop = false, tinySaid = false, closeAt = -99, lastInput = 'mouse';
 let popK = 0, bannerT = 9, sayT = 9, sayDur = 2.6, hintT = 0, fxDirty = false;
+// a tap or key that skips to the end card must not also press the card's button that appears under it
+let swallowUntil = 0;
+addEventListener('click', (e) => {
+  if (performance.now() < swallowUntil && e.target?.closest?.('.ak-layer')) { e.preventDefault(); e.stopImmediatePropagation(); }
+}, { capture: true });
 const look = rng(SEED || 20261108);                       // her lines and the sky's thunder (a demo replays exactly)
 const pick = (arr) => arr[Math.floor(look.next() * arr.length) % arr.length];
 // the demo's AI
@@ -82,6 +87,7 @@ function layout() {
   if (!scene) return;
   const r = shell.stage.getBoundingClientRect();
   scene.resize(Math.round(r.width), Math.round(r.height), dpr);
+  if (!hud.hidden) layoutHud();
   reframe(true);
 }
 let slowT = 0;
@@ -101,6 +107,11 @@ function reframe(soft = false) {
 }
 
 // ---------- the HUD ----------
+function layoutHud() {
+  const r = shell.stage.getBoundingClientRect(), hb = hud.getBoundingClientRect();
+  // sideways phones keep it on the left (nothing to avoid above the tower)
+  hudBottom = hb.height && hb.left < r.width * 0.25 && hb.right < r.width * 0.45 ? 0 : hb.bottom - r.top;
+}
 function updateHud(instant = false) {
   const h = run ? L.heightOf(run) : 0;
   floorNum.textContent = String(h);
@@ -161,9 +172,15 @@ function perfectFx(ev, entry) {
   if (ev.streak >= 3) scene.ring(ev.placed, ev.n, { tone: tones[tier], delay: 0.12, dur: 0.7 });
   if (ev.milestone) scene.ring(ev.placed, ev.n, { tone: '#fffaf0', delay: 0.26, dur: 0.8 });
   const front = topCorners(ev.placed, ev.n)[2];
+  // one label at a time: a new perfect replaces the last one's words
+  floats.items = floats.items.filter((f) => f.tag !== 'perfect');
   const text = ev.milestone ? `×${ev.streak} STREAK +${L.STREAK_BONUS.points}` : ev.streak > 1 ? `PERFECT ×${ev.streak}` : 'PERFECT';
-  floats.add({ x: clampX(front[0]), y: front[1] - 26, text, color: TIERS[tier][0] === '#fffaf0' ? '#fffaf0' : TIERS[tier][0], size: ev.milestone ? 30 : 22 + Math.min(6, ev.streak), life: 0.95, rise: 46 });
-  if (ev.grew > 0 && ev.streak === L.GROW.from) floats.add({ x: clampX(front[0]), y: front[1] + 6, text: 'GROWING', color: '#3ff0c3', size: 16, life: 0.9, rise: 30 });
+  floats.add({ x: clampX(front[0]), y: clampY(front[1] - 26), text, color: TIERS[tier][0] === '#fffaf0' ? '#fffaf0' : TIERS[tier][0], size: ev.milestone ? 30 : 22 + Math.min(6, ev.streak), life: 0.95, rise: 46 });
+  floats.items[floats.items.length - 1].tag = 'perfect';
+  if (ev.grew > 0 && ev.streak === L.GROW.from) {
+    floats.add({ x: clampX(front[0]), y: clampY(front[1] - 26) + 30, text: 'GROWING', color: '#3ff0c3', size: 16, life: 0.9, rise: 30 });
+    floats.items[floats.items.length - 1].tag = 'perfect';
+  }
 }
 function cutFx(ev) {
   const k = ev.axis, sign = Math.sign(ev.delta) || 1;
@@ -178,10 +195,13 @@ function cutFx(ev) {
   }
   if (ev.close) {
     scene.project(ex, y + 0.4, ez, P);
-    floats.add({ x: clampX(P.x), y: P.y - 18, text: 'CLOSE ONE!', color: '#ff4da6', size: 20, life: 0.9, rise: 36 });
+    floats.add({ x: clampX(P.x), y: clampY(P.y - 18), text: 'CLOSE ONE!', color: '#ff4da6', size: 20, life: 0.9, rise: 36 });
   }
 }
 const clampX = (x) => Math.min(Math.max(x, 90), fxView.w - 90);
+// words never rise into the HUD
+let hudBottom = 0;
+const clampY = (y) => Math.max(y, hudBottom + 70);
 
 function drawFx(dt) {
   parts.update(dt);
@@ -228,6 +248,7 @@ function newRun() {
   scene.framePlay(levelY(run.moving.n), top.x, top.z, { snap: DEMO });
   updateHud(true);
   hud.hidden = false;
+  layoutHud();
   shell.started();
   bestChip.set(shell.store.best() ?? 0);
   sound.start();
@@ -297,6 +318,7 @@ function endRun() {
   zoomOut();
   phase = 'over';
   if (DEMO) { newRun(); return; }
+  swallowUntil = performance.now() + 500;
   const s = L.summary(run);
   const before = shell.store.best();
   const isBest = s.score > 0 && (before == null || s.score > before);

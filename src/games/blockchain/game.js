@@ -8,7 +8,7 @@ import { createShell, el } from '../kit/shell.js';
 import { fitCanvas } from '../kit/canvas.js';
 import { createLoop } from '../kit/loop.js';
 import { pointer } from '../kit/input.js';
-import { DEMO, SEED, TOUCH } from '../kit/env.js';
+import { DEMO, SEED, TOUCH, QUERY } from '../kit/env.js';
 import { rng, fmt } from '../kit/fx.js';
 import { Session } from './session.js';
 import { Bot } from './bot.js';
@@ -16,6 +16,7 @@ import { createRenderer } from './render.js';
 import { createSfx } from './sound.js';
 import { demoOpening } from './ai.js';
 import { endLine, shareText } from './lines.js';
+import { PIECE } from './rules.js';
 
 const TAGLINE = 'Place blocks. Clear lines. Keep the chain alive.';
 const root = document.getElementById('ak-root');
@@ -243,6 +244,24 @@ const loop = createLoop({
   },
   paused: () => shell.state !== 'play' && !DEMO,
 });
+
+// QA (`?qa`): a handle for the screenshot scripts (stage a board, read the run); never on a link from the site
+if (QUERY.has('qa')) {
+  window.__bc = {
+    get se() { return se; },
+    get L() { return L; },
+    // stage(rows of '.'/'1-7', [piece ids]): the current run's board and tray as given
+    stage(rows, tray, extra = {}) {
+      const b = se.s.board;
+      rows.forEach((row, y) => [...row].forEach((ch, x) => { b[y * 8 + x] = ch === '.' ? 0 : Number(ch); }));
+      se.s.tray = tray.map((id) => (id == null ? -1 : PIECE[id]));
+      Object.assign(se.s, extra);
+      se.s.over = false;
+      se.checkDanger(true);
+    },
+    drop(slot, x, y) { return se.drop(slot, x, y); },
+  };
+}
 
 // the canvas's words wait for the arcade's fonts (never longer than a moment)
 const fonts = Promise.all([

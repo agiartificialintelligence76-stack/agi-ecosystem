@@ -104,7 +104,7 @@ void main() {
   if (top && uKind > 3.5) {
     vec2 q = vLocal.xz;
     float m = max(abs(q.x), abs(q.y));
-    float plaza = 1.0 - smoothstep(2.2 - fw.x, 2.2 + fw.x, m);
+    float plaza = 1.0 - smoothstep(2.0 - fw.x, 2.0 + fw.x, m);
     vec2 g = abs(fract(q / 0.6) - 0.5) * 0.6 / fw;
     float grout = 1.0 - smoothstep(0.0, 1.2, min(g.x, g.y));
     vec3 stone = col * (1.0 - 0.12 * grout);
@@ -112,7 +112,7 @@ void main() {
     float dots = step(0.86, hash12(floor(q * 3.0) + 2.0)) * (1.0 - plaza);
     park = mix(park, park * 1.25, dots);
     col = mix(park, stone, plaza);
-    col = mix(col, uInk, (1.0 - smoothstep(0.0, 1.4, abs(m - 2.2) / fw.x)) * 0.55);
+    col = mix(col, uInk, (1.0 - smoothstep(0.0, 1.4, abs(m - 2.0) / fw.x)) * 0.55);
   }
 
   vec2 dd = min(uv, fs - uv) / fw;
@@ -232,8 +232,8 @@ void main() {
 
   // the moon
   if (uMoon > 0.002) {
-    vec2 mp = vec2(min(0.3, aspect * 0.5 - 0.11), 0.3 - uAlt * 0.004);
-    float r = 0.052;
+    vec2 mp = vec2(min(0.34, aspect * 0.5 - 0.085), 0.36 - uAlt * 0.004);
+    float r = 0.038;
     float md = length(p - mp);
     sky += vec3(0.32, 0.26, 0.55) * exp(-max(md - r, 0.0) * 16.0) * 0.22 * uMoon;
     float disc = 1.0 - smoothstep(r - px, r + px, md);

@@ -51,7 +51,7 @@ export class Core {
     this.form = 0; this.formIn = 1;           // the form shown, and its pop-in (0 → 1)
     this.flash = 0;
     this.speed = 1;                          // the orbits' pace (a Frenzy speeds them up)
-    this.fold = -1;                          // the singularity's animation: seconds in, or -1
+    this.fold = -1; this.foldTo = 0;         // the singularity's animation: seconds in (or -1), and the form after it
     this.silhouette = null; this.silImg = null;
     // orbits: one per machine, tilted every which way like an armillary sphere
     this.rings = Array.from({ length: N }, (_, k) => ({
@@ -257,7 +257,8 @@ export class Core {
     const y = this.cy + rr * Math.cos(a) * Math.sin(ring.rot) + rr * ring.tilt * Math.sin(a) * Math.cos(ring.rot);
     this.burst(x, y, Math.min(24, 6 + n * 2), [GEN_COLORS[k], C.paper], [60, 200], [0.35, 0.7], [1.5, 3.5]);
   }
-  fold0() { this.fold = 0; }
+  // the singularity: everything folds into a point, a white flash, then `to` (a new spark) pops in
+  fold0(to = 0) { this.fold = 0; this.foldTo = to; }
 
   // ---------- each frame ----------
   update(dt, world) {
@@ -287,7 +288,7 @@ export class Core {
       p.x += p.vx * dt; p.y += p.vy * dt;
     }
     for (const f of this.floats) if (f.on && (f.t += dt) >= f.life) f.on = false;
-    if (this.fold >= 0) { this.fold += dt; if (this.fold > 2.4) this.fold = -1; }
+    if (this.fold >= 0) { this.fold += dt; if (this.fold > 2.4) { this.fold = -1; this.form = this.foldTo; this.formIn = 1; } }
   }
 
   draw(ctx, world) {
@@ -329,7 +330,7 @@ export class Core {
     ctx.translate(cx, cy);
     const sc = pulse * squeeze * (this.formIn < 1 ? lerp(0.55, 1, outBack(this.formIn)) : 1);
     ctx.scale(sc, sc);
-    this.drawForm(ctx, this.fold >= 1.6 ? 0 : this.form, world);
+    this.drawForm(ctx, this.fold >= 1.6 ? this.foldTo : this.form, world);
     ctx.restore();
     this.drawRings(ctx, world, true, squeeze);
     this.drawMotes(ctx, motes, true, squeeze);
@@ -552,10 +553,8 @@ export class Core {
       if (y < 0) this.miniHeart(ctx, x, y, R * hh.s * 0.8, 0.55);
     }
     ctx.save(); ctx.scale(hr, hr);
-    ctx.fill(HEART);
+    ctx.translate(0, 0.07); ctx.fillStyle = INK; ctx.fill(HEART); ctx.translate(0, -0.07);
     ctx.fillStyle = C.pink; ctx.fill(HEART);
-    ctx.restore();
-    ctx.save(); ctx.scale(hr, hr);
     ctx.save(); ctx.clip(HEART);
     ctx.fillStyle = '#ff7cbd';
     ctx.beginPath(); ctx.arc(-0.42, -0.42, 0.42, 0, TAU); ctx.fill();

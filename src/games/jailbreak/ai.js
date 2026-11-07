@@ -4,32 +4,96 @@
 // the way, and when to step away from a hazard or a bomb. It moves the paddle no faster than a quick thumb. Pure.
 import { fold, offsetFor, paddleAngle } from './physics.js';
 import { BALL_R, POWERS } from './sim.js';
-import { CELL_W, COLS } from './levels.js';
+import { CELL_W, CELL_H, COLS, GRID_TOP } from './levels.js';
 
 const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
 
-export function createAI({ speed = 1250, serveDelay = 0.45, holdFor = 0.28, wobble = 0.1 } = {}) {
-  return { speed, serveDelay, holdFor, wobble, x: null, aimT: 0, aimX: 208, aimY: 140, wait: 0 };
+export function createAI({ speed = 1250, serveDelay = 0.45, holdFor = 0.28, wobble = 0.025 } = {}) {
+  return { speed, serveDelay, holdFor, wobble, x: null, aimT: 0, aimX: 208, aimY: 140, wait: 0, target: null, keepT: 0, bank: false };
 }
 
-// where to send the ball: the column with the most bricks left (its neighbours count half), at its lowest brick
+// where to send the ball: a brick it can actually hit (one with open space next to it that the ball can get to), in
+// the thickest part of what's left, straight from the paddle or, when steel or a shut gate is in the way, off a side
+// wall (a bank shot). It keeps its target for a while (no dithering), and picks again once it's broken.
+const MAXR = 14;
+const grid = new Array(MAXR * COLS), open = new Uint8Array(MAXR * COLS);
 function aimPoint(s, ai) {
   const B = s.boss;
-  if (B && !B.dead && B.dying <= 0) { ai.aimX = B.x; ai.aimY = B.y; return; }
-  const cols = new Float64Array(COLS), low = new Float64Array(COLS);
+  if (B && !B.dead && B.dying <= 0) { ai.aimX = B.x + clamp(B.cfg.sway * 40, 0, 60) * Math.cos(B.sw); ai.aimY = B.y; ai.target = null; return; }
+  grid.fill(null); open.fill(0);
+  let rows = 0;
   for (const k of s.bricks) {
-    if (!k.alive || !k.required) continue;
-    const c = clamp(Math.floor((k.x + k.w / 2) / CELL_W), 0, COLS - 1);
-    cols[c] += k.hp;
-    if (k.y + k.h > low[c]) low[c] = k.y + k.h;
+    if (!k.alive || k.attached) continue;
+    const r = Math.round((k.y - GRID_TOP) / CELL_H), c = clamp(Math.floor((k.x + k.w / 2) / CELL_W), 0, COLS - 1);
+    if (r < 0 || r >= MAXR) continue;
+    grid[r * COLS + c] = k;
+    if (r + 1 > rows) rows = r + 1;
   }
-  let best = -1, bc = 6;
-  for (let c = 0; c < COLS; c++) {
-    const v = cols[c] + 0.5 * (cols[c - 1] || 0) + 0.5 * (cols[c + 1] || 0);
-    if (v > best) { best = v; bc = c; }
+  // the empty cells the ball can reach without breaking anything: from below, and the gap above once it's reached
+  const q = [];
+  const visit = (r, c) => {
+    if (r < 0 || r >= rows || c < 0 || c >= COLS) return;
+    const i = r * COLS + c;
+    if (open[i] || grid[i]) return;
+    open[i] = 1; q.push(i);
+  };
+  for (let c = 0; c < COLS; c++) visit(rows - 1, c);
+  let top = false;
+  while (q.length) {
+    const i = q.pop(), r = (i / COLS) | 0, c = i % COLS;
+    if (r === 0 && !top) { top = true; for (let cc = 0; cc < COLS; cc++) visit(0, cc); }
+    visit(r - 1, c); visit(r + 1, c); visit(r, c - 1); visit(r, c + 1);
   }
-  ai.aimX = bc * CELL_W + CELL_W / 2;
-  ai.aimY = low[bc] > 0 ? low[bc] : 140;
+  const isOpen = (r, c) => (r >= rows) || (r < 0 ? top : c >= 0 && c < COLS && open[r * COLS + c] === 1);
+  const P = s.paddle;
+  // is the path from the paddle to (tx, ty) (a straight line, folded off the side walls) clear of steel and shut gates
+  // and of other bricks (the last stretch into the target's own cell doesn't count)?
+  const clear = (tx, ty, self) => {
+    const n = Math.ceil(Math.hypot(tx - P.x, P.y - ty) / 9);
+    for (let i = 1; i < n; i++) {
+      const x = fold(P.x + ((tx - P.x) * i) / n, 0, s.W), y = P.y + ((ty - P.y) * i) / n;
+      const rr = Math.floor((y - GRID_TOP) / CELL_H), cc = clamp(Math.floor(x / CELL_W), 0, COLS - 1);
+      if (rr < 0 || rr >= rows) continue;
+      const k = grid[rr * COLS + cc];
+      if (k && k !== self) return k.kind === 'steel' || (k.kind === 'gate' && !s.gatesOpen) ? 2 : 1;
+    }
+    return 0;
+  };
+  // the target it has: kept while it's there and still clear
+  const keep = ai.target && ai.target.alive && ai.keepT > 0;
+  if (keep) {
+    const k = ai.target;
+    const tx = ai.bank ? ai.aimX : k.x + k.w / 2;
+    if (clear(tx, k.y + k.h, k) < 2) { ai.aimY = k.y + k.h; if (!ai.bank) ai.aimX = tx; return; }
+  }
+  let best = -Infinity, pick = null, px = s.W / 2, pyy = 140, bank = false;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < COLS; c++) {
+    const k = grid[r * COLS + c];
+    if (!k || !k.required) continue;
+    if (!(isOpen(r + 1, c) || isOpen(r - 1, c) || isOpen(r, c - 1) || isOpen(r, c + 1))) continue;
+    // thick around it (more to break once it's in), lower is easier
+    let score = 0;
+    for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) {
+      if (r + dr < 0 || r + dr >= rows || c + dc < 0 || c + dc >= COLS) continue;
+      const n = grid[(r + dr) * COLS + c + dc];
+      if (n && n.required) score += 1;
+    }
+    score += r * 0.4 + ((Math.sin(s.t * 1.3 + r * 7.3 + c * 3.7) + 1) * 0.8);
+    const tx = k.x + k.w / 2, ty = k.y + k.h;
+    let ax = tx, banked = false;
+    const direct = clear(tx, ty, k);
+    if (direct) {
+      // off the left or right wall instead?
+      const left = clear(-tx, ty, k), right = clear(2 * s.W - tx, ty, k);
+      if (left === 0 && (right !== 0 || Math.abs(P.x + tx) < Math.abs(2 * s.W - tx - P.x))) { ax = -tx; banked = true; score -= 2; }
+      else if (right === 0) { ax = 2 * s.W - tx; banked = true; score -= 2; }
+      else score -= direct === 2 ? 60 : 4;
+    }
+    if (score > best) { best = score; pick = k; px = ax; pyy = ty; bank = banked; }
+  }
+  ai.target = pick; ai.keepT = 2.2; ai.bank = bank;
+  ai.aimX = px;
+  ai.aimY = pyy;
 }
 
 // → the input for one step: { x, dir, action }
@@ -37,8 +101,8 @@ export function think(s, ai, dt) {
   const P = s.paddle, W = s.W;
   const out = { x: null, dir: 0, action: false };
   if (ai.x == null || !Number.isFinite(ai.x)) ai.x = P.x;
-  ai.aimT -= dt;
-  if (ai.aimT <= 0) { ai.aimT = 0.3; aimPoint(s, ai); }
+  ai.aimT -= dt; ai.keepT -= dt;
+  if (ai.aimT <= 0 || (ai.target && !ai.target.alive)) { ai.aimT = 0.25; aimPoint(s, ai); }
   const py = P.y - BALL_R;
   let tBest = Infinity, xLand = 0, ball = null;
   for (const b of s.balls) {

@@ -32,6 +32,10 @@
 .st-zone { font-family: var(--ak-display); font-weight: 850; font-stretch: 118%; font-size: 10.5px; letter-spacing: .13em; text-transform: uppercase; }
 .st-dot { width: 5px; height: 5px; border-radius: 50%; background: color-mix(in srgb, var(--ak-paper) 45%, transparent); }
 
+/* a recorded demo has no bar: the number at the top */
+.ak[data-ak-demo] .st-hud { top: 10px; }
+.ak[data-ak-demo] .st-floor { font-size: 74px; }
+
 /* a phone held sideways: the number on the left, out of the tower's way */
 @media (orientation: landscape) and (max-height: 520px) {
   .st-hud { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 4px); left: calc(18px + var(--ak-safe-l)); right: auto; justify-items: start; }
@@ -40,16 +44,14 @@
 
 /* ---------- a new zone: a sticker banner under the number ---------- */
 .st-banner {
-  position: absolute; z-index: 3; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + clamp(112px, 26vw, 160px));
+  position: absolute; z-index: 3; left: 50%; top: 57%;
   display: grid; justify-items: center; gap: 1px; padding: 9px 20px 10px; border-radius: 18px;
   background: var(--ak-paper); color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 0 5px 0 var(--ak-ink);
   opacity: 0; pointer-events: none; white-space: nowrap;
 }
 .st-banner small { font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 10.5px; letter-spacing: .18em; text-transform: uppercase; color: var(--ak-violet); }
 .st-banner b { font-family: var(--ak-display); font-weight: 900; font-stretch: 115%; font-size: clamp(19px, 5.4vw, 26px); line-height: 1.05; letter-spacing: .01em; text-transform: uppercase; }
-@media (orientation: landscape) and (max-height: 520px) {
-  .st-banner { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 8px); }
-}
+@media (orientation: landscape) and (max-height: 520px) { .st-banner { top: 60%; } }
 
 /* ---------- AGI-1 says: her face and a line, at the bottom ---------- */
 .st-say {

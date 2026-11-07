@@ -70,10 +70,10 @@ export const RECIPES = {
   },
   // the climb: its QA input replay walks and jumps her up the chart (its QA panel hidden from the picture)
   skybreak: {
-    url: '/games/skybreak?qa&step=40', css: '#qa, #qa-info { display: none !important; }', warm: 6000, dur: 6000, poster: 0.5, vp: [720, 480], crop: [120, 0, 480, 480], fps: 15, shotTimeout: 240000,
+    url: '/games/skybreak?qa&step=40', css: '#qa, #qa-info { display: none !important; }', warm: 4000, dur: 6000, poster: 0.5, vp: [720, 480], crop: [120, 0, 480, 480], manual: true, shotTimeout: 120000,
     steps: async (page) => {
       // its 3D city and her character load first (Begin Ascent turns on), then its QA replay starts a run and climbs
-      for (let i = 0; i < 240 && !(await page.$('#start:not([disabled])')); i++) await page.clock.runFor(500);
+      await page.waitForSelector('#start:not([disabled])', { timeout: 300000 });
       // its low quality (the 40,000-splat city), so a software-drawn frame takes seconds, not minutes
       await page.evaluate(() => { const q = document.getElementById('quality'); q?.click(); q?.click(); });
       await page.evaluate(() => document.getElementById('qa-replay')?.click());
@@ -98,20 +98,33 @@ async function capture(browser, id, r) {
   const page = await ctx.newPage();
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
-  await page.clock.install({ time: new Date('2026-11-08T12:00:00Z') });
+  // (a game too heavy for a fake clock, SKYBREAK's 3D: real time until it plays, then each frame stepped by hand)
+  const tick = r.manual ? (ms) => page.evaluate((m) => window.__step(m), ms) : (ms) => page.clock.runFor(ms);
+  if (!r.manual) await page.clock.install({ time: new Date('2026-11-08T12:00:00Z') });
+  else page.clock = { runFor: (ms) => page.waitForTimeout(ms) };
   await page.goto(BASE + r.url, { waitUntil: 'load', timeout: 120000 });
   if (r.css) await page.addStyleTag({ content: r.css });
   // the AGI GAMES intro, then the game's own start
   await page.clock.runFor(3200);
   await page.keyboard.press('Shift');
   if (r.steps) await r.steps(page);
-  for (let t = 0; t < r.warm; t += 250) await page.clock.runFor(250);
+  if (r.manual) {
+    await page.evaluate(() => {
+      let fake = performance.now(), queue = [];
+      performance.now = () => fake;
+      window.requestAnimationFrame = (cb) => { queue.push(cb); return queue.length; };
+      window.cancelAnimationFrame = () => {};
+      window.__step = (ms) => { fake += ms; const q = queue; queue = []; for (const cb of q) { try { cb(fake); } catch (e) { console.error(e); } } return q.length; };
+    });
+    await page.waitForTimeout(1500);       // the loops already waiting on a real frame join the queue
+  }
+  for (let t = 0; t < r.warm; t += 1000 / 30) await tick(1000 / 30);
   const fps = r.fps || FPS;
   const n = Math.round((r.dur / 1000) * fps);
   const t0 = Date.now();
   for (let i = 0; i < n; i++) {
     if (r.frame) await r.frame(page, i);
-    await page.clock.runFor(1000 / fps);
+    await tick(1000 / fps);
     await page.screenshot({ path: join(dir, `f${String(i).padStart(4, '0')}.jpg`), type: 'jpeg', quality: 94, timeout: r.shotTimeout || 30000 });
   }
   await ctx.close();

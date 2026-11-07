@@ -1,1 +1,60 @@
-/* mergeagi: its own styles (the arcade kit's frame is src/games/kit/kit.css) */
+/* MERGE TO AGI (2026-11-08): its own styles. The arcade kit's frame is src/games/kit/kit.css; everything here is an
+   mg- class (or the game's own root). The night lab behind the jar is CSS (a violet night and a halftone dot field), so
+   the canvas only draws the jar and what's in it. */
+
+.ak[data-ak-game='mergeagi'] { --ak-bg: #140a33; --ak-accent: var(--ak-honey); }
+
+.mg-stage {
+  background:
+    radial-gradient(110% 60% at 50% -8%, rgba(107, 59, 255, 0.24), transparent 62%),
+    radial-gradient(80% 45% at 50% 108%, rgba(255, 77, 166, 0.09), transparent 70%),
+    linear-gradient(180deg, #1a0b3b 0%, #130831 52%, #0e0624 100%);
+}
+/* the halftone dots: dense at the top, fading out toward the floor */
+.mg-stage::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: radial-gradient(circle, rgba(205, 184, 255, 0.17) 1.15px, transparent 1.7px);
+  background-size: 15px 15px;
+  background-position: 7px 4px;
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.45) 45%, rgba(0, 0, 0, 0.08) 85%, transparent 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, 0.45) 45%, rgba(0, 0, 0, 0.08) 85%, transparent 100%);
+}
+.mg-canvas { cursor: crosshair; }
+.ak[data-ak-state='title'] .mg-canvas, .ak[data-ak-state='over'] .mg-canvas { cursor: default; }
+
+.mg-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+
+/* ---------- the evolution strip (the title screen, the end of a run) ---------- */
+.mg-evo { display: grid; justify-items: center; gap: 7px; width: 100%; margin: 2px 0 0; }
+.mg-evo-label {
+  margin: 0;
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--ak-fg) 72%, transparent);
+}
+.mg-evo-label b { color: var(--ak-honey); font-weight: 900; }
+.mg-evo-row {
+  list-style: none; margin: 0; padding: 6px 9px;
+  display: flex; align-items: center; justify-content: center; gap: 3px;
+  border-radius: 999px;
+  background: rgba(23, 10, 54, 0.62);
+  border: 2px solid rgba(205, 184, 255, 0.24);
+}
+.mg-evo-item { display: grid; place-items: center; border-radius: 50%; }
+.mg-evo-icon { display: block; width: clamp(19px, 6.1vw, 30px); height: auto; }
+.mg-evo-item.is-dim { opacity: 0.38; }
+.mg-evo-item.is-top { box-shadow: 0 0 0 2.5px var(--ak-honey), 0 0 0 4.5px var(--ak-ink); }
+
+/* on the end-of-run card (paper) */
+.mg-evo.is-over { margin-top: 14px; }
+.mg-evo.is-over .mg-evo-label { color: var(--ak-ink2); }
+.mg-evo.is-over .mg-evo-label b { color: var(--ak-violet); }
+.mg-evo.is-over .mg-evo-row { background: var(--ak-ink); border-color: var(--ak-ink); }
+
+@media (max-height: 520px) {
+  .mg-evo-icon { width: clamp(16px, 3.4vw, 24px); }
+  .mg-evo { gap: 4px; }
+  .mg-evo.is-over { margin-top: 10px; }
+}

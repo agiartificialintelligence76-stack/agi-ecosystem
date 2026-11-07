@@ -36,7 +36,10 @@ export function computeLayout(W, H, ins, { cmax = 76 } = {}) {
   }
   const mode = pick.mode, m = MODES[mode];
   const C = Math.max(12, Math.floor(pick.C * 2) / 2);
-  const ox = Math.round(ins.left + (aw - m.w * C) / 2), oy = Math.round(ins.top + (ah - m.h * C) / 2);
+  // room to spare upright: some of it between the board and the tray (thumbs), the rest a little above the middle
+  let spare = Math.max(0, ah - m.h * C), extra = 0;
+  if (mode === 'P') { extra = Math.min(spare * 0.4, C * 0.7); spare -= extra; }
+  const ox = Math.round(ins.left + (aw - m.w * C) / 2), oy = Math.round(ins.top + spare * (mode === 'P' ? 0.42 : 0.5));
   const L = { mode, W, H, C, s: C - Math.max(2, Math.round(C * 0.08)) };
   const frame = { w: FRAME_W * C, h: FRAME_H * C, r: Math.round(C * 0.42) };
   let slots;
@@ -45,7 +48,7 @@ export function computeLayout(W, H, ins, { cmax = 76 } = {}) {
     frame.y = oy + (P_HEAD + TAG / 2) * C;
     L.score = { x: ox + frame.w / 2, y: oy + 0.6 * C, size: C * 1.04, maxW: frame.w * 0.92, align: 'center' };
     L.status = { x: ox + frame.w / 2, y: oy + (1.16 + 0.34) * C, maxW: frame.w, align: 'center', h: 0.64 * C };
-    const ty = frame.y + frame.h + (SHADOW + P_GAP) * C, gap = 0.14 * C, sw = (frame.w - gap * 2) / 3;
+    const ty = frame.y + frame.h + (SHADOW + P_GAP) * C + extra, gap = 0.12 * C, sw = (frame.w - gap * 2) / 3;
     slots = [0, 1, 2].map((k) => ({ x: ox + k * (sw + gap), y: ty, w: sw, h: P_TRAY * C }));
     L.enter = { dx: 0, dy: 1.6 * C };
   } else if (mode === 'S') {
@@ -74,7 +77,7 @@ export function computeLayout(W, H, ins, { cmax = 76 } = {}) {
   L.scorePos = { x: L.score.align === 'center' ? L.score.x : L.score.align === 'right' ? L.score.x - C * 1.2 : L.score.x + C * 1.2, y: L.score.y };
   // the tray's cells: the same size for every piece (a 5-long one just fits its slot)
   const sw = slots[0].w, sh = slots[0].h;
-  L.ts = Math.floor(Math.min(0.52 * C, (sw - 0.34 * C) / 5, (sh - 0.34 * C) / 5) * 2) / 2;
+  L.ts = Math.floor(Math.min(0.56 * C, (sw - 0.2 * C) / 5, (sh - 0.24 * C) / 5) * 2) / 2;
   L.tss = L.ts - Math.max(1, Math.round(L.ts * 0.08));
   L.center = { x: frame.x + frame.w / 2, y: frame.y + frame.h / 2 };
   return L;
@@ -119,10 +122,10 @@ export function createRenderer() {
     g.save();
     if (title) {
       // the title screen: the little board plays behind the logo, quieter and tilted
-      g.globalAlpha = 0.46;
+      g.globalAlpha = 0.34;
       g.translate(L.center.x, L.center.y);
       g.rotate(-0.07);
-      g.scale(0.94, 0.94);
+      g.scale(0.96, 0.96);
       g.translate(-L.center.x, -L.center.y);
     }
     se.shake.apply(g, W / 2, H / 2);
@@ -136,6 +139,16 @@ export function createRenderer() {
     drawDrag(g, se, now, bot);
     g.restore();
     g.globalAlpha = 1;
+    if (title) {
+      // a calm middle for the title's words
+      const r = Math.max(W, H) * 0.62;
+      const v = g.createRadialGradient(W / 2, H * 0.5, 0, W / 2, H * 0.5, r);
+      v.addColorStop(0, 'rgba(17,16,52,0.82)');
+      v.addColorStop(0.55, 'rgba(17,16,52,0.55)');
+      v.addColorStop(1, 'rgba(17,16,52,0.18)');
+      g.fillStyle = v;
+      g.fillRect(0, 0, W, H);
+    }
   }
 
   // ---------- the board ----------
@@ -255,6 +268,9 @@ export function createRenderer() {
           blit(g, spr.normal[p.color], spr, x, y, 1);
           g.globalAlpha = (0.2 + 0.25 * pulse) * ga3;
           blit(g, spr.white, spr, x, y, 1);
+        } else if (se.kb) {
+          g.globalAlpha = (0.62 + 0.2 * pulse) * ga3;
+          blit(g, spr.normal[p.color], spr, x, y, 1);
         } else {
           g.globalAlpha = (0.78 + 0.18 * pulse) * ga3;
           blit(g, spr.ghost[p.color], spr, x, y, 1);
@@ -270,7 +286,7 @@ export function createRenderer() {
       const fade = a < 0.22 ? 1 : Math.max(0, 1 - (a - 0.22) / 0.3);
       if (fade <= 0) continue;
       const lo = clamp(bm.o - ext, 0, N), hi = clamp(bm.o + ext, 0, N);
-      const th = C * 0.2;
+      const th = C * 0.15;
       g.globalAlpha = fade * 0.45;
       g.fillStyle = bm.color;
       if (bm.row) roundRect(g, L.gx + lo * C, L.gy + (bm.k + 0.5) * C - C * 0.42, (hi - lo) * C, C * 0.84, C * 0.3);
@@ -312,21 +328,34 @@ export function createRenderer() {
   }
   function drawTray(g, se, now, keys, hover) {
     const C = L.C, ts = L.ts, s = se.s;
+    // the dock the three pieces sit on
+    const a0 = L.slots[0], a2 = L.slots[2];
+    const dx = a0.x, dy = a0.y, dw = a2.x + a2.w - a0.x, dh = a2.y + a2.h - a0.y;
+    g.fillStyle = 'rgba(7,8,30,0.36)';
+    roundRect(g, dx, dy, dw, dh, C * 0.42); g.fill();
+    g.lineWidth = 1.5;
+    g.strokeStyle = 'rgba(205,184,255,0.1)';
+    roundRect(g, dx + 0.75, dy + 0.75, dw - 1.5, dh - 1.5, C * 0.42); g.stroke();
     for (let k = 0; k < 3; k++) {
       const sl = L.slots[k], t = s.tray[k], tr = se.tray[k];
       const sel = se.kb && se.kb.slot === k;
-      // its socket
-      g.fillStyle = 'rgba(8,8,34,0.34)';
-      roundRect(g, sl.x, sl.y, sl.w, sl.h, C * 0.34); g.fill();
-      g.lineWidth = sel ? Math.max(2.5, C * 0.07) : 1.5;
-      g.strokeStyle = sel ? HEX[0] : (hover === k ? 'rgba(205,184,255,0.32)' : 'rgba(205,184,255,0.12)');
-      roundRect(g, sl.x + g.lineWidth / 2, sl.y + g.lineWidth / 2, sl.w - g.lineWidth, sl.h - g.lineWidth, C * 0.34 - g.lineWidth / 2); g.stroke();
+      // the piece in hand (keys) or under the mouse: its place on the dock lights up
+      if (sel || (hover === k && t >= 0 && !se.drag)) {
+        const m = C * 0.1;
+        g.fillStyle = sel ? 'rgba(255,201,51,0.07)' : 'rgba(205,184,255,0.06)';
+        roundRect(g, sl.x + m, sl.y + m, sl.w - m * 2, sl.h - m * 2, C * 0.34); g.fill();
+        if (sel) {
+          g.lineWidth = Math.max(2.5, C * 0.07);
+          g.strokeStyle = HEX[0];
+          roundRect(g, sl.x + m, sl.y + m, sl.w - m * 2, sl.h - m * 2, C * 0.34); g.stroke();
+        }
+      }
       if (keys && t >= 0) {
         font(g, 700, Math.max(10, C * 0.24), MONO);
         g.textAlign = 'left';
         g.textBaseline = 'top';
         g.fillStyle = sel ? HEX[0] : 'rgba(205,184,255,0.42)';
-        g.fillText(String(k + 1), sl.x + C * 0.2, sl.y + C * 0.16);
+        g.fillText(String(k + 1), sl.x + C * 0.32, sl.y + C * 0.26);
       }
       if (t < 0) continue;
       const p = PIECES[t];
@@ -453,9 +482,20 @@ export function createRenderer() {
       const kin = clamp(a / 0.26, 0, 1);
       const sc = REDUCED ? 1 : lerp(1.85, 1, ease.outBack(kin, 2.2));
       const out = lb.stay ? 0 : clamp((a - (lb.life - 0.32)) / 0.32, 0, 1);
+      // kept inside the board: its widest line measured once
+      if (lb.half == null) {
+        font(g, 900, Math.round(lb.size), DISPLAY, 'expanded');
+        const main = lb.text ? Math.max(g.measureText(lb.text).width, lb.text2 ? g.measureText(lb.text2).width : 0) : 0;
+        const fs = Math.round(lb.text ? lb.size * 0.5 : lb.size);
+        font(g, 900, fs, DISPLAY, 'expanded');
+        const sub = lb.sub ? g.measureText(`CHAIN ×${lb.sub}`).width + fs * 1.1 : 0;
+        lb.half = Math.min(L.C * 4.1, Math.max(main, sub) / 2 + L.C * 0.2);
+      }
+      const fr = L.frame;
+      const lx = clamp(lb.x, fr.x + lb.half, fr.x + fr.w - lb.half);
       g.save();
       g.globalAlpha = (REDUCED ? 1 : clamp(a / 0.06, 0, 1)) * (1 - out);
-      g.translate(lb.x, lb.y - out * L.C * 0.6);
+      g.translate(lx, lb.y - out * L.C * 0.6);
       g.rotate(lb.rot);
       g.scale(sc, sc);
       const size = lb.size;
@@ -584,16 +624,17 @@ export function createRenderer() {
     g.strokeStyle = INK;
     g.beginPath(); g.arc(x, y, r - g.lineWidth / 2, 0, Math.PI * 2); g.stroke();
   }
-  // her line's presence: 0 → 1 → 0 over its time
+  // her line's presence: 0 → 1 → 0 over its time (after the ticker has gone, before it comes back: never both)
   const lineAlpha = (se, now) => {
     if (!se.line) return 0;
     const a = now - se.line.t0;
-    return clamp(Math.min(a / 0.18, (T.say - a) / 0.25), 0, 1);
+    return clamp(Math.min((a - 0.12) / 0.18, (T.say - a) / 0.22), 0, 1);
   };
+  const tickerAlpha = (se, now) => (se.line ? clamp(1 - (now - se.line.t0) / 0.12, 0, 1) : clamp((now - se.lineGone) / 0.25, 0, 1));
   function drawStatus(g, se, now) {
     const st = L.status, C = L.C;
     const la = lineAlpha(se, now);
-    const tickA = 1 - la;
+    const tickA = tickerAlpha(se, now);
     if (tickA > 0.01) {
       g.globalAlpha = tickA;
       drawTicker(g, se, now, st.x, st.y + (1 - tickA) * C * 0.15, Math.max(10.5, C * 0.29), st.align, st.maxW);
@@ -705,7 +746,7 @@ export function createRenderer() {
       g.translate(pos.x, pos.y);
       g.rotate(REDUCED ? 0 : d.tilt);
       // its hard shadow, then the piece
-      g.globalAlpha = 0.4;
+      g.globalAlpha = 0.32;
       drawPiece(g, p, C * 0.1 * k, C * 0.24 * k, C * k, spr, spr.shadow, k);
       g.globalAlpha = 1;
       drawPiece(g, p, 0, 0, C * k, spr, spr.normal[p.color], k);

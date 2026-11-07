@@ -23,6 +23,7 @@ export function createRenderer(view) {
   let icons = null, iconKey = '';
   const faces = new Map();
   const dust = makeDust(22);
+  let dimGrad = null;
 
   function layout(opts) {
     L = computeLayout(view.w, view.h, opts);
@@ -98,7 +99,15 @@ export function createRenderer(view) {
     drawSay(ctx, sc);
     drawBanner(ctx, sc);
     ctx.restore();
-    if (sc.dim > 0) { ctx.fillStyle = `rgba(12, 5, 32, ${0.55 * sc.dim})`; ctx.fillRect(0, 0, view.w, view.h); }
+    if (sc.dim > 0) {
+      ctx.fillStyle = `rgba(12, 5, 32, ${0.62 * sc.dim})`; ctx.fillRect(0, 0, view.w, view.h);
+      if (!dimGrad || dimGrad.w !== view.w || dimGrad.h !== view.h) {
+        const gr = ctx.createRadialGradient(view.w / 2, view.h * 0.52, 0, view.w / 2, view.h * 0.52, Math.max(view.w, view.h) * 0.62);
+        gr.addColorStop(0, 'rgba(10, 4, 28, 0.55)'); gr.addColorStop(0.55, 'rgba(10, 4, 28, 0.3)'); gr.addColorStop(1, 'rgba(10, 4, 28, 0)');
+        dimGrad = { g: gr, w: view.w, h: view.h };
+      }
+      ctx.globalAlpha = sc.dim; ctx.fillStyle = dimGrad.g; ctx.fillRect(0, 0, view.w, view.h); ctx.globalAlpha = 1;
+    }
     const fl = sc.fx.flash;
     if (fl && fl.t < fl.dur) {
       ctx.globalAlpha = (1 - fl.t / fl.dur) * fl.a;
@@ -159,10 +168,10 @@ export function createRenderer(view) {
   function drawGlass(ctx) {
     jarPath(ctx, 0, false);
     ctx.fillStyle = 'rgba(228, 217, 255, 0.06)'; ctx.fill();
-    // a soft reflection band on the back of the glass
+    // a soft reflection on the back of the glass, fading toward the floor
     ctx.save(); jarPath(ctx, 0, false); ctx.clip();
-    ctx.fillStyle = 'rgba(255, 250, 240, 0.035)'; ctx.fillRect(22, -RIM, 34, JAR.H + RIM);
-    ctx.fillRect(66, -RIM, 9, JAR.H + RIM);
+    ctx.fillStyle = 'rgba(255, 250, 240, 0.028)';
+    roundRect(ctx, 16, 6, 26, JAR.H * 0.62, 13); ctx.fill();
     ctx.restore();
     // a beaker's marks on the right
     ctx.strokeStyle = 'rgba(228, 217, 255, 0.2)'; ctx.lineWidth = 2;
@@ -183,6 +192,14 @@ export function createRenderer(view) {
     jarPath(ctx, WALL / 2 + INKW, true);
     ctx.strokeStyle = INK; ctx.lineWidth = WALL + INKW * 2; ctx.stroke();
     ctx.strokeStyle = glass; ctx.lineWidth = WALL; ctx.stroke();
+    // the rim: a beaker's lip on each wall, turned outward
+    const o = WALL / 2 + INKW;
+    for (const side of [-1, 1]) {
+      const x0 = side < 0 ? -o : JAR.W + o;
+      ctx.beginPath(); ctx.moveTo(x0, -RIM + 1); ctx.quadraticCurveTo(x0, -RIM - 5, x0 + side * 12, -RIM - 7);
+      ctx.strokeStyle = INK; ctx.lineWidth = WALL + INKW * 2; ctx.stroke();
+      ctx.strokeStyle = glass; ctx.lineWidth = WALL; ctx.stroke();
+    }
     // the glass's shine: a long stroke down the left wall and a short one on the right
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)'; ctx.lineWidth = 2.4;
     ctx.beginPath(); ctx.moveTo(-WALL / 2 - INKW, 14); ctx.lineTo(-WALL / 2 - INKW, 300); ctx.stroke();
@@ -206,7 +223,7 @@ export function createRenderer(view) {
   // ---------- the guide: where the dropper's orb will land ----------
   function drawGuide(ctx, sc) {
     const g = sc.game, t = g.current, r = RADII[t], x = sc.aimX;
-    landing(g.world.orbs, x, r, spot);
+    landing(g.world.orbs, x, r, spot, true);
     const match = spot.hit && spot.hit.tier === t;
     const y0 = dropY(t) + r * (sc.inflate ?? 1) + 6, y1 = spot.y - r - 4;
     const a = sc.guide === 'strong' ? 1 : 0.7;

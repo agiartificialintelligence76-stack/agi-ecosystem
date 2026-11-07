@@ -5,16 +5,16 @@
 
 // each arrangement's box, in jar units (the jar's inside is x 0…400, y 0…560; the dropper hangs above y 0)
 export const BOUNDS = Object.freeze({
-  tall: Object.freeze({ minX: -30, maxX: 430, minY: -200, maxY: 688 }),
+  tall: Object.freeze({ minX: -30, maxX: 430, minY: -222, maxY: 688 }),
   wide: Object.freeze({ minX: -222, maxX: 622, minY: -150, maxY: 622 }),
 });
 
 // the pieces of each arrangement, in jar units
 export const PARTS = Object.freeze({
   tall: Object.freeze({
-    next: { x: 374, y: -164, r: 25 },
-    say: { x: -14, y: -194, w: 338, h: 58 },
-    score: { x: -8, y: -172 },
+    next: { x: 378, y: -180, r: 25 },
+    say: { x: -16, y: -208, w: 344, h: 56 },
+    score: { x: -8, y: -186 },
     strip: { x0: 6, x1: 394, y: 652, r: 15 },
   }),
   wide: Object.freeze({

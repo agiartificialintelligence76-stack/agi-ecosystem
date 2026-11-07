@@ -12,19 +12,19 @@ THREE.ColorManagement.enabled = false;   // the palette's hex values go to the s
 export const EL = (35 * Math.PI) / 180;  // the camera's elevation
 export const AZ = Math.PI / 4;           // looking from +X +Z: X runs to the lower right, Z to the lower left
 export const PLINTH = 0.2;               // the plinth's top: floor n's bottom is PLINTH + n × FLOOR_H
-export const ISLAND = 4.6;               // the city block's half size
-const ISLAND_DEPTH = 1.7;
+export const ISLAND = 3.4;               // the city block's half size
+const ISLAND_DEPTH = 1.5;
 export const levelY = (n) => PLINTH + n * FLOOR_H;
 
 const LOBBY = hexToRgb('#efe4ff');
 const PLINTH_C = hexToRgb('#a99ad8');
-const NEIGHBOURS = [            // the block's other buildings (the back and side corners: never where floors slide)
-  { x: -3.25, z: -3.2, w: 2.1, d: 2.2, h: 5.5, c: '#4b4080' },
-  { x: -3.35, z: 3.25, w: 1.9, d: 2.0, h: 3.0, c: '#5a4a8f' },
-  { x: 3.25, z: -3.35, w: 2.0, d: 1.9, h: 3.85, c: '#3f3a73' },
+const NEIGHBOURS = [            // two little shops on the back corners (never where floors slide)
+  { x: -2.75, z: -2.75, w: 1.05, d: 1.05, h: 1.55, c: '#4b4080' },
+  { x: -2.8, z: 2.7, w: 0.95, d: 1.0, h: 1.05, c: '#5a4a8f' },
+  { x: 2.7, z: -2.8, w: 1.0, d: 0.95, h: 1.25, c: '#3f3a73' },
 ];
-const TREES = [[3.3, 3.0, 0.9], [2.6, 3.75, 0.7], [3.85, 2.45, 0.62], [-2.55, 3.95, 0.55], [3.95, -2.45, 0.58]];
-const LAMPS = [[2.45, 2.45], [-2.4, 2.45], [2.45, -2.4]];
+const TREES = [[2.75, 2.55, 0.62], [2.3, 3.0, 0.5], [3.05, 2.05, 0.46], [-2.95, 2.0, 0.42], [2.0, -3.0, 0.44]];
+const LAMPS = [[2.15, 2.15], [-2.15, 2.15], [2.15, -2.15]];
 
 const smooth = (t) => t * t * (3 - 2 * t);
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
@@ -39,6 +39,7 @@ export function createScene(canvas, { reduced = false } = {}) {
     return null;
   }
   renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
+  canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); console.warn('STACKED: the 3D view was lost (it comes back by itself)'); });
   renderer.setClearColor(0x0a0b26, 1);
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 1, 600);
@@ -69,7 +70,7 @@ export function createScene(canvas, { reduced = false } = {}) {
     uEarth: { value: 0 }, uEarthR: { value: 6 }, uEarthY: { value: -0.3 }, uEarthCol: { value: new THREE.Color() }, uLimb: { value: new THREE.Color() },
     uFlashL: { value: 0 }, uInk: U.uInk, uWin: { value: new THREE.Color('#ffc94d') },
     uJourney: { value: 0 }, uJBot: { value: 0 }, uJTop: { value: 1 },
-    uJ0: { value: color(hexToRgb('#5a2a63')) }, uJ1: { value: color(hexToRgb('#1d1747')) }, uJ2: { value: color(hexToRgb('#4c5070')) },
+    uJ0: { value: color(hexToRgb('#5a2a63')) }, uJ1: { value: color(hexToRgb('#1d1747')) }, uJ2: { value: color(hexToRgb('#4a5b6c')) },
     uJ3: { value: color(hexToRgb('#f2a088')) }, uJ4: { value: color(hexToRgb('#1d4ca8')) }, uJ5: { value: color(hexToRgb('#05041a')) },
   };
   const sky = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), new THREE.ShaderMaterial({
@@ -132,7 +133,7 @@ export function createScene(canvas, { reduced = false } = {}) {
   });
   const pole = material({ rgb: hexToRgb('#2a2050'), kind: 0 });
   const bulb = material({ rgb: hexToRgb('#ffd36b'), kind: 3 });
-  LAMPS.forEach(([x, z]) => { world.add(boxMesh(pole, x, 0.45, z, 0.08, 0.9, 0.08)); world.add(boxMesh(bulb, x, 0.95, z, 0.2, 0.14, 0.2)); });
+  LAMPS.forEach(([x, z]) => { world.add(boxMesh(pole, x, 0.32, z, 0.06, 0.64, 0.06)); world.add(boxMesh(bulb, x, 0.68, z, 0.15, 0.1, 0.15)); });
 
   // ---------- the tower ----------
   const tower = new THREE.Group();

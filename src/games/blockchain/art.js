@@ -67,11 +67,11 @@ export function blockSprites(s, dpr) {
     s, pad,
     normal: HEX.map((hex) => make((g) => drawBlock(g, pad, pad, s, hex))),
     ghost: HEX.map((hex) => make((g) => {
-      const o = Math.max(1.5, s * 0.06);
-      g.fillStyle = hex;
-      g.globalAlpha = 0.26;
+      const o = Math.max(1.6, s * 0.065);
+      g.fillStyle = mix(hex, '#ffffff', 0.35);
+      g.globalAlpha = 0.2;
       roundRect(g, pad + o / 2, pad + o / 2, s - o, s - o, r); g.fill();
-      g.globalAlpha = 0.95;
+      g.globalAlpha = 1;
       g.strokeStyle = hex;
       g.lineWidth = o;
       roundRect(g, pad + o / 2, pad + o / 2, s - o, s - o, r - o / 2); g.stroke();

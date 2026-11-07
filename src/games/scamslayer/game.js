@@ -4,6 +4,7 @@ import { createShell } from '../kit/shell.js';
 import { fitCanvas } from '../kit/canvas.js';
 import { buildSprites, createHalves } from './art.js';
 import { KINDS } from './kinds.js';
+import { buildScene } from './scene.js';
 
 const shell = createShell({ game: 'scamslayer', name: 'SCAM SLAYER', root: document.getElementById('ak-root') });
 const canvas = document.createElement('canvas');
@@ -14,6 +15,13 @@ shell.started({ count: false });
   try { await Promise.all([document.fonts.load("900 40px 'AK Display'"), document.fonts.load("italic 20px 'AK Serif'")]); } catch { /* fine */ }
   const ctx = view.begin();
   ctx.fillStyle = '#1b0f38'; ctx.fillRect(0, 0, view.w, view.h);
+  if (new URLSearchParams(location.search).has('scene')) {
+    const sc = buildScene(view.w, view.h);
+    ctx.imageSmoothingQuality = 'high';
+    ctx.drawImage(sc.back, -sc.m, -sc.m, view.w + sc.m * 2, view.h + sc.m * 2);
+    ctx.drawImage(sc.room, -sc.m, -sc.m, view.w + sc.m * 2, view.h + sc.m * 2);
+    return;
+  }
   const px = Number(new URLSearchParams(location.search).get('px') || 1.2);
   const sprites = buildSprites(px * view.dpr);
   const halves = createHalves();
