@@ -1,5 +1,22 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Ratings one game at a time, and every tile's numbers — 2026-11-08, morning
+
+The owner, the morning after night two: "can you organize well the ratings and review. and the how many times the game
+played and the how many players played that game each should be still visible on each game below it … and put stars there
+also". Their choices: "One game + picker (Recommended)" and "Yes, publish (Recommended)".
+
+- **Every tile** on agi1.app/games: its stars and average ("4.0 (3)"), ▶ its plays and 👤 its players, on every screen (a
+  phone: stars and average, then ▶ and 👤 with their numbers on one line). `gameStats()` in `src/games/words.js`.
+- **Ratings and reviews:** one game at a time. Its panel starts with the game (picture, name, stars, ratings, plays, players,
+  Change game, Play) and how its stars split, then Rate it beside What players say. **Change game** opens the game picker
+  (`<dialog class="gm-choose">`, `startChooser()` in `src/games/page.js`): a search box, every game with its stars, best rated
+  first, then most played (`pickOrder()` in `src/games/shelf.js`). A pick puts `#rate-<game>` in the address. The rating box,
+  reviews and wallet sign-in are unchanged.
+- **Nothing to set up:** no new setting, SQL, function or service. Details: CLAUDE.md, "AGI games" → "Ratings one game at a
+  time, and every tile's numbers".
+- HANDOFF_RELEASE_LINE
+
 ## Ten more AGI games, night two — 2026-11-08
 
 The owner, at 4 a.m.: "can you create 10 more games, i only have one 1 idea thou guess whats ai(picture) what do u think,

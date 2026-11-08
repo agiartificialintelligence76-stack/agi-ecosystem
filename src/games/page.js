@@ -8,8 +8,12 @@
 // with textContent, and its CSS variables through the CSS object model (the CSP allows no style attributes).
 // Since 2026-10-21 two games (Ride 'Em, AGI! and TRENCHING SIMULATOR): a card on the shelf and a tab of ratings for each
 // (mountGame: one game's numbers, reviews and box), one wallet session and 18+ answer for all of them (createSession:
-// connecting a wallet in one game's box connects them all), and a link to a game's ratings opens its tab (startTabs).
+// connecting a wallet in one game's box connects them all), and a link to a game's ratings opens its tab (startTabs; since
+// 2026-11-08 the game picker, startChooser).
 // Since 2026-10-22 the leaderboards' section too (./leaderboard.js: each game's boards and the optional name).
+// Since 2026-11-08 (the owner: "can you organize well the ratings and review … the how many times the game played and the
+// how many players played that game each should be still visible on each game below it … and put stars there also") every
+// tile shows its stars, plays and players, and the ratings show one game at a time with a game picker (startChooser).
 import '../styles/tokens.css';
 import '../styles/base.css';
 import '../styles/layout.css';
@@ -24,13 +28,13 @@ import { withHuman, postJson } from '../lib/human.js';
 import { findWallets, signInWithWallet, explainWalletError } from '../lib/wallet.js';
 import { isGame, STARS } from './list.js';
 import {
-  WALLET_STEPS, NO_WALLET, BADGE, STAR_PATH, starsPath, starsLabel, pickText, fillWidth, avgText, ratingsText, countText,
-  barWidth, playedText, cardStats, dateText, adjustStats, placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText,
-  deletedText, reviewError, gameOfHash, tileStats, shownText,
+  WALLET_STEPS, NO_WALLET, BADGE, starsPath, starsLabel, pickText, fillWidth, countText, barWidth, dateText, adjustStats,
+  placeReview, mergeMine, appendPage, BOX, moreText, meText, savedText, deletedText, reviewError, gameOfHash, rateHash,
+  gameStats, shownText,
 } from './words.js';
 import { startBoards } from './leaderboard.js';
 import { GAMES } from './list.js';
-import { SHELF, FILTERS, SORTS, sortShelf, inFilter } from './shelf.js';
+import { SHELF, FILTERS, SORTS, sortShelf, inFilter, pickOrder, previewOf } from './shelf.js';
 
 // the site's 18+ answer and wallet session (the home page's and her live page's too: a wallet connected there is connected
 // here), { session, wallet, level, name, notes }
@@ -132,10 +136,11 @@ function createSession() {
 // `rate`: its ratings' panel ([data-gm-rate="<game>"]), where everything it reads and writes is
 function mountGame(rate, session) {
   const GAME = rate.dataset.gmRate;
-  const card = $(`[data-gm-game="${GAME}"]`);
+  const card = $(`[data-gm-game="${GAME}"]`);                 // its tile in the picker
+  const row = $(`[data-gm-choose-game="${GAME}"]`);           // its row in the game picker
   const ui = {
     avg: $('[data-gm-avg]', rate), avgStars: $('[data-gm-avg-stars]', rate), count: $('[data-gm-count]', rate),
-    played: $('[data-gm-played]', rate),
+    played: $('[data-gm-played]', rate), plays: $('[data-gm-plays]', rate), players: $('[data-gm-players]', rate),
     bar: Object.fromEntries(STARS.map((n) => [n, $(`[data-gm-bar="${n}"]`, rate)])),
     barN: Object.fromEntries(STARS.map((n) => [n, $(`[data-gm-bar-n="${n}"]`, rate)])),
     states: [...rate.querySelectorAll('[data-gm-state]')],
@@ -186,36 +191,53 @@ function mountGame(rate, session) {
     renderAll();
   }
 
-  // its tile in the picker: its rating ("4.8" and a star, or "New") and its plays ("1.2K plays")
+  // its tile in the picker and its row in the game picker (2026-11-08: on every screen, a phone's too): a row of stars filled
+  // to its average (what a screen reader hears; the numbers beside it are for the eye), how many ratings, and how many times
+  // it was played by how many players, each number with its word (on a phone the word is for screen readers, its icon for
+  // the eye)
+  const said = (className, text) => { const node = el('span', className, text); node.setAttribute('aria-hidden', 'true'); return node; };
+  const withWord = (node, n, word) => node.replaceChildren(el('span', 'gm-tile-n', n), ...(word ? [el('span', 'gm-tile-unit', ` ${word}`)] : []));
   function renderCard() {
-    if (!card) return;
-    const c = tileStats(stats, { loading: stats === undefined });
-    const rating = $('[data-gm-stat="rating"]', card);
-    if (rating) {
-      rating.replaceChildren();
-      if (c.rating.star) rating.append(svgOf('gm-stat-star', '0 0 24 24', STAR_PATH));
-      rating.append(document.createTextNode(c.rating.value));
-      if (c.rating.star) rating.append(el('span', 'sr-only', ' out of 5'));
-      rating.hidden = !c.rating.value;
+    const c = gameStats(stats, { loading: stats === undefined });
+    if (card) {
+      const box = $('[data-gm-tile-stats]', card);
+      if (box) box.hidden = !c;
+      const rating = $('[data-gm-stat="rating"]', card);
+      if (rating && c) {
+        rating.replaceChildren(starRow(c.stars, c.label, 'gm-stars-xs'), ...(c.loading ? [said('gm-tile-avg', '…')]
+          : c.rated ? [said('gm-tile-avg', c.avg), said('gm-tile-count', `(${c.count.n})`)] : [said('gm-tile-none', c.ratings)]));
+      }
+      const plays = $('[data-gm-stat="plays"]', card), players = $('[data-gm-stat="players"]', card);
+      if (plays && c) withWord(plays, c.plays.n, c.plays.unit);
+      if (players && c) withWord(players, c.players.n, c.players.unit);
     }
-    const plays = $('[data-gm-stat="plays"]', card);
-    if (plays) { plays.textContent = c.plays; plays.hidden = !c.plays; }
+    const line = row && $('[data-gm-choose-stats]', row);
+    if (line) {
+      line.replaceChildren(...(!c ? [] : [starRow(c.stars, c.label, 'gm-stars-pick'),
+        said('gm-choose-rated', c.loading ? '…' : c.rated ? `${c.avg} (${c.count.full})` : c.ratings),
+        ...(c.loading ? [] : [el('span', 'gm-choose-plays', `${c.plays.full} ${c.plays.unit}`)])]));
+    }
     if (stats) shelfStats.set(GAME, stats);
     shelfChanged();
   }
 
+  // the top of its ratings: the game, its stars, how many ratings, plays and players; then how its stars split
   function renderSummary() {
     const s = stats;
-    ui.avg.textContent = s === undefined ? '…' : s && s.ratings > 0 ? avgText(s.average) : '—';
-    setStars(ui.avgStars, s && s.ratings > 0 ? s.average : 0,
-      s === undefined ? 'Loading its rating' : s && s.ratings > 0 ? `Rated ${avgText(s.average)} out of 5` : 'No ratings yet');
-    ui.count.textContent = s === undefined ? 'Loading…' : s ? ratingsText(s.ratings) : BOX.statsSoon;
+    const c = gameStats(s, { loading: s === undefined });
+    setStars(ui.avgStars, c ? c.stars : 0, c ? c.label : BOX.statsSoon);
+    ui.avg.textContent = c ? c.avg : '';
+    ui.count.textContent = c ? c.ratings : BOX.statsSoon;
+    ui.played.hidden = !c;
+    if (c) {
+      ui.plays.textContent = c.loading ? '…' : `${c.plays.full} ${c.plays.unit}`;
+      ui.players.textContent = c.loading ? '…' : `${c.players.full} ${c.players.unit}`;
+    }
     for (const n of STARS) {
       const k = s ? s.stars[n - 1] : null;
       ui.bar[n]?.style.setProperty('--gm-w', s ? barWidth(k, s.ratings) : '0%');
       if (ui.barN[n]) ui.barN[n].textContent = s ? countText(k) : '—';
     }
-    ui.played.textContent = s === undefined ? '…' : playedText(s?.plays, s?.players);
   }
 
   function reviewItem(r) {
@@ -575,61 +597,122 @@ function mountGame(rate, session) {
   return box;
 }
 
-// ---------- a tab for each game's ratings ----------
-// The WAI-ARIA tabs pattern: ← and → (Home, End) move between the games and show each one's panel as they go; Tab goes
-// on into it. A link to a game's ratings (#rate-<game>, or #rate: Ride 'Em, AGI!'s, from before there were two) opens its
-// tab before the browser scrolls there, on this page or when it opens with one.
-function startTabs(boxes) {
-  const list = $('[data-gm-tabs]');
-  const tabs = list ? [...list.querySelectorAll('[role="tab"]')] : [];
-  if (!tabs.length) return;
-  const panelOf = (tab) => document.getElementById(tab.getAttribute('aria-controls'));
-  const tabOf = (game) => tabs.find((t) => t.dataset.gmTab === game) || null;
-  function pick(tab, { focus = false } = {}) {
-    for (const t of tabs) {
-      const on = t === tab;
-      t.setAttribute('aria-selected', String(on));
-      t.tabIndex = on ? 0 : -1;
-      const panel = panelOf(t);
-      if (panel) panel.hidden = !on;
+// ---------- one game's ratings at a time, and the game picker (2026-11-08) ----------
+// The owner: "can you organize well the ratings and review"; their choice: one game at a time, with a picker. Every game's
+// panel is on the page and one shows. Its "Change game" opens the picker (a modal <dialog>: Esc, ✕ or a tap outside it closes
+// it, and focus goes back): every game with its stars, best rated first, then the most played (its order as it opens), and
+// a search box (↓ and Enter from it; ↑ ↓ Home End between the games). A tap shows that game: its panel in view, focus on its
+// name, and the address says which (#rate-<game>, so a reload or a shared link opens it). A link to a game's ratings
+// (#rate-<game>, or #rate: Ride 'Em, AGI!'s, from before there were two) shows it before the browser scrolls there, on this
+// page or when it opens with one.
+function startChooser(boxes) {
+  const panels = [...document.querySelectorAll('[data-gm-rate]')].filter((p) => isGame(p.dataset.gmRate));
+  if (!panels.length) return;
+  const dlg = $('[data-gm-choose]');
+  const list = $('[data-gm-choose-list]');
+  const q = $('[data-gm-choose-q]');
+  const none = $('[data-gm-choose-none]');
+  const say = $('[data-gm-choose-say]');
+  const items = new Map([...document.querySelectorAll('[data-gm-choose-game]')].map((li) => [li.dataset.gmChooseGame, li]));
+  const panelOf = (game) => panels.find((p) => p.dataset.gmRate === game) || null;
+  const pickOf = (game) => items.get(game)?.querySelector('[data-gm-choose-pick]') || null;
+  let current = (panels.find((p) => !p.hidden) || panels[0]).dataset.gmRate;
+
+  function show(game) {
+    const panel = panelOf(game);
+    if (!panel) return null;
+    current = game;
+    for (const p of panels) p.hidden = p !== panel;
+    for (const id of items.keys()) {
+      const b = pickOf(id);
+      if (id === game) b?.setAttribute('aria-current', 'true'); else b?.removeAttribute('aria-current');
     }
-    if (focus) tab.focus();
-    // (fourteen tabs scroll sideways on a phone: the picked one comes into view in its row, never the page)
-    const row = list, l = tab.offsetLeft, r = l + tab.offsetWidth;
-    if (row.scrollWidth > row.clientWidth && (l < row.scrollLeft || r > row.scrollLeft + row.clientWidth)) {
-      try { row.scrollTo({ left: l - 16, behavior: 'smooth' }); } catch { row.scrollLeft = l - 16; }
-    }
-    boxes.find((b) => b.game === tab.dataset.gmTab)?.render();     // its box drawn as it shows (and asks for your review)
+    boxes.find((b) => b.game === game)?.render();     // its box drawn as it shows (and asks for your review)
+    return panel;
   }
-  const picked = (tab) => tab.getAttribute('aria-selected') === 'true';
-  list.addEventListener('click', (e) => {
-    const tab = e.target.closest('[role="tab"]');
-    if (tab && tabs.includes(tab) && !picked(tab)) pick(tab);
+  // a panel into view under the top bar, unless its top is already on the screen
+  function reveal(panel, how = 'smooth') {
+    const top = panel.getBoundingClientRect().top;
+    if (top >= 56 && top <= innerHeight * 0.55) return;
+    const motion = (() => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : how; } catch { return how; } })();
+    try { panel.scrollIntoView({ block: 'start', behavior: motion }); } catch { panel.scrollIntoView(true); }
+  }
+
+  // ---------- the picker ----------
+  const norm = (t) => String(t).toLowerCase().normalize('NFKD').replace(/[^a-z0-9]/g, '');
+  const findable = new Map(SHELF.map((g) => [g.id, norm(`${g.name} ${g.genre} ${g.line}`)]));
+  // the games in the picker as they're listed (its order as it opened), those the search leaves
+  const shown = () => (list ? [...list.querySelectorAll('[data-gm-choose-game]')] : []).filter((li) => !li.hidden)
+    .map((li) => li.querySelector('[data-gm-choose-pick]')).filter(Boolean);
+  function filter() {
+    const t = norm(q?.value || '');
+    let n = 0;
+    for (const [id, li] of items) {
+      li.hidden = Boolean(t) && !(findable.get(id) || '').includes(t);
+      if (!li.hidden) n += 1;
+    }
+    if (none) none.hidden = n > 0;
+    if (say) say.textContent = t ? (n === 1 ? '1 game' : n ? `${n} games` : 'No games') : '';
+  }
+  function open() {
+    if (!dlg || !list || dlg.open) return;
+    for (const g of pickOrder(Object.fromEntries(shelfStats))) { const li = items.get(g.id); if (li) list.append(li); }
+    if (q) q.value = '';
+    filter();
+    try { dlg.showModal(); } catch { return; }
+    list.scrollTop = 0;
+    pickOf(current)?.focus();       // the game showing, in view in the list (a phone's keyboard stays down until the search is tapped)
+  }
+  function pick(game) {
+    const panel = show(game);
+    if (dlg?.open) dlg.close();
+    if (!panel) return;
+    try { history.replaceState(history.state, '', rateHash(game)); } catch { /* the address stays as it was */ }
+    reveal(panel);
+    $('[data-gm-head-name]', panel)?.focus({ preventScroll: true });
+  }
+  document.addEventListener('click', (e) => { if (e.target.closest?.('[data-gm-change]')) open(); });
+  list?.addEventListener('click', (e) => {
+    const li = e.target.closest('[data-gm-choose-pick]')?.closest('[data-gm-choose-game]');
+    if (li) pick(li.dataset.gmChooseGame);
   });
-  list.addEventListener('keydown', (e) => {
-    const i = tabs.indexOf(e.target.closest('[role="tab"]'));
+  $('[data-gm-choose-close]')?.addEventListener('click', () => dlg.close());
+  dlg?.addEventListener('click', (e) => { if (e.target === dlg) dlg.close(); });     // a tap on the dimmed page around it
+  q?.addEventListener('input', filter);
+  q?.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowDown' && e.key !== 'Enter') return;
+    const first = shown()[0];
+    if (!first) return;
+    e.preventDefault();
+    if (e.key === 'Enter') pick(first.closest('[data-gm-choose-game]').dataset.gmChooseGame);
+    else first.focus();
+  });
+  list?.addEventListener('keydown', (e) => {
+    const games = shown();
+    const i = games.indexOf(document.activeElement);
     if (i < 0 || e.altKey || e.ctrlKey || e.metaKey) return;
-    const n = tabs.length;
-    const to = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 }[e.key];
+    const n = games.length;
+    const to = { ArrowDown: Math.min(n - 1, i + 1), ArrowUp: i - 1, Home: 0, End: n - 1 }[e.key];
     if (to === undefined) return;
     e.preventDefault();
-    pick(tabs[to], { focus: true });
+    if (to < 0) q?.focus(); else games[to].focus();
   });
-  // a link to a game's ratings on this page (a card's "Rate it"): its tab first, so the browser finds its panel showing
+
+  // a link to a game's ratings on this page: that game first, so the browser finds its panel showing
   const follow = (hash) => {
-    const tab = tabOf(gameOfHash(hash));
-    if (tab && !picked(tab)) pick(tab);
-    return tab;
+    const game = gameOfHash(hash);
+    if (game && game !== current) show(game);
+    return game;
   };
   document.addEventListener('click', (e) => {
     const a = e.target.closest?.('a[href^="#rate"]');
     if (a) follow(a.getAttribute('href'));
   });
-  addEventListener('hashchange', () => follow(location.hash));
-  // the page opened at a game's ratings: its tab, then its panel in view (it was hidden when the browser looked for it)
-  const tab = tabOf(gameOfHash(location.hash));
-  if (tab && !picked(tab)) {
-    pick(tab);
+  addEventListener('hashchange', () => { const game = follow(location.hash); if (game) reveal(panelOf(game)); });
+  // the page opened at a game's ratings: that game, then its place in view (its panel was empty when the browser looked)
+  const first = gameOfHash(location.hash);
+  if (first) {
+    show(first);
     const target = document.getElementById(location.hash.slice(1));
     if (target) {
       try { target.scrollIntoView({ block: 'start', behavior: 'instant' }); } catch { target.scrollIntoView(true); }
@@ -656,6 +739,11 @@ function fillPanels() {
     }
     const walk = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
     for (let t = walk.nextNode(); t; t = walk.nextNode()) if (t.data.includes('GAMENAME')) t.data = t.data.replaceAll('GAMENAME', GAMES[game].name);
+    // (2026-11-08) its picture (its tile's still, asked for only once its panel shows: loading="lazy") and its Play link
+    const img = copy.querySelector('[data-gm-head-img]');
+    if (img) img.src = previewOf(game).poster;
+    const play = copy.querySelector('[data-gm-play]');
+    if (play) play.href = GAMES[game].path;
     panel.append(copy);
   }
 }
@@ -754,7 +842,7 @@ function start() {
     .filter((rate) => isGame(rate.dataset.gmRate))
     .map((rate) => mountGame(rate, session));
   if (!boxes.length) return;
-  startTabs(boxes);
+  startChooser(boxes);
   addEventListener('storage', (e) => session.follow(e));
   // each game's numbers at once (every tile shows them)
   for (const box of boxes) box.start();

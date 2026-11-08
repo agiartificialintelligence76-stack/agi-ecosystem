@@ -74,5 +74,21 @@ export function sortShelf(sort, stats = {}) {
   }
   return list;
 }
+// the game picker in the ratings (2026-11-08, the owner's "One game + picker"): best rated first (the higher average, then
+// more ratings), then the games nobody has rated yet, the most played first; ties keep the Featured order
+export function pickOrder(stats = {}) {
+  const rank = new Map(SHELF.map((g, i) => [g.id, i]));
+  const rated = (id) => {
+    const s = stats[id];
+    return s && Number.isSafeInteger(s.ratings) && s.ratings > 0 && Number.isFinite(s.average) ? s : null;
+  };
+  const plays = (id) => (Number.isSafeInteger(stats[id]?.plays) && stats[id].plays >= 0 ? stats[id].plays : -1);
+  return [...SHELF].sort((a, b) => {
+    const ra = rated(a.id), rb = rated(b.id);
+    if (ra && rb) return rb.average - ra.average || rb.ratings - ra.ratings || plays(b.id) - plays(a.id) || rank.get(a.id) - rank.get(b.id);
+    if (ra || rb) return ra ? -1 : 1;
+    return plays(b.id) - plays(a.id) || rank.get(a.id) - rank.get(b.id);
+  });
+}
 export const inFilter = (game, filter) => filter === 'all' || game.tags.includes(filter);
 export const countIn = (filter) => SHELF.filter((g) => inFilter(g, filter)).length;

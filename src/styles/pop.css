@@ -853,24 +853,38 @@
 [data-skin='pop'] .gm-tile-badge.is-play { color: var(--pop-ink); background: var(--pop-mint); border: 2px solid var(--pop-ink); rotate: -4deg; font-weight: 700; }
 [data-skin='pop'] .gm-tile-go { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); box-shadow: 0 3px 0 var(--pop-ink); font-family: var(--display); font-weight: 850; }
 [data-skin='pop'] .gm-tile-genre { color: var(--pop-violet); font-weight: 600; }
-[data-skin='pop'] .gm-stat-star { fill: var(--pop-honey); stroke: var(--pop-ink); stroke-width: 1.6; stroke-linejoin: round; }
-/* a tab for each game's ratings (2026-10-21): white pills with ink outlines and hard shadows, the picked one honey, each
-   game's picture on violet like its card's */
-[data-skin='pop'] .gm-tab {
-  color: var(--fg); background: var(--bg); border: 2px solid var(--edge); border-radius: 999px; box-shadow: 0 4px 0 -1px var(--shade);
-  font-family: var(--display); font-weight: 850; font-stretch: 108%; letter-spacing: -0.005em;
-}
-[data-skin='pop'] .gm-tab:hover { color: var(--pop-ink); background: var(--pop-lav); border-color: var(--edge); }
-[data-skin='pop'] .gm-tab[aria-selected='true'] { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); box-shadow: 0 5px 0 0 var(--pop-ink); }
-[data-skin='pop'] .gm-tab-art { background-color: var(--pop-violet); box-shadow: 0 0 0 2px var(--pop-ink); }
-/* its ratings: the average violet with a pink echo; stars honey with ink outlines (white where they're empty) */
-[data-skin='pop'] .gm-avg-n { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; color: var(--pop-violet); text-shadow: .05em .05em 0 var(--pop-pink); }
+/* (the second night) under each tile its stars, plays and players: ink numbers, the average bold */
+[data-skin='pop'] .gm-tile-stats { color: var(--pop-ink); }
+[data-skin='pop'] .gm-tile-avg { font-weight: 700; }
+[data-skin='pop'] .gm-tile-count, [data-skin='pop'] .gm-tile-none { color: #4a3b78; }
+/* its ratings, one game at a time (2026-11-08): the game's picture an ink-outlined sticker, its name in Anybody, its average
+   violet with a pink echo; stars honey with ink outlines (white where they're empty) */
+[data-skin='pop'] .gm-game-img { border: 3px solid var(--edge); box-shadow: 4px 4px 0 var(--shade); }
+[data-skin='pop'] .gm-game-name { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .gm-game-avg { font-family: var(--display); font-size: 26px; font-weight: 900; font-stretch: 112%; letter-spacing: -0.01em; color: var(--pop-violet); text-shadow: .06em .06em 0 var(--pop-pink); }
+[data-skin='pop'] .gm-game-played { color: var(--pop-ink); }
+[data-skin='pop'] .gm-split-title { color: var(--pop-violet); font-weight: 600; }
+/* the game picker: a white card with an ink outline and a hard shadow on a violet dusk, the game showing honey */
+[data-skin='pop'] .gm-choose { border: 3px solid var(--pop-ink); border-radius: 26px; box-shadow: 0 12px 0 -2px var(--pop-ink); }
+[data-skin='pop'] .gm-choose::backdrop { background: rgb(42 15 122 / .55); }
+[data-skin='pop'] .gm-choose-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
+[data-skin='pop'] .gm-choose-x { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); box-shadow: 0 3px 0 var(--pop-ink); }
+[data-skin='pop'] .gm-choose-q { background: #fff; border: 2px solid var(--edge); }
+[data-skin='pop'] .gm-choose-q:focus-visible { outline-color: var(--pop-violet); }
+[data-skin='pop'] .gm-choose-order { color: var(--pop-violet); font-weight: 600; }
+[data-skin='pop'] .gm-choose-game { border-width: 2px; }
+[data-skin='pop'] .gm-choose-game:hover { background: var(--pop-lav); }
+[data-skin='pop'] .gm-choose-game:focus-visible { outline-color: var(--pop-violet); }
+[data-skin='pop'] .gm-choose-game[aria-current='true'] { color: var(--pop-ink); background: var(--pop-lav); border-color: var(--pop-ink); box-shadow: 0 4px 0 var(--pop-ink); }
+[data-skin='pop'] .gm-choose-game[aria-current='true'] .gm-choose-stats, [data-skin='pop'] .gm-choose-game[aria-current='true'] .gm-choose-plays { color: var(--pop-ink); }
+[data-skin='pop'] .gm-choose-img { border: 2px solid var(--edge); }
+[data-skin='pop'] .gm-choose-name { font-family: var(--display); font-weight: 850; font-stretch: 108%; letter-spacing: -0.005em; }
+[data-skin='pop'] .gm-choose-now { color: var(--pop-ink); background: var(--pop-honey); border: 2px solid var(--pop-ink); font-weight: 700; }
 [data-skin='pop'] .gm-box-title, [data-skin='pop'] .gm-reviews-title, [data-skin='pop'] .gm-soon-title { font-family: var(--display); font-weight: 900; font-stretch: 112%; letter-spacing: -0.02em; }
 [data-skin='pop'] .gm-stars-base { fill: #fff; stroke: var(--pop-ink); stroke-width: 1.4; stroke-linejoin: round; }
 [data-skin='pop'] .gm-stars-fill { fill: var(--pop-honey); stroke: var(--pop-ink); stroke-width: 1.4; stroke-linejoin: round; }
 [data-skin='pop'] .gm-bar-track { height: 12px; background: #fff; border: 2px solid var(--edge); }
 [data-skin='pop'] .gm-bar-fill { background: var(--pop-pink); }
-[data-skin='pop'] .gm-played { border-top: 2px solid var(--edge); }
 [data-skin='pop'] .gm-me { border: 2px solid var(--edge); }
 [data-skin='pop'] .gm-pick-star { color: #fff; }
 [data-skin='pop'] .gm-pick-star svg { stroke: var(--pop-ink); stroke-width: 1.4; stroke-linejoin: round; }
@@ -921,9 +935,21 @@
 [data-skin='pop'][data-theme='dark'] .gm-filter[aria-pressed='true'] { color: var(--pop-ink); background: var(--pop-honey); border-color: var(--pop-ink); }
 [data-skin='pop'][data-theme='dark'] .gm-sort-pick { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-shelf-n { box-shadow: 2px 2px 0 var(--pop-pink); }
-[data-skin='pop'][data-theme='dark'] .gm-tab[aria-selected='true'] { box-shadow: 0 5px 0 0 var(--pop-pink); }
-[data-skin='pop'][data-theme='dark'] .gm-tab-art { background-color: #2a0f7a; box-shadow: 0 0 0 2px var(--pop-lav-2); }
-[data-skin='pop'][data-theme='dark'] .gm-avg-n { color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .gm-tile-stats { color: #f4efff; }
+[data-skin='pop'][data-theme='dark'] .gm-tile-count, [data-skin='pop'][data-theme='dark'] .gm-tile-none { color: #cbbff0; }
+[data-skin='pop'][data-theme='dark'] .gm-game-img { border-width: 2px; box-shadow: 4px 4px 0 var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .gm-game-avg { color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .gm-game-played { color: #f4efff; }
+[data-skin='pop'][data-theme='dark'] .gm-split-title { color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .gm-choose { color: #f4efff; background: #160a33; border: 2px solid var(--pop-lav-2); box-shadow: 0 12px 0 -2px var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .gm-choose::backdrop { background: rgb(7 2 22 / .72); }
+[data-skin='pop'][data-theme='dark'] .gm-choose-q { color: #f4efff; background: #1d0e40; border-color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .gm-choose-order { color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .gm-choose-game:hover { background: #2a1660; }
+[data-skin='pop'][data-theme='dark'] .gm-choose-game:focus-visible { outline-color: var(--pop-honey); }
+[data-skin='pop'][data-theme='dark'] .gm-choose-img { border-color: var(--pop-lav-2); }
+[data-skin='pop'][data-theme='dark'] .gm-choose-game[aria-current='true'] { color: #f4efff; background: #2a1660; border-color: var(--pop-lav-2); box-shadow: 0 4px 0 var(--pop-pink); }
+[data-skin='pop'][data-theme='dark'] .gm-choose-game[aria-current='true'] .gm-choose-stats, [data-skin='pop'][data-theme='dark'] .gm-choose-game[aria-current='true'] .gm-choose-plays { color: #e4d9ff; }
 [data-skin='pop'][data-theme='dark'] .gm-stars-base { fill: #28155a; stroke: var(--pop-lav-2); }
 [data-skin='pop'][data-theme='dark'] .gm-bar-track { background: #28155a; }
 [data-skin='pop'][data-theme='dark'] .gm-pick-star { color: #28155a; }
@@ -939,11 +965,18 @@
   [data-skin='pop'] .gm-tile-media { border-bottom-width: 2.5px; }
   [data-skin='pop'] .gm-sub { font-size: clamp(22px, 6.4vw, 30px); }
 }
-/* (2026-11-08, the second night) a phone's three small tiles a row: thinner outlines */
+@media (max-width: 960px) {
+  [data-skin='pop'] .gm-split { border-top: 2px solid var(--edge); }
+}
+/* (2026-11-08, the second night) a phone's three small tiles a row: thinner outlines; the game picker a sheet from the bottom */
 @media (max-width: 560px) {
   [data-skin='pop'] .gm-tile-link { border-width: 2px; border-radius: 13px; box-shadow: 0 4px 0 -1px var(--shade); }
   [data-skin='pop'] .gm-tile-media { border-bottom-width: 2px; }
   [data-skin='pop'] .gm-tile-badge.is-new, [data-skin='pop'] .gm-tile-badge.is-play { border-width: 1.5px; }
+  [data-skin='pop'] .gm-choose { border-width: 3px 0 0; border-radius: 24px 24px 0 0; box-shadow: none; }
+  [data-skin='pop'][data-theme='dark'] .gm-choose { border-width: 2px 0 0; box-shadow: none; }
+  [data-skin='pop'] .gm-game-img { border-width: 2px; box-shadow: 3px 3px 0 var(--shade); }
+  [data-skin='pop'] .gm-game-avg { font-size: 22px; }
 }
 /* ---------- things that float over the page: the market notice, the wallet screen ---------- */
 [data-skin='pop'] .notice { border: 2px solid var(--edge); border-radius: 22px; box-shadow: 0 8px 0 -1px var(--shade); }

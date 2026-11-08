@@ -49,31 +49,10 @@ const ok = (n) => Number.isSafeInteger(n) && n >= 0;
 export const countText = (n) => (ok(n) ? n.toLocaleString('en-US') : '—');
 export const avgText = (avg) => (typeof avg === 'number' && Number.isFinite(avg) ? avg.toFixed(1) : '—');
 export const ratingsText = (n) => (!ok(n) || n === 0 ? 'No ratings yet' : n === 1 ? '1 rating' : `${countText(n)} ratings`);
-export const timesText = (n) => (!ok(n) ? '—' : n === 0 ? 'Not yet' : n === 1 ? 'Once' : `${countText(n)} times`);
-export function playedText(plays, players) {
-  if (!ok(plays)) return 'Plays and players show up here soon.';
-  if (plays === 0) return 'Nobody has played it yet: be the first.';
-  const times = plays === 1 ? 'once' : `${countText(plays)} times`;
-  if (!ok(players) || players === 0) return `Played ${times}.`;
-  return `Played ${times} by ${players === 1 ? '1 person' : `${countText(players)} people`}.`;
-}
 // a bar of the 5★ to 1★ chart: its share of the ratings
 export const barWidth = (n, total) => `${ok(n) && ok(total) && total > 0 ? Number(((n / total) * 100).toFixed(1)) : 0}%`;
 
-// The game's card on the shelf: "…" while its numbers load, "—" when they aren't there (the database isn't set up yet, or
-// our server didn't answer). Its rating: the average and a star, or "None yet"
-export function cardStats(stats, { loading = false } = {}) {
-  if (loading) return { rating: { value: '…', star: false }, players: '…', plays: '…' };
-  if (!stats) return { rating: { value: '—', star: false }, players: '—', plays: '—' };
-  return {
-    rating: stats.ratings > 0 ? { value: avgText(stats.average), star: true } : { value: 'None yet', star: false },
-    players: countText(stats.players), plays: timesText(stats.plays),
-  };
-}
-
-// A game's tile in the picker (2026-11-08): its rating as "4.8" with a star (or "New" without ratings yet) and its plays
-// compact ("1.2K plays"); "…" while they load, nothing at all when they aren't there (not set up yet, or our server didn't
-// answer): the tile still opens the game
+// a big number made short for a small tile ("1.2K"), never rounded up past what it is
 export function compactCount(n) {
   if (!ok(n)) return '';
   if (n < 1000) return String(n);
@@ -81,12 +60,31 @@ export function compactCount(n) {
   for (const [v, u] of units) if (n >= v) { const x = n / v; return `${x >= 100 ? Math.floor(x) : Math.floor(x * 10) / 10}${u}`; }
   return String(n);
 }
-export function tileStats(stats, { loading = false } = {}) {
-  if (loading) return { rating: { value: '…', star: false }, plays: '…' };
-  if (!stats) return { rating: { value: '', star: false }, plays: '' };
+
+// A game's numbers wherever the page shows them: under its tile, at the top of its ratings, and in the game picker
+// (2026-11-08, the owner: "the how many times the game played and the how many players played that game each should be
+// still visible on each game below it … and put stars there also"). Its stars (a row of five, filled to its average, with
+// what a screen reader hears), the average, how many ratings, and how many times it was played by how many players: each
+// number short ("1.2K", for a tile) and in full ("1,234"), with its word. While they load, dots; null when our server has
+// none to give (not set up yet, or it didn't answer): the tile still opens the game.
+export function gameStats(stats, { loading = false } = {}) {
+  if (loading) {
+    const dots = { n: '…', full: '…', unit: '' };
+    return { loading: true, rated: false, stars: 0, label: 'Loading its rating', avg: '…', ratings: 'Loading…', count: null, plays: dots, players: dots };
+  }
+  if (!stats || typeof stats !== 'object') return null;
+  const rated = ok(stats.ratings) && stats.ratings > 0 && typeof stats.average === 'number' && Number.isFinite(stats.average);
+  const num = (n, one, many) => (ok(n) ? { n: compactCount(n), full: countText(n), unit: n === 1 ? one : many } : { n: '—', full: '—', unit: many });
   return {
-    rating: stats.ratings > 0 ? { value: avgText(stats.average), star: true } : { value: 'New', star: false },
-    plays: !ok(stats.plays) ? '' : stats.plays === 0 ? 'Be the first' : `${compactCount(stats.plays)} ${stats.plays === 1 ? 'play' : 'plays'}`,
+    loading: false,
+    rated,
+    stars: rated ? stats.average : 0,
+    label: rated ? `Rated ${avgText(stats.average)} out of 5 from ${ratingsText(stats.ratings)}` : 'No ratings yet',
+    avg: rated ? avgText(stats.average) : '',
+    ratings: ratingsText(rated ? stats.ratings : 0),
+    count: rated ? num(stats.ratings, 'rating', 'ratings') : null,
+    plays: num(stats.plays, 'play', 'plays'),
+    players: num(stats.players, 'player', 'players'),
   };
 }
 // what the picker shows, for screen readers after a filter or a sort: "Showing 4 games: Action, sorted by Most played."

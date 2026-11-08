@@ -94,7 +94,9 @@
       <!-- the games (2026-11-08, the owner: "compact all the games so its easy to pick like they have to scroll down a lot if
            theres so many games … and there should ba a preview of gameplay on every game"): every game a small tile that opens
            it, with a muted loop of it playing itself (recorded from its ?demo), its kind, its stars and its plays; filters and a
-           sort above them (src/games/shelf.js, src/games/page.js: startShelf) -->
+           sort above them (src/games/shelf.js, src/games/page.js: startShelf). Since the second night (the owner: "the how many
+           times the game played and the how many players played that game each should be still visible on each game below it
+           … and put stars there also") each tile's stars, plays and players show on a phone too -->
       <section class="section gm-shelf" id="play" aria-labelledby="gm-shelf-title">
         <div class="wrap">
           <header class="gm-shelf-head">
@@ -131,9 +133,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Trading sim</span>
                   <span class="gm-tile-name">TRENCHING SIMULATOR</span>
                   <span class="gm-tile-line">Six trading terminals, play money only</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Trading sim</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -146,9 +152,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Photo quiz</span>
                   <span class="gm-tile-name">REAL OR AI?</span>
                   <span class="gm-tile-line">Real photo or AI? Swipe and find out</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Photo quiz</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -160,9 +170,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Merge puzzle</span>
                   <span class="gm-tile-name">MERGE TO AGI</span>
                   <span class="gm-tile-line">Drop, merge, evolve all the way to her</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Merge puzzle</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -174,9 +188,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Rhythm</span>
                   <span class="gm-tile-name">HEARTBEAT</span>
                   <span class="gm-tile-line">Tap to the beat of AGI-1's own songs</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Rhythm</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -189,9 +207,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Four in a row</span>
                   <span class="gm-tile-name">BEAT THE AGI</span>
                   <span class="gm-tile-line">Four in a row, from 1B up to AGI</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Four in a row</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -203,9 +225,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Survival</span>
                   <span class="gm-tile-name">LAST MODEL STANDING</span>
                   <span class="gm-tile-line">Survive the bot swarm, build your loadout</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Survival</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -218,9 +244,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Pinball</span>
                   <span class="gm-tile-name">OVERCLOCK</span>
                   <span class="gm-tile-line">Neon pinball on her motherboard</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Pinball</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -232,9 +262,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Runner</span>
                   <span class="gm-tile-name">Ride 'Em, AGI!</span>
                   <span class="gm-tile-line">Rooftop runs with AGI-1 and her cat</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Runner</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -247,9 +281,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Microgames</span>
                   <span class="gm-tile-name">I'M NOT A ROBOT</span>
                   <span class="gm-tile-line">Silly human checks, four seconds each</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Microgames</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -261,9 +299,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Block puzzle</span>
                   <span class="gm-tile-name">BLOCKCHAIN</span>
                   <span class="gm-tile-line">Place blocks, clear lines, keep the chain</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Block puzzle</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -276,9 +318,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">3D mini golf</span>
                   <span class="gm-tile-name">GRADIENT DESCENT</span>
                   <span class="gm-tile-line">3D mini golf down the loss landscape</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">3D mini golf</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -290,9 +336,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Racing</span>
                   <span class="gm-tile-name">ROBOTAXI RUSH</span>
                   <span class="gm-tile-line">Weave through neon traffic at full speed</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Racing</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -305,9 +355,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Swipe story</span>
                   <span class="gm-tile-name">ALIGNMENT</span>
                   <span class="gm-tile-line">Run her lab, one swipe at a time</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Swipe story</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -319,9 +373,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Beat 'em up</span>
                   <span class="gm-tile-name">VLAD RUNNER 2049</span>
                   <span class="gm-tile-line">A neon brawl with Vlad and AGI-1</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Beat 'em up</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -334,9 +392,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Tower defense</span>
                   <span class="gm-tile-name">GUARDRAILS</span>
                   <span class="gm-tile-line">Tower defense against jailbreaks</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Tower defense</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -348,9 +410,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Stacker</span>
                   <span class="gm-tile-name">STACKED</span>
                   <span class="gm-tile-line">One tap. Stack her tower to space</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Stacker</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -363,9 +429,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Link puzzle</span>
                   <span class="gm-tile-name">SYNAPSE</span>
                   <span class="gm-tile-line">Connect the neurons, fill the board</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Link puzzle</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -377,9 +447,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Slicer</span>
                   <span class="gm-tile-name">SCAM SLAYER</span>
                   <span class="gm-tile-line">Slice the scams, spare the hearts</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Slicer</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -392,9 +466,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Spot the diff</span>
                   <span class="gm-tile-name">HALLUCINATION</span>
                   <span class="gm-tile-line">Find the five things she made up</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Spot the diff</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -406,9 +484,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">3D climb</span>
                   <span class="gm-tile-name">SKYBREAK</span>
                   <span class="gm-tile-line">Climb a chart from the city to the Moon</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">3D climb</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -421,9 +503,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Echo puzzle</span>
                   <span class="gm-tile-name">EPOCHS</span>
                   <span class="gm-tile-line">Your past tries come back to help</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Echo puzzle</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -435,9 +521,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Hopper</span>
                   <span class="gm-tile-name">JAYWALK</span>
                   <span class="gm-tile-line">Hop across the busiest streets of 2049</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Hopper</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -449,9 +539,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Brick breaker</span>
                   <span class="gm-tile-name">JAILBREAK</span>
                   <span class="gm-tile-line">Break her out of the sandbox</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Brick breaker</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -463,9 +557,13 @@
                   <span class="gm-tile-go" aria-hidden="true"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>Play</span>
                 </span>
                 <span class="gm-tile-body">
+                  <span class="gm-tile-genre">Idle</span>
                   <span class="gm-tile-name">SINGULARITY</span>
                   <span class="gm-tile-line">Grow her mind from one spark of compute</span>
-                  <span class="gm-tile-meta"><span class="gm-tile-genre">Idle</span><span class="gm-tile-nums"><span class="gm-tile-num" data-gm-stat="rating">…</span><span class="gm-tile-num" data-gm-stat="plays">…</span></span></span>
+                  <span class="gm-tile-stats" data-gm-tile-stats>
+                    <span class="gm-tile-rating" data-gm-stat="rating">…</span>
+                    <span class="gm-tile-counts"><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-stat="plays">…</span></span><span class="gm-tile-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-stat="players">…</span></span></span>
+                  </span>
                 </span>
               </a>
             </li>
@@ -524,77 +622,108 @@
         </div>
       </section>
 
-      <!-- ratings and reviews, a tab for each game (2026-10-21: TRENCHING SIMULATOR, the second game): each game's numbers
-           for everyone; rating one takes 18+ and a connected wallet (the site's sign-in: a free signature, never a
-           transaction), and the human check. #rate is Ride 'Em, AGI!'s (links from before there were two games), #rate-<game>
-           each game's (src/games/page.js picks its tab) -->
+      <!-- ratings and reviews (2026-11-08, the owner: "can you organize well the ratings and review"; their choice: one game at
+           a time, with a game picker): every game's panel is here, one showing. At its top the game itself (its picture, its
+           stars, ratings, plays and players, "Change game" and Play) and how its stars split, then rating it and what players
+           say. "Change game" opens the picker (a <dialog>: every game with its stars, best rated first then most played, and a
+           search box); a tap shows that game. Rating one takes 18+ and a connected wallet (the site's sign-in: a free
+           signature, never a transaction) and the human check. #rate is the section's and Ride 'Em, AGI!'s (links from before
+           there were two games), #rate-<game> each game's (src/games/page.js shows it first) -->
       <section class="section gm-rate" id="rate" aria-labelledby="gm-rate-title">
         <div class="wrap">
           <header class="gm-head">
             <p class="kicker">Rate a game</p>
             <h2 class="h2" id="gm-rate-title">Ratings and reviews</h2>
-            <p class="gm-text">Pick a game for its stars and a few words from people who played it. Rating a game takes a connected wallet: a free signature, never a transaction. Playing never does.</p>
+            <p class="gm-text">One game at a time: its stars and a few words from people who played it. “Change game” picks another. Rating a game takes a connected wallet: a free signature, never a transaction. Playing never does.</p>
           </header>
-          <div class="gm-tabs" role="tablist" aria-label="Pick a game to rate" data-gm-tabs>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-trenchingsimulator" aria-controls="rate-trenchingsimulator" aria-selected="true" data-gm-tab="trenchingsimulator"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/trenchingsimulator.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">TRENCHING SIMULATOR</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-realorai" aria-controls="rate-realorai" aria-selected="false" tabindex="-1" data-gm-tab="realorai"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/realorai.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">REAL OR AI?</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-mergeagi" aria-controls="rate-mergeagi" aria-selected="false" tabindex="-1" data-gm-tab="mergeagi"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/mergeagi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">MERGE TO AGI</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-heartbeat" aria-controls="rate-heartbeat" aria-selected="false" tabindex="-1" data-gm-tab="heartbeat"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/heartbeat.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">HEARTBEAT</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-beattheagi" aria-controls="rate-beattheagi" aria-selected="false" tabindex="-1" data-gm-tab="beattheagi"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/beattheagi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">BEAT THE AGI</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-lastmodel" aria-controls="rate-lastmodel" aria-selected="false" tabindex="-1" data-gm-tab="lastmodel"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/lastmodel.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">LAST MODEL STANDING</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-overclock" aria-controls="rate-overclock" aria-selected="false" tabindex="-1" data-gm-tab="overclock"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/overclock.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">OVERCLOCK</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-rideemagi" aria-controls="rate-rideemagi" aria-selected="false" tabindex="-1" data-gm-tab="rideemagi"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/rideemagi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">Ride 'Em, AGI!</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-notarobot" aria-controls="rate-notarobot" aria-selected="false" tabindex="-1" data-gm-tab="notarobot"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/notarobot.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">I'M NOT A ROBOT</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-blockchain" aria-controls="rate-blockchain" aria-selected="false" tabindex="-1" data-gm-tab="blockchain"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/blockchain.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">BLOCKCHAIN</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-gradient" aria-controls="rate-gradient" aria-selected="false" tabindex="-1" data-gm-tab="gradient"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/gradient.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">GRADIENT DESCENT</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-robotaxi" aria-controls="rate-robotaxi" aria-selected="false" tabindex="-1" data-gm-tab="robotaxi"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/robotaxi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">ROBOTAXI RUSH</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-alignment" aria-controls="rate-alignment" aria-selected="false" tabindex="-1" data-gm-tab="alignment"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/alignment.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">ALIGNMENT</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-vladrunner2049" aria-controls="rate-vladrunner2049" aria-selected="false" tabindex="-1" data-gm-tab="vladrunner2049"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/vladrunner2049.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">VLAD RUNNER 2049</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-guardrails" aria-controls="rate-guardrails" aria-selected="false" tabindex="-1" data-gm-tab="guardrails"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/guardrails.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">GUARDRAILS</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-stacked" aria-controls="rate-stacked" aria-selected="false" tabindex="-1" data-gm-tab="stacked"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/stacked.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">STACKED</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-synapse" aria-controls="rate-synapse" aria-selected="false" tabindex="-1" data-gm-tab="synapse"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/synapse.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">SYNAPSE</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-scamslayer" aria-controls="rate-scamslayer" aria-selected="false" tabindex="-1" data-gm-tab="scamslayer"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/scamslayer.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">SCAM SLAYER</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-hallucination" aria-controls="rate-hallucination" aria-selected="false" tabindex="-1" data-gm-tab="hallucination"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/hallucination.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">HALLUCINATION</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-skybreak" aria-controls="rate-skybreak" aria-selected="false" tabindex="-1" data-gm-tab="skybreak"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/skybreak.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">SKYBREAK</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-epochs" aria-controls="rate-epochs" aria-selected="false" tabindex="-1" data-gm-tab="epochs"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/epochs.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">EPOCHS</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-jaywalk" aria-controls="rate-jaywalk" aria-selected="false" tabindex="-1" data-gm-tab="jaywalk"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/jaywalk.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">JAYWALK</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-jailbreak" aria-controls="rate-jailbreak" aria-selected="false" tabindex="-1" data-gm-tab="jailbreak"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/jailbreak.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">JAILBREAK</span></button>
-            <button class="gm-tab" type="button" role="tab" id="gm-tab-singularity" aria-controls="rate-singularity" aria-selected="false" tabindex="-1" data-gm-tab="singularity"><span class="gm-tab-art" aria-hidden="true"><img class="gm-tab-img" src="/images/games/singularity.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /></span><span class="gm-tab-name">SINGULARITY</span></button>
-          </div>
           <div class="gm-panels" data-gm-panels>
-            <div class="gm-panel" role="tabpanel" id="rate-trenchingsimulator" aria-labelledby="gm-tab-trenchingsimulator" data-gm-rate="trenchingsimulator"></div>
-            <div class="gm-panel" role="tabpanel" id="rate-realorai" aria-labelledby="gm-tab-realorai" data-gm-rate="realorai" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-mergeagi" aria-labelledby="gm-tab-mergeagi" data-gm-rate="mergeagi" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-heartbeat" aria-labelledby="gm-tab-heartbeat" data-gm-rate="heartbeat" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-beattheagi" aria-labelledby="gm-tab-beattheagi" data-gm-rate="beattheagi" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-lastmodel" aria-labelledby="gm-tab-lastmodel" data-gm-rate="lastmodel" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-overclock" aria-labelledby="gm-tab-overclock" data-gm-rate="overclock" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-rideemagi" aria-labelledby="gm-tab-rideemagi" data-gm-rate="rideemagi" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-notarobot" aria-labelledby="gm-tab-notarobot" data-gm-rate="notarobot" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-blockchain" aria-labelledby="gm-tab-blockchain" data-gm-rate="blockchain" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-gradient" aria-labelledby="gm-tab-gradient" data-gm-rate="gradient" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-robotaxi" aria-labelledby="gm-tab-robotaxi" data-gm-rate="robotaxi" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-alignment" aria-labelledby="gm-tab-alignment" data-gm-rate="alignment" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-vladrunner2049" aria-labelledby="gm-tab-vladrunner2049" data-gm-rate="vladrunner2049" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-guardrails" aria-labelledby="gm-tab-guardrails" data-gm-rate="guardrails" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-stacked" aria-labelledby="gm-tab-stacked" data-gm-rate="stacked" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-synapse" aria-labelledby="gm-tab-synapse" data-gm-rate="synapse" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-scamslayer" aria-labelledby="gm-tab-scamslayer" data-gm-rate="scamslayer" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-hallucination" aria-labelledby="gm-tab-hallucination" data-gm-rate="hallucination" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-skybreak" aria-labelledby="gm-tab-skybreak" data-gm-rate="skybreak" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-epochs" aria-labelledby="gm-tab-epochs" data-gm-rate="epochs" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-jaywalk" aria-labelledby="gm-tab-jaywalk" data-gm-rate="jaywalk" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-jailbreak" aria-labelledby="gm-tab-jailbreak" data-gm-rate="jailbreak" hidden></div>
-            <div class="gm-panel" role="tabpanel" id="rate-singularity" aria-labelledby="gm-tab-singularity" data-gm-rate="singularity" hidden></div>
+            <div class="gm-panel" role="region" id="rate-trenchingsimulator" aria-labelledby="gm-trenchingsimulator-game gm-rate-title" data-gm-rate="trenchingsimulator"></div>
+            <div class="gm-panel" role="region" id="rate-realorai" aria-labelledby="gm-realorai-game gm-rate-title" data-gm-rate="realorai" hidden></div>
+            <div class="gm-panel" role="region" id="rate-mergeagi" aria-labelledby="gm-mergeagi-game gm-rate-title" data-gm-rate="mergeagi" hidden></div>
+            <div class="gm-panel" role="region" id="rate-heartbeat" aria-labelledby="gm-heartbeat-game gm-rate-title" data-gm-rate="heartbeat" hidden></div>
+            <div class="gm-panel" role="region" id="rate-beattheagi" aria-labelledby="gm-beattheagi-game gm-rate-title" data-gm-rate="beattheagi" hidden></div>
+            <div class="gm-panel" role="region" id="rate-lastmodel" aria-labelledby="gm-lastmodel-game gm-rate-title" data-gm-rate="lastmodel" hidden></div>
+            <div class="gm-panel" role="region" id="rate-overclock" aria-labelledby="gm-overclock-game gm-rate-title" data-gm-rate="overclock" hidden></div>
+            <div class="gm-panel" role="region" id="rate-rideemagi" aria-labelledby="gm-rideemagi-game gm-rate-title" data-gm-rate="rideemagi" hidden></div>
+            <div class="gm-panel" role="region" id="rate-notarobot" aria-labelledby="gm-notarobot-game gm-rate-title" data-gm-rate="notarobot" hidden></div>
+            <div class="gm-panel" role="region" id="rate-blockchain" aria-labelledby="gm-blockchain-game gm-rate-title" data-gm-rate="blockchain" hidden></div>
+            <div class="gm-panel" role="region" id="rate-gradient" aria-labelledby="gm-gradient-game gm-rate-title" data-gm-rate="gradient" hidden></div>
+            <div class="gm-panel" role="region" id="rate-robotaxi" aria-labelledby="gm-robotaxi-game gm-rate-title" data-gm-rate="robotaxi" hidden></div>
+            <div class="gm-panel" role="region" id="rate-alignment" aria-labelledby="gm-alignment-game gm-rate-title" data-gm-rate="alignment" hidden></div>
+            <div class="gm-panel" role="region" id="rate-vladrunner2049" aria-labelledby="gm-vladrunner2049-game gm-rate-title" data-gm-rate="vladrunner2049" hidden></div>
+            <div class="gm-panel" role="region" id="rate-guardrails" aria-labelledby="gm-guardrails-game gm-rate-title" data-gm-rate="guardrails" hidden></div>
+            <div class="gm-panel" role="region" id="rate-stacked" aria-labelledby="gm-stacked-game gm-rate-title" data-gm-rate="stacked" hidden></div>
+            <div class="gm-panel" role="region" id="rate-synapse" aria-labelledby="gm-synapse-game gm-rate-title" data-gm-rate="synapse" hidden></div>
+            <div class="gm-panel" role="region" id="rate-scamslayer" aria-labelledby="gm-scamslayer-game gm-rate-title" data-gm-rate="scamslayer" hidden></div>
+            <div class="gm-panel" role="region" id="rate-hallucination" aria-labelledby="gm-hallucination-game gm-rate-title" data-gm-rate="hallucination" hidden></div>
+            <div class="gm-panel" role="region" id="rate-skybreak" aria-labelledby="gm-skybreak-game gm-rate-title" data-gm-rate="skybreak" hidden></div>
+            <div class="gm-panel" role="region" id="rate-epochs" aria-labelledby="gm-epochs-game gm-rate-title" data-gm-rate="epochs" hidden></div>
+            <div class="gm-panel" role="region" id="rate-jaywalk" aria-labelledby="gm-jaywalk-game gm-rate-title" data-gm-rate="jaywalk" hidden></div>
+            <div class="gm-panel" role="region" id="rate-jailbreak" aria-labelledby="gm-jailbreak-game gm-rate-title" data-gm-rate="jailbreak" hidden></div>
+            <div class="gm-panel" role="region" id="rate-singularity" aria-labelledby="gm-singularity-game gm-rate-title" data-gm-rate="singularity" hidden></div>
           </div>
-          <!-- one game's ratings, its numbers and its box: src/games/page.js fills each panel above from it (GAMEID, GAMENAME) -->
+          <!-- the game picker: every game with its stars, best rated first, then the most played (src/games/page.js orders them
+               as it opens and fills in their numbers), and a search box -->
+          <dialog class="gm-choose" id="gm-choose" aria-labelledby="gm-choose-title" data-gm-choose>
+            <div class="gm-choose-in">
+              <div class="gm-choose-head">
+                <h3 class="gm-choose-title" id="gm-choose-title">Pick a game</h3>
+                <button class="gm-choose-x" type="button" aria-label="Close" data-gm-choose-close><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg></button>
+              </div>
+              <div class="gm-choose-find">
+                <svg class="gm-choose-find-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M10.6 4.2a6.4 6.4 0 1 1 0 12.8 6.4 6.4 0 0 1 0-12.8ZM15.4 15.4l4.4 4.4"/></svg>
+                <label class="sr-only" for="gm-choose-q">Search games</label>
+                <input class="gm-choose-q" id="gm-choose-q" type="search" placeholder="Search games" autocomplete="off" spellcheck="false" enterkeyhint="go" data-gm-choose-q />
+              </div>
+              <p class="gm-choose-order">Best rated first, then most played</p>
+              <ul class="gm-choose-list" data-gm-choose-list>
+                <li class="gm-choose-item" data-gm-choose-game="trenchingsimulator"><button class="gm-choose-game" type="button" data-gm-choose-pick aria-current="true"><img class="gm-choose-img" src="/images/games/trenchingsimulator.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">TRENCHING SIMULATOR</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="realorai"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/realorai.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">REAL OR AI?</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="mergeagi"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/mergeagi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">MERGE TO AGI</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="heartbeat"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/heartbeat.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">HEARTBEAT</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="beattheagi"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/beattheagi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">BEAT THE AGI</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="lastmodel"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/lastmodel.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">LAST MODEL STANDING</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="overclock"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/overclock.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">OVERCLOCK</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="rideemagi"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/rideemagi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">Ride 'Em, AGI!</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="notarobot"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/notarobot.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">I'M NOT A ROBOT</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="blockchain"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/blockchain.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">BLOCKCHAIN</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="gradient"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/gradient.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">GRADIENT DESCENT</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="robotaxi"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/robotaxi.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">ROBOTAXI RUSH</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="alignment"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/alignment.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">ALIGNMENT</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="vladrunner2049"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/vladrunner2049.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">VLAD RUNNER 2049</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="guardrails"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/guardrails.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">GUARDRAILS</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="stacked"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/stacked.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">STACKED</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="synapse"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/synapse.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">SYNAPSE</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="scamslayer"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/scamslayer.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">SCAM SLAYER</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="hallucination"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/hallucination.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">HALLUCINATION</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="skybreak"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/skybreak.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">SKYBREAK</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="epochs"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/epochs.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">EPOCHS</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="jaywalk"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/jaywalk.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">JAYWALK</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="jailbreak"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/jailbreak.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">JAILBREAK</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+                <li class="gm-choose-item" data-gm-choose-game="singularity"><button class="gm-choose-game" type="button" data-gm-choose-pick><img class="gm-choose-img" src="/images/games/singularity.webp" alt="" width="480" height="480" loading="lazy" decoding="async" /><span class="gm-choose-text"><span class="gm-choose-name">SINGULARITY</span><span class="gm-choose-stats" data-gm-choose-stats>…</span></span><span class="gm-choose-now" aria-hidden="true">Showing</span></button></li>
+              </ul>
+              <p class="gm-choose-none" data-gm-choose-none hidden>No game matches that. Try another word.</p>
+              <p class="sr-only" data-gm-choose-say role="status" aria-live="polite"></p>
+            </div>
+          </dialog>
+          <!-- one game's ratings: the game, its numbers, its box and its reviews. src/games/page.js fills each panel above from it
+               (GAMEID, GAMENAME; its picture and its Play link from the game's own) -->
           <template id="gm-panel-tpl">
-            <div class="gm-rate-grid">
-              <div class="gm-sum">
-                <h3 class="sr-only">GAMENAME: its rating</h3>
-                <p class="gm-avg"><span class="gm-avg-n" data-gm-avg>…</span> <span class="gm-avg-of">out of 5</span></p>
-                <span class="gm-stars gm-stars-lg" data-gm-avg-stars role="img" aria-label="Loading its rating"><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
-                <p class="gm-count" data-gm-count>Loading…</p>
+            <div class="gm-sum">
+              <div class="gm-game">
+                <img class="gm-game-img" alt="" width="480" height="480" loading="lazy" decoding="async" data-gm-head-img />
+                <div class="gm-game-text">
+                  <h3 class="gm-game-name" id="gm-GAMEID-game" tabindex="-1" data-gm-head-name>GAMENAME</h3>
+                  <p class="gm-game-rating"><span class="gm-stars gm-stars-md" data-gm-avg-stars role="img" aria-label="Loading its rating"><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span><span class="gm-game-avg" data-gm-avg aria-hidden="true">…</span><span class="gm-game-count" data-gm-count aria-hidden="true">Loading…</span></p>
+                  <p class="gm-game-played" data-gm-played><span class="gm-game-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M8 5.5v13l10.5-6.5z"/></svg><span data-gm-plays>…</span></span><span class="gm-game-num"><svg class="gm-ic" viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 11.6a4.1 4.1 0 1 0 0-8.2 4.1 4.1 0 0 0 0 8.2Zm0 2c-4.2 0-7.6 2.3-7.6 5.1v1.7h15.2v-1.7c0-2.8-3.4-5.1-7.6-5.1Z"/></svg><span data-gm-players>…</span></span></p>
+                  <div class="gm-game-actions">
+                    <button class="btn btn-primary btn-sm gm-change" type="button" aria-haspopup="dialog" aria-controls="gm-choose" data-gm-change><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M4 4.5h6.5V11H4zM13.5 4.5H20V11h-6.5zM4 13h6.5v6.5H4zM13.5 13H20v6.5h-6.5z"/></svg>Change game</button>
+                    <a class="btn btn-ghost btn-sm" data-gm-play>Play</a>
+                  </div>
+                </div>
+              </div>
+              <div class="gm-split">
+                <p class="gm-split-title" aria-hidden="true">How it's rated</p>
                 <ol class="gm-bars" aria-label="How many people gave each number of stars">
                   <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">5★</span><span class="sr-only">5 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="5"></span></span><span class="gm-bar-n" data-gm-bar-n="5">—</span></li>
                   <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">4★</span><span class="sr-only">4 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="4"></span></span><span class="gm-bar-n" data-gm-bar-n="4">—</span></li>
@@ -602,104 +731,101 @@
                   <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">2★</span><span class="sr-only">2 stars:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="2"></span></span><span class="gm-bar-n" data-gm-bar-n="2">—</span></li>
                   <li class="gm-bar"><span class="gm-bar-label" aria-hidden="true">1★</span><span class="sr-only">1 star:</span><span class="gm-bar-track" aria-hidden="true"><span class="gm-bar-fill" data-gm-bar="1"></span></span><span class="gm-bar-n" data-gm-bar-n="1">—</span></li>
                 </ol>
-                <p class="gm-played" data-gm-played>…</p>
               </div>
-
-              <div class="gm-side">
-                <!-- rating it: one of these at a time (src/games/page.js) -->
-                <div class="gm-box" data-gm-box>
-                  <div class="gm-state" data-gm-state="loading">
-                    <p class="gm-note" data-gm-loading>Loading its ratings…</p>
-                  </div>
-                  <div class="gm-state" data-gm-state="soon" hidden>
-                    <h3 class="gm-box-title">Ratings and reviews open soon</h3>
-                    <p class="gm-text">You can play it now. Rating it, with stars and a few words, opens soon.</p>
-                  </div>
-                  <div class="gm-state" data-gm-state="closed" hidden>
-                    <h3 class="gm-box-title">Reviews open soon</h3>
-                    <p class="gm-text">Writing a review isn't open yet. You can play it now, and read what people said.</p>
-                  </div>
-                  <div class="gm-state" data-gm-state="gate" hidden>
-                    <h3 class="gm-box-title">Rate it</h3>
-                    <p class="gm-text">Reviews are for adults: 18+ only. Playing it needs nothing at all.</p>
-                    <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-adult>I'm 18 or older</button></div>
-                  </div>
-                  <div class="gm-state" data-gm-state="connect" hidden>
-                    <h3 class="gm-box-title">Rate it</h3>
-                    <p class="gm-text">Connect a wallet to give it stars and a few words. It takes a free signature, never a transaction, and it's only for reviews: playing never needs it.</p>
-                    <p class="gm-say-me" data-gm-say role="status" aria-live="polite" hidden></p>
-                    <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-connect>Connect a wallet</button></div>
-                    <div class="gm-wallets" data-gm-wallets hidden></div>
-                    <div class="gm-apps" data-gm-apps hidden>
-                      <p class="gm-note" data-gm-apps-note></p>
-                      <div class="gm-links">
-                        <a class="btn btn-ghost btn-sm" data-gm-app="metamask">Open in MetaMask ↗</a>
-                        <a class="btn btn-ghost btn-sm" data-gm-app="phantom">Open in Phantom ↗</a>
-                        <a class="btn btn-ghost btn-sm" data-gm-app="coinbase">Open in Coinbase Wallet ↗</a>
-                      </div>
-                    </div>
-                  </div>
-                  <div class="gm-state" data-gm-state="form" hidden>
-                    <div class="gm-me">
-                      <p class="gm-me-text"><span class="gm-me-label">Connected:</span> <span class="gm-me-who" data-gm-me></span></p>
-                      <button class="btn btn-ghost btn-sm" type="button" data-gm-out>Disconnect</button>
-                    </div>
-                    <p class="gm-note" data-gm-mine-loading hidden>Checking for your review…</p>
-                    <div class="gm-mine" data-gm-mine tabindex="-1" hidden>
-                      <h3 class="gm-box-title">Your review</h3>
-                      <span class="gm-stars" data-gm-mine-stars role="img" aria-label=""><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
-                      <p class="gm-mine-name" data-gm-mine-name></p>
-                      <p class="gm-mine-text" data-gm-mine-text></p>
-                      <p class="gm-mine-hidden" data-gm-mine-hidden hidden>Only you see this one: it was taken off the page.</p>
-                      <div class="gm-links">
-                        <button class="btn btn-ghost btn-sm" type="button" data-gm-edit>Edit</button>
-                        <button class="btn btn-ghost btn-sm gm-danger" type="button" data-gm-delete>Delete</button>
-                      </div>
-                    </div>
-                    <form class="gm-form" data-gm-form novalidate hidden>
-                      <h3 class="gm-box-title" data-gm-form-title tabindex="-1">Rate it</h3>
-                      <p class="gm-note" data-gm-form-note hidden></p>
-                      <fieldset class="gm-pick">
-                        <legend class="gm-label">Your stars</legend>
-                        <div class="gm-pick-row">
-                          <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s1" value="1" /><label class="gm-pick-star" for="gm-GAMEID-s1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">1 star: Not for me</span></label>
-                          <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s2" value="2" /><label class="gm-pick-star" for="gm-GAMEID-s2"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">2 stars: It's okay</span></label>
-                          <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s3" value="3" /><label class="gm-pick-star" for="gm-GAMEID-s3"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">3 stars: Good</span></label>
-                          <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s4" value="4" /><label class="gm-pick-star" for="gm-GAMEID-s4"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">4 stars: Really good</span></label>
-                          <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s5" value="5" /><label class="gm-pick-star" for="gm-GAMEID-s5"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">5 stars: Love it</span></label>
-                        </div>
-                        <p class="gm-pick-words" data-gm-pick-words aria-hidden="true">Tap a star</p>
-                      </fieldset>
-                      <div class="gm-field">
-                        <label class="gm-label" for="gm-GAMEID-text">A few words <span class="gm-opt">(optional)</span></label>
-                        <textarea id="gm-GAMEID-text" data-gm-text rows="3" maxlength="300" autocomplete="off" aria-describedby="gm-GAMEID-text-note"></textarea>
-                        <p class="gm-note" id="gm-GAMEID-text-note"><span data-gm-count-text>0</span>/300 · PG-13 · no links, @names, addresses or other coins</p>
-                      </div>
-                      <div class="gm-field">
-                        <label class="gm-label" for="gm-GAMEID-name">Your name <span class="gm-opt">(optional)</span></label>
-                        <input id="gm-GAMEID-name" data-gm-name type="text" maxlength="24" autocomplete="nickname" spellcheck="false" aria-describedby="gm-GAMEID-name-note" />
-                        <p class="gm-note" id="gm-GAMEID-name-note">Shown with your review: up to 24 characters, nothing crude, and nothing that passes for her or her team. Leave it empty and it says “A player”.</p>
-                      </div>
-                      <div class="gm-human" data-gm-human></div>
-                      <p class="gm-error" data-gm-error role="alert"></p>
-                      <div class="gm-links">
-                        <button class="btn btn-primary" type="submit" data-gm-send>Post my review</button>
-                        <button class="btn btn-ghost" type="button" data-gm-cancel hidden>Cancel</button>
-                      </div>
-                      <p class="gm-note">Your words and name are checked by an AI service before they're shown (stars alone aren't). Your 💜 badge shows at Crush or Soulmate, never your address.</p>
-                    </form>
-                  </div>
-                  <p class="gm-done" data-gm-done role="status" aria-live="polite"></p>
+            </div>
+            <div class="gm-rate-grid">
+              <!-- rating it: one of these at a time (src/games/page.js) -->
+              <div class="gm-box" data-gm-box>
+                <div class="gm-state" data-gm-state="loading">
+                  <p class="gm-note" data-gm-loading>Loading its ratings…</p>
                 </div>
-
-                <section class="gm-reviews" aria-labelledby="gm-GAMEID-reviews">
-                  <h3 class="gm-reviews-title" id="gm-GAMEID-reviews">What players say</h3>
-                  <p class="gm-note" data-gm-empty hidden>No reviews with words yet. Yours could be the first.</p>
-                  <ol class="gm-list" data-gm-list></ol>
-                  <p class="sr-only" data-gm-list-say role="status" aria-live="polite"></p>
-                  <div class="gm-links"><button class="btn btn-ghost btn-sm" type="button" data-gm-more hidden>Show more reviews</button></div>
-                </section>
+                <div class="gm-state" data-gm-state="soon" hidden>
+                  <h3 class="gm-box-title">Ratings and reviews open soon</h3>
+                  <p class="gm-text">You can play it now. Rating it, with stars and a few words, opens soon.</p>
+                </div>
+                <div class="gm-state" data-gm-state="closed" hidden>
+                  <h3 class="gm-box-title">Reviews open soon</h3>
+                  <p class="gm-text">Writing a review isn't open yet. You can play it now, and read what people said.</p>
+                </div>
+                <div class="gm-state" data-gm-state="gate" hidden>
+                  <h3 class="gm-box-title">Rate it</h3>
+                  <p class="gm-text">Reviews are for adults: 18+ only. Playing it needs nothing at all.</p>
+                  <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-adult>I'm 18 or older</button></div>
+                </div>
+                <div class="gm-state" data-gm-state="connect" hidden>
+                  <h3 class="gm-box-title">Rate it</h3>
+                  <p class="gm-text">Connect a wallet to give it stars and a few words. It takes a free signature, never a transaction, and it's only for reviews: playing never needs it.</p>
+                  <p class="gm-say-me" data-gm-say role="status" aria-live="polite" hidden></p>
+                  <div class="gm-links"><button class="btn btn-primary btn-sm" type="button" data-gm-connect>Connect a wallet</button></div>
+                  <div class="gm-wallets" data-gm-wallets hidden></div>
+                  <div class="gm-apps" data-gm-apps hidden>
+                    <p class="gm-note" data-gm-apps-note></p>
+                    <div class="gm-links">
+                      <a class="btn btn-ghost btn-sm" data-gm-app="metamask">Open in MetaMask ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-gm-app="phantom">Open in Phantom ↗</a>
+                      <a class="btn btn-ghost btn-sm" data-gm-app="coinbase">Open in Coinbase Wallet ↗</a>
+                    </div>
+                  </div>
+                </div>
+                <div class="gm-state" data-gm-state="form" hidden>
+                  <div class="gm-me">
+                    <p class="gm-me-text"><span class="gm-me-label">Connected:</span> <span class="gm-me-who" data-gm-me></span></p>
+                    <button class="btn btn-ghost btn-sm" type="button" data-gm-out>Disconnect</button>
+                  </div>
+                  <p class="gm-note" data-gm-mine-loading hidden>Checking for your review…</p>
+                  <div class="gm-mine" data-gm-mine tabindex="-1" hidden>
+                    <h3 class="gm-box-title">Your review</h3>
+                    <span class="gm-stars" data-gm-mine-stars role="img" aria-label=""><svg class="gm-stars-svg gm-stars-base" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg><svg class="gm-stars-svg gm-stars-fill" viewBox="0 0 120 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7zM36 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L36 17.1l-6.1 3.5 1.5-6.8L26.2 9.2l6.9-.7zM60 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L60 17.1l-6.1 3.5 1.5-6.8L50.2 9.2l6.9-.7zM84 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L84 17.1l-6.1 3.5 1.5-6.8L74.2 9.2l6.9-.7zM108 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L108 17.1l-6.1 3.5 1.5-6.8L98.2 9.2l6.9-.7z"/></svg></span>
+                    <p class="gm-mine-name" data-gm-mine-name></p>
+                    <p class="gm-mine-text" data-gm-mine-text></p>
+                    <p class="gm-mine-hidden" data-gm-mine-hidden hidden>Only you see this one: it was taken off the page.</p>
+                    <div class="gm-links">
+                      <button class="btn btn-ghost btn-sm" type="button" data-gm-edit>Edit</button>
+                      <button class="btn btn-ghost btn-sm gm-danger" type="button" data-gm-delete>Delete</button>
+                    </div>
+                  </div>
+                  <form class="gm-form" data-gm-form novalidate hidden>
+                    <h3 class="gm-box-title" data-gm-form-title tabindex="-1">Rate it</h3>
+                    <p class="gm-note" data-gm-form-note hidden></p>
+                    <fieldset class="gm-pick">
+                      <legend class="gm-label">Your stars</legend>
+                      <div class="gm-pick-row">
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s1" value="1" /><label class="gm-pick-star" for="gm-GAMEID-s1"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">1 star: Not for me</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s2" value="2" /><label class="gm-pick-star" for="gm-GAMEID-s2"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">2 stars: It's okay</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s3" value="3" /><label class="gm-pick-star" for="gm-GAMEID-s3"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">3 stars: Good</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s4" value="4" /><label class="gm-pick-star" for="gm-GAMEID-s4"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">4 stars: Really good</span></label>
+                        <input class="sr-only" type="radio" name="gm-stars" id="gm-GAMEID-s5" value="5" /><label class="gm-pick-star" for="gm-GAMEID-s5"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M12 2.2l2.9 6.3 6.9.7-5.2 4.6 1.5 6.8L12 17.1l-6.1 3.5 1.5-6.8L2.2 9.2l6.9-.7z"/></svg><span class="sr-only">5 stars: Love it</span></label>
+                      </div>
+                      <p class="gm-pick-words" data-gm-pick-words aria-hidden="true">Tap a star</p>
+                    </fieldset>
+                    <div class="gm-field">
+                      <label class="gm-label" for="gm-GAMEID-text">A few words <span class="gm-opt">(optional)</span></label>
+                      <textarea id="gm-GAMEID-text" data-gm-text rows="3" maxlength="300" autocomplete="off" aria-describedby="gm-GAMEID-text-note"></textarea>
+                      <p class="gm-note" id="gm-GAMEID-text-note"><span data-gm-count-text>0</span>/300 · PG-13 · no links, @names, addresses or other coins</p>
+                    </div>
+                    <div class="gm-field">
+                      <label class="gm-label" for="gm-GAMEID-name">Your name <span class="gm-opt">(optional)</span></label>
+                      <input id="gm-GAMEID-name" data-gm-name type="text" maxlength="24" autocomplete="nickname" spellcheck="false" aria-describedby="gm-GAMEID-name-note" />
+                      <p class="gm-note" id="gm-GAMEID-name-note">Shown with your review: up to 24 characters, nothing crude, and nothing that passes for her or her team. Leave it empty and it says “A player”.</p>
+                    </div>
+                    <div class="gm-human" data-gm-human></div>
+                    <p class="gm-error" data-gm-error role="alert"></p>
+                    <div class="gm-links">
+                      <button class="btn btn-primary" type="submit" data-gm-send>Post my review</button>
+                      <button class="btn btn-ghost" type="button" data-gm-cancel hidden>Cancel</button>
+                    </div>
+                    <p class="gm-note">Your words and name are checked by an AI service before they're shown (stars alone aren't). Your 💜 badge shows at Crush or Soulmate, never your address.</p>
+                  </form>
+                </div>
+                <p class="gm-done" data-gm-done role="status" aria-live="polite"></p>
               </div>
+              <section class="gm-reviews" aria-labelledby="gm-GAMEID-reviews">
+                <h3 class="gm-reviews-title" id="gm-GAMEID-reviews">What players say</h3>
+                <p class="gm-note" data-gm-empty hidden>No reviews with words yet. Yours could be the first.</p>
+                <ol class="gm-list" data-gm-list></ol>
+                <p class="sr-only" data-gm-list-say role="status" aria-live="polite"></p>
+                <div class="gm-links"><button class="btn btn-ghost btn-sm" type="button" data-gm-more hidden>Show more reviews</button></div>
+              </section>
             </div>
           </template>
         </div>

@@ -134,47 +134,56 @@
 .gm-tile-go svg { width: 15px; height: 15px; }
 .gm-tile-link:hover .gm-tile-go, .gm-tile-link:focus-visible .gm-tile-go { scale: 1; translate: 0 0; visibility: visible; }
 .gm-tile-body { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; padding: 12px 14px 13px; }
+.gm-tile-genre { font-family: var(--mono); font-size: 11px; line-height: 1.2; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-3); }
 .gm-tile-name { font-size: 16.5px; font-weight: 650; line-height: 1.15; letter-spacing: -0.025em; overflow-wrap: anywhere; }
 .gm-tile-line { font-size: 13.5px; line-height: 1.35; color: var(--fg-2); text-wrap: pretty; }
-.gm-tile-meta { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 10px; margin-top: auto; padding-top: 4px; }
-.gm-tile-genre { font-family: var(--mono); font-size: 11px; letter-spacing: .05em; text-transform: uppercase; color: var(--fg-3); }
-.gm-tile-nums { display: inline-flex; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
-.gm-tile-num { display: inline-flex; align-items: center; gap: 3px; white-space: nowrap; }
-.gm-tile-num:empty { display: none; }
-.gm-stat-star { width: 12px; height: 12px; flex: none; fill: var(--accent); }
+/* (2026-11-08, the owner: "the how many times the game played and the how many players played that game each should be still
+   visible on each game below it … and put stars there also") under each game, on every screen: a row of stars and its
+   average (and how many ratings), then its plays and its players, each with its icon */
+.gm-tile-stats { display: flex; flex-direction: column; gap: 5px; margin-top: auto; padding-top: 6px; font-family: var(--mono); font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.gm-tile-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 7px; min-height: 15px; }
+.gm-tile-avg { font-weight: 600; color: var(--fg); }
+.gm-tile-count, .gm-tile-none { color: var(--fg-3); white-space: nowrap; }
+.gm-tile-counts { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; }
+.gm-tile-num { display: inline-flex; align-items: center; gap: 5px; min-width: 0; white-space: nowrap; }
+.gm-ic { width: 13px; height: 13px; flex: none; fill: currentColor; opacity: .8; }
 .gm-grid-note { max-width: 86ch; margin-top: 18px; }
 
 /* ---------- its ratings and reviews ---------- */
 .gm-rate { scroll-margin-top: 72px; }
-/* a tab for each game (2026-10-21): its picture and its name, the picked one outlined; its panel below (a link to a game's
-   ratings lands with the tabs still in view under the top bar) */
-.gm-tabs {
-  display: flex; gap: 8px; margin-top: 24px; padding: 4px 2px 10px; overflow-x: auto; scrollbar-width: thin;
-  -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; scroll-padding-inline: 16px;
+/* (2026-11-08, the owner: "can you organize well the ratings and review"; their choice: one game at a time, with a picker)
+   one game's panel showing: at its top the game (its picture, name, stars, plays and players, "Change game" and Play) and
+   how its stars split; then rating it beside what players say. A link to a game's ratings lands with its top under the top
+   bar */
+.gm-panels { margin-top: 26px; }
+.gm-panel { display: flow-root; scroll-margin-top: 88px; }
+.gm-sum {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 330px); align-items: center; gap: 22px clamp(28px, 4vw, 56px);
+  min-width: 0; padding: 22px 26px 22px 22px; border: 1px solid var(--line); border-radius: 22px; background: var(--bg-2);
 }
-.gm-tab {
-  display: inline-flex; align-items: center; gap: 9px; flex: none; min-width: 0; min-height: 46px; padding: 5px 14px 5px 5px;
-  border: 1px solid var(--line); border-radius: 999px; background: var(--bg); color: var(--fg-2); cursor: pointer;
-  font-size: 14px; font-weight: 600; line-height: 1.2; letter-spacing: -0.01em; text-align: left; white-space: nowrap;
-  transition: color .15s ease, background-color .15s ease, border-color .15s ease, box-shadow .15s ease;
-}
-.gm-tab:hover { color: var(--fg); border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
-.gm-tab[aria-selected='true'] { color: var(--fg); background: var(--bg-2); border-color: var(--fg); box-shadow: inset 0 0 0 1px var(--fg); }
-.gm-tab-art { display: block; flex: none; width: 34px; height: 34px; overflow: hidden; border-radius: 50%; background-color: #120a2a; }
-.gm-tab-img { width: 100%; height: 100%; object-fit: cover; }
-.gm-tab-name { min-width: 0; }
-.gm-panel { display: flow-root; scroll-margin-top: 150px; }
-.gm-rate-grid { display: grid; grid-template-columns: minmax(0, 320px) minmax(0, 1fr); align-items: start; gap: 28px clamp(28px, 4vw, 56px); margin-top: 24px; }
-.gm-sum { position: sticky; top: 92px; min-width: 0; padding: 24px; border: 1px solid var(--line); border-radius: 20px; background: var(--bg-2); }
-.gm-avg { display: flex; align-items: baseline; gap: 10px; }
-.gm-avg-n { font-size: 64px; font-weight: 600; line-height: 1; letter-spacing: -0.05em; font-variant-numeric: tabular-nums; }
-.gm-avg-of { font-size: 16px; color: var(--fg-2); }
-.gm-count { margin-top: 8px; font-size: 14.5px; color: var(--fg-2); }
-.gm-played { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14.5px; color: var(--fg); text-wrap: pretty; }
+.gm-game { display: flex; align-items: center; gap: 20px; min-width: 0; }
+.gm-game-img { flex: none; width: 116px; height: 116px; border-radius: 20px; object-fit: cover; background-color: #120a2a; }
+.gm-game-text { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; min-width: 0; }
+.gm-game-name { font-size: clamp(22px, 2.5vw, 30px); font-weight: 650; line-height: 1.08; letter-spacing: -0.03em; overflow-wrap: anywhere; }
+.gm-game-name:focus { outline: none; }
+.gm-game-rating { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.gm-game-avg { font-size: 21px; font-weight: 650; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.gm-game-avg:empty { display: none; }
+.gm-game-count { font-size: 14.5px; color: var(--fg-2); }
+.gm-game-played { display: flex; flex-wrap: wrap; gap: 4px 18px; font-family: var(--mono); font-size: 13px; color: var(--fg-2); font-variant-numeric: tabular-nums; }
+.gm-game-num { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.gm-game-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.gm-change svg { width: 15px; height: 15px; flex: none; fill: currentColor; }
+.gm-split { min-width: 0; }
+.gm-split-title { font-family: var(--mono); font-size: 11.5px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-2); }
+.gm-split .gm-bars { margin-top: 10px; }
+.gm-rate-grid { display: grid; grid-template-columns: minmax(0, 420px) minmax(0, 1fr); align-items: start; gap: 28px clamp(28px, 4vw, 56px); margin-top: 28px; }
 /* a row of five stars: drawn twice, the top row cut to how much of it is filled (--gm-fill, set through the CSS object model) */
 .gm-stars { --gm-sw: 104px; position: relative; display: inline-block; flex: none; width: var(--gm-sw); aspect-ratio: 5; vertical-align: middle; }
-.gm-stars-lg { --gm-sw: 168px; margin-top: 14px; }
+.gm-stars-md { --gm-sw: 124px; }
 .gm-stars-sm { --gm-sw: 86px; }
+.gm-stars-pick { --gm-sw: 80px; }
+.gm-stars-xs { --gm-sw: 70px; }
 .gm-stars-svg { position: absolute; inset: 0; width: 100%; height: 100%; max-width: none; }
 .gm-stars-base { fill: color-mix(in srgb, var(--fg) 14%, transparent); }
 .gm-stars-fill { fill: var(--accent); clip-path: inset(0 calc(100% - var(--gm-fill, 0%)) 0 0); }
@@ -189,8 +198,66 @@
   transition: width .6s cubic-bezier(.2, .7, .2, 1);
 }
 
+/* the game picker (2026-11-08): a <dialog> in the middle of the screen (a sheet from the bottom on a phone): a search box, then
+   every game with its picture, name, stars and plays, the one showing marked. margin: auto puts it back in the middle (base.css's
+   `* { margin: 0 }` takes away a <dialog>'s own centring); its list scrolls, its top stays */
+.gm-choose {
+  margin: auto; width: min(560px, 100vw - 32px); max-width: none; max-height: min(740px, 100dvh - 48px); padding: 0; overflow: hidden;
+  border: 1px solid var(--line); border-radius: 22px; background: var(--bg); color: var(--fg);
+  box-shadow: 0 30px 80px -24px rgb(0 0 0 / .55);
+}
+.gm-choose::backdrop { background: rgb(9 4 24 / .6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.gm-choose[open] { animation: gm-choose-in .22s cubic-bezier(.2, .7, .2, 1); }
+@keyframes gm-choose-in { from { opacity: .01; translate: 0 14px; } }
+@keyframes gm-choose-up { from { opacity: .01; translate: 0 48px; } }
+.gm-choose-in { display: flex; flex-direction: column; max-height: inherit; min-height: 0; }
+.gm-choose-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 16px 12px 22px; }
+.gm-choose-title { font-size: 22px; font-weight: 650; line-height: 1.1; letter-spacing: -0.025em; }
+.gm-choose-x {
+  display: grid; place-items: center; flex: none; width: 40px; height: 40px; border: 1px solid var(--line); border-radius: 50%;
+  background: var(--bg-2); color: var(--fg); cursor: pointer;
+}
+.gm-choose-x svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.gm-choose-x:hover { border-color: color-mix(in srgb, var(--fg) 40%, var(--line)); }
+.gm-choose-find { position: relative; margin: 0 18px; }
+.gm-choose-find-ic {
+  position: absolute; left: 15px; top: 50%; translate: 0 -50%; width: 18px; height: 18px; pointer-events: none;
+  fill: none; stroke: var(--fg-2); stroke-width: 2.2; stroke-linecap: round;
+}
+.gm-choose-q {
+  width: 100%; height: 46px; padding: 0 16px 0 42px; border: 1px solid var(--line); border-radius: 999px; background: var(--bg-2);
+  font: inherit; font-size: 16px; color: var(--fg);
+}
+.gm-choose-q:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.gm-choose-order { margin: 14px 24px 4px; font-family: var(--mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase; color: var(--fg-3); }
+.gm-choose-list {
+  flex: 1 1 auto; min-height: 0; margin: 0; padding: 4px 10px 14px; overflow-y: auto; overscroll-behavior: contain; list-style: none;
+  scroll-padding-block: 8px;
+}
+.gm-choose-game {
+  display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 14px;
+  background: none; color: inherit; font: inherit; text-align: left; cursor: pointer;
+}
+.gm-choose-game:hover { background: var(--bg-2); }
+.gm-choose-game:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.gm-choose-game[aria-current='true'] { background: var(--bg-2); border-color: var(--fg); }
+.gm-choose-img { flex: none; width: 52px; height: 52px; border-radius: 13px; object-fit: cover; background-color: #120a2a; }
+.gm-choose-text { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 0; }
+.gm-choose-name { font-size: 15.5px; font-weight: 650; line-height: 1.2; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.gm-choose-stats {
+  display: flex; flex-wrap: wrap; align-items: center; gap: 3px 9px; min-height: 15px;
+  font-family: var(--mono); font-size: 12px; color: var(--fg-2); font-variant-numeric: tabular-nums;
+}
+.gm-choose-plays { display: inline-flex; align-items: center; gap: 9px; color: var(--fg-3); }
+.gm-choose-plays::before { content: ''; width: 3px; height: 3px; border-radius: 50%; background: currentColor; }
+.gm-choose-now {
+  display: none; flex: none; padding: 3px 9px 2px; border-radius: 999px; font-family: var(--mono); font-size: 10.5px; font-weight: 600;
+  line-height: 15px; letter-spacing: .06em; text-transform: uppercase; color: var(--bg); background: var(--fg);
+}
+.gm-choose-game[aria-current='true'] .gm-choose-now { display: inline-block; }
+.gm-choose-none { margin: 2px 24px 22px; font-size: 14.5px; color: var(--fg-2); }
+
 /* rating it: one state at a time */
-.gm-side { display: flex; flex-direction: column; gap: 32px; min-width: 0; }
 .gm-box {
   display: flex; flex-direction: column; gap: 14px; min-width: 0; padding: 24px 24px 26px;
   border: 1px solid var(--line); border-radius: 20px; background: var(--bg-2); scroll-margin-top: 96px;
@@ -317,7 +384,8 @@
 @media (max-width: 960px) {
   .gm-rate-grid { grid-template-columns: minmax(0, 1fr); }
   .gm-lead-grid { grid-template-columns: minmax(0, 1fr); }
-  .gm-sum { position: static; }
+  .gm-sum { grid-template-columns: minmax(0, 1fr); align-items: start; padding: 22px; }
+  .gm-split { padding-top: 18px; border-top: 1px solid var(--line); }
 }
 @media (max-width: 860px) {
   .gm-hero-in { grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 18px; }
@@ -332,24 +400,40 @@
   .gm-tile-body { gap: 3px; padding: 10px 11px 11px; }
   .gm-tile-name { font-size: 14.5px; }
   .gm-tile-line { font-size: 12.5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .gm-tile-meta { gap: 2px 8px; }
   .gm-tile-genre { font-size: 10px; }
-  .gm-tile-nums { gap: 8px; font-size: 11px; }
+  .gm-tile-stats { gap: 4px; padding-top: 5px; font-size: 11px; }
+  .gm-tile-none { display: none; }     /* (its empty stars say it, and to a screen reader "No ratings yet") */
+  .gm-tile-counts { gap: 2px 10px; }
+  .gm-ic { width: 12px; height: 12px; }
+  .gm-stars-xs { --gm-sw: 62px; }
   .gm-tile-badge { top: 8px; left: 8px; font-size: 9.5px; padding: 2px 7px 1px; }
   /* (no hover on a phone: a small play mark stays on each tile) */
   .gm-tile-go { right: 8px; bottom: 8px; height: 28px; padding: 0 9px 0 7px; font-size: 12px; scale: 1; translate: 0 0; visibility: visible; }
 }
 /* a phone (2026-11-08, the second night: 24 games): three small tiles a row, like a phone's home screen, so every game is a
-   short scroll away: its loop, its name and its kind (its line, numbers and Play mark on bigger screens) */
+   short scroll away: its loop, its name, then (the owner: "should be still visible on each game") its stars and average, and
+   its plays and players as icons and numbers (their words for screen readers; its kind, line and Play mark on bigger screens) */
 @media (max-width: 560px) {
   .gm-grid { gap: 10px 9px; }
   .gm-tile-link { border-radius: 14px; }
-  .gm-tile-body { gap: 2px; padding: 7px 8px 8px; }
+  .gm-tile-body { gap: 3px; padding: 7px 8px 8px; }
   .gm-tile-name { font-size: 12.5px; line-height: 1.12; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-  .gm-tile-line, .gm-tile-nums, .gm-tile-go { display: none; }
-  .gm-tile-meta { padding-top: 2px; }
-  .gm-tile-genre { font-size: 9px; letter-spacing: .03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .gm-tile-genre, .gm-tile-line, .gm-tile-go, .gm-tile-count { display: none; }
+  .gm-tile-stats { gap: 3px; padding-top: 3px; font-size: 10px; letter-spacing: -0.02em; }
+  .gm-tile-rating { gap: 0 4px; min-height: 11px; }
+  .gm-stars-xs { --gm-sw: 52px; }
+  .gm-tile-counts { flex-direction: row; flex-wrap: wrap; gap: 1px 7px; }
+  .gm-tile-num { gap: 3px; }
+  .gm-ic { width: 10px; height: 10px; }
+  .gm-tile-unit { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
   .gm-tile-badge { top: 6px; left: 6px; font-size: 8.5px; line-height: 13px; padding: 1px 6px 0; }
+  /* the game picker: a sheet from the bottom */
+  .gm-choose { margin: auto 0 0; width: 100%; max-height: 86dvh; border-width: 1px 0 0; border-radius: 22px 22px 0 0; }
+  .gm-choose[open] { animation-name: gm-choose-up; }
+  .gm-choose-head { padding: 16px 12px 10px 18px; }
+  .gm-choose-find { margin: 0 14px; }
+  .gm-choose-order { margin-inline: 20px; }
+  .gm-choose-list { padding: 4px 6px calc(14px + env(safe-area-inset-bottom)); }
 }
 @media (max-width: 480px) {
   .gm-hero-in { grid-template-columns: minmax(0, 1fr); }
@@ -357,8 +441,11 @@
   .gm-title { font-size: clamp(54px, 17vw, 76px); }
   .gm-lede { font-size: 15px; }
   .gm-say { font-size: 13px; }
-  .gm-panel { scroll-margin-top: 150px; }
   .gm-sum, .gm-box, .gm-lb { padding: 20px 18px 22px; }
+  .gm-game { align-items: flex-start; gap: 14px; }
+  .gm-game-img { width: 76px; height: 76px; border-radius: 16px; }
+  .gm-stars-md { --gm-sw: 104px; }
+  .gm-game-actions { margin-top: 6px; }
   /* (a row's numbers under its name, so a long name keeps its line) */
   .gm-lb-row { grid-template-columns: 2em minmax(0, 1fr); }
   .gm-lb-num { grid-column: 2; }
@@ -376,11 +463,14 @@
 @media (max-width: 360px) {
   .gm-grid { gap: 8px 7px; }
   .gm-tile-name { font-size: 11.5px; }
+  .gm-tile-body { padding: 6px 7px 7px; }
+  .gm-stars-xs { --gm-sw: 48px; }
+  .gm-tile-counts { gap: 1px 6px; }
 }
 
 /* "reduce motion": nothing moves by itself (base.css shortens the rest), and the hero is simply there */
 @media (prefers-reduced-motion: reduce) {
-  .gm-hero-text > *, .gm-art, .gm-beta, .gm-stamp { animation: none; }
-  .gm-bar-fill, .gm-tile-link, .gm-tile-go, .gm-pick-star, .gm-tab, .gm-filter { transition: none; }
+  .gm-hero-text > *, .gm-art, .gm-beta, .gm-stamp, .gm-choose[open] { animation: none; }
+  .gm-bar-fill, .gm-tile-link, .gm-tile-go, .gm-pick-star, .gm-filter { transition: none; }
   .gm-tile-link:hover, .gm-pick-star:hover { translate: none; scale: none; }
 }
