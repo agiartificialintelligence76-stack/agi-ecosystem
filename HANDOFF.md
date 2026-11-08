@@ -1,5 +1,23 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## SKYBREAK's game menu and touch controls — 2026-11-08, afternoon
+
+The owner: "can u change the menu interface of the game skybreak it really looks like a website and optimized the mobile
+controls of that game skybreak. after ur done publish it in production".
+
+- **Its title screen is a game's now:** AGI-1 on the helipad turned toward you (framed beside the menu, or between the logo
+  and the buttons on a screen held upright), ← ARCADE, sound and full screen, the SKYBREAK logo with its candle chart, the two
+  run modes as cards, a big PLAY that fills as the world loads, Continue rift, How to play, Settings, best time and bag.
+  Pause, the finish and How to play are matching cards. No header bar, side legend or footer bar any more.
+- **Settings** (new): sound, graphics (Auto / High / Medium / Low), camera speed, and on a touchscreen camera follow and
+  button size; kept with the best times in the browser.
+- **Touch:** a stick that appears under the left thumb and sprints when pushed to its edge; JUMP, SWING (lights up near a
+  diamond), ROLL (new) and RECOVER (held a moment) in a thumb arc; a compact HUD on phones; safe areas; no zoom or selection.
+- **Where:** the game's own project (`skybreak/` in the owner's folder: `index.html`, `src/main.js`, `input.js`, `style.css`,
+  `save.js`, `renderer.js`, `tests/touch.test.js`, README), brought in by `node tools/games/import-skybreak.mjs skybreak`
+  (its two markup patches updated). Its games-page preview recorded again. Details: CLAUDE.md, "AGI games" → "SKYBREAK's
+  game menu and touch controls". **Nothing to set up:** no new setting, SQL, function or service.
+
 ## Ratings one game at a time, and every tile's numbers — 2026-11-08, morning
 
 The owner, the morning after night two: "can you organize well the ratings and review. and the how many times the game

@@ -11,8 +11,9 @@
 //                                  and its sky's billboards and the Moon's flag (never $AGI's price: hard rule 8)
 //   src/games/skybreak/style.css   its styles, its two fonts from ./fonts/
 //   src/games/skybreak/fonts/      Geist and Geist Mono (woff2) and their license (SIL Open Font License 1.1)
-//   skybreak.html                  its markup, between <!-- game:start --> and <!-- game:end -->: its header's mark links
-//                                  back to agi1.app/games, and its title screen says beta instead of personal prototype
+//   skybreak.html                  its markup, between <!-- game:start --> and <!-- game:end -->: its title screen's back
+//                                  button goes to the arcade (agi1.app/games), and it says AGI GAMES · BETA instead of
+//                                  personal prototype
 //   public/games/skybreak/         only the files it loads (RUNTIME), never the original 17.9 MB city or the provenance
 //                                  records (they stay in the owner's folder; .gitignore keeps them out of git and the site)
 //
@@ -53,8 +54,11 @@ export const PATCHES = [
 ];
 // [its text now, what it becomes, how many times it's there] in its markup
 export const MARKUP_PATCHES = [
-  ['<a href="./" aria-label="Skybreak home">', '<a href="/games" aria-label="Back to AGI games">', 1],
-  ['PERSONAL PROTOTYPE / BUILD 02', 'AGI GAMES · BETA / BUILD 02', 1],
+  // (2026-11-08) its title screen's back button goes to the arcade, and its kicker says AGI GAMES · BETA (a game's
+  // start screen since that day, not a page's header)
+  ['<a class="exit-pill" href="./" aria-label="Skybreak home"><svg aria-hidden="true"><use href="#i-back"/></svg><span>HOME</span></a>',
+    '<a class="exit-pill" href="/games" aria-label="Back to AGI games"><svg aria-hidden="true"><use href="#i-back"/></svg><span>ARCADE</span></a>', 1],
+  ['<p class="kicker"><span>PERSONAL PROTOTYPE</span><b>BUILD 02</b></p>', '<p class="kicker"><span>AGI GAMES</span><b>BETA</b></p>', 1],
   ['\n  <script type="module" src="./src/main.js"></script>', '', 1],   // the site's page.js loads it
 ];
 

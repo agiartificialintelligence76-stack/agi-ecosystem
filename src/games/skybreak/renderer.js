@@ -11,6 +11,15 @@ const mix = (a, b, t) => a + (b - a) * t;
 const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
 const asset = path => `/games/skybreak/${path}`;
 const VIEW_BELOW = 30, VIEW_ABOVE = 46;
+// The title camera's direction (a little up, toward the first candles), her turn toward it, her height and the middle of
+// her (metres above her feet).
+const TITLE = (() => {
+  const pitch = 3 * Math.PI / 180, hx = .4436, hz = -.8962;
+  const forward = { x: hx * Math.cos(pitch), y: Math.sin(pitch), z: hz * Math.cos(pitch) };
+  const right = { x: -hz, y: 0, z: hx };
+  const up = { x: right.y * forward.z - right.z * forward.y, y: right.z * forward.x - right.x * forward.z, z: right.x * forward.y - right.y * forward.x };
+  return Object.freeze({ fov: 63, facing: 20, height: 1.62, middle: .84, forward, right, up });
+})();
 
 // Per-skin palettes. Candles use the chart's own green and red.
 const SKINS = {
@@ -71,7 +80,7 @@ export class SkyRenderer {
     this.materials = new Map(); this.textures = new Map(); this.geometries = new Map();
     this.look = lookAt(0); this.shakeAmount = 0; this.flashTimer = 4; this.boltTimer = 0; this.envTintApplied = null;
     this.onThunder = null; this.collected = new Set();
-    this.menuView = { target: new pc.Vec3(6, 7, -6), eye: new pc.Vec3(-8, 3.5, 13) };
+    this.titleFrame = null;
     this.sky = new ChartSky(scene);
     const fog = this.app.scene.fog; fog.type = pc.FOG_LINEAR; fog.start = 45; fog.end = 320;
     this.sun = new pc.Entity('Sun'); this.sun.addComponent('light', { type: 'directional', color: color('#ffd8b0'), intensity: 2.1, castShadows: false });
@@ -567,6 +576,23 @@ export class SkyRenderer {
     };
   }
 
+  // The title camera (2026-11-08): AGI-1 on the helipad turned toward you, a low camera looking a little up at her with
+  // the first candles and the city behind. It faces her, then turns (never moves) so she stands where the title's layout
+  // leaves room for her (titleFrame, measured by the page: the middle of her on screen, -1 … 1, and her height as a share
+  // of the screen's); without it, by the screen's shape. Turning keeps her face toward you wherever she stands on screen.
+  titleShot(p) {
+    const canvas = this.scene.graphicsDevice.canvas, w = canvas.clientWidth || 16, h = canvas.clientHeight || 9, aspect = w / h;
+    const tan = Math.tan(TITLE.fov / 2 * Math.PI / 180), frame = this.titleFrame;
+    let sx, sy, depth;
+    if (frame) { sx = frame.x; sy = frame.y; depth = TITLE.height / (2 * tan * frame.h); }
+    else { const wide = clamp((aspect - .8) / .7, 0, 1); sx = wide * .34; sy = mix(.02, -.14, wide); depth = mix(5.2, 4.7, wide); }
+    depth = clamp(depth, 3.2, 9);
+    const { forward: f, right: r, up: u } = TITLE, sway = Math.sin(this.time * .1) * .16, cx = p.x, cy = p.y + TITLE.middle, cz = p.z;
+    const eye = new pc.Vec3(cx - f.x * depth + r.x * sway, cy - f.y * depth, cz - f.z * depth + r.z * sway);
+    const a = sx * depth * tan * aspect, b = sy * depth * tan;
+    return { eye, target: new pc.Vec3(cx - r.x * a - u.x * b, cy - r.y * a - u.y * b, cz - r.z * a - u.z * b) };
+  }
+
   update(dt, physics, input, { playing = false, paused = false, menu = false, frameDt = dt } = {}) {
     this.time += paused ? 0 : dt; const p = physics.player; this.lastPoseState = p;
     const viewY = menu ? 0 : p.y;
@@ -632,12 +658,12 @@ export class SkyRenderer {
       b.material.emissiveIntensity = 1.4 * (1 - t); b.material.update();
       if (b.life <= 0) b.entity.enabled = false;
     }
-    if (this.character) { this.character.setPosition(p.x, p.y, p.z); let desired = Math.atan2(p.facingX, p.facingZ) * 180 / Math.PI - 90; if (p.speed > .3 || p.grapple) { let delta = ((desired - this.facing + 540) % 360) - 180; this.facing += delta * (1 - Math.exp(-dt * 14)); } this.character.setRotation(0, this.facing, p.state === 'roll' ? -35 : 0); const motion = menu ? 'idle' : p.grapple ? 'hang' : p.state === 'mantle' ? 'mantle' : p.state === 'roll' ? 'roll' : !p.grounded ? (p.vy > 0 ? 'jump' : 'fall') : p.speed > .7 ? 'run' : 'idle'; if (motion !== this.motion) { this.motion = motion; if (this.clips.has(motion)) this.character.crossfadeTo(motion, { duration: .14, loop: ['idle', 'run', 'hang', 'fall'].includes(motion), rootMotion: false }); else this.character.armature.stop(.12); } this.character.armature.paused = paused; if (this.clips.has('run') && this.motion === 'run') this.character.armature.playbackSpeed = Math.max(.6, p.speed / 5.5); else this.character.armature.playbackSpeed = 1; }
+    if (this.character) { this.character.setPosition(p.x, p.y, p.z); let desired = Math.atan2(p.facingX, p.facingZ) * 180 / Math.PI - 90; if (p.speed > .3 || p.grapple) { let delta = ((desired - this.facing + 540) % 360) - 180; this.facing += delta * (1 - Math.exp(-dt * 14)); } else if (menu) { const delta = ((TITLE.facing - this.facing + 540) % 360) - 180; this.facing += delta * (1 - Math.exp(-dt * 3)); } this.character.setRotation(0, this.facing, p.state === 'roll' ? -35 : 0); const motion = menu ? 'idle' : p.grapple ? 'hang' : p.state === 'mantle' ? 'mantle' : p.state === 'roll' ? 'roll' : !p.grounded ? (p.vy > 0 ? 'jump' : 'fall') : p.speed > .7 ? 'run' : 'idle'; if (motion !== this.motion) { this.motion = motion; if (this.clips.has(motion)) this.character.crossfadeTo(motion, { duration: .14, loop: ['idle', 'run', 'hang', 'fall'].includes(motion), rootMotion: false }); else this.character.armature.stop(.12); } this.character.armature.paused = paused; if (this.clips.has('run') && this.motion === 'run') this.character.armature.playbackSpeed = Math.max(.6, p.speed / 5.5); else this.character.armature.playbackSpeed = 1; }
     this.shadow.setPosition(p.x, p.y + .015, p.z); this.shadow.enabled = p.grounded;
     this.rope.enabled = !!p.grapple; if (p.grapple) { const a = p.grapple.anchor, b = new pc.Vec3(p.x, p.y + 1.4, p.z), v = new pc.Vec3(a.x - b.x, a.y - b.y, a.z - b.z); this.rope.setPosition((a.x + b.x) / 2, (a.y + b.y) / 2, (a.z + b.z) / 2); const rotation = new pc.Quat(); rotation.setFromDirections(pc.Vec3.UP, v.clone().normalize()); this.rope.setRotation(rotation); this.rope.setLocalScale(.03, v.length(), .03); }
     let target = new pc.Vec3(p.x, p.y + 1.15, p.z), desired;
     // Title camera: AGI-1 on the helipad, the first candle run climbing away behind her.
-    if (menu) { const a = Math.sin(this.time * .08) * .6, v = this.menuView; target.copy(v.target); desired = new pc.Vec3(v.eye.x + a, v.eye.y, v.eye.z); }
+    if (menu) { const v = this.titleShot(p); target.copy(v.target); desired = v.eye; if (!this.titleSeen) { this.titleSeen = true; this.cameraPos.copy(desired); } }
     else { const cp = Math.cos(input.pitch); desired = new pc.Vec3(p.x + Math.sin(input.yaw) * input.distance * cp, p.y + 1.15 + Math.sin(input.pitch) * input.distance, p.z + Math.cos(input.yaw) * input.distance * cp); const delta = desired.clone().sub(target), length = delta.length(); delta.normalize(); const hit = physics.world.castRay(new RAPIER.Ray(target, delta), length, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, physics.playerCollider); if (hit) desired.copy(target).add(delta.mulScalar(Math.max(.12, hit.timeOfImpact - .2))); }
     this.cameraPos.lerp(this.cameraPos, desired, menu ? .025 : 1 - Math.exp(-dt * 12));
     if (!menu) { const ray = this.cameraPos.clone().sub(target), length = ray.length(); if (length > .001) { ray.normalize(); const hit = physics.world.castRay(new RAPIER.Ray(target, ray), length, true, RAPIER.QueryFilterFlags.EXCLUDE_SENSORS, undefined, physics.playerCollider); if (hit) this.cameraPos.copy(target).add(ray.mulScalar(Math.max(.12, hit.timeOfImpact - .2))); } }

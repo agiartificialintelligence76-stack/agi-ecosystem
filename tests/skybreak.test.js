@@ -58,14 +58,42 @@ test('its page: the AGI GAMES intro, then the run counter, then the game, loaded
   assert.ok(asked.size > 30, `${asked.size} ids looked for`);
 });
 
-test('its phone and tablet controls: the stick and buttons on any touchscreen, a compact title on a short screen', () => {
+test('its title screen (2026-11-08): a game\'s start screen, not a web page\'s', () => {
   const page = read('skybreak.html');
-  for (const id of ['touch-controls', 'touch-stick', 'touch-recover', 'touch-grapple', 'touch-jump']) assert.match(page, new RegExp(`id="${id}"`));
+  const game = page.slice(page.indexOf('<!-- game:start'), page.indexOf('<!-- game:end -->'));
+  // no site header, editorial copy or footer bar: the arcade's back button, its logo, its modes and a big Play
+  assert.doesNotMatch(game, /class="brand"|intro-footer|intro-side|FIELD SYSTEMS|ASCENT DIVISION/);
+  assert.match(game, /<a class="exit-pill" href="\/games" aria-label="Back to AGI games">[\s\S]*?<span>ARCADE<\/span><\/a>/);
+  assert.match(game, /<p class="kicker"><span>AGI GAMES<\/span><b>BETA<\/b><\/p>/);
+  assert.match(game, /<h1 class="logo" aria-label="Skybreak">/);
+  assert.match(game, /role="radiogroup" aria-label="Run mode">[\s\S]*data-mode="rift" role="radio" aria-checked="true"[\s\S]*data-mode="pure" role="radio" aria-checked="false"/);
+  assert.match(game, /<button id="start" class="game-button play" disabled><span id="load-fill" class="play-fill"><\/span>/, 'Play fills as it loads');
+  for (const id of ['how', 'settings', 'continue', 'title-sound', 'title-full', 'settings-screen', 'pause-settings', 'pause-help']) assert.match(game, new RegExp(`id="${id}"`));
+  // its settings: sound, graphics, camera speed, and on a touchscreen camera follow and button size, kept on the device
+  for (const set of ['sound', 'quality', 'look', 'follow', 'buttons']) assert.match(game, new RegExp(`data-set="${set}"`));
+  assert.match(read(`${GAME}/save.js`), /export function getSettings\(\)/);
+  // AGI-1 stands where its layout leaves room, facing you (the page measures it, the renderer frames her)
+  assert.match(read(`${GAME}/main.js`), /renderer\.titleFrame = \{ x: /);
+  assert.match(read(`${GAME}/renderer.js`), /titleShot\(p\) \{/);
+  // its icons are its own inline SVG (no images, nothing from another site, nothing the CSP refuses)
+  assert.doesNotMatch(game, /<img|https?:\/\/|\sstyle=/);
+});
+
+test('its phone and tablet controls: a floating stick that sprints at its edge, a thumb arc of buttons, on any touchscreen', () => {
+  const page = read('skybreak.html');
+  for (const id of ['touch-controls', 'touch-zone', 'touch-stick', 'touch-recover', 'touch-roll', 'touch-grapple', 'touch-jump']) assert.match(page, new RegExp(`id="${id}"`));
   const css = read(`${GAME}/style.css`);
-  assert.match(css, /@media \(pointer:coarse\)\{\.playing #touch-controls\{display:block\}/, 'any touchscreen, not only a narrow one');
-  assert.match(css, /@media \(max-height:500px\)\{[\s\S]*\.intro-content\{[^}]*overflow-y:auto/, 'Begin Ascent always on screen on a phone held sideways');
-  assert.match(read(`${GAME}/input.js`), /getElementById\('touch-recover'\)/);
-  assert.match(read(`${GAME}/main.js`), /matchMedia\('\(pointer: coarse\)'\)/, 'its first hint names the stick');
+  assert.match(css, /@media \(pointer:coarse\)\{\s*\.playing #touch-controls\{display:block\}/, 'any touchscreen, not only a narrow one');
+  assert.match(css, /#touch-zone\{[^}]*touch-action:none/, 'the stick\'s zone never scrolls or zooms the page');
+  assert.match(css, /\.big-buttons #touch-controls\{--tb:/, 'larger buttons in Settings');
+  assert.match(css, /@media \(max-height:500px\)\{[\s\S]*\.title-main\{[^}]*overflow-y:auto/, 'Play always on screen on a phone held sideways');
+  assert.match(css, /env\(safe-area-inset-bottom/, 'clear of a phone\'s rounded corners and home bar');
+  const input = read(`${GAME}/input.js`);
+  for (const id of ['touch-zone', 'touch-recover', 'touch-roll', 'touch-jump', 'touch-grapple']) assert.match(input, new RegExp(`getElementById\\('${id}'\\)|hold\\('${id}'`));
+  assert.match(input, /this\.touchSprint=len>=STICK_EDGE/, 'pushed to its edge, it sprints');
+  assert.match(input, /roll:this\.keys\.has\('KeyQ'\)\|\|this\.touchRoll/, 'ROLL on a touchscreen too');
+  assert.match(input, /RECOVER_HOLD/, 'RECOVER is held a moment');
+  assert.match(read(`${GAME}/main.js`), /matchMedia\('\(pointer: coarse\)'\)/, 'its hints name the stick');
 });
 
 test('its files on the site: only what it loads, never the original city or its provenance', async () => {

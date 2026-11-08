@@ -29,24 +29,59 @@
     <div class="gi" id="agi-intro" aria-hidden="true"></div>
     <main id="sb-root">
       <!-- game:start (written by tools/games/import-skybreak.mjs from the game's own markup: don't edit) -->
+      <svg class="sprite" aria-hidden="true" focusable="false">
+        <symbol id="i-play" viewBox="0 0 24 24"><path d="M7.5 4.6v14.8c0 .9 1 1.4 1.7.9l11.3-7.4a1.1 1.1 0 0 0 0-1.8L9.2 3.7c-.7-.5-1.7 0-1.7.9z" fill="currentColor"/></symbol>
+        <symbol id="i-jump" viewBox="0 0 24 24"><path d="M12 3.2 20 12h-4.8v8.8H8.8V12H4z" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/></symbol>
+        <symbol id="i-swing" viewBox="0 0 24 24"><path d="M12 1.8 17.2 7 12 12.2 6.8 7z" fill="currentColor"/><path d="M12 13.4v3.6" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="12" cy="20" r="2.4" fill="currentColor"/></symbol>
+        <symbol id="i-roll" viewBox="0 0 24 24"><path d="M19 13.2A7.1 7.1 0 1 1 16.9 7" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M18.4 3.2v4.9h-4.9" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-recover" viewBox="0 0 24 24"><path d="M5 13.2A7.1 7.1 0 1 0 7.1 7" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round"/><path d="M5.6 3.2v4.9h4.9" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-sound-on" viewBox="0 0 24 24"><path d="M3.8 9.4h3.6l4.8-4.1v13.4l-4.8-4.1H3.8z" fill="currentColor"/><path d="M15.6 8.7a4.7 4.7 0 0 1 0 6.6M18.2 6.1a8.4 8.4 0 0 1 0 11.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+        <symbol id="i-sound-off" viewBox="0 0 24 24"><path d="M3.8 9.4h3.6l4.8-4.1v13.4l-4.8-4.1H3.8z" fill="currentColor"/><path d="m15.6 9.4 5.2 5.2m0-5.2-5.2 5.2" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/></symbol>
+        <symbol id="i-full" viewBox="0 0 24 24"><path d="M4 9.2V4h5.2M14.8 4H20v5.2M20 14.8V20h-5.2M9.2 20H4v-5.2" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+        <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="4.8" width="4.2" height="14.4" rx="1.3" fill="currentColor"/><rect x="13.8" y="4.8" width="4.2" height="14.4" rx="1.3" fill="currentColor"/></symbol>
+        <symbol id="i-settings" viewBox="0 0 24 24"><path d="M3.5 7h9.2M19.3 7h1.2M3.5 17h2.8M12.9 17h7.6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><circle cx="16" cy="7" r="2.7" fill="none" stroke="currentColor" stroke-width="2.2"/><circle cx="9.6" cy="17" r="2.7" fill="none" stroke="currentColor" stroke-width="2.2"/></symbol>
+        <symbol id="i-back" viewBox="0 0 24 24"><path d="M14.6 5.4 8 12l6.6 6.6" fill="none" stroke="currentColor" stroke-width="2.9" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+      </svg>
       <canvas id="game" aria-label="Skybreak 3D game"></canvas>
       <div id="vignette"></div><div id="speedlines"></div><div id="flash"></div>
-      <header class="brand"><a href="/games" aria-label="Back to AGI games"><span class="brand-mark">A1</span><span>AGI<span class="brand-divider"> / </span>FIELD SYSTEMS</span></a><span class="edition">SKYBREAK / V.02 · THE CHART CLIMB</span></header>
-      <section id="intro" class="screen intro">
-        <div class="intro-content"><div class="eyebrow"><span class="live-dot"></span> ONLY UP / NUMBER GO UP</div><h1>SKY<span>BREAK</span></h1><div class="title-meta">AN AGI-1 CHART CLIMB</div>
-        <p class="intro-copy">Green candles <b class="up">pump</b>. Red candles <b class="down">dump</b>.<br>Climb 600 metres of chart to the Moon. Never hold the bag.</p>
-        <div class="mode-tabs" role="group" aria-label="Run mode"><button class="active" data-mode="rift">Rift run<span>Earn checkpoints on side routes</span></button><button data-mode="pure">Pure ascent<span>No checkpoints. One climb.</span></button></div>
-        <button id="start" class="primary" disabled><span id="start-label">OPENING THE MARKET</span><span>↗</span></button><div class="load-track"><div id="load-fill"></div></div><p id="load-status" class="loading" role="status">Establishing the route…</p>
-        <button id="how" class="text-button">Field manual <span>↗</span></button><span class="prototype-label" id="best-bag">AGI GAMES · BETA / BUILD 02</span>
+      <section id="intro" class="screen intro" aria-label="Skybreak">
+        <div class="title-scrim" aria-hidden="true"></div>
+        <header class="title-bar">
+          <a class="exit-pill" href="/games" aria-label="Back to AGI games"><svg aria-hidden="true"><use href="#i-back"/></svg><span>ARCADE</span></a>
+          <div class="round-tools"><button id="title-sound" class="round-button" aria-label="Mute sound"><svg class="ico-on" aria-hidden="true"><use href="#i-sound-on"/></svg><svg class="ico-off" aria-hidden="true"><use href="#i-sound-off"/></svg></button><button id="title-full" class="round-button hidden" aria-label="Play full screen"><svg aria-hidden="true"><use href="#i-full"/></svg></button></div>
+        </header>
+        <div class="title-main">
+          <div class="title-logo">
+            <p class="kicker"><span>AGI GAMES</span><b>BETA</b></p>
+            <h1 class="logo" aria-label="Skybreak"><span class="logo-sky">SKY<span class="logo-chart" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i></span></span><span class="logo-break">BREAK</span></h1>
+            <p class="logo-ribbon">AN AGI-1 CHART CLIMB</p>
+            <ul class="legend" aria-label="Read the chart"><li><i class="candle up"></i>Green candles pump</li><li><i class="candle down"></i>Red candles dump</li><li><i class="rug"></i>Rugs get pulled</li></ul>
+          </div>
+          <div class="title-menu">
+            <div class="mode-pick" role="radiogroup" aria-label="Run mode">
+              <button class="mode active" data-mode="rift" role="radio" aria-checked="true"><i class="mode-ico rift" aria-hidden="true"></i><b>RIFT RUN</b><span>Checkpoints on side routes</span></button>
+              <button class="mode" data-mode="pure" role="radio" aria-checked="false"><i class="mode-ico pure" aria-hidden="true"></i><b>PURE ASCENT</b><span>No saves. One climb.</span></button>
+            </div>
+            <button id="continue" class="game-button gold hidden"><svg aria-hidden="true"><use href="#i-play"/></svg><span>CONTINUE RIFT</span><small id="continue-at"></small></button>
+            <button id="start" class="game-button play" disabled><span id="load-fill" class="play-fill"></span><svg class="play-ico" aria-hidden="true"><use href="#i-play"/></svg><span id="start-label">LOADING</span></button>
+            <p id="load-status" class="loading" role="status">Establishing the route…</p>
+            <div class="menu-row"><button id="how" class="game-button"><b class="q" aria-hidden="true">?</b><span>HOW TO PLAY</span></button><button id="settings" class="game-button"><svg aria-hidden="true"><use href="#i-settings"/></svg><span>SETTINGS</span></button></div>
+            <p class="rotate-tip">Tip: turn your phone sideways for a wider view.</p>
+          </div>
         </div>
-        <div class="intro-side"><div class="legend"><span class="tiny">READ THE CHART</span><p><i class="candle up"></i>Green candle. Stand on it and it pumps you up.</p><p><i class="candle down"></i>Red candle. It dumps a beat after you land.</p><p><i class="rug"></i>Rug. It gets pulled. Keep moving.</p></div>
-        <div class="map-note"><span class="tiny">FINAL COORDINATE</span><strong>The Moon</strong><span>ELEVATION +600 M</span></div></div>
-        <footer class="intro-footer"><span>AGI-1 / ASCENT DIVISION</span><span>08 ZONES <i>/</i> 600 METRES <i>/</i> <span id="route-steps">460</span> STEPS</span><span>GRAVITY DOES NOT NEGOTIATE.</span></footer>
+        <footer class="title-foot">
+          <span class="chip"><span class="chip-label" id="title-best-label">RIFT BEST</span><b id="title-best">—</b></span>
+          <span class="chip gold"><i class="coin-icon">AGI</i><span id="best-bag">NO BAG YET</span></span>
+          <span class="chip chip-route"><b>8</b> ZONES · <b>600</b> M · <b id="route-steps">460</b> STEPS</span>
+          <span class="press-hint">PRESS <kbd>ENTER</kbd> TO PLAY</span>
+        </footer>
       </section>
       <section id="hud" class="hidden" aria-label="Game information">
-        <div class="run-time"><span class="tiny" id="run-mode">RIFT RUN</span><strong id="timer">00:00.000</strong><span class="best">BEST <b id="best">—</b></span></div>
-        <div id="bag" class="bag"><i class="coin-icon">AGI</i><strong id="coin-count">0</strong><small>/ <span id="coin-total">0</span> $AGI</small></div>
-        <div class="hud-top-right"><button id="sound" class="icon-button" aria-label="Toggle sound">♪</button><button id="quality" class="icon-button" aria-label="Change visual quality">HQ</button><button id="pause" class="icon-button" aria-label="Pause game">Ⅱ</button></div>
+        <div class="hud-run">
+          <div class="run-time"><span class="tiny" id="run-mode">RIFT RUN</span><strong id="timer">00:00.000</strong><span class="best">BEST <b id="best">—</b></span></div>
+          <div id="bag" class="bag"><i class="coin-icon">AGI</i><strong id="coin-count">0</strong><small>/ <span id="coin-total">0</span> $AGI</small></div>
+        </div>
+        <div class="hud-top-right"><button id="sound" class="icon-button" aria-label="Mute sound"><svg class="ico-on" aria-hidden="true"><use href="#i-sound-on"/></svg><svg class="ico-off" aria-hidden="true"><use href="#i-sound-off"/></svg></button><button id="quality" class="icon-button" aria-label="Change visual quality">HQ</button><button id="pause" class="icon-button pause-button" aria-label="Pause game"><svg aria-hidden="true"><use href="#i-pause"/></svg></button></div>
         <div class="ticker">
           <div class="ticker-head"><span class="tiny">$SKY · ALTITUDE</span><span id="change" class="up">▲ 0.0%</span></div>
           <strong class="ticker-price"><span id="altitude">0</span><small>M</small></strong>
@@ -61,10 +96,79 @@
         <div id="hint" class="hint">WASD to move · Space to jump · Drag to look</div><div id="toast" class="toast" role="status"></div>
         <div class="controls-strip"><span><kbd>W A S D</kbd> MOVE</span><span><kbd>SPACE</kbd> JUMP / MANTLE</span><span><kbd>SHIFT</kbd> SPRINT</span><span><kbd>Q</kbd> ROLL</span><span><kbd>E</kbd> GRAPPLE</span><span><kbd>R</kbd> RECOVER</span></div>
       </section>
-      <section id="pause-screen" class="screen dialog-screen hidden"><div class="dialog"><span class="eyebrow">TRADING HALTED</span><h2>Hold<br>position.</h2><p>Your ascent is paused. The chart will wait.</p><button id="resume" class="primary">RESUME ASCENT <span>↗</span></button><button id="restart" class="secondary">Restart from the ground</button><button id="menu" class="text-button">Return to title</button></div></section>
-      <section id="win-screen" class="screen dialog-screen hidden"><div class="dialog win"><span class="eyebrow">FINAL COORDINATE REACHED</span><h2>To the<br>Moon.</h2><p>600 metres of chart, climbed by hand.</p><canvas id="finish-chart" aria-label="Your whole climb as a candlestick chart"></canvas><strong id="finish-time" class="finish-time">00:00.000</strong><span id="finish-note" class="finish-note"></span><p id="finish-bag" class="finish-bag"></p><p id="finish-detail"></p><button id="again" class="primary">RUN IT AGAIN <span>↗</span></button><button id="win-menu" class="text-button">Return to title</button></div></section>
-      <section id="help-screen" class="screen dialog-screen hidden"><div class="dialog help"><span class="eyebrow">FIELD MANUAL / 02</span><h2>Read the chart.</h2><dl><dt>WASD · Space</dt><dd>Move and jump. Hold Space for height. Jump toward a nearby ledge to mantle up.</dd><dt>Green candle</dt><dd>Stand on it and it pumps. The glowing wick and frame show exactly how high it goes.</dd><dt>Red candle</dt><dd>It dumps a moment after you land. Jump before it drops away.</dd><dt>Rug · rails · pads</dt><dd>Rugs get pulled out from under you. Green rails fling you long. Gold pads throw you up.</dd><dt>Lasers · diamonds</dt><dd>Red lasers sweep the outer edge, so stay inside. Hold E near a diamond to swing.</dd><dt>Moon gravity</dt><dd>The last zone is low gravity: bigger gaps, floatier jumps.</dd><dt>R · Escape</dt><dd>Recover to your rift or the start. Pause the run.</dd><dt>Touch</dt><dd>Left stick to move, drag anywhere to look. ↑ jumps (hold for height), hold E to swing, ↺ recovers, Ⅱ pauses.</dd><dt>Gamepad</dt><dd>Sticks move and look. A jumps, RB swings, LB sprints, B rolls.</dd></dl><p class="help-note">Falls stay in the world: miss a jump and you land on the loop below. Rift runs save on side paths; Pure ascent never saves. Coins and best times stay on this device.</p><button id="help-close" class="primary">UNDERSTOOD <span>↗</span></button></div></section>
-      <div id="touch-controls"><div id="touch-stick"><i></i></div><div class="touch-actions"><button id="touch-recover" aria-label="Recover to your rift or the start">↺</button><button id="touch-grapple" aria-label="Hold to grapple">E</button><button id="touch-jump" aria-label="Jump">↑</button></div></div>
+      <section id="pause-screen" class="screen dialog-screen hidden" aria-label="Paused">
+        <div class="card pause">
+          <p class="card-kicker">TRADING HALTED</p>
+          <h2>PAUSED</h2>
+          <p class="card-copy">Your climb is on hold. The chart will wait.</p>
+          <div class="card-actions">
+            <button id="resume" class="game-button play"><svg aria-hidden="true"><use href="#i-play"/></svg><span>RESUME</span></button>
+            <button id="restart" class="game-button"><svg aria-hidden="true"><use href="#i-recover"/></svg><span>RESTART CLIMB</span></button>
+            <div class="menu-row"><button id="pause-settings" class="game-button"><svg aria-hidden="true"><use href="#i-settings"/></svg><span>SETTINGS</span></button><button id="pause-help" class="game-button"><b class="q" aria-hidden="true">?</b><span>CONTROLS</span></button></div>
+            <button id="menu" class="text-link">QUIT TO TITLE</button>
+          </div>
+        </div>
+      </section>
+      <section id="win-screen" class="screen dialog-screen hidden" aria-label="You reached the Moon">
+        <div class="card win">
+          <p class="card-kicker">FINAL COORDINATE REACHED</p>
+          <h2>TO THE MOON!</h2>
+          <canvas id="finish-chart" aria-label="Your whole climb as a candlestick chart"></canvas>
+          <div class="finish-stats"><div><span class="stat-label">TIME</span><strong id="finish-time" class="finish-time">00:00.000</strong></div><div><span class="stat-label">$AGI BAG</span><strong id="finish-bag" class="finish-bag">0</strong></div></div>
+          <span id="finish-note" class="finish-note"></span>
+          <p id="finish-detail" class="card-copy"></p>
+          <div class="card-actions">
+            <button id="again" class="game-button play"><svg aria-hidden="true"><use href="#i-play"/></svg><span>RUN IT AGAIN</span></button>
+            <button id="win-menu" class="game-button">TITLE SCREEN</button>
+          </div>
+        </div>
+      </section>
+      <section id="help-screen" class="screen dialog-screen hidden" aria-label="How to play">
+        <div class="card help">
+          <p class="card-kicker">FIELD MANUAL</p>
+          <h2>HOW TO PLAY</h2>
+          <div class="help-grid">
+            <div class="help-set keys">
+              <p class="help-title">KEYBOARD &amp; MOUSE</p>
+              <ul><li><kbd>W A S D</kbd><span>Move</span></li><li><kbd>SPACE</kbd><span>Jump. Hold for height; jump at a ledge to climb it</span></li><li><kbd>SHIFT</kbd><span>Sprint</span></li><li><kbd>Q</kbd><span>Hold as you land to roll and keep your speed</span></li><li><kbd>E</kbd><span>Hold near a diamond to swing</span></li><li><kbd>R</kbd><span>Recover to your rift or the start</span></li><li><kbd>MOUSE</kbd><span>Look around; the wheel zooms</span></li><li><kbd>ESC</kbd><span>Pause</span></li></ul>
+            </div>
+            <div class="help-set touch">
+              <p class="help-title">TOUCH</p>
+              <ul><li><i class="hb hb-stick"></i><span>Put your left thumb down anywhere on the left to move. Push to the edge to sprint</span></li><li><i class="hb hb-jump"><svg aria-hidden="true"><use href="#i-jump"/></svg></i><span>Jump. Hold for height; jump at a ledge to climb it</span></li><li><i class="hb hb-swing"><svg aria-hidden="true"><use href="#i-swing"/></svg></i><span>Lights up near a diamond: hold to swing</span></li><li><i class="hb"><svg aria-hidden="true"><use href="#i-roll"/></svg></i><span>Hold as you land to roll and keep your speed</span></li><li><i class="hb"><svg aria-hidden="true"><use href="#i-recover"/></svg></i><span>Hold a moment to recover to your rift or the start</span></li><li><i class="hb hb-look"></i><span>Drag anywhere else to look</span></li></ul>
+            </div>
+            <div class="help-set chart">
+              <p class="help-title">READ THE CHART</p>
+              <ul><li><i class="candle up"></i><span><b>Green candle.</b> Stand on it and it pumps you up; the glowing wick shows how high</span></li><li><i class="candle down"></i><span><b>Red candle.</b> It dumps a moment after you land. Jump first</span></li><li><i class="rug"></i><span><b>Rug.</b> It gets pulled out from under you. Keep moving</span></li><li><i class="rail"></i><span><b>Rails and pads.</b> Green rails fling you long; gold pads throw you up</span></li><li><i class="laser"></i><span><b>Lasers.</b> They sweep the outer edge, so stay inside</span></li><li><i class="moon"></i><span><b>Moon gravity.</b> The last zone is floaty: bigger gaps, bigger jumps</span></li></ul>
+            </div>
+          </div>
+          <p class="help-note"><b>Gamepad:</b> left stick moves, right stick looks, A jumps, RB swings, LB sprints, B rolls. Falls stay in the world: miss a jump and you land on the loop below. Rift runs save on side paths; Pure ascent never saves. Coins and best times stay on this device.</p>
+          <button id="help-close" class="game-button play"><span>GOT IT</span></button>
+        </div>
+      </section>
+      <section id="settings-screen" class="screen dialog-screen hidden" aria-label="Settings">
+        <div class="card settings">
+          <p class="card-kicker">SYSTEM</p>
+          <h2>SETTINGS</h2>
+          <div class="set-rows">
+            <div class="set-row"><span class="set-name">SOUND</span><div class="seg" role="group" aria-label="Sound"><button data-set="sound" data-value="on">ON</button><button data-set="sound" data-value="off">OFF</button></div></div>
+            <div class="set-row"><span class="set-name">GRAPHICS<small>Auto steps down if frames run slow</small></span><div class="seg" role="group" aria-label="Graphics"><button data-set="quality" data-value="auto">AUTO</button><button data-set="quality" data-value="high">HIGH</button><button data-set="quality" data-value="medium">MED</button><button data-set="quality" data-value="low">LOW</button></div></div>
+            <div class="set-row"><span class="set-name">CAMERA SPEED</span><div class="seg" role="group" aria-label="Camera speed"><button data-set="look" data-value="slow">SLOW</button><button data-set="look" data-value="normal">NORMAL</button><button data-set="look" data-value="fast">FAST</button></div></div>
+            <div class="set-row touch-only"><span class="set-name">CAMERA FOLLOW<small>Turns with you as you run</small></span><div class="seg" role="group" aria-label="Camera follow"><button data-set="follow" data-value="on">ON</button><button data-set="follow" data-value="off">OFF</button></div></div>
+            <div class="set-row touch-only"><span class="set-name">BUTTONS</span><div class="seg" role="group" aria-label="Button size"><button data-set="buttons" data-value="normal">NORMAL</button><button data-set="buttons" data-value="large">LARGE</button></div></div>
+          </div>
+          <button id="settings-close" class="game-button play"><span>DONE</span></button>
+        </div>
+      </section>
+      <div id="touch-controls">
+        <div id="touch-zone"></div>
+        <div id="touch-stick"><i></i><span class="sprint-tag">SPRINT</span></div>
+        <div class="touch-actions">
+          <button id="touch-recover" class="tb tb-rec" aria-label="Hold to recover to your rift or the start"><svg aria-hidden="true"><use href="#i-recover"/></svg></button>
+          <button id="touch-grapple" class="tb tb-swing" aria-label="Hold to grapple"><svg aria-hidden="true"><use href="#i-swing"/></svg><span>SWING</span></button>
+          <button id="touch-roll" class="tb tb-roll" aria-label="Hold to roll as you land"><svg aria-hidden="true"><use href="#i-roll"/></svg><span>ROLL</span></button>
+          <button id="touch-jump" class="tb tb-jump" aria-label="Jump"><svg aria-hidden="true"><use href="#i-jump"/></svg><span>JUMP</span></button>
+        </div>
+      </div>
       <div id="error" class="hidden" role="alert"></div>
       <!-- game:end -->
       <noscript>Turn on JavaScript to play SKYBREAK. <a href="/games">Back to AGI games</a>.</noscript>

@@ -10276,7 +10276,8 @@ physics; everything above the city is drawn in code.
   text exactly; never edit its output by hand): its modules and styles into `src/games/skybreak/` (its 3D files read from
   `/games/skybreak/`; its fonts, Geist and Geist Mono with their OFL license, in `fonts/`), its markup into `skybreak.html`
   between `<!-- game:start -->` and `<!-- game:end -->` (its header's mark links back to /games; "AGI GAMES · BETA" on its
-  title screen instead of "personal prototype"), and only the five files it loads into `public/games/skybreak/` (`RUNTIME`:
+  title screen instead of "personal prototype"; since 2026-11-08 its title screen's ARCADE button and "AGI GAMES BETA": see
+  "SKYBREAK's game menu and touch controls"), and only the five files it loads into `public/games/skybreak/` (`RUNTIME`:
   her character, the city at 120,000 and 40,000 splats, the motions' list and her idle; about 4.5 MB). **Never shipped:**
   the original 17.9 MB city export and the provenance records, which stay in the owner's folder (`.gitignore`).
   **Hard rule 8 in the game too:** on the site its sky's chart billboards chart the game's own made-up `$SKY` (its altitude,
@@ -10297,7 +10298,8 @@ physics; everything above the city is drawn in code.
   and Vercel uses the last rule's value for the same header. Every other page and file keeps the policy as it was. Without
   the worker's rule the city fails ("the positions stream does not decompress: Failed to fetch") and Begin Ascent never
   comes. Its 3D files are cached a day (`/games/skybreak/(characters|environment|motions)/(.*)`).
-- **Phones and tablets** (the same day, in its own project, so in both): any touchscreen gets the stick (move), ↑ (jump),
+- **Phones and tablets** (the same day, in its own project, so in both; redone 2026-11-08 with a floating stick, sprint,
+  roll and a thumb arc of buttons: see "SKYBREAK's game menu and touch controls"): any touchscreen gets the stick (move), ↑ (jump),
   E (hold to swing), ↺ (recover, new) and the HUD's Ⅱ, and dragging anywhere else on the world looks around, also while
   the stick is held (before: the touch controls only showed below 700 px wide, so a phone held sideways or a tablet had
   none, and on a phone held sideways Begin Ascent was below the screen); a short screen gets a compact title and HUD; the
@@ -10317,6 +10319,55 @@ physics; everything above the city is drawn in code.
 controls, only its `RUNTIME` files shipped, its key art, its two CSP rules and nowhere else), `tests/page.test.js` (its card,
 stars and plays, its page, its addresses; the games page with four games), `tests/intro.test.js` (its cover and entry, as
 every game's), `tests/arcade.test.js`, `tests/clips.test.js`.
+
+### SKYBREAK's game menu and touch controls (2026-11-08, afternoon)
+
+The owner: "can u change the menu interface of the game skybreak it really looks like a website and optimized the mobile
+controls of that game skybreak. after ur done publish it in production". Done in the game's own project (`skybreak/` in the
+owner's folder: `index.html`, `src/main.js`, `src/input.js`, `src/style.css`, `src/save.js`, `src/renderer.js`, a new
+`tests/touch.test.js`, its README), then brought in with `node tools/games/import-skybreak.mjs skybreak` as always.
+
+**Its title screen, a game's** (before: an agency-style landing page, a header bar "A1 AGI / FIELD SYSTEMS", tiny spaced
+labels, a side legend and a footer bar): **AGI-1 on the helipad turned toward you**, the first candles and the city behind
+her, beside the menu on a wide screen and between the logo and the buttons on a screen held upright (the page measures
+where its layout leaves room, `frameTitle()` in `main.js` → `renderer.titleFrame`, and the title camera turns, never moves,
+to put her there: `titleShot()` in `renderer.js`; she turns to face it, `TITLE.facing`); **← ARCADE** (agi1.app/games; the
+game's own project says HOME), sound and full screen (where the browser allows it: not an iPhone's Safari) as round
+buttons; "AGI GAMES BETA"; the **SKYBREAK** logo (extruded letters rising to the right, a little candle chart climbing
+beside SKY) and "AN AGI-1 CHART CLIMB"; three chips (green candles pump, red candles dump, rugs get pulled); the two run
+modes as cards (`role="radio"`, ← → on a keyboard); a big **PLAY** that fills up as the world loads ("LOADING 64%") and
+glows when it's ready; **CONTINUE RIFT** (its height and time) when a rift is saved; **HOW TO PLAY** and **SETTINGS**; the
+best time for the mode picked, the biggest bag and "8 zones · 600 m · 459 steps"; **Enter** plays. Pause ("PAUSED":
+Resume, Restart climb, Settings, Controls, Quit to title), the finish ("TO THE MOON!": the climb's chart, time and bag as two
+stats, Run it again, Title screen) and How to play (keyboard and mouse on a computer, touch on a touchscreen, the chart's
+pieces with their icons, the gamepad) are the same kind of cards. Its icons are inline SVG in its own markup (CSP as it is).
+
+**Settings** (new; on the title and in pause; kept with the best times, `getSettings()` / `saveSettings()` in `save.js`):
+sound; graphics (Auto steps down by itself when frames run slow, as before; High, Medium, Low stay put); camera speed (slow,
+normal, fast); on a touchscreen camera follow (on by default: running sideways turns the camera with you, gently, never
+while you look around yourself or back up) and button size (normal, large).
+
+**Touch controls** (`input.js`, before: a fixed stick, ↑, E and ↺ squares, no sprint or roll on a touchscreen): the stick
+appears wherever the left thumb lands on the left of the screen (`#touch-zone`) and goes home when it's let go; pushed to
+its edge it **sprints** ("SPRINT" over it); a thumb arc of round buttons on the right: **JUMP** (hold for height), **SWING**
+(gold and pulsing when a diamond is in reach; hold to swing), **ROLL** (new: hold as you land to keep your speed) and
+**RECOVER** (held 0.45 s, a ring filling, so a stray thumb never throws a climb away); pause top right, 46 px. Pressed
+buttons sink. On a phone the HUD is one compact row (time and bag on the left, pause and a small ticker on the right; no
+zone and speed readouts or crosshair), its hint fades as soon as the stick is used, and everything keeps clear of a
+phone's notch, rounded corners and home bar (`env(safe-area-inset-*)`). Nothing selects, zooms or scrolls while playing
+(`touch-action`, Safari's gesture events). On computers the HUD lost the header bar and moved up; Space and the arrows
+press a focused menu button again (before, the game swallowed them everywhere).
+
+**No new setting, SQL, function or service.** The import tool's two markup patches changed with the markup (its back
+button to /games and "ARCADE", its kicker "AGI GAMES" and "BETA"); its renderer and style patches are as they were. Its
+games-page preview (`public/images/games/skybreak.mp4` and `.webp`) was recorded again for the new HUD.
+
+**Checked:** the game's 42 tests (38 + `tests/touch.test.js`: the floating stick, sprint at its edge, camera follow, the held
+buttons, RECOVER's hold, the settings), `tests/skybreak.test.js` (its title screen's markup, its touch controls) and the
+site's whole suite; in Chromium (software-drawn) on a computer (1440 × 900, 1366 × 640), phones held up (390 × 664,
+390 × 844, 360 × 640) and sideways (750 × 342, 844 × 390) and an iPad both ways: AGI-1 framed in the room each layout
+leaves, the stick and sprint, the buttons, RECOVER's hold, pause, the finish, settings and how to play; axe: no issues on the
+title, its dialogs and the HUD, on a computer and a phone. A real phone's feel and frame rate weren't measured here.
 
 ### The arcade kit and ten new games (2026-11-08)
 
@@ -14088,6 +14139,10 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-10-31 | SKYBREAK's touch controls on any touchscreen (`pointer: coarse`), not only below 700 px wide, and a compact title on a short screen: a phone held sideways had no controls and couldn't reach Begin Ascent |
 | 2026-11-02 | First visits in Pop mode by day (the owner: "can you make the default light mode and pop mode when they first visit the site"): `/theme.js` and `DEFAULT_THEME` say light with nothing saved; a saved choice still wins, and nothing is saved until a button is pressed; the pages load `/theme.js?v=8` |
 | 2026-11-02 | The page's scrollbar in each look (the owner: "design the scroll bar as well that will match the website"): `--sb-*` values in `base.css` (the lab look), `pop.css` (Pop mode) and `studio-theme.css` (Studio); `::-webkit-scrollbar` on the page only (inner scroll areas keep theirs); Firefox gets `scrollbar-color` only inside `@supports not selector(::-webkit-scrollbar)` |
+| 2026-11-08 | SKYBREAK's title screen as a game's (the owner: "it really looks like a website"): AGI-1 framed on the helipad beside or between its menu, a logo, mode cards, a big Play that loads, round buttons; no header bar, side legend or footer bar. Done in its own project, so its standalone copy has it too (HOME there, ARCADE on the site) |
+| 2026-11-08 | SKYBREAK's title camera turns to put AGI-1 where the page measures room for her (`titleFrame`), never moves sideways: turning keeps her face toward you; the camera snaps there the first time, then glides back after a run |
+| 2026-11-08 | SKYBREAK on a touchscreen: a floating stick that sprints at its edge, ROLL added, SWING lit near a diamond, RECOVER held 0.45 s (a stray thumb never throws a climb away), camera follow on by default (Settings can turn it off) |
+| 2026-11-08 | SKYBREAK's settings kept with its best times (`agi1-skybreak-v2`): sound, graphics (Auto, High, Medium, Low), camera speed, and on a touchscreen camera follow and button size |
 
 | 2026-11-02 | Publish the approved Axium, BasedBott and Clank simulator terminals. The owner chose real Clank coins on Robinhood Chain with locally simulated prices and volume affected by play-money trades. Preserve production configuration and exclude unrelated workspace edits. |
 
