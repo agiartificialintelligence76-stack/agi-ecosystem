@@ -15,7 +15,12 @@ also". Their choices: "One game + picker (Recommended)" and "Yes, publish (Recom
   reviews and wallet sign-in are unchanged.
 - **Nothing to set up:** no new setting, SQL, function or service. Details: CLAUDE.md, "AGI games" → "Ratings one game at a
   time, and every tile's numbers".
-- HANDOFF_RELEASE_LINE
+- **Published as `53e74e3` and `b4de222` to `main` on 2026-11-08** (branch `games-ratings-picker`), then a notes commit with the
+  picker list's thin scrollbar. Checks: the clean build the way Vercel runs it (1,978 tests, 1,974 passed, 4 skipped, 0 failed;
+  Vite, share pages, secret check); the built page under the site's real CSP on a computer and a phone; Chromium with sample
+  numbers from 1440 to 360 px in all four looks; axe: no issues in Pop mode. Vercel: previews `EZjaut1Hz3Wj1Kngs1MY4UDUmu5N`
+  and `B8mcmfaVTo8u5yqooLZsXAbqWxUb`, production `3LMzPddZ3u2hyPfdQU6Mqmwh5FtJ`, all Ready. Live: the tiles' real numbers, the
+  picker and a pick checked in the owner's Chrome, no console errors.
 
 ## Ten more AGI games, night two — 2026-11-08
 

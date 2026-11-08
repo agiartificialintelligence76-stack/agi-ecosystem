@@ -7,7 +7,12 @@
 > reviews show one game at a time: its picture, stars, plays and players, Change game and Play, how its stars split, Rate it
 > and What players say; Change game opens a game picker (a search box, every game with its stars, best rated first, then most
 > played). `#rate-<game>` links still open their game. **No new setting, SQL, function or service.** See "Ratings one game at a
-> time, and every tile's numbers" under "AGI games". TOP_RELEASE_LINE
+> time, and every tile's numbers" under "AGI games". **Published as `53e74e3` and `b4de222` to `main` on 2026-11-08** (through the
+> branch `games-ratings-picker`), then a notes commit that also gives the picker's list a thin scrollbar. Vercel: the branch's
+> previews `EZjaut1Hz3Wj1Kngs1MY4UDUmu5N` and `B8mcmfaVTo8u5yqooLZsXAbqWxUb`, then production `3LMzPddZ3u2hyPfdQU6Mqmwh5FtJ`, all
+> Ready. Live: every tile shows its real stars, plays and players (TRENCHING SIMULATOR "4.0 (1)", 215 plays, 26 players), and in
+> the owner's Chrome the picker opened in its order (Ride 'Em, AGI! 5.0, TRENCHING SIMULATOR 4.0, then the most played) and a
+> pick showed Ride 'Em, AGI!'s ratings at `#rate-rideemagi`, with no console errors.
 
 > **Ten more AGI games, night two (2026-11-08):** the owner, waking up at 4 a.m.: "can you create 10 more games, i only
 > have one 1 idea thou guess whats ai(picture) … try thinking original games with creative game mechanics … make this
@@ -10508,7 +10513,11 @@ sample numbers at 1440, 1280, 1024, 768, 600, 390 and 360 px in all four looks: 
 search, Esc, ✕, a tap outside, the keys, a pick's address and focus, a link straight to a game; axe: no issues in Pop mode
 (the lab look's two older contrast notes, the filters' counts and the "New" sticker at night, were there before). Fixed on
 the way: the picker's ↑ and ↓ followed the Featured order instead of its own, and the tiles' stars drew at a bigger size on
-a computer. RELEASE_LINE
+a computer; after the live check, the picker's list got a thin scrollbar (`scrollbar-width: thin`) instead of a Windows
+computer's grey bar with arrows. **Published** as in the entry at the top (`53e74e3`, `b4de222`): the clean build the way
+Vercel runs it (Node 24, UTC, all 81 documented settings as fakes): 1,978 tests, 1,974 passed, 4 skipped, 0 failed; Vite, the
+share pages and the secret check (274 files); the built page with the site's real headers on a computer and a phone: no CSP
+reports or errors, the picker opened and a pick made.
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 

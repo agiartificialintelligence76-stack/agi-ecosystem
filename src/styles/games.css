@@ -233,6 +233,7 @@
 .gm-choose-list {
   flex: 1 1 auto; min-height: 0; margin: 0; padding: 4px 10px 14px; overflow-y: auto; overscroll-behavior: contain; list-style: none;
   scroll-padding-block: 8px;
+  scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--fg) 28%, transparent) transparent;   /* (not a computer's grey bar with arrows) */
 }
 .gm-choose-game {
   display: flex; align-items: center; gap: 12px; width: 100%; padding: 8px 10px; border: 1px solid transparent; border-radius: 14px;
