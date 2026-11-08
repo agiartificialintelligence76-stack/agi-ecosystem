@@ -1,5 +1,21 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **SKYBREAK's game menu and touch controls (2026-11-08, afternoon):** the owner: "can u change the menu interface of the
+> game skybreak it really looks like a website and optimized the mobile controls of that game skybreak. after ur done publish
+> it in production". Its title screen is a game's now: AGI-1 on the helipad turned toward you (beside the menu, or between
+> the logo and the buttons on a screen held upright), ← ARCADE, the SKYBREAK logo with its candle chart, the run modes as
+> cards, a big PLAY that fills as the world loads, Continue rift, How to play and new Settings (sound, graphics, camera
+> speed, camera follow, button size); pause, the finish and How to play as matching cards; no header bar, side legend or
+> footer bar. Touch: a stick that appears under the left thumb and sprints at its edge, JUMP, SWING (lit near a diamond),
+> ROLL (new) and RECOVER (held a moment) in a thumb arc, a compact phone HUD, safe areas. Made in the game's own project and
+> brought in by its import tool. **No new setting, SQL, function or service.** See "SKYBREAK's game menu and touch
+> controls" under "AGI games". **Published as `80beb6d` to `main` on 2026-11-08** (through the branch `skybreak-menu`), after
+> the full build passed the way Vercel runs it (1,979 tests: 1,975 passed, 4 skipped, 0 failed; Vite, the share pages and
+> the secret check) and the built page passed under the site's real CSP on a computer and a phone. Vercel: the branch's
+> preview `D4LNVzwzxdhUz8JUAMfMKbAPtSTK`, then production `CkoM4uhtffhR5ott5jCdg8qnbwiw`, both Ready. Live in the owner's
+> Chrome: the new title (AGI-1 framed beside the menu, ARCADE to /games, "AGI GAMES BETA"), a run, pause, quit to title and
+> Settings, with no console errors.
+
 > **Ratings one game at a time, and every tile's numbers (2026-11-08, morning):** the owner: "can you organize well the
 > ratings and review. and the how many times the game played and the how many players played that game each should be still
 > visible on each game below it … and put stars there also", then "One game + picker" and "Yes, publish". Every game's tile on

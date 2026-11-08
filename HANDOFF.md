@@ -17,6 +17,12 @@ controls of that game skybreak. after ur done publish it in production".
   `save.js`, `renderer.js`, `tests/touch.test.js`, README), brought in by `node tools/games/import-skybreak.mjs skybreak`
   (its two markup patches updated). Its games-page preview recorded again. Details: CLAUDE.md, "AGI games" → "SKYBREAK's
   game menu and touch controls". **Nothing to set up:** no new setting, SQL, function or service.
+- **Published as `80beb6d` to `main` on 2026-11-08** (branch `skybreak-menu`). Checks: the game's 42 tests; the clean build
+  the way Vercel runs it (1,979 tests, 1,975 passed, 4 skipped, 0 failed; Vite, share pages, secret check); the built page
+  under the site's real CSP on a computer and a phone (no reports or errors); Chromium on a computer, phones both ways and an
+  iPad; axe: no issues. Vercel: preview `D4LNVzwzxdhUz8JUAMfMKbAPtSTK`, production `CkoM4uhtffhR5ott5jCdg8qnbwiw`, both Ready.
+  Live in the owner's Chrome: the title, a run, pause, quit to title, Settings; no console errors. A real phone's feel and
+  frame rate weren't measured here: worth a try on the owner's phone.
 
 ## Ratings one game at a time, and every tile's numbers — 2026-11-08, morning
 
