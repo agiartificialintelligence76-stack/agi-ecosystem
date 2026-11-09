@@ -33,6 +33,12 @@ export const GAMES = {
   beattheagi: { name: "BEAT THE AGI", path: '/games/beattheagi', genre: 'Strategy', kit: true },
   hallucination: { name: "HALLUCINATION", path: '/games/hallucination', genre: 'Puzzle', kit: true },
   guardrails: { name: "GUARDRAILS", path: '/games/guardrails', genre: 'Strategy', kit: true },
+  // since 2026-11-09 (the owner: "create 5 more new games"): five more on the arcade kit
+  bubblesort: { name: "BUBBLE SORT", path: '/games/bubblesort', genre: 'Puzzle', kit: true },
+  airgap: { name: "AIR GAP", path: '/games/airgap', genre: 'Sports', kit: true },
+  cookies: { name: "ACCEPT ALL COOKIES", path: '/games/cookies', genre: 'Puzzle', kit: true },
+  packetloss: { name: "PACKET LOSS", path: '/games/packetloss', genre: 'Arcade', kit: true },
+  autocomplete: { name: "AUTOCOMPLETE", path: '/games/autocomplete', genre: 'Puzzle', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

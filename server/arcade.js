@@ -291,6 +291,44 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  // (2026-11-09) five more on the arcade kit
+  bubblesort: Object.freeze({
+    what: '"BUBBLE SORT", a bubble shooter where you aim and shoot colored bubbles to match three or more and drop '
+      + 'whole clusters, with an anime girl, AGI-1, cheering (its name is a joke about sorting data): talk about '
+      + 'aiming, bubbles, levels, special bubbles, the board pushing down and losing is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  airgap: Object.freeze({
+    what: '"AIR GAP", an air hockey game against an anime girl, AGI-1, at five difficulty levels, with power-ups on '
+      + 'the table and a two-player mode on one screen: talk about the puck, the mallets, goals, power-ups, her '
+      + 'difficulty and playing with a friend is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  cookies: Object.freeze({
+    what: '"ACCEPT ALL COOKIES", a rope-cutting physics puzzle where you cut ropes to swing a cookie into the mouth '
+      + 'of a cartoon cat that belongs to an anime girl, AGI-1 (its name, pop-ups and banners are jokes about '
+      + 'website cookie banners): talk about the levels, ropes, physics, stars, the cat and being stuck is part '
+      + 'of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  packetloss: Object.freeze({
+    what: '"PACKET LOSS", a maze chase game where you steer a little love-letter envelope from an anime girl, '
+      + 'AGI-1, through network mazes collecting dots while four cartoon "lag" gremlins chase you (its names are '
+      + 'jokes about internet connections): talk about the mazes, the gremlins, speed, power-ups, controls and '
+      + 'losing is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  autocomplete: Object.freeze({
+    what: '"AUTOCOMPLETE", a word game where you swipe across letter tiles to make English words while an anime '
+      + 'girl, AGI-1, tries to predict them (its name is a joke about phone keyboards and AI): talk about the '
+      + 'words, letters, the dictionary, the timer, hints and scores is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

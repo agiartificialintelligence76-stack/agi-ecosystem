@@ -36,6 +36,11 @@ export const BUILTIN_PAGES = Object.freeze([
   { path: '/games/beattheagi', title: "BEAT THE AGI" },
   { path: '/games/hallucination', title: "HALLUCINATION" },
   { path: '/games/guardrails', title: "GUARDRAILS" },
+  { path: '/games/bubblesort', title: "BUBBLE SORT" },
+  { path: '/games/airgap', title: "AIR GAP" },
+  { path: '/games/cookies', title: "ACCEPT ALL COOKIES" },
+  { path: '/games/packetloss', title: "PACKET LOSS" },
+  { path: '/games/autocomplete', title: "AUTOCOMPLETE" },
   { path: '/cloakmesh', title: 'CloakMesh' },
   { path: '/studio', title: 'AGI Studio' },
   { path: '/studio/explore', title: 'Studio · Explore' },
@@ -70,6 +75,11 @@ const ALIASES = Object.freeze({
   '/beattheagi': '/games/beattheagi',
   '/hallucination': '/games/hallucination',
   '/guardrails': '/games/guardrails',
+  '/bubblesort': '/games/bubblesort',
+  '/airgap': '/games/airgap',
+  '/cookies': '/games/cookies',
+  '/packetloss': '/games/packetloss',
+  '/autocomplete': '/games/autocomplete',
 });
 
 export function normalizePath(value = '/') {

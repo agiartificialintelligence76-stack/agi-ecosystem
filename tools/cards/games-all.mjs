@@ -13,7 +13,7 @@ import { GAMES } from '../../src/games/list.js';
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright');
 // the wall: 12 tiles (3 rows of 4), the featured order; the games' names (a long one shortened)
-const SHORT = { trenchingsimulator: 'TRENCHING SIM', lastmodel: 'LAST MODEL', vladrunner2049: 'VLAD RUNNER', gradient: 'GRADIENT', notarobot: 'NOT A ROBOT' };
+const SHORT = { trenchingsimulator: 'TRENCHING SIM', lastmodel: 'LAST MODEL', vladrunner2049: 'VLAD RUNNER', gradient: 'GRADIENT', notarobot: 'NOT A ROBOT', cookies: 'COOKIES' };
 const shown = SHELF.slice(0, 12).map((g) => `${g.id}:${(SHORT[g.id] || GAMES[g.id].name).replace(/[,:]/g, '')}`);
 const page = new URL('games-all-card.html', import.meta.url);
 page.search = `?games=${encodeURIComponent(shown.join(','))}&count=${SHELF.length}`;

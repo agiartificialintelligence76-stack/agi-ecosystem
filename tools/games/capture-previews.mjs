@@ -34,6 +34,8 @@ export const RECIPES = {
   // (2026-11-08, the second night)
   realorai: kit('realorai'), notarobot: kit('notarobot', 7, { poster: 0.2 }), alignment: kit('alignment'), gradient: kit('gradient'), epochs: kit('epochs'),
   synapse: kit('synapse'), overclock: kit('overclock'), beattheagi: kit('beattheagi', 7, { poster: 0.1 }), hallucination: kit('hallucination'), guardrails: kit('guardrails'),
+  // (2026-11-09) five more
+  bubblesort: kit('bubblesort'), airgap: kit('airgap'), cookies: kit('cookies'), packetloss: kit('packetloss'), autocomplete: kit('autocomplete'),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],

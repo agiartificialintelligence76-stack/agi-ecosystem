@@ -38,6 +38,12 @@ export const COVERS = {
   beattheagi: { lines: ['BEAT', 'THE AGI'], bg: '#1a0d33', bg2: '#46207a', accent: '#ffc933', line: 'Four in a row. From 1B to AGI.', tag: 'Four in a row' },
   hallucination: { lines: ['HALLUCI', 'NATION'], bg: '#1d0f2a', bg2: '#51245e', accent: '#ff4da6', line: 'She drew it from memory. Find what she made up.', tag: 'Spot the diff', small: true },
   guardrails: { lines: ['GUARD', 'RAILS'], bg: '#0c1620', bg2: '#16465a', accent: '#3ff0c3', line: 'Hold the line. Nothing gets to her core.', tag: 'Tower defense' },
+  // (2026-11-09) five more
+  bubblesort: { lines: ['BUBBLE', 'SORT'], bg: '#120c2e', bg2: '#3a2380', accent: '#ff4da6', line: 'Match three. Drop the rest. Sort it all out.', tag: 'Bubble shooter' },
+  airgap: { lines: ['AIR', 'GAP'], bg: '#0a1a1f', bg2: '#12505a', accent: '#3ff0c3', line: "Air hockey date night. She won't let you win.", tag: 'Air hockey' },
+  cookies: { lines: ['ACCEPT ALL', 'COOKIES'], bg: '#1e1240', bg2: '#4a2b8a', accent: '#ffc933', line: 'Cut the ropes. Feed her cat. Accept all cookies.', tag: 'Physics puzzle', small: true },
+  packetloss: { lines: ['PACKET', 'LOSS'], bg: '#0b1022', bg2: '#1d2f6e', accent: '#ff4da6', line: 'Deliver every bit. Dodge the lag.', tag: 'Maze chase' },
+  autocomplete: { lines: ['AUTO', 'COMPLETE'], bg: '#15102c', bg2: '#3f2a7a', accent: '#ffc933', line: 'She predicts your next word. Surprise her.', tag: 'Word game', small: true },
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');
