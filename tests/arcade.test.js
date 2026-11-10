@@ -193,8 +193,7 @@ test("the games' rules: its games and their ids, a player's id, plays a report, 
     // (the second night of 2026-11-08) ten more on the kit
     'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails',
     // (2026-11-09) five more on the kit
-    'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete',
-    'harvest', 'nightshift', 'switchyard', 'orbital', 'polarity', 'timeloop', 'deepdive', 'prism', 'botworks', 'drift']);
+    'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete']);
   assert.equal(GAMES.vladrunner2049.name, 'VLAD RUNNER 2049');
   assert.equal(GAMES.vladrunner2049.path, '/games/vladrunner2049');
   assert.equal(GAMES.skybreak.name, 'SKYBREAK');

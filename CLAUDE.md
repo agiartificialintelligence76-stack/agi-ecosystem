@@ -1,11 +1,5 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
-> **Ten additional games (2026-11-10):** HARVEST EXCHANGE, NIGHT SHIFT, SWITCHYARD, ORBITAL, POLARITY, TIME LOOP,
-> DEEP DIVE, PRISM, BOTWORKS and AFTERDRIFT bring the arcade to 39 games. The owner explicitly requested the farm as a
-> fictional stock-market farming sim; game-only crop prices and shares are authorized for HARVEST EXCHANGE. All ten
-> use the arcade kit, local progress, responsive controls, seeded demos and their own gameplay previews/share cards.
-> No database or environment changes. See `handoff/ten-more-games-2026-11-10.md` for implementation and release status.
-
 > **Five-game expansion finished (2026-11-10):** BUBBLE SORT, AIR GAP, ACCEPT ALL COOKIES, PACKET LOSS and AUTOCOMPLETE,
 > recovered from `arcade-five-more` at `22eabdaa`, completed on `codex/finish-five-games`. All five have gameplay loops,
 > stills and share cards; the arcade has 29 games. Phone menu fixes for AIR GAP and COOKIES, a COOKIES level-picker text

@@ -18,16 +18,6 @@ const url = (p) => pathToFileURL(join(ROOT, p)).href;
 
 // each game: its name's lines (the wide letters), its colors (the background, the frame's shadow), its line
 export const COVERS = {
-  harvest: {"lines":["HARVEST","EXCHANGE"],"bg":"#163e33","bg2":"#163e33","accent":"#b2f279","line":"Grow crops. Trade a fictional market.","tag":"Farm market","small":true},
-  nightshift: {"lines":["NIGHT","SHIFT"],"bg":"#422037","bg2":"#422037","accent":"#ffb7cf","line":"Her midnight café. Your perfect rush.","tag":"Café sim","small":true},
-  switchyard: {"lines":["SWITCH","YARD"],"bg":"#183946","bg2":"#183946","accent":"#ffc933","line":"Switch the rails. Keep every train moving.","tag":"Train dispatch","small":true},
-  orbital: {"lines":["ORBITAL"],"bg":"#18113c","bg2":"#18113c","accent":"#ad9bff","line":"Gravity is your slingshot. Aim for orbit.","tag":"Space physics","small":true},
-  polarity: {"lines":["POLARITY"],"bg":"#102d40","bg2":"#102d40","accent":"#46eddd","line":"Flip the field. Find your flow.","tag":"Magnet arcade","small":true},
-  timeloop: {"lines":["TIME","LOOP"],"bg":"#24163f","bg2":"#24163f","accent":"#c9a1ff","line":"Your past self is your puzzle partner.","tag":"Echo puzzle","small":true},
-  deepdive: {"lines":["DEEP","DIVE"],"bg":"#082c43","bg2":"#082c43","accent":"#76e6ff","line":"Go deeper. Bring your discoveries home.","tag":"Salvage","small":true},
-  prism: {"lines":["PRISM"],"bg":"#1c153b","bg2":"#1c153b","accent":"#ff8dd8","line":"Bend the light. Connect every color.","tag":"Light puzzle","small":true},
-  botworks: {"lines":["BOT","WORKS"],"bg":"#303143","bg2":"#303143","accent":"#ffb86b","line":"Build a tiny factory that actually works.","tag":"Factory puzzle","small":true},
-  drift: {"lines":["AFTER","DRIFT"],"bg":"#251431","bg2":"#251431","accent":"#ff73b8","line":"Neon corners. Clean lines. One more lap.","tag":"Drift racing","small":true},
   mergeagi: { lines: ['MERGE', 'TO AGI'], bg: '#1a0b3b', bg2: '#3a1b86', accent: '#ffc933', line: 'Drop it. Match it. Merge your way up to her.', tag: 'Merge puzzle' },
   blockchain: { lines: ['BLOCK', 'CHAIN'], bg: '#10142e', bg2: '#22306e', accent: '#3ff0c3', line: 'Place blocks. Clear lines. Keep the chain alive.', tag: 'Block puzzle' },
   heartbeat: { lines: ['HEART', 'BEAT'], bg: '#16051f', bg2: '#5a0f4a', accent: '#ff4da6', line: 'Her songs. Your fingers. Stay on the beat.', tag: 'Rhythm' },
