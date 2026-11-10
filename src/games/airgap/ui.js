@@ -50,18 +50,16 @@ export function logo() {
 }
 
 // under the big button: who you'll face (her five settings as pips), and Settings
-export function titleExtra(save, { onLadder, onSettings }) {
+export function titleExtra(save, { onLadder }) {
   const level = save.level;
   const pips = el('ol', { class: 'ag-pips', 'aria-hidden': 'true' }, SETTINGS.map((s, i) => {
     const cls = ['ag-pip', save.stars[i] ? 'is-done' : '', i === level ? 'is-current' : '', !isUnlocked(save, i) ? 'is-locked' : ''].filter(Boolean).join(' ');
     return el('li', cls, !isUnlocked(save, i) ? svg('lock') : save.stars[i] ? svg('star') : el('b', null, String(i + 1)));
   }));
   const strip = el('button', { class: 'ag-strip', type: 'button', 'aria-label': `Her setting: ${SETTINGS[level].name}. ${save.unlocked + 1} of 5 unlocked. Pick another` },
-    el('span', 'ag-strip-k', 'Her setting'), pips, el('b', 'ag-strip-name', SETTINGS[level].name));
+    el('span', 'ag-strip-k', 'Her setting'), pips, el('b', 'ag-strip-name', SETTINGS[level].name), el('span', 'ag-strip-go', svg('next')));
   strip.addEventListener('click', () => onLadder?.());
-  const gear = el('button', { class: 'ak-btn ak-btn-sm ag-gear', type: 'button' }, svg('gear'), 'Settings');
-  gear.addEventListener('click', () => onSettings?.());
-  return el('div', 'ag-title-extra', strip, gear);
+  return el('div', 'ag-title-extra', strip);
 }
 
 // ---------- Her setting: the ladder ----------

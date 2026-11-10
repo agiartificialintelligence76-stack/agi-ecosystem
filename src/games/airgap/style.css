@@ -56,8 +56,8 @@
 .ag-pip.is-current { background: var(--ak-mint); border-color: var(--ak-ink); color: var(--ak-ink); box-shadow: 0 0 0 2px var(--ak-mint); }
 .ag-pip.is-locked { border-style: dashed; opacity: .6; }
 @media (max-width: 380px) { .ag-strip-k { display: none; } }
-.ak-btn.ag-gear { width: auto; min-height: 44px; padding: 8px 18px; gap: 8px; }
-.ak-btn.ag-gear svg { width: 18px; height: 18px; }
+.ag-strip-go { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--ak-honey); color: var(--ak-ink); border: 2px solid var(--ak-ink); flex: none; }
+.ag-strip-go svg { width: 14px; height: 14px; }
 .ak[data-ak-game='airgap'] .ak-btn-mode { min-height: 60px; }
 
 /* ---------- cards ---------- */

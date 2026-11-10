@@ -189,13 +189,17 @@ function toTitle() {
     play: 'Vs AGI-1',
     onPlay: () => newVs(level),
     modes: [
-      { label: 'Her setting', sub: `${save.unlocked + 1} of 5 unlocked`, onClick: () => openLadder() },
       { label: 'Two players', sub: 'One screen', onClick: () => newPP() },
+      { label: 'Settings', sub: settingsLine(), onClick: () => openSettings() },
     ],
-    extra: titleExtra(save, { onLadder: () => openLadder(), onSettings: () => openSettings() }),
+    extra: titleExtra(save, { onLadder: () => openLadder() }),
     best: null,
   });
   void S;
+}
+function settingsLine() {
+  const st = save.settings;
+  return `${st.powerups ? 'Power-ups' : 'Classic'} · to ${st.to}${st.turbo ? ' · Turbo' : ''}`;
 }
 function startDemo() {
   mode = 'demo';
