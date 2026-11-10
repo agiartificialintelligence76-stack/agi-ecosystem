@@ -7,8 +7,9 @@ import { rng } from '../kit/fx.js';
 import { Game, endlessBoard } from './rules.js';
 
 export const DEMO_BOARD = Object.freeze({ seed: 1736, rows: 9, gifts: Object.freeze({ 0: 'b', 1: 'sort', 2: 'c', 3: 'a' }) });
-// when the first four shots fire (seconds after the page opened): the SORT lands at about 5.8 s, the big drop at about 10 s
-export const DEMO_TIMES = Object.freeze([4.4, 5.45, 7.95, 9.05]);
+// when the first four shots fire (seconds after the page opened): the SORT lands at about 5.4 s and its rows hop into
+// order from 5.7 s, the meter's SORT lands at about 8.9 s and the big drop falls at about 10 s
+export const DEMO_TIMES = Object.freeze([3.9, 4.75, 7.0, 7.95]);
 
 export function demoGame(k = 0, seed = 7) {
   if (k === 0) {

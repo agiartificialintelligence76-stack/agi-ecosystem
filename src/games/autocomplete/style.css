@@ -1,0 +1,117 @@
+/* AUTOCOMPLETE (2026-11-09): its own styles, in the arcade's sticker look (src/games/kit/kit.css): ink outlines, hard
+   shadows, the AK fonts. "A phone keyboard from the future": cream keycaps on a deep ink-violet night, honey for a swipe,
+   pink for its path, violet token pills. The board itself is drawn on a canvas (./render.js). */
+.ak[data-ak-game='autocomplete'] {
+  --ak-bg: #15102c;
+  --ak-accent: #ffc933;
+  --ac-cream: #fff7e3;
+  --ac-cream-side: #d6c08e;
+  --ac-honey-side: #c58a10;
+}
+/* the title over the board AGI-1 is playing: dimmed enough to read */
+.ak[data-ak-game='autocomplete'] .ak-screen-scrim {
+  background: radial-gradient(110% 70% at 50% 46%, rgba(21, 16, 44, 0.9) 30%, rgba(21, 16, 44, 0.72) 68%, rgba(21, 16, 44, 0.5) 100%);
+}
+.ak[data-ak-game='autocomplete'] .ak-title-body { gap: 12px; }
+.ak[data-ak-game='autocomplete'] .ak-chip.is-low { background: var(--ak-pink); }
+.ak[data-ak-game='autocomplete'] .ak-btn.is-loading { opacity: 0.8; cursor: progress; }
+
+/* the notch and the rounded corners: read by game.js to keep the board clear of them */
+.ac-safe {
+  position: absolute; inset: 0; z-index: -1; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* ---------- the logo: AUTO on keys, COMPLETE as the swipe that finishes it ---------- */
+.ac-logo { margin: 0; display: grid; justify-items: center; line-height: 1; }
+.ac-logo-keys { display: grid; justify-items: center; gap: clamp(8px, 1.8vh, 14px); }
+.ac-logo-row { position: relative; display: flex; gap: clamp(4px, 1.2vw, 8px); }
+.ac-logo-typed { --s: clamp(50px, 14.5vw, 80px); }
+.ac-logo-done { --s: clamp(32px, 9.4vw, 52px); }
+.ac-key {
+  position: relative; z-index: 1; display: grid; place-items: center;
+  width: var(--s); height: var(--s); border-radius: calc(var(--s) * 0.2);
+  background: var(--ac-cream); color: var(--ak-ink); border: 3px solid var(--ak-ink);
+  box-shadow: 0 calc(var(--s) * 0.09) 0 var(--ac-cream-side), 0 calc(var(--s) * 0.09) 0 3px var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-size: calc(var(--s) * 0.56); letter-spacing: 0;
+}
+.ac-key.is-done {
+  background: radial-gradient(circle at 50% 52%, var(--ak-pink) 0 17%, transparent 18%), var(--ak-honey);
+  box-shadow: 0 calc(var(--s) * 0.09) 0 var(--ac-honey-side), 0 calc(var(--s) * 0.09) 0 3px var(--ak-ink);
+  font-size: calc(var(--s) * 0.6);
+}
+/* the pink path joining COMPLETE's keys (it shows between them) */
+.ac-logo-path {
+  position: absolute; z-index: 0; left: calc(var(--s) / 2); right: calc(var(--s) / 2); top: 50%;
+  height: calc(var(--s) * 0.22); translate: 0 -50%; border-radius: 999px;
+  background: var(--ak-pink); border: 3px solid var(--ak-ink);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ac-key.is-typed { animation: ac-press 0.42s calc(0.15s + var(--i) * 0.11s) cubic-bezier(.3, 1.5, .5, 1) both; }
+  .ac-key.is-done { animation: ac-complete 0.5s calc(0.7s + var(--i) * 0.06s) cubic-bezier(.2, 1.5, .4, 1) both; }
+  .ac-logo-path { animation: ac-path 0.6s 0.66s cubic-bezier(.3, 1, .4, 1) both; transform-origin: left center; }
+}
+@keyframes ac-press {
+  0% { transform: translateY(0); }
+  45% { transform: translateY(calc(var(--s) * 0.08)); box-shadow: 0 1px 0 var(--ac-cream-side), 0 1px 0 3px var(--ak-ink); }
+  100% { transform: translateY(0); }
+}
+@keyframes ac-complete { from { opacity: 0.01; transform: translateY(-14px) scale(0.5); filter: saturate(0); } }
+@keyframes ac-path { from { transform: scaleX(0); } }
+@media (max-height: 520px) {
+  .ac-logo-typed { --s: clamp(36px, 10vh, 56px); }
+  .ac-logo-done { --s: clamp(24px, 6.6vh, 36px); }
+  .ac-logo-keys { gap: 7px; }
+}
+
+/* ---------- the title's chip: her guess on or off ---------- */
+.ac-title-extra { display: flex; justify-content: center; }
+.ac-guess-chip {
+  display: inline-flex; align-items: center; gap: 9px; min-height: 44px; padding: 4px 5px 4px 4px; border-radius: 999px;
+  background: color-mix(in srgb, var(--ak-ink) 72%, transparent); border: 2px solid color-mix(in srgb, var(--ak-paper) 32%, transparent);
+  color: var(--ak-paper); font-family: var(--ak-display); font-weight: 850; font-stretch: 115%; font-size: 11.5px; letter-spacing: .09em; text-transform: uppercase;
+}
+.ac-guess-chip img { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
+.ac-guess-chip b { min-width: 42px; padding: 5px 10px 4px; border-radius: 999px; background: var(--ak-mint); color: var(--ak-ink); border: 2px solid var(--ak-ink); text-align: center; }
+.ac-guess-chip[aria-checked='false'] b { background: var(--ak-lav2); }
+.ac-guess-chip:hover { border-color: color-mix(in srgb, var(--ak-paper) 60%, transparent); }
+
+/* ---------- the tools under the board ---------- */
+.ac-tools { position: absolute; z-index: 5; display: flex; align-items: center; justify-content: center; gap: 12px; pointer-events: none; }
+.ac-tools > * { pointer-events: auto; }
+.ac-tool {
+  display: inline-flex; align-items: center; gap: 9px; height: 48px; padding: 0 12px 0 5px; border-radius: 999px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 3px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; text-transform: uppercase; letter-spacing: .03em;
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease, opacity .15s ease;
+}
+.ac-tool:hover { transform: translateY(-1px); box-shadow: 0 5px 0 var(--ak-ink); }
+.ac-tool:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ak-ink); }
+.ac-tool:disabled { opacity: .55; cursor: default; transform: none; box-shadow: 0 4px 0 var(--ak-ink); }
+.ac-hint img { flex: none; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--ak-ink); background: var(--ak-lav); object-fit: cover; }
+.ac-hint-text { display: grid; gap: 1px; text-align: left; line-height: 1; }
+.ac-hint-text b { font-size: 14px; }
+.ac-hint-text small { font-family: var(--ak-serif); font-style: italic; font-weight: 400; font-size: 14px; letter-spacing: 0; text-transform: none; color: var(--ak-ink2); }
+.ac-hint-cost {
+  padding: 4px 8px 3px; border-radius: 999px; background: var(--ak-lav); border: 2px solid var(--ak-ink);
+  font-family: var(--ak-mono); font-weight: 750; font-size: 12px; letter-spacing: -0.01em; text-transform: none;
+}
+.ac-hint.is-active { background: var(--ak-honey); }
+.ac-finish { padding: 0 22px; background: var(--ak-mint); font-size: 15px; }
+@media (max-height: 520px) {
+  .ac-tool { height: 44px; }
+  .ac-hint img { width: 30px; height: 30px; }
+}
+
+/* ---------- the end card: the run's top words, as keys ---------- */
+.ac-top { margin: 14px 0 0; text-align: left; }
+.ac-top-title { margin: 0 0 7px; font-family: var(--ak-display); font-weight: 850; font-stretch: 120%; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--ak-ink2); }
+.ac-top-list { list-style: none; margin: 0; padding: 0 0 4px; display: flex; flex-wrap: wrap; gap: 8px 7px; }
+.ac-top-item {
+  display: inline-flex; align-items: baseline; gap: 7px; padding: 6px 10px 5px; border-radius: 11px;
+  background: var(--ac-cream); border: 2px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+}
+.ac-top-item.is-first { background: var(--ak-honey); }
+.ac-top-word { font-family: var(--ak-display); font-weight: 900; font-size: 14.5px; letter-spacing: .03em; }
+.ac-top-pts { font-family: var(--ak-mono); font-weight: 750; font-size: 12px; color: var(--ak-ink2); }
+.ac-credit { margin-top: 14px; }
