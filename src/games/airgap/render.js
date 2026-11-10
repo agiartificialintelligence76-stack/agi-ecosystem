@@ -628,6 +628,13 @@ function drawBubble(ctx, x, y, r, b, side) {
   if (side === 'right') { bx = x + r + 12; by = y - h / 2; }
   else if (side === 'left') { bx = x - r - 12 - w; by = y - h / 2; }
   else { bx = x - w / 2; by = y + r + 12; }
+  // A badge beside the rink can be close to an edge. Keep her words and their shadow on screen;
+  // the tail still points toward her badge when the bubble has to slide sideways.
+  if (b.bounds) {
+    bx = clamp(bx, b.bounds.left, b.bounds.right - w - 4);
+    by = clamp(by, b.bounds.top, b.bounds.bottom - h - 4);
+  }
+  const tailX = clamp(x, bx + 14, bx + w - 14);
   ctx.save();
   ctx.globalAlpha = Math.min(1, k);
   const ox = side === 'right' ? bx : side === 'left' ? bx + w : bx + w / 2, oy = side === 'below' ? by : by + h / 2;
@@ -640,7 +647,7 @@ function drawBubble(ctx, x, y, r, b, side) {
   ctx.beginPath();
   if (side === 'right') { ctx.moveTo(bx + 1, by + h / 2 - 7); ctx.lineTo(bx - 9, by + h / 2); ctx.lineTo(bx + 1, by + h / 2 + 7); }
   else if (side === 'left') { ctx.moveTo(bx + w - 1, by + h / 2 - 7); ctx.lineTo(bx + w + 9, by + h / 2); ctx.lineTo(bx + w - 1, by + h / 2 + 7); }
-  else { ctx.moveTo(bx + w / 2 - 7, by + 1); ctx.lineTo(bx + w / 2, by - 9); ctx.lineTo(bx + w / 2 + 7, by + 1); }
+  else { ctx.moveTo(tailX - 7, by + 1); ctx.lineTo(tailX, by - 9); ctx.lineTo(tailX + 7, by + 1); }
   ctx.fill(); ctx.stroke();
   ctx.fillStyle = C.ink; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   lines.forEach((l, i) => ctx.fillText(l, bx + 11, by + 7 + size * 0.62 + i * size * 1.18));

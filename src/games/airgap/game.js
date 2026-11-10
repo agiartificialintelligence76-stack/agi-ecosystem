@@ -602,7 +602,7 @@ function drawOverlay(ctx, upside) {
   // her face (not in two-player on a touchscreen: the far player would read it upside down) and her words
   if (mode !== '2p' || !upside) {
     const fs = face.size;
-    const b = bubble && (mode === 'vs' || mode === '2p') ? { ...bubble, size: clamp(fs * 0.3, 13.5, 17), maxW: face.side === 'right' ? Math.min(300, view.w - face.x - fs) : clamp(view.w * 0.4, 170, 260) } : null;
+    const b = bubble && (mode === 'vs' || mode === '2p') ? { ...bubble, size: clamp(fs * 0.3, 13.5, 17), maxW: face.side === 'right' ? Math.min(300, view.w - face.x - fs) : clamp(view.w * 0.4, 170, 260), bounds: { left: 8, right: view.w - 8, top: barBottom + 8, bottom: view.h - 8 } } : null;
     drawFace(R, ctx, face.x, face.y, fs, mood, t, b, face.side);
   }
   // the very first match: how to move, until you hit the puck
