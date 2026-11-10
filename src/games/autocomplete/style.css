@@ -115,3 +115,19 @@
 .ac-top-word { font-family: var(--ak-display); font-weight: 900; font-size: 14.5px; letter-spacing: .03em; }
 .ac-top-pts { font-family: var(--ak-mono); font-weight: 750; font-size: 12px; color: var(--ak-ink2); }
 .ac-credit { margin-top: 14px; }
+
+/* ---------- a phone held sideways: the title in two columns (the logo and its line; the buttons) ---------- */
+@media (max-height: 520px) and (min-width: 640px) {
+  .ak[data-ak-game='autocomplete'] .ak-title-body {
+    width: min(880px, 100%); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); grid-auto-flow: row dense;
+    column-gap: 30px; row-gap: 8px; align-items: center;
+  }
+  .ak[data-ak-game='autocomplete'] .ak-title-body > :is(.ak-kicker, .ac-logo, .ak-tagline) { grid-column: 1; }
+  .ak[data-ak-game='autocomplete'] .ak-title-body > :not(.ak-kicker, .ac-logo, .ak-tagline) { grid-column: 2; }
+  .ak[data-ak-game='autocomplete'] .ak-title-body > .ak-kicker { grid-row: 1; align-self: end; }
+  .ak[data-ak-game='autocomplete'] .ak-title-body > .ac-logo { grid-row: 2 / span 2; }
+  .ak[data-ak-game='autocomplete'] .ak-title-body > .ak-tagline { grid-row: 4 / span 2; align-self: start; font-size: 19px; }
+  .ak[data-ak-game='autocomplete'] .ak-title-actions { width: 100%; margin-top: 0; }
+  .ak[data-ak-game='autocomplete'] .ak-btn-mode { min-height: 50px; }
+  .ak[data-ak-game='autocomplete'] .ak-fine { display: none; }
+}
