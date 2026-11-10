@@ -1,0 +1,50 @@
+# AUTOCOMPLETE: words never accepted, predicted or hinted (PG-13). ROT13-encoded so the repository holds no slurs in
+# plain text (tools/games/autocomplete/README.md). Decoded rules: "word" the word, "word+" the word and its regular
+# forms, "word*" every word starting with it, "*word*" every word containing it, "!word" (or "!word*") never caught
+# by the others. Lines starting with # are notes.
+# profanity
+*shpx* *fuvg* *phag* *cvff* *gjng* jnax* *wvmm* *obyybpx* *obyyvk* obyybk *zbgures*
+ovgpu* onfgneq* nffubyr* nefrubyr* wnpxnff* qhzonff* fznegnff* onqnff* nffung* nff nffrf nefr nefrf nefrl
+qnza qnzaf qnzarq qnzavat qnzzvg tbqqnz tbqqnzf tbqqnza tbqqnzaf tbqqnzarq tbqqnzavat tbqqnzzvg
+uryy uryyf penc penccrq penccvat penccl penccvre penccvrfg penccre penccref
+ohttre* gheq+ qbhpur* fxnax+ gbffre+ zvatre+ zhagre+ fynccre+ ovag+ srpx+ fung
+# sex and the body (kept out of a family arcade)
+frk frkrf frkrq frkvat frkl frkvre frkvrfg frkvyl frkvarff frkhny frkhnyyl frkhnyvgl frkhnyvgvrf frkhnyvmr frkhnyvmrq frkhnyvmrf frkhnyvmvat frkhnyvfr frkhnyvfrq frkhnyvfrf frkhnyvfvat frkcbg+ plorefrk+
+cbea* *cbea* betnfz* betl betvrf betvnfgvp rebgvp* rebgvfz* rebtrabhf nhgbrebgvp* ubzbrebgvp*
+znfgheong* rwnphyng* frzra frzraf fcrez fcrezf fcrezvpvqr+ fcrezvpvqny pbaqbz+
+cravf cravfrf crarf cravyr cravny cunyyhf cunyyv cunyyvp cunyyhfrf intvan intvanf intvanr intvany ihyin ihyinf ihyinr ihyine ynovn
+pyvg pyvgf pyvgbeny pyvgbevf pyvgbevfrf pyvgbevqrf fpebghz fpebghzf fpebgn fpebgny grfgvpyr+ grfgvphyne grfgrf grfgvf tbanq+
+obbo+ obbovr+ obbol obbovrf gvg gvgf gvggl gvggvrf gvggvr avccyr+ nerbyn+ nerbynr nerbyr nerbyrf obfbzl ohfgl
+ubeal ubeavre ubeavrfg yrjq+ yrjqyl yrjqarff yrpure* yrpu yrpurf yrpul fyhg* juber* uneybg+ fgehzcrg+ gebyybc+ uhffl uhffvrf
+sybbml sybbmvr sybbmvrf ubbxre+ cebfgvghg* cvzc cvzcf cvzcrq cvzcvat oebgury+ obeqryyb+
+alzcub* xvaxl xvaxvre xvaxvrfg xvaxvyl xvaxvarff obaqntr+ fnqvfz fnqvfg fnqvfgf znfbpuvfz znfbpuvfg znfbpuvfgf fnqbznfbpuvfz* fnqbznfbpuvfg*
+qbzvangevk* iblrhe* crrcfubj+ fgevcgrnfr+ gbcyrff ahqvr ahqvrf yvatrevr cnagvrf cnagl cnagvr cnaglubfr dhvpxvr+ abbxvr+ abbxl
+encr encrq encrf encvat encvfg encvfgf encre encref zbyrfg* vaprfg* crqbcuvy* cnrqbcuvy* crqrenfg* crqb crqbf
+tebcr+ tebcrq tebcvat sbaqyr+ sbaqyrq sbaqyvat sbercynl+ vagrepbhefr+ pbvghf pbvgny pbchyng* sbeavpng* tvtbyb+ fzhg fzhgf fzhggl fzhggvre fzhggvrfg
+funt funtf funttrq funttvat obss+ obssrq obssvat fughc+ fpughc+ uhzcvat wrexbss+ phz phzf phzzvat phzzre phzzref fchax fchaxf fzrtzn+
+ulzra ulzraf ulzrany pbbmr+ cbbagnat+ cbba cbbaf zvatr+ dhvz dhvzf snaal snaavrf xabpxref ubbgre ubbgref onmbbz onmbbzf tnmbatn+
+qbat qbatf fpuybat+ crpxre crpxref cevpx cevpxf qvpx qvpxf qvpxurnq+ obare obaref rerpgvba rerpgvbaf fgvssl+ jvyyl qvyqb* ivoengbe+
+oybjwbo* navyvathf+ phaavyvathf+ sryyng* evzzvat orfgvnyvgl+ mbbcuvy* pbcebcuvy* tnatonat* guerrfbzr+ guebngvat fpvffbevat
+travgny travgnyf travgnyvn chorf chovp chovf ohatubyr+ ohggubyr+ wnvyonvg+ zvys+ cynlobl+ cynltvey+ qbttvat crttvat svttvat svfgvat fxrrg
+# slurs and hate (with their forms)
+*avtt* arteb artebrf artebvq+ artebcuvy* *avttn* qnexvr qnexvrf qnexl qnexrl qnexrlf pbba pbbaf wvtnobb+ cvpxnavaa* cvpnavaa* fnzob+ gneonol+ fcrnepuhpxre+
+xvxr+ xlxr+ lvq lvqf uror urorf urro urrof furral furravrf furrarl furrarlf ulzvr+ fulybpx+ wrjrq wrjvat tbl tblf tblvz fuvxfn+
+fcvp fcvpf fcvpx fcvpxf fcvx fcvxf jrgonpx+ ornare+ ternfre+ qntb qntbf qntbrf jbc jbcf zvpx zvpxf xenhg+ obpur obpurf yvzrl+ cbzzl cbzzvrf
+puvax puvaxf puvaxl puvaxrq puvaxvat tbbx tbbxf tbbxl fynagl fybcrurnq+ mvccreurnq+ pbbyvr+ pbbyl puvanzna puvanzra wnc wncf cnxv cnxvf
+xnssve* xnsve* jbt jbtf tbyyvjbt* ubaxl ubaxvr* ubaxrl* juvgrl* juvgvrf crpxrejbbq+ erqarpx+ erqyrt+ penpxn+ obuhax+ cbynpx+ uhaxvr+
+fdhnj+ erqfxva+ vawha+ nob nobf obbat+ yhoen+ tlc tlcf tlccrq tlccvat tlccb+ tlcfl tlcfvrf tvcfl tvcfvrf cvxrl+ unysoerrq+ unyspnfgr+ zhynggb* bpgbebba+ dhnqebba+ enturnq+ gbjryurnq+ oyhrthz+
+snt sntf snttbg* sntbg* snttvat snttrq snttl snttvre snttvrfg qlxr qlxrf qlxrl ubzb ubzbf yrfob+ yrm yrmrf yrmmrf yrmm yrmmvr yrmmvrf yrmml cbbs cbbsf cbbsgre+ cbbir+ genaal genaavr genaavrf furznyr+ synzre+ ohyyqlxr+ ohyyqnttre+ fbqbzvgr+ fbqbzl fbqbzvrf fbqbzvmr* fbqbzvfr* fbqbzvfg*
+ergneq ergneqf ergneqrq ergneqngr+ fcnm fcnmm fcnmmrf fcnmml fcnfgvp+ zbat zbatf zbatbybvq* zbatby zbatbyf zvqtrg+ fpuvmb fpuvmbf tvzc+ tvzcl gneq gneqf
+anmv anmvf anmvfz anmvvfz anmvsl anmvsvrq anmvsvrf anmvslvat anmvsvpngvba fjnfgvxn+ ylapu ylapurq ylapure ylapuref ylapurf ylapuvat ylapuvatf xyna xynaf xynafzna xynafzra xynafjbzna xynafjbzra
+# more crude words and insults a family game leaves out
+sngfb+ fpuzhpx+ wnpxnffrf cvffbve+ zvfuvg zvfuvgf zvfuvggvat favttre* ovzob+ ovzobf fpnt+ fybcre+ jrypure+ jryfure+ znffn
+# the rest of the core, and words the lists missed
+pbpx pbpxf pbpxfhpxre* pbpxfhpxvat nany nanyyl nahf nahfrf erpghz erpghzf erpgn erpgny erpgnyyl chffl chffvrf
+wvfz wvfzf tvfz wvffbz qvatyroree* qvax qvaxf ubre ubref abo abof ghful ghfuvrf pnpn pbbgre pbbgref oynpxpbpx+
+sberfxva+ tynaf ternfronyy+ ybirznxvat+ cvaxb+ crei creir creirf creif creil hafrkl birefrkrq haqrefrkrq ubf
+jubevat
+# words with sex in them, but for counting, music, time, the stars and who people are
+*frk* !frkntranevna* !frkntrfvzny* !frkqrpvyyvba* !frkgvyyvba* !frkgnva* !frkgna* !frkgnevv !frkgnevhf !frkgrg* !frkgvyr* !frkgb !frkgbf !frkgba* !frkvfz* !frkvfg* !nagvfrkvfg* !abafrkvfg* !havfrk !ovfrkhny* !ubzbfrkhny* !urgrebfrkhny* !cnafrkhny* !nzovfrkhny* !nfrkhny* !vagrefrk* !genaffrkhny*
+*ovgpu* intva* zbatbyvfz* cvzczbovyr* fhcrecvzc* artebcu* artebav artebavf tlcfl* tlcfgre* tlcyher* tlccre* tlcfvrq nagvencr oebbzencr* encrfrrq*
+rebg* nhgbrebg* nagvrebgvp abarebgvp harebgvp betvnfgvpnyyl orqnza* qnzaqrfg qnzaqrfgf qnzarqre qnzarqrfg qnzarqrfgf qnzavsl qnzavsvrq qnzavsvrf qnzavslvat qnzavatyl qnzare qnzaref obyybk*
+fphzont+ phzfunj+ nffyvxr pbpxhc pbpxhcf gvgzna gvgzra nefrq avtevs* eravt eravtf cbbsgnu+ qvpxrq qvpxvat qlxrq qlxvat sntva sntvaf fcrezvp gheqvar fchaxrq fchaxvat jubevfu jubevfuyl

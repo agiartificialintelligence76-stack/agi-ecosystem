@@ -1,0 +1,28 @@
+# AUTOCOMPLETE: words the game accepts (they're ordinary English) but AGI-1 never predicts, hints or plays in the demo.
+# Money talk (the arcade never talks money), violence, drugs and drink, insults, and words about bodies, identity,
+# religion or politics that could read as a taunt in a suggestion. Words separated by spaces or new lines; a word
+# ending in * covers every word that starts with it (used only where no innocent word starts the same way).
+buy buys buyer buyers buying bought sell sells seller sellers selling sold resell resells reselling resold
+price prices priced pricing pricey pricy pricier priciest pump pumps pumped pumping dump dumps dumped dumping dumpster dumpsters
+invest invests invested investing investor investors investment investments profit* cash cashed cashes cashing cashier cashiers
+money* monies monetary coin coins coined coining token tokens bank banks banked banking banker bankers bankrupt* bankroll* banknote*
+loan loans loaned loaning debt debts debtor debtors wealth wealthy wealthier wealthiest rich richer richest riches
+fund funds funded funding fundraiser fundraisers fundraising stock stocks stockbroker* trade trades traded trading trader traders
+market* dollar* cent cents penny pennies wage wages salary salaries bribe bribes bribed bribing bribery gambl* casino* lottery lotteries jackpot*
+bet bets betting bettor bettors broker brokers brokerage dividend* financ* gain gains gained gaining scam scams scammed scammer scammers
+pay pays paid paying payment payments payroll* cost costs costly cheap cheaper cheapest expensive afford* spend spends spending spender spent
+earn earns earned earning earnings income incomes budget* purchas* sale sales wallet* tax taxes taxed taxing
+kill* murder* dead deadly death deaths die died dies dying suicid* gun guns gunman gunmen gunfire gunshot* shoot* shot shots
+bomb* blood* bleed* war wars warfare weapon* rifle* pistol* stab stabs stabbed stabbing slaughter* massacre* assassin* corpse*
+tortur* terror* hostage* violen* abuse abused abuser abusers abuses abusing abusive hate hated hates hating hatred racis* slave* slavery
+prison* drug* drunk* beer* wine wines whisky whiskey whiskies whiskeys vodka* booze* alcohol* cigar* smok* tobacco* cocaine heroin heroins marijuana weed weeds
+idiot* stupid* dumb dumber dumbest moron* fool fools ugly uglier ugliest fat fatter fattest fatty loser losers jerk jerks freak* creep creeps creepy weirdo*
+psycho psychos insane sucks suck sucked sucker suckers sucking butt butts buttock* bum bums naked nude nudes nudity nudist* breast* bosom* crotch* groin* bra bras
+lust lusts lusted lusting lustful lusty undress* stripper* seduc* sensual* sexism sexist sexists gay gays lesbian* queer* bisexual* homosexual* heterosexual* transgender* transsexual* transvestit*
+god gods goddess* devil* satan* demon demons demonic sin sins sinful pray* church* bible* religio* holy
+democrat* republican* communis* fascis* politic* liberal* conservative* election* vote votes voted voting voter voters
+bloody muff muffs snatch* scat fingering bareback hardcore willies booby bestial* fart farts farted farting poop* pee pees peed peeing weenie* wiener* puss pussycat* hump humped humps
+screwing penetrat* teat swinger* swallower kink* fetish* pervers* flasher* libido* wench* tush scantily spank* hoes simp wuss dimwit* doofus
+lowlife slimeball ninny bogan yobbo hillbill* leper* junkie* junky illegals jihad* hijack* herpes syphilis cocain ganja reefer* peyote skag
+hooch hootch boozer* stoned stoner* excrement faeces fecal defecat* enema* weewee weiner* balls blacks lucifer sodom eunuch* preteen* pula
+haole haoles bong bongs boned diddl* strappado bastinado cockfight* squirt* undressing

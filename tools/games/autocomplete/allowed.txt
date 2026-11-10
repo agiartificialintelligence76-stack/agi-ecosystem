@@ -1,0 +1,15 @@
+# AUTOCOMPLETE: words one of the outside block lists names that we reviewed and kept: ordinary English (a tool, a plant,
+# a place, a sport, a spice…), or mild enough for a PG-13 word game. The milder ones are also in quiet.txt, so AGI-1
+# never suggests them. build-words.mjs stops when a list names a word that's in neither this file nor the block rules.
+abuse babes balls bareback bastinado bestial blacks bloody bogan bombers boned bong boonies bootee boozer breasts bum bung butt
+chug chugs clamps clansman clansmen clanswoman clanswomen cocain cocaine cockfight cocky cox cummin cumquat defecate diddle dike
+dimwit dingle dipstick doggie domination doofus enema escort eunuch excrement faeces fecal fetish fingering fisted flange flasher
+foursome gae ganja gays geezer gey god guineas gummer hadji hadjis haji hajis hajji hajjis haole haoles hardcore heroin herpes
+hijacking hillbillies hillbilly hoar hoes honkers hooch hootch hummer humped hustler illegals jerked jerries jerry jigger jiggers jigs
+jihad junkie junky kimchis kink knob leper libido licker licking limy lowlife lucifer lust lusting lusty mams marijuana menage moron
+muff muncher naked nimrod ninny nips nog nude nudger nudity ovum paddy pansies pansy pawn penetrate penetration penthouse perse
+perversion peyote piker pis pollock pollocks poop pooping preteen prig pula punky puss pussycat queers quiff rectus reefer ritard
+rosebuds sadis scallywag scantily scat screwing seduce septics shrimping simp sissy skag slag slimeball snatch snowballing snuff
+sodom souse soused spank spunky squinty squirting stoned stoner strappado stroking suck sucked sucker sucking sucks swallower swinger
+syphilis tawdry teat testee titi toots torture transsexual transvestite trois trots tuckahoe tush undressing vixen wab wazoo weenie
+weewee weiner wench whacker whit whop willies wuss yank yobbo

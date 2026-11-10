@@ -1,0 +1,267 @@
+# 1 hello, world
+aabbccaabbc
+abbccaabbc
+ccaabbccaab
+.aa....bb.
+
+# 2 off the wall
+bbb.....ccc
+ba......ac
+baa.....aac
+..a....a..
+...abcba...
+...abca...
+
+# 3 let it fall
+.....a.....
+....aa....
+....bab....
+...bccb...
+...cbabc...
+..cbaabc..
+..cbcccbc..
+..bb..cc..
+
+# 4 four of a kind
+aabbccddaab
+abbccddaab
+ddaabbccddc
+daabbccddc
+..ddaabbc..
+
+# 5 sort it out
+abcabcabcab
+bcabcabcab
+cabcabcabca
+abcabcabca
+
+# 6 heavy thoughts
+aabb...ccdd
+a#b....c#d
+.abb...ccd.
+.a#....#d.
+..abbccdd..
+..#abcd#..
+...abccd...
+
+# 7 chandeliers
+..a.....b..
+.aa....bb.
+.cac...dbd.
+cddc..cbbc
+ddbdd.ccaac
+bddb..cbbc
+.bab...ada.
+
+# 8 crossroads
+aa.......bb
+ac......db
+.cca...ddb.
+..aad.bd..
+....dcb....
+...bccd...
+..bb...dd..
+.ab.....da
+aa.......aa
+
+# 9 keepsakes
+aabbccaabbc
+abbccaabbc
+.bc..a..ca.
+.M..aa..M.
+....bMb....
+
+# 10 first crush
+.abc...cba.
+abba..abba
+abcbaaabcba
+abcMbbMcba
+.abccbccba.
+.abcMccba.
+..abcccba..
+..abccba..
+...abcba...
+....aa....
+
+# 11 locked in
+aabbccddaab
+ab*bcc*daa
+ddaa*bbccdd
+dab*bcc*dc
+..ddaabbc..
+
+# 12 wildcard
+aabbccddaab
+bccddaabbc
+cddaabbccdd
+.aabbccdd.
+..cc...aa..
+
+# 13 garbage day
+aabcc.ccbaa
+ab#c..c#ba
+.ab##d##ba.
+..bddddb..
+...cbbbc...
+....cc....
+
+# 14 high five
+aabbccddeea
+abbccddeea
+eeaabbccdde
+eaabbccdde
+..eeaabb...
+
+# 15 cat nap
+.a.......a.
+aa......aa
+aaf.....faa
+ffddffddff
+ddMffddfMdd
+.ffddffdd.
+..ddfMfdd..
+...ffdff..
+....ddd....
+
+# 16 pendulum
+.....a.....
+....ab....
+.....c.....
+....cd....
+.....d.....
+....de....
+...eabde...
+..eabcde..
+..aabcdee..
+..bcdeab..
+...cdeab...
+
+# 17 crossed wires
+aab*ccc*bba
+ab#cddc#ba
+.bb*ddd*ab.
+.eeaabbee.
+..e#aaa#e..
+...ebbbe..
+
+# 18 jellyfish
+...aaaaa...
+..abbbba..
+.abcccccba.
+.dc.ee.cd.
+.d..e.e..d.
+.c..dd..c.
+.c..b.b..c.
+.b..aa..b.
+
+# 19 low ceiling
+aabbccddeea
+abbccddeea
+eeaabbccdde
+eaabbccdde
+ddeeaabbccd
+deeaabbccd
+ccddeeaabbc
+cddeeaabbc
+bbccddeeaab
+.bccddeea.
+..bbccdd...
+
+# 20 the core
+....abc....
+...abbca..
+..ab#*#ca..
+..b*cMc*c.
+.ab#MdM#ca.
+.ab*cdc*ca
+..ab#*#ca..
+...abbca..
+....aaa....
+
+# 21 six senses
+aabbccddeef
+abbccddeef
+ffaabbccdde
+faabbccdde
+..ffaabbc..
+
+# 22 the vault
+aab.ccd.eea
+a*b.c*d.e*
+*M*.*M*.*M*
+bc..de..ab
+.ab..cd..ef
+
+# 23 rainfall
+a.b.c.d.e.f
+b.c.d.e.fa
+b.c.d.e.f.a
+c.d.e.f.ab
+c.d.e.f.a.b
+d.e.f.a.bc
+d.e.f.a.b.c
+e.f.a.b.cd
+
+# 24 bit flip
+abababababa
+cdcdcdcdcd
+abababababa
+cdcdcdcdcd
+
+# 25 overhang
+ab.........
+abb.......
+abccd......
+.bcddee...
+..cdeeaab..
+...deabbcc
+....eabcdde
+.....bcdde
+
+# 26 bloom
+.....e.....
+....ee....
+...bbebb...
+..bbccbb..
+.ddbcfcbdd.
+.ddcffcdd.
+..ddcfcdd..
+..aaccaa..
+...aaaaa...
+
+# 27 firewall
+aabbccddeef
+abbccddeef
+###.###.###
+ccddeeffaa
+ddeeffaabbc
+
+# 28 the ladder
+ab.......ab
+ab......ab
+ccddeeffacc
+d........d
+de.......ed
+ffaabbccdd
+e.........e
+ef......fe
+abbccddeeff
+
+# 29 lullaby
+a.b.c.d.e.f
+a.b.c.d.ef
+.ab.cd..ef.
+.M..M...M.
+.ab..cd..ef
+
+# 30 everything, sorted
+.aab...bcc.
+af*b..c*ec
+afdbeaecedc
+afdMbbMdec
+.afdbcbdec.
+.afdMddec.
+..a#dfd#c..
+..afddec..
+...a*f*c...
+....ab....

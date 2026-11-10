@@ -1,0 +1,141 @@
+/* BUBBLE SORT (2026-11-09): its own styles on top of the arcade kit's sticker look (src/games/kit/kit.css): ink outlines,
+   hard shadows, the AK fonts. The board is drawn on a canvas (./render.js); this is AGI-1's bubble, the memory banks and
+   the level cards. Every rule names a bs- class or the game's root. */
+.ak[data-ak-game='bubblesort'] {
+  --ak-bg: #0b0720;
+  --ak-accent: #ffc933;
+  --bs-board: #120c2e;
+}
+.ak[data-ak-game='bubblesort'] .ak-stage canvas { cursor: crosshair; }
+.ak[data-ak-game='bubblesort'] .ak-logo-line.is-pink { color: #ff5fae; }
+.ak[data-ak-game='bubblesort'] .ak-screen-scrim {
+  background: radial-gradient(110% 70% at 50% 48%, rgba(11, 7, 32, 0.88) 30%, rgba(11, 7, 32, 0.6) 66%, rgba(11, 7, 32, 0.35) 100%);
+}
+.ak[data-ak-game='bubblesort'] .ak-modes > .ak-btn-mode { min-height: 62px; }
+
+/* the notch and the rounded corners: read by game.js */
+.bs-safe {
+  position: absolute; inset: 0; z-index: -1; visibility: hidden; pointer-events: none;
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+}
+
+/* icons */
+.bs-ico { width: 20px; height: 20px; display: block; flex: none; overflow: visible; }
+.bs-ico .bs-s { fill: none; stroke: currentColor; stroke-width: 2.5; stroke-linecap: round; stroke-linejoin: round; }
+.bs-ico .bs-f { fill: currentColor; }
+.bs-star .bs-f { fill: #e4d9ff; stroke: #170a36; stroke-width: 1.8; stroke-linejoin: round; }
+.bs-star.is-on .bs-f { fill: #ffc933; }
+
+/* ---------- AGI-1's bubble ---------- */
+.bs-say { position: absolute; z-index: 8; transform: translateY(-100%); pointer-events: none; width: max-content; }
+.bs-say-body {
+  position: relative; margin: 0; padding: 8px 13px 9px; border-radius: 16px 16px 16px 4px;
+  background: #fff; color: #170a36; border: 2.5px solid #170a36; box-shadow: 0 3px 0 #170a36;
+  font-family: var(--ak-serif); font-style: italic; font-size: clamp(15px, 4.1vw, 18.5px); line-height: 1.2;
+}
+.bs-say.is-wide .bs-say-body { font-size: 19px; border-radius: 16px 16px 16px 16px; }
+@media (prefers-reduced-motion: no-preference) {
+  .bs-say.is-in { animation: bs-say-in .32s cubic-bezier(.2, 1.5, .4, 1) both; }
+  .bs-say.is-out { animation: bs-say-out .22s ease both; }
+}
+@keyframes bs-say-in { from { opacity: .01; translate: -6px 10px; scale: .9; } }
+@keyframes bs-say-out { to { opacity: .01; translate: 0 -6px; } }
+
+/* ---------- the title's record ---------- */
+.bs-record {
+  margin: 0; display: inline-flex; align-items: center; gap: 8px;
+  font-family: var(--ak-mono); font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
+  color: color-mix(in srgb, var(--ak-fg) 78%, transparent);
+}
+.bs-record .bs-ico { width: 15px; height: 15px; }
+
+/* ---------- cards ---------- */
+.bs-card { width: min(560px, 100%); }
+.bs-card .ak-card-title { margin-bottom: 12px; }
+.bs-total { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: -6px 0 14px; font-size: 14.5px; color: var(--ak-ink2); }
+.bs-total b { font-family: var(--ak-mono); font-size: 16px; color: var(--ak-ink); }
+.bs-total .bs-ico { width: 18px; height: 18px; }
+.bs-total-hint { display: inline-flex; align-items: center; gap: 4px; }
+.bs-banks { display: grid; gap: 14px; }
+.bs-bank {
+  --tone: #ff7ab9;
+  padding: 10px 12px 12px; border-radius: 18px; background: color-mix(in srgb, var(--tone) 22%, #fffaf0);
+  border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+}
+.bs-bank.is-pink { --tone: #ff7ab9; } .bs-bank.is-honey { --tone: #ffc933; } .bs-bank.is-mint { --tone: #3ff0c3; }
+.bs-bank.is-locked { background: var(--ak-lav); }
+.bs-bank-head { display: flex; align-items: baseline; gap: 8px; margin: 0 2px 9px; }
+.bs-bank-n {
+  flex: none; padding: 2px 8px 1px; border-radius: 999px; background: var(--tone); border: 2px solid var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 120%; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+}
+.bs-bank-name { flex: 1 1 auto; min-width: 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 110%; font-size: 15px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bs-bank-stars { flex: none; display: inline-flex; align-items: center; gap: 4px; font-family: var(--ak-mono); font-weight: 800; font-size: 13.5px; }
+.bs-bank-stars .bs-ico { width: 16px; height: 16px; }
+.bs-tiles { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; }
+.bs-tile {
+  position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 58px; padding: 6px 2px 5px; border-radius: 14px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink);
+  transition: transform .08s ease, box-shadow .08s ease, background-color .15s ease;
+}
+.bs-tile:hover { transform: translateY(-1px); box-shadow: 0 4px 0 var(--ak-ink); background: #fff; }
+.bs-tile:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.bs-tile-n { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 19px; line-height: 1; }
+.bs-tile.is-next { background: var(--ak-honey); box-shadow: 0 3px 0 var(--ak-ink), 0 0 0 3px var(--ak-paper), 0 0 0 5.5px var(--ak-ink); }
+.bs-tile.is-locked { background: color-mix(in srgb, var(--ak-lav) 70%, #fffaf0); color: var(--ak-ink2); box-shadow: 0 3px 0 color-mix(in srgb, var(--ak-ink) 55%, transparent); cursor: default; }
+.bs-tile.is-locked:hover { transform: none; }
+.bs-tile .bs-lock { width: 18px; height: 18px; }
+.bs-tile-mem { position: absolute; top: -7px; right: -7px; width: 18px; height: 18px; color: #ff4da6; filter: drop-shadow(0 1.5px 0 #170a36); }
+.bs-total-hint .bs-tile-mem { position: static; width: 15px; height: 15px; }
+.bs-stars-row { display: inline-flex; gap: 1px; }
+.bs-stars-row.is-sm .bs-ico { width: 13px; height: 13px; }
+@media (prefers-reduced-motion: no-preference) { .bs-tile.is-shake { animation: bs-shake .32s ease; } }
+@keyframes bs-shake { 25% { translate: -5px 0; } 50% { translate: 4px 0; } 75% { translate: -2px 0; } }
+@media (max-width: 400px) {
+  .bs-tiles { gap: 6px; }
+  .bs-tile { min-height: 52px; border-radius: 12px; }
+  .bs-tile-n { font-size: 17px; }
+  .bs-stars-row.is-sm .bs-ico { width: 11px; height: 11px; }
+  .bs-bank-name { font-size: 13px; }
+}
+
+/* a level cleared */
+.bs-done { text-align: center; }
+.bs-bigstars { display: flex; justify-content: center; align-items: flex-end; gap: 6px; margin: 2px 0 6px; }
+.bs-bigstar { display: block; }
+.bs-bigstar .bs-ico { width: 58px; height: 58px; }
+.bs-bigstar:nth-child(2) .bs-ico { width: 72px; height: 72px; }
+.bs-bigstar .bs-f { fill: #e4d9ff; stroke: #170a36; stroke-width: 1.6; stroke-linejoin: round; }
+.bs-bigstar.is-on .bs-f { fill: #ffc933; }
+@media (prefers-reduced-motion: no-preference) {
+  .bs-bigstar.is-on { animation: bs-stamp .5s var(--d, .2s) cubic-bezier(.2, 1.6, .4, 1) both; }
+}
+@keyframes bs-stamp { from { opacity: .01; transform: rotate(-24deg) scale(2.4); } }
+.bs-done-score { margin: 0; font-size: 14px; color: var(--ak-ink2); }
+.bs-done-score b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 34px; color: var(--ak-ink); letter-spacing: -0.02em; }
+.bs-done .ak-stats { margin-top: 12px; }
+.bs-done-main, .bs-done-side { display: contents; }
+.bs-fail-left { margin: -6px 0 0; font-size: 15px; color: var(--ak-ink2); }
+/* a short, wide screen (a phone held sideways): the run on the left, what's next on the right */
+@media (max-height: 520px) and (min-width: 600px) {
+  .bs-done { width: min(760px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 22px; align-items: center; }
+  .bs-done-main, .bs-done-side { display: block; min-width: 0; }
+  .bs-done .ak-stats { grid-template-columns: 1fr 1fr 1fr; }
+  .bs-done .ak-stat.is-wide { grid-column: auto; }
+  .bs-done .ak-say { margin-top: 0; }
+  .bs-bigstar .bs-ico { width: 44px; height: 44px; }
+  .bs-bigstar:nth-child(2) .bs-ico { width: 54px; height: 54px; }
+  .bs-levels { width: min(720px, 100%); }
+  .bs-banks { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  .bs-tiles { gap: 5px; }
+  .bs-tile { min-height: 44px; padding: 4px 1px; }
+  .bs-tile-n { font-size: 15px; }
+  .bs-stars-row.is-sm .bs-ico { width: 9px; height: 9px; }
+  .bs-bank-name { font-size: 12px; }
+}
+@media (min-width: 900px) and (min-height: 700px) {
+  .bs-levels { width: min(860px, 100%); }
+  .bs-banks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+/* the title: Levels and Endless side by side */
+.ak[data-ak-game='bubblesort'] .ak-modes { grid-template-columns: repeat(2, minmax(0, 1fr)); }
