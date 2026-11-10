@@ -46,7 +46,7 @@ export const SKETCHES = [
   {
     id: '1-9', name: 'Swing set',
     cookie: [110, 200], pins: [[60, 90], [200, 90]], ropes: [[0], [1]], hooks: [[250, 330, 120], [420, 470, 110]],
-    sol: [[70, 'cut', 0], [260, 'cut', 1], [470, 'cut', 2], [627, 'cut', 3]], pixT: [100, 305, 548], catAt: { y: 790 },
+    sol: [[70, 'cut', 0], [260, 'cut', 1], [470, 'cut', 2], [627, 'cut', 3]], pixT: [125, 305, 548], catAt: { y: 790 },
   },
   {
     id: '1-10', name: 'Layer cake',
@@ -57,7 +57,7 @@ export const SKETCHES = [
     site: 'site 2: a news site (pop-ups, cookie banners, fans)',
     id: '2-1', name: 'Breaking news', tip: 'Tap ✕ to close a pop-up',
     cookie: [300, 330], pins: [[150, 150], [450, 150]], ropes: [[0], [1]], popups: [[300, 610]],
-    sol: [[40, 'cut', 0], [40, 'cut', 1], [362, 'pop', 0]], pixT: [100, 300, 352], catAt: [300, 790],
+    sol: [[40, 'cut', 0], [40, 'cut', 1], [432, 'pop', 0]], pixT: [100, 372, 414], catAt: [300, 790],
   },
   {
     id: '2-2', name: 'Above the fold',
@@ -91,8 +91,8 @@ export const SKETCHES = [
   },
   {
     id: '2-8', name: 'Clickbait',
-    cookie: [120, 150], pins: [[120, 60]], ropes: [[0]], popups: [[120, 470], [470, 560]], banners: [[60, 330, 380, 420]],
-    sol: [[40, 'cut', 0], [300, 'pop', 0], [600, 'pop', 1]], pixT: [200, 420, 560], catAt: { y: 790 },
+    cookie: [120, 150], pins: [[120, 60]], ropes: [[0]], popups: [[470, 560]], banners: [[60, 330, 380, 420]],
+    sol: [[40, 'cut', 0], [575, 'pop', 0]], pixT: [210, 420, 560], catAt: { y: 790 },
   },
   {
     id: '2-9', name: 'Comment section',
@@ -117,11 +117,11 @@ export const SKETCHES = [
   },
   {
     id: '3-3', name: 'Swipe right', tip: 'Drag the yellow knob',
-    cookie: [120, 300], pins: [{ track: [120, 90, 480, 90], t: 0 }], ropes: [[0]],
-    sol: [[30, 'slide', 0, 0.5], [110, 'slide', 0, 1], [330, 'cut', 0]], pixT: [100, 200, 380], catAt: { y: 790 },
+    cookie: [110, 300], pins: [{ track: [110, 90, 340, 90], t: 0 }], ropes: [[0]],
+    sol: [[30, 'slide', 0, 0.5], [70, 'slide', 0, 1], [217, 'cut', 0]], pixT: [100, 145, 280], catAt: { y: 790 },
   },
   {
-    id: '3-4', name: 'Pump it',
+    id: '3-4', name: 'Wind-up',
     cookie: [200, 280], pins: [{ track: [200, 90, 400, 90], t: 0 }], ropes: [[0]], bugs: [[400, 640], [400, 700]],
     sol: [[30, 'slide', 0, 1], [166, 'cut', 0]], pixT: [100, 150, 240], catAt: { y: 790 },
   },
@@ -132,13 +132,13 @@ export const SKETCHES = [
   },
   {
     id: '3-6', name: 'Tab hoarder',
-    cookie: [450, 150], pins: [[300, 110]], ropes: [[0]], tabs: [[[160, 520, 0, -1], [540, 330, -1, 1.4]]], bugs: [[300, 700]],
-    sol: [[155, 'cut', 0]], pixT: [80, 200, 270], catAt: { y: 790 },
+    cookie: [450, 150], pins: [[300, 110]], ropes: [[0]], tabs: [[[160, 500, 0, -1], [480, 230, 0, 1]]], bugs: [[160, 700]],
+    sol: [[155, 'cut', 0]], pixT: [80, 200, 275], catAt: { y: 790 },
   },
   {
     id: '3-7', name: 'Doomscroll',
-    cookie: [120, 290], pins: [{ track: [120, 90, 470, 90], t: 0 }], ropes: [[0]], bugs: [[160, 520, 440, 520, 2.4, 0]],
-    sol: [[30, 'slide', 0, 1], [532, 'cut', 0]], pixT: [110, 270, 600], catAt: { y: 790 },
+    cookie: [120, 290], pins: [{ track: [120, 90, 360, 90], t: 0 }], ropes: [[0]], bugs: [[150, 540, 540, 540, 2.4, 0]],
+    sol: [[30, 'slide', 0, 1], [176, 'cut', 0]], pixT: [90, 140, 240], catAt: { y: 790 },
   },
   {
     id: '3-8', name: 'Going viral',
@@ -147,8 +147,8 @@ export const SKETCHES = [
   },
   {
     id: '3-9', name: 'Notifications',
-    cookie: [300, 170], pins: [[300, 70]], ropes: [[0]], popups: [[300, 640]], bugs: [[130, 460, 470, 460, 2.6, 0], [130, 230, 470, 230, 2.6, 1.3]],
-    sol: [[76, 'cut', 0], [543, 'pop', 0]], pixT: [300, 420, 520], catAt: { y: 790 },
+    cookie: [140, 150], pins: [[280, 70]], ropes: [[0]], popups: [[410, 640]], bugs: [[220, 420, 560, 420, 2.4, 0]],
+    sol: [[152, 'cut', 0], [621, 'pop', 0]], pixT: [60, 210, 612], catAt: { y: 790 },
   },
   {
     id: '3-10', name: 'Feed me',

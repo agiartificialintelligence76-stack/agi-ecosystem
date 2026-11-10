@@ -410,7 +410,7 @@ function toTitle() {
 }
 
 // ---------- the demo: the levels' own solutions, with a visible blade and taps ----------
-const DEMO_ORDER = ['1-10', '1-6', '1-9', '1-4', '1-7'];
+const DEMO_ORDER = ['2-10', '1-6', '3-10', '2-3', '1-9', '3-8', '2-5', '1-4'];
 function startDemo(k = 0) {
   mode = 'demo';
   dock.show(false);

@@ -71,6 +71,7 @@
 .pl-comms.is-side { flex-direction: column; align-items: flex-start; justify-content: center; gap: 14px; }
 .pl-comms.is-side .pl-face { width: 112px; height: 112px; }
 .pl-comms.is-side .pl-live { width: 20px; height: 20px; }
+.pl-comms.is-side .pl-comms-say { flex: 0 0 auto; align-content: start; width: 100%; }
 .pl-comms.is-side .pl-bubble { font-size: 21px; -webkit-line-clamp: 4; line-clamp: 4; }
 /* no room: a small bubble at the top of the maze that goes quiet */
 .pl-comms.is-mini { gap: 7px; align-items: flex-start; }
@@ -121,10 +122,10 @@
   .pl-deliver.is-counted .pl-total-v { animation: pl-swell .4s cubic-bezier(.3, 1.6, .5, 1); display: inline-block; }
 }
 @keyframes pl-swell { 40% { transform: scale(1.25); color: var(--pl-pink); } }
-.pl-next { min-height: 58px; font-size: 18px; justify-content: space-between; padding-inline: 24px 20px; }
+.ak .pl-next { min-height: 58px; font-size: 18px; justify-content: space-between; padding-inline: 24px 20px; }
 .pl-next-text { display: grid; justify-items: start; gap: 1px; text-align: left; line-height: 1; }
 .pl-next-text small { font-family: var(--ak-sans); font-weight: 650; font-size: 12.5px; letter-spacing: 0; text-transform: none; opacity: .78; }
-.pl-next svg { width: 18px; height: 18px; }
+.ak .pl-next svg { width: 18px; height: 18px; }
 @media (max-height: 560px) {
   .pl-card { padding: 14px 16px 14px; }
   .pl-title { margin: 2px 0 6px; font-size: 28px; }

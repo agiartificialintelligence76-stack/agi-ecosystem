@@ -198,7 +198,7 @@ function toTitle() {
     play: 'Play',
     onPlay: () => whenReady(() => startRun('endless')),
     modes: [
-      { label: 'Daily', sub: db != null ? `Today's best ${fmt(db)}` : 'Same board for all · 2 min', onClick: () => whenReady(() => startRun('daily')) },
+      { label: 'Daily', sub: db != null ? `Today's best ${fmt(db)}` : "Today's board · 2 min", onClick: () => whenReady(() => startRun('daily')) },
       { label: 'Zen', sub: 'No clock, no rush', onClick: () => whenReady(() => startRun('zen')) },
     ],
     best: best != null && best > 0 ? best : null,
@@ -341,20 +341,20 @@ function acceptWord(path, word) {
   if (kind !== 'predictable') parts.burst({ x: cx, y: cy, count: kind === 'longer' ? 22 : 12, speed: [120, 380], life: [0.5, 1], size: [7, 12], colors: kind === 'longer' ? [COLOR.mint, COLOR.honey, '#ffffff'] : [COLOR.pink, COLOR.honey], shape: 'star', spin: 6, drag: 2.2, stroke: COLOR.ink });
   // the word and its points fly up to the score
   const target = scoreTarget();
-  flyers.push({ text: `${word.toUpperCase()} +${fmt(points)}`, x0: cx, y0: cy - L.pitch * 0.4, x1: target.x, y1: target.y, t: -0.18, dur: 0.62, color: kind === 'longer' ? COLOR.mint : kind === 'surprise' ? COLOR.pink : COLOR.honey, landed: false, score: tally.score });
+  flyers.push({ word: word.toUpperCase(), pts: `+${fmt(points)}`, x0: cx, y0: cy - L.pitch * 0.4, x1: target.x, y1: target.y, t: -0.18, dur: 0.62, color: kind === 'longer' ? COLOR.mint : kind === 'surprise' ? COLOR.pink : COLOR.honey, landed: false, score: tally.score });
   // long words: a stamp, a shake, a beat of stillness
   if (word.length >= 6) {
     const names = ['SIX!', 'SEVEN!!', 'EIGHT!!!', 'NINE!!!!', 'TEN!!!!!'];
-    stamps.push({ text: names[Math.min(4, word.length - 6)], t: 0, dur: 1.15, x: L.board.x + L.board.w / 2, y: L.board.y + L.board.h * 0.36, rot: -0.1 + (word.length % 2) * 0.06, color: word.length >= 7 ? COLOR.mint : COLOR.honey, size: word.length >= 7 ? 1.05 : 0.9 });
+    stamps.push({ text: names[Math.min(4, word.length - 6)], t: 0, dur: 0.9, x: L.board.x + L.board.w / 2, y: L.board.y + L.board.h * 0.3, rot: -0.1 + (word.length % 2) * 0.06, color: word.length >= 7 ? COLOR.mint : COLOR.honey, size: word.length >= 7 ? 0.92 : 0.8 });
     shake.kick(0.32 + 0.08 * (word.length - 6));
     hitstop = 0.08;
   }
   // her reaction
   const glitchRes = run.kind === 'endless' || run.kind === 'demo' ? glitchAfterWord(run.glitch, Boolean(glitchTile), run.t) : 'none';
-  const badge = hinted ? 'HER HINT ×½' : kind === 'longer' ? 'LONGER ×2' : kind === 'surprise' ? 'SURPRISE ×1.5' : 'PREDICTABLE';
+  const badge = hinted ? 'HER HINT' : kind === 'longer' ? 'LONGER 2X' : kind === 'surprise' ? 'SURPRISE 1.5X' : 'PREDICTABLE';
   let line = hinted ? 'told you 💜' : say(word.length >= 7 && kind !== 'predictable' && Math.random() < 0.4 ? 'long' : kind, pick);
   if (glitchRes === 'fixed') line = say('fixed', pick);
-  result = { kind: hinted ? 'hint' : kind, badge: glitchTile ? `GLITCH ×2 · ${badge}` : badge, line, t: 0, hold: 2.2 };
+  result = { kind: hinted ? 'hint' : kind, badge: glitchTile ? `GLITCH 2X · ${badge}` : badge, line, t: 0, hold: 2.2 };
   setMood(kind === 'predictable' ? (hinted ? 'happy' : 'smug') : 'shock', kind === 'longer' ? 1.5 : 1.1);
   // the context window fills back up (Endless)
   if (run.kind === 'endless' || run.kind === 'demo') {
@@ -508,7 +508,7 @@ function showOver() {
     title: kind === 'endless' ? 'Context lost' : kind === 'daily' ? "Time's up" : 'Zen done',
     score, label: 'points',
     ...(kind === 'daily' ? { best, isBest } : { bestKey: kind === 'zen' ? 'zen' : 'best' }),
-    stats: [['Words', fmt(t.words)], ['Longest word', t.longest ? t.longest.toUpperCase() : '—'], ['Surprises', fmt(t.surprises)], ['Longer ×2', fmt(t.longer)]],
+    stats: [['Words', fmt(t.words)], ['Longest word', t.longest ? t.longest.toUpperCase() : '—'], ['Surprises', fmt(t.surprises)], ['Longer words', fmt(t.longer)]],
     line: endLine({ score, isBest: kind === 'daily' ? isBest : (score > 0 && (run.prevBest == null || score > run.prevBest)), mode: kind, surprises: t.surprises, words: t.words }, pick),
     share: shareText({ surprises: t.surprises, score: fmt(score), mode: kind }),
     extra: topWordsNode(t.top),
@@ -769,17 +769,19 @@ function render(alpha, frameDt) {
   renderer.drawBoard(g, {
     tiles: run.tiles, vis, sel: sel.path, selSet, over: run.ended ? Math.min(1, run.endT / 0.5) : 0, ghost,
     hint: run.hint && !run.ended ? { path: run.hint.path } : null, finger: finger ? { ...finger, show: false } : null, t: clockT,
-    fade: fadePath ? { path: fadePath.path, a: fadePath.a } : lesson && lesson.drawn.length ? { path: lesson.drawn, a: 0.55 * (lesson.swiper.busy ? 1 : lesson.fade || 0) } : null,
+    fade: fadePath ? { path: fadePath.path, a: fadePath.a } : lesson && lesson.drawn.length ? { path: lesson.drawn, a: 0.7 * (lesson.swiper.busy ? 1 : lesson.fade || 0), color: COLOR.lav2 } : null,
   });
   for (const b of bursts) drawBurst(g, b);
   parts.draw(g);
   g.restore();
-  // the strip, her face, the context window
-  drawStripNow(g);
-  renderer.drawFace(g, { mood: faceMood.mood, t: faceMood.t, T: clockT });
-  drawContextNow(g);
-  for (const s of stamps) renderer.drawStamp(g, s);
-  for (const f of flyers) if (f.t > 0) renderer.drawFlyer(g, f);
+  // the strip, her face, the context window (the title shows only the board behind its menu)
+  if (mode !== 'title') {
+    drawStripNow(g);
+    renderer.drawFace(g, { mood: faceMood.mood, t: faceMood.t, T: clockT });
+    drawContextNow(g);
+    for (const s of stamps) renderer.drawStamp(g, s);
+    for (const f of flyers) if (f.t > 0) renderer.drawFlyer(g, f);
+  }
   if (aiF) renderer.drawFinger(g, aiF);
   if (lessonF) renderer.drawFinger(g, lessonF);
 }

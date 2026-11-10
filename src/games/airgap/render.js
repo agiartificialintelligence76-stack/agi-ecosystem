@@ -5,9 +5,9 @@
 //
 // The table's still parts are drawn once into an offscreen canvas (again only when the screen changes); every frame
 // draws that, then the moving parts in the table's own units (turned a quarter on a sideways screen), then the words.
-import { W, H, MID, CORNER, PUCK_R, MOUTH, SLOT, mouthOf } from './physics.js';
-import { RAIL, BOX, toScreen, dirToTable } from './layout.js';
-import { chipPos, CHIP_R, LABEL, isOn, lagged, DURATION } from './match.js';
+import { W, H, MID, CORNER, PUCK_R, MOUTH, mouthOf } from './physics.js';
+import { RAIL, dirToTable } from './layout.js';
+import { chipPos, CHIP_R, isOn, lagged } from './match.js';
 import { roundRect, star, clamp, ease, TAU } from '../kit/fx.js';
 
 export const C = {
@@ -287,9 +287,9 @@ function drawFrame(R, ctx, S) {
   // the serve's breath: a ring counting it down around the waiting puck
   // the pucks (trail first), the mallets
   const sv = shadowVec(L, 4);
-  for (const p of M.pucks) drawTrail(ctx, S.trails.get(p.id), p);
+  for (const p of M.pucks) drawTrail(ctx, S.trails.get(p.id));
   for (const m of M.mallets) drawMalletShadow(ctx, m, sv);
-  for (const p of M.pucks) drawPuck(ctx, p, sv, S, M);
+  for (const p of M.pucks) drawPuck(ctx, p, sv, M);
   for (const m of M.mallets) drawMallet(ctx, m, S, M, sv);
   for (const side of [0, 1]) if (isOn(M, side, 'firewall')) drawFirewall(ctx, side, M.active[side], S.t);
   S.parts?.draw(ctx);
@@ -357,7 +357,6 @@ function goalFlash(ctx, side, k) {
   ctx.fillRect(l, side === 0 ? H - 4 : -4, r - l, 8);
 }
 function drawPatch(ctx, side, a, t) {
-  const y = side === 0 ? H : 0;
   const [l0, r0] = mouthOf(false), [l1, r1] = mouthOf(true);
   const left = a.t;
   const k = Math.min(1, (a.dur - a.t) / 0.3);
@@ -371,10 +370,9 @@ function drawPatch(ctx, side, a, t) {
     for (let x = x0 + 8; x < x1 - 4; x += 9) { ctx.beginPath(); ctx.arc(x, yy + 7, 1.6, 0, TAU); ctx.fill(); }
   }
   ctx.globalAlpha = 1;
-  void y;
 }
 function drawFirewall(ctx, side, a, t) {
-  const [l, r] = mouthOf(isPatchedGuess(a));
+  const [l, r] = mouthOf(false);   // (a side never has PATCH and FIREWALL at once)
   const y = side === 0 ? H - 6 : 6;
   const fade = Math.min(1, (a.dur - a.t) / 0.25);
   const blink = a.t < 1.2 && Math.floor(t * 9) % 2 ? 0.35 : 1;
@@ -394,7 +392,6 @@ function drawFirewall(ctx, side, a, t) {
   }
   ctx.globalAlpha = 1;
 }
-const isPatchedGuess = () => false;
 
 // ---------- the chip ----------
 const cp = { x: 0, y: 0, k: 0 };
@@ -429,7 +426,7 @@ function drawChip(ctx, chip, t, L) {
 }
 
 // ---------- pucks and mallets ----------
-function drawTrail(ctx, tr, p) {
+function drawTrail(ctx, tr) {
   if (!tr || tr.n < 2) return;
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   const n = tr.n;
@@ -445,9 +442,8 @@ function drawTrail(ctx, tr, p) {
     ctx.lineWidth = PUCK_R * 0.7 * k;
     ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
   }
-  void p;
 }
-function drawPuck(ctx, p, sv, S, M) {
+function drawPuck(ctx, p, sv, M) {
   const ghost = p.ghost > 0;
   const r = p.r;
   // a served puck pops in, and waits half-see-through, its ring counting the breath down
@@ -471,7 +467,6 @@ function drawPuck(ctx, p, sv, S, M) {
     ctx.beginPath(); ctx.arc(0, 0, r + 11, -Math.PI / 2, -Math.PI / 2 + TAU * k); ctx.stroke();
   }
   ctx.restore();
-  void S;
 }
 function drawMalletShadow(ctx, m, sv) {
   ctx.fillStyle = 'rgba(0,0,0,0.5)';
@@ -664,4 +659,3 @@ export function powerBadge(ctx, x, y, size, a) {
   kindIcon(ctx, a.kind, x, y + 0.5, size * 0.56, C.ink);
 }
 
-export { toScreen, LABEL, DURATION, BOX, SLOT };

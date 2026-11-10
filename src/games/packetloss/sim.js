@@ -639,11 +639,14 @@ export function dropBits(S, n) {
   const M = S.maze;
   spots.push(M.receipt.y * W + M.receipt.x, M.repeater.y * W + M.repeater.x);
   const cand = [];
-  for (let i = 0; i < N; i++) {
-    const d = dist[i];
-    if (d < TUNE.dropNear) continue;
-    if (S.cell[i] !== PATH || S.bits[i] || taken.has(i) || spots.includes(i)) continue;
-    cand.push(i);
+  for (const nearest of [TUNE.dropNear, 1]) {
+    for (let i = 0; i < N; i++) {
+      const d = dist[i];
+      if (d < nearest || (nearest === 1 && d >= TUNE.dropNear)) continue;
+      if (S.cell[i] !== PATH || S.bits[i] || taken.has(i) || spots.includes(i)) continue;
+      cand.push(i);
+    }
+    if (cand.length >= n) break;     // (right next to the letter only when there's nowhere else)
   }
   // the nearest first (within TUNE.dropFar if there's room there, further out if not); then a seeded shuffle among
   // the nearest few so they spray around

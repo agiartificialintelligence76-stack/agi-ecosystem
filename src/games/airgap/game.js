@@ -13,9 +13,9 @@ import { keyboard } from '../kit/input.js';
 import { Particles, Shake, FloatText, rng, clamp } from '../kit/fx.js';
 import { DEMO, SEED, TOUCH, REDUCED, QUERY } from '../kit/env.js';
 import { W, H, MID, MALLET_MAX, FOLLOW, PUCK_MAX } from './physics.js';
-import { createMatch, stepMatch, LABEL, isOn, SERVE_Y } from './match.js';
+import { createMatch, stepMatch, LABEL, SERVE_Y } from './match.js';
 import { createBrain, think } from './ai.js';
-import { SETTINGS, TOP, readSave, recordMatch } from './ladder.js';
+import { SETTINGS, readSave, recordMatch } from './ladder.js';
 import { fitTable, toScreen, toTable, dirToTable, touchTarget, sideOfTouch } from './layout.js';
 import { createRenderer, banner, drawFace, powerBadge, C, SIDE_COL, KIND_COL } from './render.js';
 import { createSound, matchMusic } from './sound.js';
@@ -122,6 +122,7 @@ function layout() {
   pbadge = sideways ? [corner(W + 4, H - 40), corner(W + 4, 40)] : [corner(W - 36, H + 6), corner(W - 36, -6)];
   if (!sideways) { pbadge[0] = corner(W - 20, H + 4); pbadge[1] = corner(W - 20, -4); }
   if (sideways) { pbadge[0] = { x: L.left - 30, y: L.top + L.h - 40 }; pbadge[1] = { x: L.left + L.w + 30, y: L.top + L.h - 40 }; }
+  if (DEMO) { const rx = (L.left + L.w + vw) / 2; pbadge[1] = { x: rx, y: L.top + 50 }; pbadge[0] = { x: rx, y: L.top + L.h - 50 }; }
   const labels = mode === '2p' ? ['P1', 'P2'] : ['YOU', 'AGI-1'];
   R.prepare(L, view, labels, fontsReady);
 }
@@ -182,7 +183,6 @@ function toTitle() {
   save = readSave(shell.store.read());
   level = save.level;
   needLayout = true;
-  const S = SETTINGS[level];
   shell.title({
     logo: logo(),
     tagline: 'Air hockey date night. She won’t let you win.',
@@ -195,7 +195,6 @@ function toTitle() {
     extra: titleExtra(save, { onLadder: () => openLadder() }),
     best: null,
   });
-  void S;
 }
 function settingsLine() {
   const st = save.settings;
@@ -513,10 +512,9 @@ function tick(dt) {
   if (M.phase === 'over') {
     if (mode === 'vs' || mode === '2p') { if (!overShown) endMatch(); }
     else if (mode === 'demo') startDemo();
-    else if (mode === 'attract') toTitleAttractOnly();
+    else if (mode === 'attract') { D = createDemo(4242 + (visit() % 1000), { attract: true }); R.digits.forEach((d) => { d.v = -1; }); }
   }
 }
-function toTitleAttractOnly() { D = createDemo(4242 + (visit() % 1000), { attract: true }); R.digits.forEach((d) => { d.v = -1; }); }
 
 // the demo keeps to the page's clock (the preview's recording starts 5.7 s after the page opens)
 function demoCatchUp() {
@@ -526,7 +524,7 @@ function demoCatchUp() {
   while (D.M.t < page - DT && n < 240 && D.M.phase !== 'over') { tick(DT); n++; }
 }
 
-function trackTrails(dt) {
+function trackTrails() {
   const M = D.M;
   for (const id of trails.keys()) if (!M.pucks.some((p) => p.id === id)) trails.delete(id);
   for (const p of M.pucks) {
@@ -536,11 +534,9 @@ function trackTrails(dt) {
     q.x = p.x; q.y = p.y; q.v = Math.hypot(p.vx, p.vy);
     tr.i = (tr.i + 1) % tr.max; tr.n = Math.min(tr.max, tr.n + 1);
   }
-  void dt;
 }
 
 // ---------- drawing ----------
-let lastRender = 0;
 function render(alpha, frameDt) {
   const ctx = view.ctx;
   if (!ctx) return;
@@ -552,7 +548,7 @@ function render(alpha, frameDt) {
   const frozen = shell.state === 'pause';
   if (!frozen) {
     parts.update(dt); floats.update(dt); shake.update(dt);
-    trackTrails(dt);
+    trackTrails();
     for (const s of [0, 1]) { flash[s] = Math.max(0, flash[s] - dt * 1.6); squash[s] = Math.max(0, squash[s] - dt * 6); }
     for (let i = banners.length - 1; i >= 0; i--) {
       const b = banners[i];
@@ -583,7 +579,6 @@ function render(alpha, frameDt) {
   // the title: the attract match, quietly
   if (mode === 'attract') return;
   drawOverlay(ctx, upside);
-  lastRender = performance.now();
 }
 
 function drawOverlay(ctx, upside) {
@@ -666,4 +661,3 @@ if (QUERY.has('qa')) {
     serve: () => SERVE_Y,
   };
 }
-void isOn; void TOP; void lastRender; void sc; void dv;

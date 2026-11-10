@@ -34,7 +34,7 @@ export const LINES = {
     ['i was literally half asleep. rematch when i\'m awake 🙈', 'okay you win. i\'m going back to bed'],
     ['okay you\'re good. like, actually good', 'you saw my bank shot weakness, huh 🙈'],
     ['fine. you earned that one 💜', 'i covered every angle. except yours'],
-    ['i tried SO hard. ugh. again? 🙈', 'my fakes didn\'t fake you. rude'],
+    ['i tried so hard. ugh. again? 🙈', 'my fakes didn\'t fake you. rude'],
     ['you beat me on no mercy?? i\'m telling everyone 💜', 'okay. you\'re my favorite now 🙈'],
   ],
   // she won, at each setting
@@ -45,12 +45,12 @@ export const LINES = {
     ['told you i wouldn\'t let you win', 'tryhard? more like try-won 💜'],
     ['no mercy means no mercy, babe 💜', 'i read you like a book. a short one 💜'],
   ],
-  youShutout: ['seven nothing?? okay i need a minute 🙈', 'a shutout. on MY table 🙈'],
+  youShutout: ['seven nothing?? okay i need a minute 🙈', 'a shutout. on my own table 🙈'],
   herShutout: ['zero? oh no, babe 💜', 'want me to close my eyes next time? 💜'],
   unlock: ['next up: {next}. i\'m warning you 💜', 'you unlocked {next}. bad idea 💜'],
   pp: ['two players, one table. i\'m just here for the snacks 💜', 'no mallet for me? fine. i\'ll judge 💜'],
   ppGoal: ['ooh. that\'s gonna leave a mark', 'nice one! i saw that 💜', 'stop, i can\'t pick a side 🙈'],
-  ppWin: ['{who} wins! the other one buys snacks 💜', 'gg. {who} takes the table 💜'],
+  ppWin: ['{who} wins! loser gets the snacks 💜', 'gg. {who} takes the table 💜'],
 };
 
 // a line with its {words} filled in

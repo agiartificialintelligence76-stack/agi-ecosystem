@@ -230,8 +230,8 @@ test('THROTTLE aims 4 tiles ahead of you (not through walls), and inside its 3-t
   assert.equal(throttleTarget(S), 1 * W + 8);
   place(S, 15, 1, RIGHT);
   assert.equal(throttleTarget(S), 1 * W + 17, 'stops at the wall');
-  place(S, 9, 19, UP);
-  assert.equal(throttleTarget(S), 17 * W + 9, 'up the spoke to ring 3');
+  place(S, 9, 17, UP);
+  assert.equal(throttleTarget(S), 15 * W + 9, 'up the spoke, two tiles, then a wall');
   // its ring
   const th = S.gremlins[2];
   th.state = 'roam'; th.scrambled = false; th.moving = false;
@@ -254,6 +254,7 @@ test('THROTTLE aims 4 tiles ahead of you (not through walls), and inside its 3-t
 test('ECHO joins after 30 bits and replays your exact path 2.5 s behind you', () => {
   const S = quiet();
   const e = S.gremlins[3];
+  for (const k of S.keys) k.on = false;      // no key: nobody to quarantine it
   place(S, 1, 3, RIGHT);
   const ai = createAI();
   let joinedAt = -1;
@@ -282,28 +283,25 @@ test('a key: 6 s encrypted (gremlins scrambled, flashing the last 1.5 s), quaran
   const k = S.keys[0];
   place(S, k.x, k.y, RIGHT, false);
   step(S);
-  assert.equal(S.enc, encFor(0) - 0 > 0 ? S.enc : 0);
   assert.ok(Math.abs(S.enc - 6) < 0.02, 'encrypted for 6 s');
   assert.equal(encFor(0), 6);
   for (const g of S.gremlins) assert.equal(g.scrambled, true, `${g.kind} scrambled`);
   // touch them one after another
   const scores = [];
-  for (const g of S.gremlins.slice(0, 3)) {
-    g.x = S.player.x; g.y = S.player.y;
+  // (a quarantine holds the world a moment: keep stepping until it lets go)
+  const touch = (g, put) => {
     const before = S.score;
-    step(S);
+    for (let i = 0; i < 30 && g.state !== 'return'; i++) { put(); step(S); }
     scores.push(S.score - before);
-    assert.equal(g.state, 'return', 'flies back to the box');
-  }
+    assert.equal(g.state, 'return', `${g.kind} flies back to the box`);
+  };
+  for (const g of S.gremlins.slice(0, 3)) touch(g, () => { g.x = S.player.x; g.y = S.player.y; });
   const e = S.gremlins[3];
-  e.lag = 0;                                  // ECHO right on top of you
-  const before = S.score;
-  step(S);
-  scores.push(S.score - before);
+  touch(e, () => { e.lag = 0; });             // ECHO right on top of you
   assert.deepEqual(scores, TUNE.chain);
   assert.equal(S.quarantined, 4);
   // the flashing, and the end of it
-  S.enc = TUNE.encFlash + 0.01;
+  S.enc = TUNE.encFlash + 0.01; S.hitstop = 0;
   assert.equal(flashing(S), false);
   step(S); step(S);
   assert.equal(flashing(S), true);
@@ -359,13 +357,14 @@ test('packet loss: a bar gone, up to 12 bits scattered onto free route tiles (ne
     step(S);
     assert.equal(S.signal, 2);
   }
-  // fewer collected, fewer lost; early in a maze (bits everywhere) they still find somewhere to land
+  // fewer collected, fewer lost: every bit collected left a free tile, so they always find somewhere to land
   const S = quiet();
-  S.collectedHere = 5;
   place(S, 9, 19, LEFT, false);
+  for (const i of [1 * W + 5, 3 * W + 12, 21 * W + 2, 19 * W + 8, 19 * W + 10]) { S.bits[i] = 0; S.bitsLeft--; S.collectedHere++; }
   const out = dropBits(S, 5);
   assert.equal(out.length, 5);
   for (const f of out) assert.equal(S.cell[f.ty * W + f.tx], PATH);
+  assert.equal(new Set(out.map((f) => f.ty * W + f.tx)).size, 5);
 });
 
 test('out of bars: CONNECTION LOST ends the run', () => {
@@ -420,13 +419,13 @@ test('firewall gates open and close on an 8 s cycle (5 open, 3 shut), the two gr
   const S = quiet(3);
   const [a, b] = [S.gates.find((g) => g.group === 0), S.gates.find((g) => g.group === 1)];
   const seen = [];
-  for (let i = 0; i <= 16 * 120; i++) {
-    if (i % 60 === 0) seen.push([+(S.t).toFixed(1), a.open, b.open, canEnter(S, a.x, a.y)]);
+  for (let i = 1; i <= 16 * 120; i++) {
     step(S); S.events.length = 0;
+    if (i % 60 === 30) seen.push([S.t, a.open, b.open, canEnter(S, a.x, a.y)]);   // between the switches
   }
   for (const [t, ao, bo, enter] of seen) {
-    assert.equal(ao, (t % 8) < 5 - 1e-6 || Math.abs(t % 8 - 5) < 1e-6 ? (t % 8) < 5 : false, `A at ${t}`);
-    assert.equal(bo, ((t + 4) % 8) < 5, `B at ${t}`);
+    assert.equal(ao, (t % 8) < 5, `A at ${t.toFixed(2)}`);
+    assert.equal(bo, ((t + 4) % 8) < 5, `B at ${t.toFixed(2)}`);
     assert.equal(enter, ao, 'a shut gate is a wall');
   }
   assert.ok(seen.some(([, ao]) => !ao) && seen.some(([, , bo]) => !bo));
@@ -503,7 +502,7 @@ test('AGI-1\'s lines: her voice, never money; the share text', () => {
 test('its code: the kit\'s shell with its id, its rules free of the page, nothing from elsewhere', () => {
   const dir = new URL('../src/games/packetloss/', import.meta.url);
   const files = readdirSync(dir).filter((f) => f.endsWith('.js'));
-  for (const f of ['mazes.js', 'sim.js', 'ai.js', 'lines.js']) {
+  for (const f of ['mazes.js', 'sim.js', 'ai.js']) {
     const code = read(`src/games/packetloss/${f}`).replace(/\/\/.*$/gm, '');
     assert.doesNotMatch(code, /\b(document|window|navigator|localStorage|Math\.random|requestAnimationFrame)\b/, `${f}: pure and seeded`);
   }

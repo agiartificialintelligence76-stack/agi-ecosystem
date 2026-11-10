@@ -149,7 +149,12 @@ export function createRenderer() {
   //       ({ path, from }), hint ({ path, t }), finger ({ x, y, down }), t, glitchT, fade (a path fading out) }
   function drawBoard(g, st) {
     const cap = L.cap, d = L.depth, half = cap / 2, sel = st.selSet;
-    // the keys, top row first (a key falling into a row below never hides under it)
+    // the keys, top row first (a key falling into a row below never hides under it), inside the deck: new keys slide
+    // in from its top edge
+    const m = L.pitch * 0.12;
+    g.save();
+    roundRect(g, L.board.x - m, L.board.y - m, L.board.w + m * 2, L.board.h + m * 2 + L.depth, L.pitch * 0.28);
+    g.clip();
     for (let i = 0; i < SIZE; i++) {
       const tile = st.tiles[i];
       if (!tile) continue;
@@ -179,9 +184,10 @@ export function createRenderer() {
       }
       g.restore();
     }
+    g.restore();
     if (st.hint) drawHint(g, st);
     if (st.ghost) drawGhost(g, st);
-    if (st.fade) drawPath(g, st, st.fade.path, null, st.fade.a, true);
+    if (st.fade) drawFaded(g, st, st.fade.path, st.fade.a, st.fade.color);
     if (st.sel.length) drawPath(g, st, st.sel, st.finger && st.finger.down ? st.finger : null, 1, false);
     if (st.finger && st.finger.show) drawFinger(g, st.finger);
   }
@@ -226,6 +232,20 @@ export function createRenderer() {
       const c = centerOf(st, path[k]);
       g.drawImage(spr, c.x - L.cap / 2 - pad, c.y - L.depth * 0.7 + L.depth * 0.7 - L.cap / 2 - pad, spr.width / dpr, spr.height / dpr);
     }
+    g.restore();
+  }
+
+  // a path letting go (a non-word, the lesson's ghost): just its line, fading
+  function drawFaded(g, st, path, alpha, color = '#9c8fbf') {
+    if (path.length < 2 || alpha <= 0) return;
+    g.save();
+    g.globalAlpha = Math.min(1, alpha);
+    g.lineCap = 'round'; g.lineJoin = 'round';
+    const pts = path.map((i) => centerOf(st, i));
+    g.beginPath(); g.moveTo(pts[0].x, pts[0].y);
+    for (let k = 1; k < pts.length; k++) g.lineTo(pts[k].x, pts[k].y);
+    g.strokeStyle = COLOR.ink; g.lineWidth = L.pitch * 0.13 + 4; g.stroke();
+    g.strokeStyle = color; g.lineWidth = L.pitch * 0.13; g.stroke();
     g.restore();
   }
 
@@ -578,8 +598,9 @@ export function createRenderer() {
   function drawStamp(g, st) {
     const k = st.t / st.dur;
     if (k >= 1) return;
-    const sIn = ease.outBack(Math.min(1, st.t / 0.22), 2.2);
-    const a = k > 0.75 ? 1 - (k - 0.75) / 0.25 : 1;
+    const out = k > 0.78 ? (k - 0.78) / 0.22 : 0;
+    const sIn = ease.outBack(Math.min(1, st.t / 0.22), 2.2) * (1 + out * 0.25);
+    const a = 1 - out;
     const size = L.pitch * st.size;
     g.save();
     g.globalAlpha = a;
@@ -600,17 +621,22 @@ export function createRenderer() {
     const x = f.x0 + (f.x1 - f.x0) * e;
     const y = f.y0 + (f.y1 - f.y0) * e - Math.sin(Math.PI * e) * L.pitch * 0.8;
     const sc = k < 0.15 ? ease.outBack(k / 0.15) : 1 - 0.55 * e;
-    const text = f.text;
+    // the word in the display face, its points in the mono one (a clear +)
     const size = Math.round(L.pitch * 0.32);
     g.save();
     g.translate(x, y); g.scale(sc, sc);
     g.font = `900 ${size}px ${DISPLAY}`;
-    const tw = g.measureText(text).width;
-    const w = tw + size * 1.1, h = size * 1.6;
+    const ww = g.measureText(f.word).width;
+    g.font = `800 ${Math.round(size * 0.92)}px ${MONO}`;
+    const pw = g.measureText(f.pts).width;
+    const gap = size * 0.4;
+    const w = ww + gap + pw + size * 1.1, h = size * 1.6;
     roundRect(g, -w / 2, -h / 2 + 3, w, h, h / 2); g.fillStyle = COLOR.ink; g.fill();
     roundRect(g, -w / 2, -h / 2, w, h, h / 2); g.fillStyle = f.color; g.fill(); g.lineWidth = 2.5; g.strokeStyle = COLOR.ink; g.stroke();
-    g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillStyle = COLOR.ink;
-    g.fillText(text, 0, size * 0.06);
+    g.textAlign = 'left'; g.textBaseline = 'middle'; g.fillStyle = COLOR.ink;
+    const x0 = -w / 2 + size * 0.55;
+    g.font = `900 ${size}px ${DISPLAY}`; g.fillText(f.word, x0, size * 0.06);
+    g.font = `800 ${Math.round(size * 0.92)}px ${MONO}`; g.fillText(f.pts, x0 + ww + gap, size * 0.04);
     g.restore();
   }
 

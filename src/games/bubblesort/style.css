@@ -50,13 +50,15 @@
 .bs-record .bs-ico { width: 15px; height: 15px; }
 
 /* ---------- cards ---------- */
-.bs-card { width: min(560px, 100%); }
+.ak-card.bs-card { width: min(560px, 100%); }
 .bs-card .ak-card-title { margin-bottom: 12px; }
 .bs-total { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin: -6px 0 14px; font-size: 14.5px; color: var(--ak-ink2); }
 .bs-total b { font-family: var(--ak-mono); font-size: 16px; color: var(--ak-ink); }
 .bs-total .bs-ico { width: 18px; height: 18px; }
 .bs-total-hint { display: inline-flex; align-items: center; gap: 4px; }
-.bs-banks { display: grid; gap: 14px; }
+.bs-banks { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; }
+.bs-bank { min-width: 0; }
+.bs-tile { min-width: 0; }
 .bs-bank {
   --tone: #ff7ab9;
   padding: 10px 12px 12px; border-radius: 18px; background: color-mix(in srgb, var(--tone) 22%, #fffaf0);
@@ -118,14 +120,14 @@
 .bs-fail-left { margin: -6px 0 0; font-size: 15px; color: var(--ak-ink2); }
 /* a short, wide screen (a phone held sideways): the run on the left, what's next on the right */
 @media (max-height: 520px) and (min-width: 600px) {
-  .bs-done { width: min(760px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 22px; align-items: center; }
+  .ak-card.bs-done { width: min(760px, 100%); display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 22px; align-items: center; }
   .bs-done-main, .bs-done-side { display: block; min-width: 0; }
   .bs-done .ak-stats { grid-template-columns: 1fr 1fr 1fr; }
   .bs-done .ak-stat.is-wide { grid-column: auto; }
   .bs-done .ak-say { margin-top: 0; }
   .bs-bigstar .bs-ico { width: 44px; height: 44px; }
   .bs-bigstar:nth-child(2) .bs-ico { width: 54px; height: 54px; }
-  .bs-levels { width: min(720px, 100%); }
+  .ak-card.bs-levels { width: min(720px, 100%); }
   .bs-banks { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   .bs-tiles { gap: 5px; }
   .bs-tile { min-height: 44px; padding: 4px 1px; }
@@ -134,7 +136,7 @@
   .bs-bank-name { font-size: 12px; }
 }
 @media (min-width: 900px) and (min-height: 700px) {
-  .bs-levels { width: min(860px, 100%); }
+  .ak-card.bs-levels { width: min(860px, 100%); }
   .bs-banks { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }
 /* the title: Levels and Endless side by side */

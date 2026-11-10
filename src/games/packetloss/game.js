@@ -14,7 +14,7 @@ import { Particles, Shake, FloatText, clamp, approach, fmt, rgba, TAU } from '..
 import { DEMO, SEED, TOUCH, REDUCED, QUERY } from '../kit/env.js';
 import { MAZES, W, H, DX, DY } from './mazes.js';
 import { createSim, step, request, nextMaze, bfs, wrapX, STEP, TUNE, LEFT, UP, RIGHT, DOWN } from './sim.js';
-import { createAI, drive } from './ai.js';
+import { createAI, drive, think } from './ai.js';
 import { drawBackground, drawBoard, drawBanner, drawDemoHud, stickerText, mazeLayer } from './render.js';
 import { C, KIND_COLOR, KIND_NAME, envelope } from './art.js';
 import { createSfx, createMusic } from './sound.js';
@@ -256,7 +256,7 @@ function demoOpening(S) {
   put(S.gremlins[2], 7, 3, LEFT);     // THROTTLE cutting across below
   S.gremlins[1].chase = true; S.gremlins[1].modeT = 6;
   S.readyT = 99;                      // held until the clock says go
-  demoGoAt = 5.4;
+  demoGoAt = 5.6;
 }
 
 // the end of a run
@@ -693,6 +693,8 @@ function drawStick(ctx) {
 if (QUERY.has('qa')) {
   window.__pl = {
     get S() { return S; }, get mode() { return mode; }, get cam() { return cam; }, step, request, nextMaze,
+    // what AGI-1's own player would do now (for a scripted play-through that steers with real keys and swipes)
+    advice: (() => { const a = createAI(); return () => think(a, S); })(),
     play() { newRun(); },
     // jump to a maze and a state
     maze(n) { newRun(); S.events.length = 0; while (S.n < n) { nextMaze(S); } drain(); relayout(); },
