@@ -8,7 +8,7 @@ import { defineConfig } from 'vite';
 // AGI games (2026-10-19): agi1.app/games/rideemagi is the game's own page (rideemagi.html), like Vercel's rewrite, and
 // (2026-10-20) agi1.app/games/trenchingsimulator is TRENCHING SIMULATOR's (trenchingsimulator.html)
 // (2026-11-08) the ten games built on the arcade kit (src/games/kit/): agi1.app/games/<id> is <id>.html
-const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete'];
+const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'harvest', 'nightshift', 'switchyard', 'orbital', 'polarity', 'timeloop', 'deepdive', 'prism', 'botworks', 'drift'];
 const KIT_GAME = new RegExp(`^/games/(${KIT_GAMES.join('|')})/?$`);
 const STUDIO_HOST = /^studio\./i;
 const STUDIO_VIEW = /^\/(?!api\/|@|src\/|node_modules\/)(?:[^.]*)$/;

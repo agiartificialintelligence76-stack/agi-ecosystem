@@ -1,0 +1,32 @@
+export const SIZE=7;
+export const DIRECTIONS=[[1,0],[0,1],[-1,0],[0,-1]];
+export const TOOLS=[{id:'belt',name:'Belt',color:'#a6cfce'},{id:'press',name:'Press',color:'#ffd282'},{id:'paint',name:'Paint',color:'#ff9bc7'},{id:'charge',name:'Charge',color:'#a3a5ff'}];
+const specs=[
+ ['First little bot',[[0,3],[6,3]],['press'],[[2,2],[3,2],[4,2],[2,4],[3,4],[4,4]]],
+ ['Around the corner',[[0,5],[2,5],[2,1],[6,1]],['press','paint'],[[3,3],[4,3],[5,3],[4,5],[0,2]]],
+ ['Full of energy',[[0,1],[2,1],[2,5],[6,5]],['press','paint','charge'],[[4,1],[4,2],[4,3],[0,4]]],
+ ['The long way home',[[0,0],[5,0],[5,4],[1,4],[1,6],[6,6]],['press','paint'],[[2,2],[3,2],[3,3],[4,2],[3,5]]],
+ ['Small footprint',[[0,3],[1,3],[1,1],[5,1],[5,3],[6,3]],['press','paint','charge'],[[2,3],[3,3],[4,3],[3,0],[3,5]]],
+ ['Assembly valley',[[0,5],[1,5],[1,1],[3,1],[3,5],[5,5],[5,2],[6,2]],['press','paint','charge'],[[2,3],[4,3],[3,0],[0,2],[6,4]]],
+ ['Rose colored robots',[[0,1],[4,1],[4,3],[1,3],[1,5],[6,5]],['paint','press','charge'],[[2,0],[3,2],[3,4],[5,2],[5,3]]],
+ ['The switchback',[[0,0],[1,0],[1,5],[3,5],[3,1],[5,1],[5,6],[6,6]],['press','charge','paint'],[[2,2],[4,4],[0,3],[6,3]]],
+ ['Moonbeam circuit',[[0,3],[1,3],[1,0],[5,0],[5,5],[2,5],[2,6],[6,6]],['charge','paint','press'],[[3,2],[3,3],[4,3],[1,5],[0,1]]],
+ ['A factory of friends',[[0,6],[1,6],[1,1],[3,1],[3,4],[5,4],[5,0],[6,0]],['paint','charge','press'],[[2,3],[4,2],[4,5],[0,3],[6,3]]],
+];
+function route(points){const out=[points[0]];for(let i=1;i<points.length;i++){let[x,y]=out.at(-1);const[tx,ty]=points[i];while(x!==tx||y!==ty){x+=Math.sign(tx-x);y+=Math.sign(ty-y);out.push([x,y]);}}return out;}
+export const LEVELS=specs.map(([name,points,recipe,blocks],id)=>{const path=route(points),source=path[0],goal=path.at(-1),solution={};for(let i=1;i<path.length-1;i++){const[x,y]=path[i],[nx,ny]=path[i+1];solution[`${x},${y}`]={type:'belt',dir:DIRECTIONS.findIndex(([dx,dy])=>dx===nx-x&&dy===ny-y)};}recipe.forEach((type,n)=>{const at=Math.max(1,Math.min(path.length-2,Math.floor((n+1)*(path.length-1)/(recipe.length+1))));solution[path[at].join(',')].type=type;});return{id,name,source,goal,sourceDir:DIRECTIONS.findIndex(([dx,dy])=>dx===path[1][0]-source[0]&&dy===path[1][1]-source[1]),recipe,blocks,solution,goalCount:4+Math.floor(id/3),budget:Object.keys(solution).length+5};});
+export const key=(x,y)=>`${x},${y}`;
+export function createFactory(level=0){const def=LEVELS[Math.max(0,Math.min(LEVELS.length-1,level|0))];return{level:def.id,def,board:{},parts:[],phase:'edit',delivered:0,rejected:0,age:0,spawnIn:0,nextId:1,hints:0,events:[],message:'Build a route from IN to OUT.'};}
+export function canEdit(s,x,y){return Number.isInteger(x)&&Number.isInteger(y)&&x>=0&&y>=0&&x<SIZE&&y<SIZE&&!s.def.blocks.some(p=>p[0]===x&&p[1]===y)&&key(x,y)!==s.def.source.join(',')&&key(x,y)!==s.def.goal.join(',');}
+export function place(s,x,y,type='belt',dir=0){if(s.phase!=='edit'||!canEdit(s,x,y))return false;const k=key(x,y);if(type==='erase'){delete s.board[k];return true;}if(!TOOLS.some(t=>t.id===type)||!Number.isInteger(dir))return false;if(!s.board[k]&&Object.keys(s.board).length>=s.def.budget){s.message='No more floor pieces. Reuse a shorter route.';return false;}if(type!=='belt'&&(!s.def.recipe.includes(type)||Object.entries(s.board).some(([other,c])=>other!==k&&c.type===type))){s.message='One of each required machine. Move the existing one.';return false;}s.board[k]={type,dir:((dir%4)+4)%4};s.message='Ready when you are.';return true;}
+export function restoreBoard(s,data){if(!data||typeof data!=='object')return;for(const [k,v]of Object.entries(data)){const[x,y]=k.split(',').map(Number);if(v&&typeof v==='object')place(s,x,y,v.type,v.dir);}}
+export function hint(s){if(s.phase!=='edit')return false;for(const[k,v]of Object.entries(s.def.solution)){const c=s.board[k];if(!c||c.type!==v.type||c.dir!==v.dir){if(v.type!=='belt')for(const[old,o]of Object.entries(s.board))if(old!==k&&o.type===v.type)delete s.board[old];const[x,y]=k.split(',').map(Number);if(!place(s,x,y,v.type,v.dir))return false;s.hints++;s.events.push({type:'hint',x,y});s.message='A little nudge. Follow the arrow.';return true;}}s.message='Your blueprint is ready. Start the line!';return false;}
+export function run(s){if(s.phase==='running')return false;s.phase='running';s.parts=[];s.delivered=0;s.rejected=0;s.age=0;s.spawnIn=.1;s.message='Assembly line running';return true;}
+export function stop(s){s.phase='edit';s.parts=[];s.message='Adjust the blueprint, then run again.';}
+export function step(s,dt){if(s.phase!=='running')return;dt=Math.max(0,Math.min(.1,dt));s.age+=dt;s.spawnIn-=dt;if(s.spawnIn<=0&&s.parts.length<14){s.parts.push({id:s.nextId++,x:s.def.source[0],y:s.def.source[1],next:null,p:0,stages:[],steps:0,dead:false,wait:0});s.spawnIn=1.8;}
+ for(const p of s.parts){if(p.dead)continue;if(!p.next){const cell=key(p.x,p.y)===s.def.source.join(',')?{type:'belt',dir:s.def.sourceDir}:s.board[key(p.x,p.y)];if(!cell){p.wait+=dt;if(p.wait>1.1){p.dead=true;s.rejected++;s.events.push({type:'lost',x:p.x,y:p.y});s.message='A gap in the line. Stop and connect it.';}continue;}const[dx,dy]=DIRECTIONS[cell.dir];if(cell.type!=='belt'){p.wait+=dt;if(p.wait<.4)continue;p.stages.push(cell.type);s.events.push({type:'process',x:p.x,y:p.y});}p.next={x:p.x+dx,y:p.y+dy};p.p=0;p.wait=0;}
+ p.p+=dt/.58;if(p.p>=1){p.x=p.next.x;p.y=p.next.y;p.next=null;p.p=0;p.steps++;if(key(p.x,p.y)===s.def.goal.join(',')){p.dead=true;if(p.stages.join('|')===s.def.recipe.join('|')){s.delivered++;s.events.push({type:'delivered',x:p.x,y:p.y});s.message='Another little friend, ready!';}else{s.rejected++;s.events.push({type:'wrong',x:p.x,y:p.y});s.message='Machine order matters. Read the recipe above.';}}else if(p.x<0||p.x>=SIZE||p.y<0||p.y>=SIZE||s.def.blocks.some(([x,y])=>x===p.x&&y===p.y)||p.steps>70){p.dead=true;s.rejected++;s.events.push({type:'lost',x:p.x,y:p.y});s.message='The route leaves the floor or loops forever.';}}}
+ s.parts=s.parts.filter(p=>!p.dead);if(s.delivered>=s.def.goalCount){s.phase='won';s.message='Order complete!';}else if(s.rejected>=3){s.phase='failed';s.message='Three rejects. Adjust your blueprint and try again.';}
+}
+export function rating(s){return Math.max(1,3-(s.hints?1:0)-(Object.keys(s.board).length>Object.keys(s.def.solution).length?1:0));}
+export function score(s){return s.delivered*150+rating(s)*300+Math.max(0,Math.round(500-s.age*3));}

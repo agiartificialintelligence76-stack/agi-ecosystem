@@ -39,6 +39,16 @@ export const GAMES = {
   cookies: { name: "ACCEPT ALL COOKIES", path: '/games/cookies', genre: 'Puzzle', kit: true },
   packetloss: { name: "PACKET LOSS", path: '/games/packetloss', genre: 'Arcade', kit: true },
   autocomplete: { name: "AUTOCOMPLETE", path: '/games/autocomplete', genre: 'Puzzle', kit: true },
+  harvest: { name: "HARVEST EXCHANGE", path: '/games/harvest', genre: 'Simulation', kit: true },
+  nightshift: { name: "NIGHT SHIFT", path: '/games/nightshift', genre: 'Simulation', kit: true },
+  switchyard: { name: "SWITCHYARD", path: '/games/switchyard', genre: 'Puzzle', kit: true },
+  orbital: { name: "ORBITAL", path: '/games/orbital', genre: 'Arcade', kit: true },
+  polarity: { name: "POLARITY", path: '/games/polarity', genre: 'Arcade', kit: true },
+  timeloop: { name: "TIME LOOP", path: '/games/timeloop', genre: 'Puzzle', kit: true },
+  deepdive: { name: "DEEP DIVE", path: '/games/deepdive', genre: 'Action', kit: true },
+  prism: { name: "PRISM", path: '/games/prism', genre: 'Puzzle', kit: true },
+  botworks: { name: "BOTWORKS", path: '/games/botworks', genre: 'Simulation', kit: true },
+  drift: { name: "AFTERDRIFT", path: '/games/drift', genre: 'Racing', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

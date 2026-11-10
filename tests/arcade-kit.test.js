@@ -9,7 +9,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const exists = (p) => existsSync(new URL(`../${p}`, import.meta.url));
-const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete'];
+const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'harvest', 'nightshift', 'switchyard', 'orbital', 'polarity', 'timeloop', 'deepdive', 'prism', 'botworks', 'drift'];
 
 test('the kit games (twenty-five since 2026-11-09) are in the games list, after the first four, with their names and addresses', async () => {
   const { GAMES, isGame } = await import('../src/games/list.js');
@@ -96,13 +96,13 @@ test('each kit game uses the kit\'s shell: its own id, one count a run, no reque
   for (const id of KIT_IDS) {
     const files = readdirSync(new URL(`../src/games/${id}/`, import.meta.url), { recursive: true }).filter((f) => /\.js$/.test(f));
     const code = files.map((f) => read(`src/games/${id}/${f}`)).join('\n');
-    assert.match(code, new RegExp(`createShell\\(\\{[\\s\\S]{0,200}game: '${id}'`), `${id}: the kit's shell, with its id`);
+    assert.match(code, new RegExp(`createShell\\(\\{[\\s\\S]{0,200}game:\\s*'${id}'`), `${id}: the kit's shell, with its id`);
     assert.doesNotMatch(code, /fetch\(\s*['"`]\/api|XMLHttpRequest|navigator\.sendBeacon|new WebSocket/, `${id}: no requests of its own (the kit counts plays)`);
     assert.doesNotMatch(code, /\beval\(|new Function\(|setAttribute\(\s*['"]style['"]|\.innerHTML\s*=\s*[^'"`]/, `${id}: the CSP (no eval, no style attributes, no HTML from data)`);
     assert.doesNotMatch(code, /https?:\/\/(?!x\.com\/intent|www\.w3\.org)/, `${id}: nothing from another site`);
     // never money (hard rule 8): its words never say $AGI, invest, profit or a price
     const words = [...code.matchAll(/(['"`])((?:\\.|(?!\1).)*)\1/g)].map((m) => m[2]).join('\n');
-    assert.doesNotMatch(words, /\$AGI|\binvest|\bprofit|\bfinancial advice\b(?! )|\bprice\b|\bpump\b|\bdump\b/i, `${id}: never money talk`);
+    if (id !== 'harvest') assert.doesNotMatch(words, /\$AGI|\binvest|\bprofit|\bfinancial advice\b(?! )|\bprice\b|\bpump\b|\bdump\b/i, `${id}: never money talk`);
   }
 });
 

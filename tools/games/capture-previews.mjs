@@ -11,9 +11,9 @@
 // (`window.__auto`); SKYBREAK with its QA input replay (`?qa`); VLAD RUNNER 2049 and TRENCHING SIMULATOR with a few
 // scripted presses. Needs a running site (`npx vite`), Playwright's Chromium and ffmpeg.
 import { createRequire } from 'node:module';
-import { mkdirSync, rmSync, readdirSync, statSync, existsSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, readdirSync, statSync, existsSync } from 'node:fs';
 import { execFileSync } from 'node:child_process';
-import { join } from 'node:path';
+import { join, resolve, dirname } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const require = createRequire(import.meta.url);
@@ -28,6 +28,7 @@ const only = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWi
 
 const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } = {}) => ({ url: `/games/${id}?demo&seed=${seed}`, warm, dur, poster, shotTimeout: 180000, ...more });
 export const RECIPES = {
+  harvest: kit('harvest'), nightshift: kit('nightshift'), switchyard: kit('switchyard'), orbital: kit('orbital'), polarity: kit('polarity'), timeloop: kit('timeloop'), deepdive: kit('deepdive'), prism: kit('prism'), botworks: kit('botworks'), drift: kit('drift'),
   mergeagi: kit('mergeagi'), blockchain: kit('blockchain'), heartbeat: kit('heartbeat'), scamslayer: kit('scamslayer'),
   // (its pixel art is small on a wide field: drawn twice as fine and cropped around her, so the bots read on a small tile)
   lastmodel: kit('lastmodel', 7, { dpr: 2, crop: [110, 80, 260, 260] }), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),
@@ -93,8 +94,8 @@ async function press(page, key) { await page.keyboard.down(key); await page.cloc
 async function click(page, sel) { try { await page.click(sel, { force: true, timeout: 3000 }); } catch (e) { console.log(`  (no ${sel})`); } }
 
 async function capture(browser, id, r) {
-  const dir = join(tmpdir(), `agi-preview-${id}`);
-  rmSync(dir, { recursive: true, force: true });
+  const tempRoot = resolve(tmpdir());
+  const dir = mkdtempSync(join(tempRoot, `agi-preview-${id}-`));
   mkdirSync(dir, { recursive: true });
   // a game made for a wide screen is recorded wide, then cropped square around its action (`vp`, `crop` in CSS pixels)
   const [vw, vh] = r.vp || [SIZE, SIZE];
@@ -145,6 +146,7 @@ async function capture(browser, id, r) {
   const pick = join(dir, `f${String(Math.min(n - 1, Math.round(n * r.poster))).padStart(4, '0')}.jpg`);
   execFileSync(ffmpeg, ['-y', '-loglevel', 'error', '-i', pick, '-vf', `${cropOf(r)}scale=600:600:flags=lanczos`, '-quality', '82', webp]);
   console.log(`  → ${mp4} (${Math.round(statSync(mp4).size / 1024)} KB), ${webp} (${Math.round(statSync(webp).size / 1024)} KB)`);
+  if (dirname(resolve(dir)) !== tempRoot) throw new Error('Preview temporary folder escaped its parent');
   rmSync(dir, { recursive: true, force: true });
   return errors;
 }

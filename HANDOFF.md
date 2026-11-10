@@ -1,5 +1,13 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Ten more games and the community farm — 2026-11-10
+
+Added HARVEST EXCHANGE, NIGHT SHIFT, SWITCHYARD, ORBITAL, POLARITY, TIME LOOP, DEEP DIVE, PRISM, BOTWORKS and AFTERDRIFT.
+The arcade has 39 games. HARVEST EXCHANGE follows the owner's explicit choice of a fictional stock-market farming sim:
+grow crops, sell produce, trade fictional crop shares, fulfil deliveries and upgrade the farm. All ten include menus,
+saved progress, touch/keyboard controls, gameplay previews and share cards. No new service or configuration is needed.
+Full implementation and validation notes: [ten-more-games-2026-11-10.md](handoff/ten-more-games-2026-11-10.md).
+
 ## Five-game expansion completed — 2026-11-10
 
 Recovered `arcade-five-more` at `22eabdaa` and finished on `codex/finish-five-games`, based on production `a8153a76`.
