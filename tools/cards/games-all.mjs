@@ -11,13 +11,13 @@ import { SHELF } from '../../src/games/shelf.js';
 import { GAMES } from '../../src/games/list.js';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 // the wall: 12 tiles (3 rows of 4), the featured order; the games' names (a long one shortened)
 const SHORT = { trenchingsimulator: 'TRENCHING SIM', lastmodel: 'LAST MODEL', vladrunner2049: 'VLAD RUNNER', gradient: 'GRADIENT', notarobot: 'NOT A ROBOT', cookies: 'COOKIES' };
 const shown = SHELF.slice(0, 12).map((g) => `${g.id}:${(SHORT[g.id] || GAMES[g.id].name).replace(/[,:]/g, '')}`);
 const page = new URL('games-all-card.html', import.meta.url);
 page.search = `?games=${encodeURIComponent(shown.join(','))}&count=${SHELF.length}`;
-const browser = await chromium.launch();
+const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || undefined });
 const tab = await browser.newPage({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 await tab.goto(page.href, { waitUntil: 'load' });
 await tab.evaluate(() => Promise.all([document.fonts.ready, ...[...document.images].map((i) => i.decode().catch(() => {}))]));

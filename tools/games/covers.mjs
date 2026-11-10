@@ -8,12 +8,13 @@ import { createRequire } from 'node:module';
 import { mkdirSync, readFileSync, writeFileSync, rmSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { tmpdir } from 'node:os';
+import { pathToFileURL } from 'node:url';
 import sharp from 'sharp';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const ROOT = resolve('.');
-const url = (p) => `file://${join(ROOT, p)}`;
+const url = (p) => pathToFileURL(join(ROOT, p)).href;
 
 // each game: its name's lines (the wide letters), its colors (the background, the frame's shadow), its line
 export const COVERS = {
@@ -84,7 +85,7 @@ p.line { margin-top: 26px; width: 540px; font-family: S; font-style: italic; fon
 }
 
 const ids = process.argv.slice(2).length ? process.argv.slice(2) : Object.keys(COVERS);
-const browser = await chromium.launch();
+const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || undefined });
 const ctx = await browser.newContext({ viewport: { width: 1200, height: 630 }, deviceScaleFactor: 1 });
 const tmp = join(tmpdir(), 'agi-covers');
 mkdirSync(tmp, { recursive: true });
@@ -95,7 +96,7 @@ for (const id of ids) {
   const file = join(tmp, `${id}.html`);
   writeFileSync(file, page(id, c));
   const p = await ctx.newPage();
-  await p.goto(`file://${file}`, { waitUntil: 'load' });
+  await p.goto(pathToFileURL(file).href, { waitUntil: 'load' });
   await p.evaluate(() => document.fonts.ready);
   // a long name shrinks until it clears the gameplay frame (its letters' outline included)
   await p.evaluate(() => {

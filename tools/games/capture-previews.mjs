@@ -17,7 +17,8 @@ import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const require = createRequire(import.meta.url);
-const { chromium } = require('playwright');
+const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
+const ffmpeg = process.env.FFMPEG_BIN || 'ffmpeg';
 const args = process.argv.slice(2);
 const opt = (name, def) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args[i + 1] : def; };
 const BASE = opt('base', 'http://127.0.0.1:5173');
@@ -138,17 +139,17 @@ async function capture(browser, id, r) {
   console.log(`  ${n} frames in ${((Date.now() - t0) / 1000).toFixed(1)} s${errors.length ? ` · page errors: ${errors.slice(0, 3).join(' | ')}` : ''}`);
   mkdirSync(OUT, { recursive: true });
   const mp4 = join(OUT, `${id}.mp4`), webp = join(OUT, `${id}.webp`);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(dir, 'f%04d.jpg'), '-r', String(FPS),
+  execFileSync(ffmpeg, ['-y', '-loglevel', 'error', '-framerate', String(fps), '-i', join(dir, 'f%04d.jpg'), '-r', String(FPS),
     '-vf', `${cropOf(r)}scale=${SIZE}:${SIZE}:flags=lanczos,format=yuv420p`, '-c:v', 'libx264', '-profile:v', 'high', '-level', '4.0',
     '-preset', 'slow', '-crf', '27', '-g', String(FPS * 2), '-movflags', '+faststart', '-an', mp4]);
   const pick = join(dir, `f${String(Math.min(n - 1, Math.round(n * r.poster))).padStart(4, '0')}.jpg`);
-  execFileSync('ffmpeg', ['-y', '-loglevel', 'error', '-i', pick, '-vf', `${cropOf(r)}scale=600:600:flags=lanczos`, '-quality', '82', webp]);
+  execFileSync(ffmpeg, ['-y', '-loglevel', 'error', '-i', pick, '-vf', `${cropOf(r)}scale=600:600:flags=lanczos`, '-quality', '82', webp]);
   console.log(`  → ${mp4} (${Math.round(statSync(mp4).size / 1024)} KB), ${webp} (${Math.round(statSync(webp).size / 1024)} KB)`);
   rmSync(dir, { recursive: true, force: true });
   return errors;
 }
 
-const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio'] });
+const browser = await chromium.launch({ executablePath: process.env.CHROME_BIN || undefined, args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--mute-audio'] });
 const ids = only.length ? only : Object.keys(RECIPES);
 const problems = {};
 for (const id of ids) {

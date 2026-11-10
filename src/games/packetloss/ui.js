@@ -4,7 +4,7 @@
 // stamps. DOM methods only (the CSP: no HTML from strings, no style attributes).
 import { el } from '../kit/shell.js';
 
-const PORTRAIT = '/images/agi1-portrait.webp';
+const PORTRAIT = '/images/agi1-portrait-2d.webp';
 const SVG = 'http://www.w3.org/2000/svg';
 function svg(viewBox, parts, cls = '') {
   const s = document.createElementNS(SVG, 'svg');

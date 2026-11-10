@@ -1,5 +1,10 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Five-game expansion finished (2026-11-10):** BUBBLE SORT, AIR GAP, ACCEPT ALL COOKIES, PACKET LOSS and AUTOCOMPLETE,
+> recovered from `arcade-five-more` at `22eabdaa`, completed on `codex/finish-five-games`. All five have gameplay loops,
+> stills and share cards; the arcade has 29 games. Phone menu fixes for AIR GAP and COOKIES, a COOKIES level-picker text
+> fix, and PACKET LOSS's 2D portrait are included. No new configuration or database setup. See HANDOFF.md's five-game entry.
+
 > **SKYBREAK's game menu and touch controls (2026-11-08, afternoon):** the owner: "can u change the menu interface of the
 > game skybreak it really looks like a website and optimized the mobile controls of that game skybreak. after ur done publish
 > it in production". Its title screen is a game's now: AGI-1 on the helipad turned toward you (beside the menu, or between

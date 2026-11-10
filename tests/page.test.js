@@ -290,7 +290,7 @@ const SOON = { stake: 'Stake $AGI', giveaway: 'Giveaways' };
 const readPage = (name) => readFileSync(new URL(`../${name}`, import.meta.url), 'utf8');
 const between = (s, start, end) => { const from = s.indexOf(start); assert.ok(from >= 0, `has ${start}`); return s.slice(from, s.indexOf(end, from) + end.length); };
 const mainOf = (page) => between(page, '<main id="main">', '</main>');
-const textOf = (h) => h.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&amp;/g, '&').replace(/\s+/g, ' ');
+const textOf = (h) => h.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<[^>]+>/g, ' ').replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16))).replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n))).replace(/&amp;/g, '&').replace(/\s+/g, ' ');
 
 // a stylesheet's rules, with the at-rule each is in (a @keyframes' own steps left out)
 function cssRules(source) {
@@ -981,7 +981,8 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), a compact picker of 
   for (const [i, m] of choices.entries()) {
     assert.equal(Boolean(m[2]), i === 0, 'the game showing marked');
     assert.ok(m[3].startsWith(`<img class="gm-choose-img" src="/images/games/${m[1]}.webp" alt="" width="480" height="480" loading="lazy" decoding="async" />`), `${m[1]}: its picture, asked for only once the picker opens`);
-    assert.ok(m[3].includes(`<span class="gm-choose-name">${GAMES[m[1]].name}</span>`), `${m[1]}: its name`);
+    const choiceName = m[3].match(/<span class="gm-choose-name">([^<]*)<\/span>/)?.[1];
+    assert.equal(textOf(choiceName || '').trim(), GAMES[m[1]].name, `${m[1]}: its displayed name`);
     assert.ok(m[3].includes('<span class="gm-choose-stats" data-gm-choose-stats>…</span>'), `${m[1]}: its numbers, as they come`);
     assert.ok(m[3].includes('<span class="gm-choose-now" aria-hidden="true">Showing</span>'), `${m[1]}: "Showing" for the eye (aria-current says it)`);
   }

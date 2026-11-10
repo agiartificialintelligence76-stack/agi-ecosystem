@@ -95,7 +95,7 @@ export function levelSelect({ sites, levels, prog, open, siteOpenFn, starsOf, si
       el('span', 'ck-url', el('i', null, 'cookies.agi1.app/'), s.key),
       el('span', 'ck-site-stars', ICON.pixel(true), `${siteStars(sid)}/30`));
     const lock = isOpen ? null : el('div', 'ck-site-lock', ICON.lock(), el('b', null, `Find ${s.unlock} pixels to open`), el('span', null, `You have ${total}`));
-    body.replaceChildren(head, el('div', `ck-tiles${isOpen ? '' : ' is-shut'}`, tiles), lock);
+    body.replaceChildren(head, el('div', `ck-tiles${isOpen ? '' : ' is-shut'}`, tiles), ...(lock ? [lock] : []));
     onSite?.(sid);
   };
   for (const s of sites) {

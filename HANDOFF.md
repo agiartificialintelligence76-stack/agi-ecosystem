@@ -1,5 +1,21 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Five-game expansion completed — 2026-11-10
+
+Recovered `arcade-five-more` at `22eabdaa` and finished on `codex/finish-five-games`, based on production `a8153a76`.
+The arcade now has 29 games, with BUBBLE SORT, AIR GAP, ACCEPT ALL COOKIES, PACKET LOSS and AUTOCOMPLETE marked New.
+Each has a recorded six-second gameplay preview, a tile still, and a share card; the arcade share image was refreshed.
+
+Final fixes: AIR GAP's phone title fits; COOKIES' level picker no longer prints "null" and its sideways-phone title keeps
+all controls visible; PACKET LOSS uses AGI-1's 2D portrait. The picker test compares decoded displayed names so HTML
+apostrophe entities are accepted. Capture tools support optional PLAYWRIGHT_MODULE, CHROME_BIN and FFMPEG_BIN settings
+and correct Windows file URLs.
+
+Validation: all five game suites passed (104 tests); COOKIES' 30 levels and all 90 stars verified, including level 3-7's
+moving-obstacle timing; real pointer/touch interactions checked at desktop and portrait/landscape phone sizes. Full site
+release checks run on Node 24 with UTC and fake deployment settings. No new service, database change or setting is needed.
+The original Desktop checkout was left intact; the isolated release is in `output/games-five-ready`.
+
 ## SKYBREAK's game menu and touch controls — 2026-11-08, afternoon
 
 The owner: "can u change the menu interface of the game skybreak it really looks like a website and optimized the mobile
