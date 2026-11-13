@@ -45,6 +45,8 @@ export const COVERS = {
   cookies: { lines: ['ACCEPT ALL', 'COOKIES'], bg: '#1e1240', bg2: '#4a2b8a', accent: '#ffc933', line: 'Cut the ropes. Feed her cat. Accept all cookies.', tag: 'Physics puzzle', small: true },
   packetloss: { lines: ['PACKET', 'LOSS'], bg: '#0b1022', bg2: '#1d2f6e', accent: '#ff4da6', line: 'Deliver every bit. Dodge the lag.', tag: 'Maze chase' },
   autocomplete: { lines: ['AUTO', 'COMPLETE'], bg: '#15102c', bg2: '#3f2a7a', accent: '#ffc933', line: 'She predicts your next word. Surprise her.', tag: 'Word game', small: true },
+  // (2026-11-13)
+  overthinking: { lines: ['OVER', 'THINKING'], bg: '#170b3d', bg2: '#5a2ca0', accent: '#ffc933', line: "She can't sleep. Loop her thoughts before they spiral.", tag: 'Lasso arcade', small: true },
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');

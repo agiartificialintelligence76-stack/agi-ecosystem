@@ -973,6 +973,9 @@
   [data-skin='pop'] .gm-tile-link { border-width: 2px; border-radius: 13px; box-shadow: 0 4px 0 -1px var(--shade); }
   [data-skin='pop'] .gm-tile-media { border-bottom-width: 2px; }
   [data-skin='pop'] .gm-tile-badge.is-new, [data-skin='pop'] .gm-tile-badge.is-play { border-width: 1.5px; }
+  /* (2026-11-13) narrower letters on these small tiles, so a one-word name (OVERTHINKING, AUTOCOMPLETE, HALLUCINATION,
+     SINGULARITY) stays whole on its line instead of breaking in the middle */
+  [data-skin='pop'] .gm-tile-name { font-stretch: 84%; letter-spacing: -0.015em; }
   [data-skin='pop'] .gm-choose { border-width: 3px 0 0; border-radius: 24px 24px 0 0; box-shadow: none; }
   [data-skin='pop'][data-theme='dark'] .gm-choose { border-width: 2px 0 0; box-shadow: none; }
   [data-skin='pop'] .gm-game-img { border-width: 2px; box-shadow: 3px 3px 0 var(--shade); }

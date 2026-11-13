@@ -37,6 +37,8 @@ export const RECIPES = {
   synapse: kit('synapse'), overclock: kit('overclock'), beattheagi: kit('beattheagi', 7, { poster: 0.1 }), hallucination: kit('hallucination'), guardrails: kit('guardrails'),
   // (2026-11-09) five more
   bubblesort: kit('bubblesort'), airgap: kit('airgap'), cookies: kit('cookies'), packetloss: kit('packetloss'), autocomplete: kit('autocomplete'),
+  // (2026-11-13) OVERTHINKING: its own player draws the loops (its still: a loop about to close round five of a kind)
+  overthinking: kit('overthinking', 7, { poster: 0.86 }),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],

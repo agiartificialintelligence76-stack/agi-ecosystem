@@ -329,6 +329,16 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  overthinking: Object.freeze({
+    what: '"OVERTHINKING", an arcade game where you draw loops of light with a finger around the cute cartoon '
+      + 'thoughts (hearts, stars, moons, cookies, cats, music notes) of an anime girl, AGI-1, who cannot sleep, to '
+      + 'clear them before her mind fills up and she "spirals" (its name and words are jokes about lying awake '
+      + 'overthinking at 3 a.m., and "context" is a joke about AI memory): talk about the loops, the ribbon, her '
+      + 'thoughts, cringe memories, combos, the nights of the week, sunrise, her journal, stickers and losing is '
+      + 'part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

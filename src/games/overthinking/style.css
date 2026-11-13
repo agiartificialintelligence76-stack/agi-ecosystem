@@ -1,0 +1,218 @@
+/* OVERTHINKING: its own page furniture, on top of the arcade kit's stickers (../kit/kit.css). Every rule an `ot-` class.
+   The playfield is one canvas; under it sits AGI-1's panel (her face, "thinking…", her context, what she says). */
+.ak[data-ak-game="overthinking"] { --ak-bg: #150b38; }
+
+.ot-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ak[data-ak-state="play"] .ot-canvas { cursor: crosshair; }
+@media (hover: hover) and (pointer: fine) { .ak[data-ak-state="play"] .ot-canvas { cursor: none; } }
+/* the notch and the home bar, measured by the page's layout */
+.ot-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: var(--ak-safe-t) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l); }
+
+/* ---------- her panel ---------- */
+.ot-her {
+  position: absolute; z-index: 2; left: calc(10px + var(--ak-safe-l)); right: calc(10px + var(--ak-safe-r)); bottom: calc(10px + var(--ak-safe-b));
+  max-width: 620px; margin-inline: auto; display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 10px;
+  padding: 7px 12px 7px 7px; border-radius: 22px; background: var(--ak-paper); color: var(--ak-ink);
+  border: 3px solid var(--ak-ink); box-shadow: 0 5px 0 var(--ak-ink); pointer-events: none;
+  -webkit-user-select: none; user-select: none;
+}
+.ot-her[hidden] { display: none; }
+.ot-ava { position: relative; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; background: var(--ak-lav); border: 3px solid var(--ak-ink); }
+.ot-ava img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 20%; }
+.ot-her-main { display: grid; gap: 6px; min-width: 0; }
+.ot-her-row { display: flex; align-items: center; gap: 8px; min-width: 0; min-height: 24px; }
+.ot-name { font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; font-size: 14px; letter-spacing: .02em; }
+.ot-status { flex: 1; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--ak-serif); font-style: italic; font-size: 17px; line-height: 1; color: var(--ak-ink2); }
+.ot-her.is-full .ot-status { color: #d6124f; font-weight: 700; }
+.ot-train, .ot-effect {
+  position: relative; flex: none; display: inline-flex; align-items: baseline; gap: 5px; overflow: hidden; padding: 3px 9px 4px; border-radius: 999px;
+  border: 2.5px solid var(--ak-ink); background: var(--ak-honey); font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; line-height: 1;
+}
+.ot-train[hidden], .ot-effect[hidden] { display: none; }
+.ot-train small { font-size: 9px; letter-spacing: .12em; text-transform: uppercase; }
+.ot-train b { font-size: 15px; }
+.ot-train i { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--ak-ink); }
+.ot-train.is-pop { animation: ot-pop .32s cubic-bezier(.2, 1.6, .4, 1); }
+.ot-effect { background: var(--ak-mint); font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase; padding: 5px 9px; }
+@keyframes ot-pop { from { transform: scale(1.35) rotate(-4deg); } }
+
+.ot-meter { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 8px; }
+.ot-meter-bar { position: relative; height: 17px; overflow: hidden; border-radius: 999px; border: 2.5px solid var(--ak-ink); background: var(--ak-lav); }
+.ot-meter-fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; min-width: 6px; border-radius: 999px; background: var(--ak-mint); box-shadow: 2.5px 0 0 var(--ak-ink); transition: width .18s ease-out, background-color .25s; }
+.ot-meter[data-level="mid"] .ot-meter-fill { background: var(--ak-honey); }
+.ot-meter[data-level="high"] .ot-meter-fill { background: #ff8a5c; }
+.ot-meter[data-level="full"] .ot-meter-fill { background: var(--ak-pink); }
+.ot-meter-label, .ot-meter-num { font-family: var(--ak-mono); font-weight: 700; font-size: 10.5px; line-height: 1; letter-spacing: .08em; text-transform: uppercase; }
+.ot-meter-num { min-width: 3.4em; text-align: right; letter-spacing: 0; font-size: 12px; }
+.ot-her.is-zen .ot-meter { opacity: .55; }
+
+/* what she says: a bubble above her */
+.ot-say {
+  position: absolute; left: 4px; bottom: calc(100% + 12px); max-width: min(100%, 430px); padding: 8px 13px 9px; border-radius: 18px 18px 18px 5px;
+  background: var(--ak-paper); border: 3px solid var(--ak-ink); box-shadow: 4px 5px 0 var(--ak-ink);
+  font-family: var(--ak-serif); font-style: italic; font-size: 19px; line-height: 1.12; text-wrap: balance;
+}
+.ot-say[hidden] { display: none; }
+.ot-say p { margin: 0; }
+.ot-say.is-in { animation: ot-say-in .26s cubic-bezier(.2, 1.4, .4, 1); transform-origin: 12% 100%; }
+@keyframes ot-say-in { from { opacity: 0; transform: scale(.7) translateY(8px); } }
+
+.ot-demo-hud { display: none; }
+
+/* ---------- the night's banner, tips ---------- */
+.ot-banner {
+  position: absolute; z-index: 3; left: 50%; top: 36%; width: min(88%, 560px); transform: translate(-50%, -50%); text-align: center; pointer-events: none; color: var(--ak-paper);
+}
+.ot-banner[hidden] { display: none; }
+.ot-banner.is-in { animation: ot-banner 2.6s ease both; }
+.ot-banner-kicker { margin: 0 0 8px; font-family: var(--ak-display); font-weight: 900; font-stretch: 125%; font-size: 12px; letter-spacing: .2em; text-transform: uppercase; color: var(--ak-honey); text-shadow: 0 2px 0 var(--ak-ink); }
+.ot-banner-title {
+  margin: 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 116%; font-size: clamp(32px, 9vw, 60px); line-height: .92; letter-spacing: -0.01em; text-transform: uppercase;
+  text-shadow: 3px 4px 0 var(--ak-ink), -1.5px -1.5px 0 var(--ak-ink), 1.5px -1.5px 0 var(--ak-ink), -1.5px 1.5px 0 var(--ak-ink);
+}
+.ot-banner-blurb { margin: 12px auto 0; max-width: 24em; font-family: var(--ak-serif); font-style: italic; font-size: clamp(18px, 4.6vw, 23px); line-height: 1.15; text-shadow: 0 2px 0 var(--ak-ink), 0 0 12px rgba(23, 10, 54, .8); text-wrap: balance; }
+@keyframes ot-banner { 0% { opacity: 0; transform: translate(-50%, -44%) scale(.94); } 12%, 82% { opacity: 1; transform: translate(-50%, -50%) scale(1); } 100% { opacity: 0; transform: translate(-50%, -56%) scale(1); } }
+
+.ot-tip {
+  position: absolute; z-index: 4; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 12px); transform: translateX(-50%); width: max-content; max-width: min(92%, 440px); transition: top .22s ease;
+  display: flex; align-items: baseline; gap: 9px; padding: 9px 15px 10px; border-radius: 16px; pointer-events: none;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2.5px solid var(--ak-lav2); box-shadow: 0 4px 0 rgba(10, 4, 24, .5);
+  font-family: var(--ak-sans); font-weight: 600; font-size: 14.5px; line-height: 1.25;
+}
+.ot-tip[hidden] { display: none; }
+/* the kit's toasts share that spot: a tip steps down under however many are showing */
+.ak:has(.ak-toasts > .ak-toast) .ot-tip { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 52px); }
+.ak:has(.ak-toasts > .ak-toast:nth-child(2)) .ot-tip { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 96px); }
+.ak:has(.ak-toasts > .ak-toast:nth-child(3)) .ot-tip { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 140px); }
+.ot-tip b { flex: none; font-family: var(--ak-display); font-weight: 900; font-stretch: 120%; font-size: 10.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--ak-honey); }
+.ot-tip.is-in { animation: ot-tip .3s cubic-bezier(.2, 1.3, .4, 1); }
+@keyframes ot-tip { from { opacity: 0; transform: translate(-50%, -10px); } }
+
+/* ---------- cards ---------- */
+.ot-card { width: min(470px, 100%); }
+.ot-card.is-tall { width: min(540px, 100%); }
+.ot-card-sub { margin: -6px 0 14px; font-size: 14.5px; line-height: 1.35; color: var(--ak-ink2); }
+.ot-card-sub b { color: var(--ak-ink); font-family: var(--ak-mono); white-space: nowrap; }
+.ot-sub-title { margin: 20px 0 10px; font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; font-size: 14px; letter-spacing: .12em; text-transform: uppercase; }
+
+.ot-stars { display: inline-flex; gap: 1px; }
+.ot-stars i { font-style: normal; font-size: 17px; line-height: 1; color: #d8ccf5; -webkit-text-stroke: 1.6px var(--ak-ink); paint-order: stroke fill; }
+.ot-stars i.is-on { color: var(--ak-honey); }
+.ot-stars.is-big { gap: 6px; }
+.ot-stars.is-big i { font-size: 40px; -webkit-text-stroke-width: 2.6px; }
+.ot-stars.is-big i.is-on { animation: ot-pop .5s cubic-bezier(.2, 1.6, .4, 1) both; }
+.ot-stars.is-big i:nth-child(2) { animation-delay: .16s; transform: translateY(-5px); }
+.ot-stars.is-big i:nth-child(3) { animation-delay: .32s; }
+
+.ot-nights { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 8px; }
+.ot-night {
+  width: 100%; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 11px; padding: 9px 12px 10px 9px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--ak-ink); background: #fff; border: 2.5px solid var(--ak-ink); border-radius: 16px; box-shadow: 0 3px 0 var(--ak-ink);
+  transition: transform .12s, box-shadow .12s;
+}
+.ot-night:hover:not(.is-locked) { transform: translateY(-1px); box-shadow: 0 4px 0 var(--ak-ink); }
+.ot-night:active:not(.is-locked) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.ot-night:focus-visible { outline: 3px solid var(--ak-violet); outline-offset: 2px; }
+.ot-night.is-done { background: #eafff8; }
+.ot-night.is-locked { cursor: default; opacity: .55; box-shadow: none; }
+.ot-night-day {
+  display: grid; place-items: center; width: 46px; height: 46px; border-radius: 13px; background: var(--ak-violet); color: var(--ak-paper); border: 2.5px solid var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 12.5px; letter-spacing: .04em; text-transform: uppercase;
+}
+.ot-night.is-done .ot-night-day { background: var(--ak-mint); color: var(--ak-ink); }
+.ot-night.is-locked .ot-night-day { background: #b9aede; }
+.ot-night-main { display: grid; gap: 2px; min-width: 0; }
+.ot-night-main b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 15.5px; line-height: 1.05; text-transform: uppercase; }
+.ot-night-main small { font-family: var(--ak-serif); font-style: italic; font-size: 14.5px; line-height: 1.12; color: var(--ak-ink2); }
+.ot-night-side { display: grid; justify-items: end; gap: 3px; }
+.ot-night-side small { font-family: var(--ak-mono); font-weight: 700; font-size: 11px; color: var(--ak-ink2); }
+
+.ot-thought { display: block; flex: none; }
+.ot-page { margin: 0 0 14px; }
+.ot-page h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 4px; font-family: var(--ak-display); font-weight: 900; font-stretch: 116%; font-size: 14px; letter-spacing: .06em; text-transform: uppercase; }
+.ot-page h3 small { margin-left: auto; font-family: var(--ak-mono); font-weight: 700; font-size: 11.5px; letter-spacing: 0; color: var(--ak-ink2); }
+.ot-lines { list-style: none; margin: 0; padding: 0; border-top: 2.5px solid var(--ak-ink); }
+.ot-lines li { padding: 7px 2px 8px; border-bottom: 1.5px dashed color-mix(in srgb, var(--ak-ink) 30%, transparent); font-family: var(--ak-serif); font-style: italic; font-size: 17.5px; line-height: 1.18; }
+.ot-lines li.is-blank { font-style: normal; letter-spacing: .3em; color: color-mix(in srgb, var(--ak-ink) 32%, transparent); }
+
+.ot-stickers { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 9px; }
+.ot-stickers li { display: grid; justify-items: center; align-content: start; gap: 3px; padding: 10px 7px 11px; text-align: center; border-radius: 16px; border: 2.5px dashed color-mix(in srgb, var(--ak-ink) 45%, transparent); }
+.ot-stickers li .ot-thought { filter: grayscale(1) opacity(.4); }
+.ot-stickers li b { font-family: var(--ak-display); font-weight: 900; font-stretch: 110%; font-size: 12px; line-height: 1.05; text-transform: uppercase; color: var(--ak-ink2); }
+.ot-stickers li small { font-size: 11px; line-height: 1.2; color: var(--ak-ink2); }
+.ot-stickers li.is-on { border-style: solid; border-color: var(--ak-ink); background: #fff3c4; box-shadow: 0 3px 0 var(--ak-ink); }
+.ot-stickers li.is-on .ot-thought { filter: none; }
+.ot-stickers li.is-on b { color: var(--ak-ink); }
+
+.ot-ribbons { display: grid; grid-template-columns: repeat(auto-fit, minmax(88px, 1fr)); gap: 8px; }
+.ot-ribbon { display: grid; gap: 4px; justify-items: center; padding: 9px 6px 8px; font: inherit; color: var(--ak-ink); cursor: pointer; background: #fff; border: 2.5px solid var(--ak-ink); border-radius: 14px; box-shadow: 0 3px 0 var(--ak-ink); }
+.ot-ribbon:focus-visible { outline: 3px solid var(--ak-violet); outline-offset: 2px; }
+.ot-ribbon-swatch { display: block; width: 100%; height: 11px; border-radius: 999px; border: 2px solid var(--ak-ink); }
+.ot-ribbon b { font-family: var(--ak-display); font-weight: 900; font-stretch: 110%; font-size: 12px; text-transform: uppercase; }
+.ot-ribbon small { font-size: 11px; color: var(--ak-ink2); }
+.ot-ribbon.is-on { background: #d9fff3; }
+.ot-ribbon.is-locked { cursor: default; opacity: .5; box-shadow: none; }
+
+.ot-extra { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 18px; }
+.ot-extra-link { font-family: var(--ak-mono); font-weight: 700; font-size: 12.5px; }
+
+.ot-over-extra { display: grid; justify-items: center; gap: 7px; margin: 4px 0 2px; }
+.ot-new { display: inline-flex; align-items: center; gap: 7px; margin: 0; padding: 3px 12px 3px 5px; border-radius: 999px; background: #fff3c4; border: 2.5px solid var(--ak-ink); font-size: 13.5px; line-height: 1.15; }
+.ot-new-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; }
+.ot-new.is-many { padding: 3px 13px 3px 6px; gap: 8px; }
+.ot-new-row { display: inline-flex; align-items: center; padding-left: 7px; }
+.ot-new-row canvas { margin-left: -7px; }
+.ot-new.is-plain { padding: 5px 12px; background: var(--ak-lav); font-family: var(--ak-mono); font-weight: 700; font-size: 12px; }
+
+/* ---------- small phones, short screens, the arcade's preview ---------- */
+@media (max-width: 400px) {
+  .ot-her { gap: 8px; padding: 6px 10px 6px 6px; border-radius: 20px; }
+  .ot-ava { width: 50px; height: 50px; }
+  .ot-status { font-size: 15.5px; }
+  .ot-say { font-size: 17.5px; }
+  .ot-train small { display: none; }
+}
+@media (max-height: 520px) {
+  .ot-her { bottom: calc(6px + var(--ak-safe-b)); padding: 4px 10px 4px 5px; border-radius: 18px; box-shadow: 0 3px 0 var(--ak-ink); gap: 8px; max-width: 520px; }
+  .ot-ava { width: 40px; height: 40px; border-width: 2.5px; }
+  .ot-her-main { gap: 3px; }
+  .ot-her-row { min-height: 20px; }
+  .ot-status { font-size: 14.5px; }
+  .ot-meter-bar { height: 14px; }
+  .ot-meter-label { font-size: 9.5px; }
+  .ot-say { font-size: 16px; padding: 6px 11px 7px; bottom: calc(100% + 8px); }
+  .ot-banner { top: 40%; }
+  .ot-banner-title { font-size: clamp(26px, 9vh, 44px); }
+  .ot-banner-blurb { margin-top: 6px; font-size: 17px; }
+}
+/* a phone held sideways: the title in two columns (the name and its line beside the buttons), nothing under the fold */
+@media (max-height: 520px) and (min-width: 640px) {
+  .ak[data-ak-game="overthinking"] .ak-title-body { width: min(900px, 100%); grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); column-gap: 30px; row-gap: 6px; align-items: center; }
+  .ak[data-ak-game="overthinking"] .ak-title-body > * { grid-column: 2; }
+  .ak[data-ak-game="overthinking"] .ak-title-body > .ak-kicker { grid-column: 1; grid-row: 1; align-self: end; }
+  .ak[data-ak-game="overthinking"] .ak-title-body > .ak-logo { grid-column: 1; grid-row: 2; }
+  .ak[data-ak-game="overthinking"] .ak-title-body > .ak-tagline { grid-column: 1; grid-row: 3; align-self: start; margin: 0; font-size: 19px; }
+  .ak[data-ak-game="overthinking"] .ak-title-body > .ak-title-actions { grid-row: 1 / span 3; width: 100%; margin-top: 0; gap: 10px; }
+  .ak[data-ak-game="overthinking"] .ak-btn-mode { min-height: 46px; }
+  .ak[data-ak-game="overthinking"] .ak-fine { display: none; }
+}
+.ak[data-ak-demo] .ot-her { grid-template-columns: auto minmax(0, 1fr) auto; left: 8px; right: 8px; bottom: 8px; padding: 5px 12px 5px 5px; }
+.ak[data-ak-demo] .ot-ava { width: 46px; height: 46px; }
+.ak[data-ak-demo] .ot-demo-hud { display: grid; justify-items: end; gap: 1px; font-family: var(--ak-mono); font-weight: 700; line-height: 1.1; }
+.ak[data-ak-demo] .ot-demo-hud b { font-size: 19px; }
+.ak[data-ak-demo] .ot-demo-hud span { font-size: 11px; color: var(--ak-ink2); }
+.ak[data-ak-demo] .ot-say { font-size: 17px; max-width: 78%; }
+.ak[data-ak-demo] .ot-banner, .ak[data-ak-demo] .ot-tip { display: none; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .ot-her.is-full .ot-ava { animation: ot-shake .16s linear infinite; }
+  .ot-her.is-full .ot-meter-fill { animation: ot-alarm .5s steps(2) infinite; }
+}
+@keyframes ot-shake { 0% { transform: translate(1px, 0) rotate(-2deg); } 50% { transform: translate(-1px, 1px) rotate(2deg); } 100% { transform: translate(1px, -1px) rotate(-1deg); } }
+@keyframes ot-alarm { 50% { background-color: #ff2e63; } }
+@media (prefers-reduced-motion: reduce) {
+  .ot-say.is-in, .ot-tip.is-in, .ot-train.is-pop, .ot-stars.is-big i.is-on { animation: none; }
+  .ot-banner.is-in { animation: none; }
+  .ot-tip { transition: none; }
+  .ot-meter-fill, .ot-night { transition: none; }
+}

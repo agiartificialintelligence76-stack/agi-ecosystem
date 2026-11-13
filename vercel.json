@@ -66,6 +66,8 @@
     { "source": "/games/packetloss/", "destination": "/packetloss" },
     { "source": "/games/autocomplete", "destination": "/autocomplete" },
     { "source": "/games/autocomplete/", "destination": "/autocomplete" },
+    { "source": "/games/overthinking", "destination": "/overthinking" },
+    { "source": "/games/overthinking/", "destination": "/overthinking" },
     { "source": "/vote/owner", "destination": "/vote" },
     { "source": "/vote/owner/", "destination": "/vote" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" },

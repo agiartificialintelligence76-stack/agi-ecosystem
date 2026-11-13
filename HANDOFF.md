@@ -1,5 +1,26 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## OVERTHINKING, one new game — 2026-11-13
+
+The owner: "Create an original game that is creative , addictive, visually good, best game of the year in agi1.app/games.
+just 1 game then publish it to production when youre done". Built on the branch `overthinking`, based on production
+`167ef46` (the revert of the ten-game batch of 2026-11-10; none of that batch's ids is used).
+
+**OVERTHINKING** (agi1.app/games/overthinking, `src/games/overthinking/`, on the arcade kit): AGI-1 can't sleep; the
+player draws loops of light round her thoughts of one kind before her context fills. The week (seven nights to a
+sunrise, three stars each), Insomnia, a Daily and Zen; her journal, stickers and ribbons, kept in the browser. The arcade
+has 30 games; its tile is second (after TRENCHING SIMULATOR) and the only one marked New. It has a recorded six-second
+preview (its own player draws the loops), a tile still, a share cover; the arcade's share image says thirty.
+
+How it's put together, how to tune it (`node tools/games/overthinking/balance.mjs`), what its tests promise and what the
+`?qa` address is for: `CLAUDE.md` → "OVERTHINKING" under "AGI games".
+
+Validation: `tests/overthinking.test.js` (25 tests) in `npm test`; the whole suite; in headless Chromium with real
+pointer and touch events at a tall phone, a small phone, a phone held sideways and a computer: the first run's guide,
+loops, flourishes, every special, the danger state, the spiral, the sunrise, every card, the keys, "reduce motion", every
+night and mode at speed with no page error. **Not validated:** its sound by ear (written in a silent workspace; its
+levels were measured) and play by a person on a real phone. No new service, database change or setting.
+
 ## Five-game expansion completed — 2026-11-10
 
 Recovered `arcade-five-more` at `22eabdaa` and finished on `codex/finish-five-games`, based on production `a8153a76`.

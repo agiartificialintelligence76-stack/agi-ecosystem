@@ -24,20 +24,22 @@ export const SORTS = Object.freeze([
   { id: 'rated', label: 'Top rated' },
 ]);
 
-// "Featured": the order of the tiles when the page opens. New: the five of 2026-11-09 (the owner: "create 5 more new games"),
-// every other tile at the top; the second night's ten (2026-11-08, `added` with its hour so Newest puts them before the first
-// night's ten) were New until then
+// "Featured": the order of the tiles when the page opens. New: OVERTHINKING (2026-11-13, the owner: "Create an original
+// game … just 1 game"), right after TRENCHING SIMULATOR; the five of 2026-11-09 (the owner: "create 5 more new games"), every
+// other tile after it, were New until then, and before them the second night's ten (2026-11-08, `added` with its hour so
+// Newest puts them before the first night's ten)
 export const SHELF = Object.freeze([
   { id: 'trenchingsimulator', genre: 'Trading sim', line: 'Six trading terminals, play money only', tags: ['chill'], added: '2026-10-20', badge: 'Play money' },
-  { id: 'bubblesort', genre: 'Bubble shooter', line: 'Match three, drop the rest', tags: ['new', 'puzzle', 'arcade'], added: '2026-11-09' },
+  { id: 'overthinking', genre: 'Lasso arcade', line: 'Draw loops round her 3 a.m. thoughts', tags: ['new', 'arcade', 'puzzle'], added: '2026-11-13' },
+  { id: 'bubblesort', genre: 'Bubble shooter', line: 'Match three, drop the rest', tags: ['puzzle', 'arcade'], added: '2026-11-09' },
   { id: 'realorai', genre: 'Photo quiz', line: 'Real photo or AI? Swipe and find out', tags: ['puzzle'], added: '2026-11-08T10:00' },
-  { id: 'airgap', genre: 'Air hockey', line: 'Air hockey vs her, or a friend', tags: ['new', 'arcade', 'action'], added: '2026-11-09' },
+  { id: 'airgap', genre: 'Air hockey', line: 'Air hockey vs her, or a friend', tags: ['arcade', 'action'], added: '2026-11-09' },
   { id: 'mergeagi', genre: 'Merge puzzle', line: 'Drop, merge, evolve all the way to her', tags: ['puzzle'], added: '2026-11-08' },
-  { id: 'packetloss', genre: 'Maze chase', line: 'Outrun the lag in a neon maze', tags: ['new', 'arcade', 'action'], added: '2026-11-09' },
+  { id: 'packetloss', genre: 'Maze chase', line: 'Outrun the lag in a neon maze', tags: ['arcade', 'action'], added: '2026-11-09' },
   { id: 'heartbeat', genre: 'Rhythm', line: "Tap to the beat of AGI-1's own songs", tags: ['arcade'], added: '2026-11-08' },
-  { id: 'cookies', genre: 'Physics puzzle', line: 'Cut the ropes, feed her cat', tags: ['new', 'puzzle'], added: '2026-11-09' },
+  { id: 'cookies', genre: 'Physics puzzle', line: 'Cut the ropes, feed her cat', tags: ['puzzle'], added: '2026-11-09' },
   { id: 'beattheagi', genre: 'Four in a row', line: 'Four in a row, from 1B up to AGI', tags: ['puzzle'], added: '2026-11-08T10:00' },
-  { id: 'autocomplete', genre: 'Word game', line: 'Swipe words, beat her prediction', tags: ['new', 'puzzle'], added: '2026-11-09' },
+  { id: 'autocomplete', genre: 'Word game', line: 'Swipe words, beat her prediction', tags: ['puzzle'], added: '2026-11-09' },
   { id: 'lastmodel', genre: 'Survival', line: 'Survive the bot swarm, build your loadout', tags: ['action'], added: '2026-11-08' },
   { id: 'overclock', genre: 'Pinball', line: 'Neon pinball on her motherboard', tags: ['arcade', 'action'], added: '2026-11-08T10:00' },
   { id: 'rideemagi', genre: 'Runner', line: 'Rooftop runs with AGI-1 and her cat', tags: ['arcade'], added: '2026-10-19' },

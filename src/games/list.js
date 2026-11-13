@@ -39,6 +39,9 @@ export const GAMES = {
   cookies: { name: "ACCEPT ALL COOKIES", path: '/games/cookies', genre: 'Puzzle', kit: true },
   packetloss: { name: "PACKET LOSS", path: '/games/packetloss', genre: 'Arcade', kit: true },
   autocomplete: { name: "AUTOCOMPLETE", path: '/games/autocomplete', genre: 'Puzzle', kit: true },
+  // since 2026-11-13 (the owner: "Create an original game … just 1 game"): one more on the arcade kit, drawn with one
+  // finger: loop AGI-1's 3 a.m. thoughts before her context fills (see CLAUDE.md, "OVERTHINKING")
+  overthinking: { name: "OVERTHINKING", path: '/games/overthinking', genre: 'Arcade', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

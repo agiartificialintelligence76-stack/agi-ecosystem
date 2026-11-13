@@ -603,7 +603,7 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   // AGI! keeps games.jpg (below)
   assert.ok(page.includes('<meta property="og:image" content="__SITE__/cards/games-all.jpg" />'), 'its own link preview (tools/cards/games-all-card.html)');
   assert.match(page, /<meta property="og:image:width" content="1200" \/>\s*<meta property="og:image:height" content="630" \/>/);
-  assert.match(page, /<meta property="og:image:alt" content="A wall of AGI games being played, next to the words GAMES, 29 and Twenty-nine games, one girlfriend\." \/>/, 'its preview\'s words for screen readers');
+  assert.match(page, /<meta property="og:image:alt" content="A wall of AGI games being played, next to the words GAMES, 30 and Thirty games, one girlfriend\." \/>/, 'its preview\'s words for screen readers');
   for (const re of [/<meta name="description" content="([^"]+)"/, /<meta property="og:description" content="([^"]+)"/]) {
     const words = page.match(re)[1];
     assert.match(words, /not financial advice/i, 'its preview says so');
@@ -626,7 +626,7 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   assert.ok(readPage('rideemagi.html').includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its game shares its picture');
   // (2026-10-21) its second game at /games/trenchingsimulator, with its own picture (its test below)
   assert.ok(vercel.rewrites.some((r) => r.source === '/games/trenchingsimulator' && r.destination === '/trenchingsimulator'), 'its second game at /games/trenchingsimulator');
-  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Twenty-nine free browser games with AGI-1: BUBBLE SORT, AIR GAP, PACKET LOSS, AUTOCOMPLETE, REAL OR AI\? and more\./, 'its preview names the games (since the second night of 2026-11-08: twenty-four)');
+  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Thirty free browser games with AGI-1: OVERTHINKING, BUBBLE SORT, AIR GAP, PACKET LOSS, AUTOCOMPLETE and more\./, 'its preview names the games (since the second night of 2026-11-08: twenty-four; thirty since 2026-11-13)');
   // the site's own top bar and footer, Games marked as the page you're on (and nothing else)
   const strip = (s) => s.replace(/ aria-current="page"/g, '');
   const live = readPage('live.html');
@@ -655,13 +655,13 @@ test('AGI games\' wall of games (its link preview since 2026-11-08): a real 1200
   assert.deepEqual(size, [1200, 630]);
   const card = readPage('tools/cards/games-all-card.html');
   const words = textOf(card.slice(card.indexOf('<body>'), card.indexOf('<script>')));
-  for (const w of ['AGI games · free to play', 'GAMES', 'Twenty-nine games,', 'one girlfriend.', 'No wallet needed.', 'agi1.app/games', 'Free to play · not financial advice']) assert.ok(words.includes(w), w);
+  for (const w of ['AGI games · free to play', 'GAMES', 'Thirty games,', 'one girlfriend.', 'No wallet needed.', 'agi1.app/games', 'Free to play · not financial advice']) assert.ok(words.includes(w), w);
   assert.match(card, /\.\.\/\.\.\/public\/images\/games\/\$\{id\}\.webp/, 'the games\' own stills (their previews)');
   assert.doesNotMatch(card, /\.glb\b|https?:\/\//, 'never the 3D model, nothing from another site');
   assert.doesNotMatch(words, /\bbuy\b|%|\$\s?\d/i, 'no price talk');
   // its count is the shelf's, and every game on its wall has its still
   const { SHELF } = await import('../src/games/shelf.js');
-  assert.equal(SHELF.length, 29);
+  assert.equal(SHELF.length, 30);
   for (const g of SHELF.slice(0, 12)) assert.ok(existsSync(new URL(`../public/images/games/${g.id}.webp`, import.meta.url)), g.id);
 });
 
@@ -881,7 +881,7 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), a compact picker of 
   const { GAMES } = await import('../src/games/list.js');
   const { SHELF, FILTERS, SORTS, countIn, sortShelf, inFilter, previewOf, pickOrder } = await import('../src/games/shelf.js');
   const IDS = Object.keys(GAMES);
-  assert.equal(IDS.length, 29, 'twenty-nine games since 2026-11-09 (five more on the kit)');
+  assert.equal(IDS.length, 30, 'thirty games since 2026-11-13 (OVERTHINKING; twenty-nine since 2026-11-09: five more on the kit)');
   // the picker's order ("Featured") covers every game once
   assert.deepEqual([...SHELF.map((g) => g.id)].sort(), [...IDS].sort(), 'every game on the shelf, once');
   for (const g of SHELF) {
@@ -893,10 +893,13 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), a compact picker of 
     assert.match(g.added, /^2026-\d\d-\d\d(T\d\d:\d\d)?$/, `${g.id}: its day (and hour, for two the same day)`);
     assert.deepEqual(previewOf(g.id), { video: `/images/games/${g.id}.mp4`, poster: `/images/games/${g.id}.webp` });
   }
-  assert.deepEqual(SHELF.filter((g) => g.tags.includes('new')).map((g) => g.id).sort(), IDS.slice(24).sort(), 'the five of 2026-11-09 are New');
-  assert.deepEqual(sortShelf('new').slice(0, 5).map((g) => g.id).sort(), IDS.slice(24).sort(), 'Newest: the five of 2026-11-09 first');
-  assert.deepEqual(sortShelf('new').slice(5, 15).map((g) => g.id).sort(), IDS.slice(14, 24).sort(), 'then the second night\'s ten');
-  assert.deepEqual(SHELF.slice(0, 10).map((g) => g.id).filter((id) => IDS.slice(24).includes(id)), SHELF.slice(0, 10).filter((g, i) => i % 2).map((g) => g.id), 'Featured: every other tile at the top is one of the five');
+  // (2026-11-13) New is OVERTHINKING alone (the five of 2026-11-09 were New until then), right after TRENCHING SIMULATOR
+  assert.deepEqual(SHELF.filter((g) => g.tags.includes('new')).map((g) => g.id), ['overthinking'], 'OVERTHINKING is New');
+  assert.deepEqual(SHELF.slice(0, 2).map((g) => g.id), ['trenchingsimulator', 'overthinking'], 'Featured: the newest right after TRENCHING SIMULATOR');
+  assert.equal(sortShelf('new')[0].id, 'overthinking', 'Newest: OVERTHINKING first');
+  assert.deepEqual(sortShelf('new').slice(1, 6).map((g) => g.id).sort(), IDS.slice(24, 29).sort(), 'then the five of 2026-11-09');
+  assert.deepEqual(sortShelf('new').slice(6, 16).map((g) => g.id).sort(), IDS.slice(14, 24).sort(), 'then the second night\'s ten');
+  assert.deepEqual(SHELF.slice(2, 12).map((g) => g.id).filter((id) => IDS.slice(24, 29).includes(id)), SHELF.slice(2, 12).filter((g, i) => i % 2 === 0).map((g) => g.id), 'Featured: after it, every other tile is one of the five');
   // the sorts: Newest by its day (then Featured); Most played and Top rated by our server's numbers, the rest after them
   assert.deepEqual(sortShelf('new').slice(-4).map((g) => g.id), ['skybreak', 'vladrunner2049', 'trenchingsimulator', 'rideemagi']);
   assert.deepEqual(sortShelf('played', { skybreak: { plays: 9 }, rideemagi: { plays: 50 } }).slice(0, 3).map((g) => g.id), ['rideemagi', 'skybreak', SHELF[0].id]);
@@ -908,17 +911,17 @@ test('AGI games: "GAME beta" on top (beta stuck over GAME), a compact picker of 
   assert.deepEqual(picked.slice(0, 6), ['stacked', 'synapse', 'jaywalk', 'robotaxi', 'epochs', 'skybreak'], 'rated by average, then ratings; then plays (an odd average counts as none)');
   assert.deepEqual(picked.slice(6), SHELF.map((g) => g.id).filter((id) => !picked.slice(0, 6).includes(id)), 'the rest in the Featured order');
   assert.deepEqual(pickOrder().map((g) => g.id), SHELF.map((g) => g.id), 'no numbers yet: Featured');
-  assert.equal(countIn('all'), 29);
+  assert.equal(countIn('all'), 30);
   assert.equal(SHELF.filter((g) => inFilter(g, 'puzzle')).length, countIn('puzzle'));
   const page = GAMES_PAGE();
   const main = mainOf(page);
   assert.equal((page.match(/<h1\b/g) || []).length, 1, 'one h1');
   assert.match(main, /<h1 class="gm-title" id="gm-title"><span class="gm-word">GAME<\/span> <span class="gm-beta">beta<\/span><\/h1>/, 'screen readers hear "GAME beta"');
-  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: twenty-nine games now 💜 .* no prizes yet, just bragging rights\./, 'her line, for all of them');
+  assert.match(textOf(between(main, '<p class="gm-say">', '</p>')), /AGI-1: thirty games now 💜 .* no prizes yet, just bragging rights\./, 'her line, for all of them');
   // the picker: a filter for each kind (with how many), the sort, then a tile for each game in the Featured order
   const shelf = between(main, '<section class="section gm-shelf"', '</section>');
   assert.match(shelf, /^<section class="section gm-shelf" id="play" aria-labelledby="gm-shelf-title">/);
-  assert.match(textOf(shelf), /Pick a game 29/);
+  assert.match(textOf(shelf), /Pick a game 30/);
   assert.match(textOf(shelf), /No sign-in or wallet needed to play: runs are counted, never who\./);
   assert.deepEqual([...shelf.matchAll(/<button class="gm-filter" type="button" aria-pressed="(true|false)" data-gm-filter="([\w]+)">([^<]+) <span class="gm-filter-n" aria-hidden="true">(\d+)<\/span><\/button>/g)]
     .map((m) => [m[2], m[3].replaceAll('&amp;', '&'), Number(m[4]), m[1]]), FILTERS.map((f, i) => [f.id, f.label, countIn(f.id), String(i === 0)]), 'its filters, All picked');

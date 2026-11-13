@@ -1,5 +1,20 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **OVERTHINKING, one new game (2026-11-13):** the owner: "Create an original game that is creative , addictive, visually
+> good, best game of the year in agi1.app/games. just 1 game then publish it to production when youre done". It's
+> midnight, AGI-1 can't sleep, and her thoughts drift round her mind as little glowing creatures: draw a ribbon of light
+> round thoughts of ONE kind and lift (or cross your own line and keep drawing: a flourish) to resolve them, before her
+> context fills (40 thoughts; four seconds over it and she spirals). A loop is worth 10 × n × n, loops in a row build her
+> train of thought (up to x5), a loop with two kinds in it scatters them, and the ribbon is a fence for 3 seconds. Six
+> kinds with habits of their own (hearts follow the pen, cats run from it…) and six specials (a cringe memory cuts the
+> ribbon, a what-if splits in three, her phone, a eureka, a deep breath, chamomile). **The week** (seven nights, 12 AM
+> to a sunrise at 6 AM in 3.5 minutes, each with something new, three stars each), **Insomnia** (endless), a **Daily**
+> (the same night for everyone) and **Zen**; her journal (72 lines), 16 stickers, 5 ribbons. At
+> agi1.app/games/overthinking, on the arcade kit. /games: 30 games, its tile right after TRENCHING SIMULATOR; "New" is
+> this one (the five of 2026-11-09 were New until then). **No new setting, SQL, function or service.** Its sound was
+> never heard by its author and no person has played it on a real phone yet (said under "Not checked"). See
+> "OVERTHINKING" under "AGI games".
+
 > **Five-game expansion finished (2026-11-10):** BUBBLE SORT, AIR GAP, ACCEPT ALL COOKIES, PACKET LOSS and AUTOCOMPLETE,
 > recovered from `arcade-five-more` at `22eabdaa`, completed on `codex/finish-five-games`. All five have gameplay loops,
 > stills and share cards; the arcade has 29 games. Phone menu fixes for AIR GAP and COOKIES, a COOKIES level-picker text
@@ -10590,6 +10605,96 @@ computer's grey bar with arrows. **Published** as in the entry at the top (`53e7
 Vercel runs it (Node 24, UTC, all 81 documented settings as fakes): 1,978 tests, 1,974 passed, 4 skipped, 0 failed; Vite, the
 share pages and the secret check (274 files); the built page with the site's real headers on a computer and a phone: no CSP
 reports or errors, the picker opened and a pick made.
+
+### OVERTHINKING (2026-11-13)
+
+The owner: "Create an original game that is creative , addictive, visually good, best game of the year in agi1.app/games.
+just 1 game then publish it to production when youre done". One game, made from scratch, at **agi1.app/games/overthinking**
+(`overthinking.html`, `src/games/overthinking/`), on the arcade kit like the others (its frame, title, pause, end card,
+local saves `agi_arcade:overthinking`, `?demo` self-play, the AGI GAMES intro). **No new setting, SQL, function or
+service**; never money; nothing asked of a wallet.
+
+**The game.** It's midnight and AGI-1 can't sleep. Her thoughts drift round her mind (the field) as little glowing
+creatures. The player draws a ribbon of light with one finger (or the mouse, or the keys) round thoughts of ONE kind:
+
+- **A loop closes** when the pen lifts with the ribbon a little more than half way round (its ends within 0.55 of its
+  length: about 205° of a circle; a straight line joins them), or the moment the ribbon crosses itself. Everything inside
+  of one kind is resolved: **10 × n × n** points (two = 40, five = 250, ten = 1,000).
+- **A loop with two kinds in it is mixed:** nothing is resolved, the thoughts scatter and her train of thought derails.
+- **A flourish:** cross your own line and keep drawing without lifting: each more loop in one stroke is worth more
+  (x1.5, x2, x2.5, x3).
+- **Her train of thought:** every 3 clean loops in a row add x1 to everything (up to x5); it slows a notch after 7
+  seconds without a loop.
+- **The ribbon is a fence:** thoughts bounce off it while it lasts (3 seconds), so a line can herd them. Nothing new
+  arrives inside a loop being drawn, and a thought counts only 0.3 s after it lands (no "it appeared under my finger").
+- **Her context** (the meter on her panel, 40 thoughts): 4 seconds over it and **she spirals** (the run ends). Clearing
+  the whole field after at least 8 resolved is an **empty mind** bonus.
+- **Six kinds, each with a habit:** hearts follow the pen, stars drift, moons are slow, cookies are big, cats run from
+  the pen, notes sway in waves; they loosely flock with their own kind. Each has its own shape as well as its color (it
+  doesn't lean on color alone).
+- **Six specials:** a **cringe memory** cuts the ribbon it touches (loop it alone to let it go; it leaves by itself after
+  13 s), a **what-if** splits in three if it isn't caught in 8 s, **her phone** keeps making thoughts until it's looped
+  or its battery runs out, a **eureka** goes with any kind and doubles the loop, a **deep breath** slows everything for
+  5 s, **chamomile** sorts every thought toward its own kind for 6 s.
+- **The clock:** a night runs 12 AM to 6 AM at 35 seconds an hour (3.5 minutes); each hour brings more thoughts, a bonus
+  (100 × the hour) and one of her lines; **sunrise is the win** (1,500 + 40 for every free place in her context; the sun
+  comes up behind her panel).
+
+**Modes.** **The week** (seven nights, each opened by the one before, each with something new: Monday "The “k.”",
+Tuesday "Cringe hour", Wednesday "Earworm", Thursday "What if", Friday "Group chat", Saturday "Espresso at 9 pm", Sunday
+"Sunday scaries"; one star for the sunrise, two and three for its score: `stars` in `nights.js`), **Insomnia** (endless,
+opens with Monday's sunrise; the day goes on past 6 AM), a **Daily** (the same night for everyone that date, with one
+of the twists in `TWISTS`; a streak) and **Zen** (no context, no end). Kept in the browser: stars, bests, **her journal**
+(72 lines: a loop of three or more of a kind writes that kind's next line, until its page is full: `lines.js`), **16
+stickers** and **5 ribbons** opened by stickers (`progress.js`).
+
+**How it's built** (all in `src/games/overthinking/`; the rules never touch the page):
+
+- `sim.js`: the rules, pure and seeded (the same seed and the same pen give the same night; world units: a thought's
+  radius is 1, the field's area always 480, its shape the screen's, from 0.5 to 3 wide over tall). `TUNE` holds every
+  number above. The pen is `penDown / penMove / penUp`; what happened comes out of `drain(S)` as events.
+- `geom.js` (crossings, point in polygon), `kinds.js` (the six kinds and six specials), `nights.js` (the week, Insomnia's
+  curve, the Daily's seed and twists, the clock's words), `ai.js` (the game's own players: `newbie`, `casual`, `steady`,
+  `expert`, and `demo`, who draws the tile's preview and the title's background).
+- `game.js`: the page (layout, pen, loop, what each event looks and sounds like, the title and end cards), `render.js`
+  and `art.js` (canvas 2D: the sky by the hour, every creature drawn in code with its face, the ribbon as one tapered
+  shape, the sun), `sound.js` (every sound made in the browser: each kind a note of one pentatonic scale, a lullaby
+  that tenses as her context fills), `ui.js` (her panel, the week, journal and sticker cards), `lines.js` (her words,
+  lowercase, never money), `progress.js` (what's kept), `style.css` (`ot-` classes).
+- A slow device gets fewer pixels by itself (`quality` in `game.js`), never a slower game.
+
+**Tuning it.** `node tools/games/overthinking/balance.mjs [seeds] [night …]` plays every night with each of the game's
+players and prints who sees the sunrise, the scores, the hour reached and the peaks. As published (24 seeds): the
+slowest player sees Monday's sunrise every time and reaches about 5 AM on Tuesday; `casual` passes Tuesday and
+Wednesday and seldom Thursday; `steady` passes every night but Sunday (about 9 in 10); `expert` passes all. The stars
+were set from those scores (two stars about a steady night's, three about halfway to an expert's). To change a night,
+change its `rate` (thoughts a second, hour by hour) and run the tool again; `tests/overthinking.test.js` holds the
+promises (Monday is for everyone, each night ends harder than the last, an expert earns three stars on every night).
+
+**Checked.** `tests/overthinking.test.js` (25 tests: geometry, every rule above, the nights, the players, the same seed
+twice, what's kept, her lines, and the kit's code rules), in `npm test`. In headless Chromium, with real pointer and touch
+events: a new player's first seconds (the night's banner, then a ring round one bunch that stays with it, one tip), loops,
+flourishes, mixed loops, every special, the danger state, the spiral, the sunrise, each card; a tall phone (390 × 844 and
+360 × 640), a phone held sideways (740 × 360: the field takes the full width, the title is in two columns), a computer
+(1280 × 800); the keys; "reduce motion"; every night and mode at speed with no page error; how loud it gets (peaks under
+full scale after the kit's compressor). `?qa` in its address is for those browser tests only (the game's state readable
+from the page, `&speed=n`, `&auto=<player>`, `&night=N` or `&mode=…`): a `?qa` page saves and counts nothing.
+
+**Not checked, said plainly:** nobody has heard its sound (it was written from the notes' frequencies in a silent
+workspace), and no person has played it on a real phone yet: the balance comes from its own players, so the owner's
+first few runs are its first real playtest. If a night feels too hard or too easy, its `rate` is the one number to move.
+
+**On /games:** 30 games. Its tile is the second, right after TRENCHING SIMULATOR; "New" is this one alone (the five of
+2026-11-09 were New until then, as each batch before them). `src/games/shelf.js`, `games.html` (its tile, its ratings
+panel `#rate-overthinking`, its place in the game picker, the counts and her line), `src/games/list.js`, `vercel.json`
+(its two rewrites), `vite.config.js`, `scripts/share-pages.js`, `src/owner/catalog.js`, `server/arcade.js` (what a review
+of it may talk about), the tile's preview and still (`public/images/games/overthinking.mp4` and `.webp`, by
+`tools/games/capture-previews.mjs`), its cover (`public/cards/games/overthinking.jpg`, by `tools/games/covers.mjs`) and
+the wall (`public/cards/games-all.jpg`: "Thirty games, one girlfriend."). On a phone's small tiles the names' letters are
+narrower in Pop mode (`pop.css`: `font-stretch: 84%` under 560 px), so a one-word name (OVERTHINKING, AUTOCOMPLETE,
+HALLUCINATION, SINGULARITY) stays whole on its line instead of breaking in the middle. The ten ids of the batch that was published
+and taken back on 2026-11-10 (botworks, deepdive, drift, harvest, nightshift, orbital, polarity, prism, switchyard,
+timeloop) are not used.
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 
