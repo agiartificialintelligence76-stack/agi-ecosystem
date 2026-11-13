@@ -19,10 +19,11 @@
 > real CSP on a phone and a computer (the game's title, a run with real pointer loops, pause; /games: 30 tiles, its tile
 > second with the only New badge, its preview playing, `#rate-overthinking`). Vercel: the branch's preview
 > `4d55jN4r5zZHpfC4CEsaViqXUAfz`, then production `4bYiR33MugWtjeWUeULRFDsp9rnf`, both completed. Live: agi1.app/games
-> serves the picker with 30 games, OVERTHINKING second and New, with its link and its still. **Two things this session
-> could not do:** open the live game's own page (reading it needed an approval nobody was there to give, and the link to
-> the owner's computer was down), so the owner's first tap on it is that check; and bring the new files into the owner's
-> Desktop folder, which stays behind GitHub `main` (as it already was since the five games of 2026-11-10).
+> serves the picker with 30 games, OVERTHINKING second and New, with its link and its still, and the owner played the
+> live game that evening ("i played it already on the website"): this session could not open the live game's own page
+> itself (reading it needed an approval nobody was there to give, and the link to the owner's computer was down). **Not
+> done:** the new files were not brought into the owner's Desktop folder (the same link), which stays behind GitHub
+> `main`, as it already was since the five games of 2026-11-10.
 
 > **Five-game expansion finished (2026-11-10):** BUBBLE SORT, AIR GAP, ACCEPT ALL COOKIES, PACKET LOSS and AUTOCOMPLETE,
 > recovered from `arcade-five-more` at `22eabdaa`, completed on `codex/finish-five-games`. All five have gameplay loops,

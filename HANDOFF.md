@@ -25,7 +25,7 @@ levels were measured) and play by a person on a real phone. No new service, data
 (Node 24, UTC, fake deployment settings: 2,108 tests, 2,104 passed, 4 skipped, 0 failed; bundling, share pages, secret
 scan) and the built pages under the site's real CSP on a phone and a computer. Vercel preview
 `4d55jN4r5zZHpfC4CEsaViqXUAfz` and production `4bYiR33MugWtjeWUeULRFDsp9rnf` completed. Live: agi1.app/games lists 30
-games with OVERTHINKING second and New. Not done from this session: opening the live game page itself in a browser, and
+games with OVERTHINKING second and New, and the owner played the live game that evening. Not done from this session:
 copying the new files into the owner's Desktop folder (its link was down): that folder is behind GitHub `main`.
 
 ## Five-game expansion completed — 2026-11-10
