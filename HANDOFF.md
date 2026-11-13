@@ -21,6 +21,13 @@ loops, flourishes, every special, the danger state, the spiral, the sunrise, eve
 night and mode at speed with no page error. **Not validated:** its sound by ear (written in a silent workspace; its
 levels were measured) and play by a person on a real phone. No new service, database change or setting.
 
+**Published as `2580b8d` to `main` on 2026-11-13** (branch `overthinking`), after the full release build in a clean copy
+(Node 24, UTC, fake deployment settings: 2,108 tests, 2,104 passed, 4 skipped, 0 failed; bundling, share pages, secret
+scan) and the built pages under the site's real CSP on a phone and a computer. Vercel preview
+`4d55jN4r5zZHpfC4CEsaViqXUAfz` and production `4bYiR33MugWtjeWUeULRFDsp9rnf` completed. Live: agi1.app/games lists 30
+games with OVERTHINKING second and New. Not done from this session: opening the live game page itself in a browser, and
+copying the new files into the owner's Desktop folder (its link was down): that folder is behind GitHub `main`.
+
 ## Five-game expansion completed — 2026-11-10
 
 Recovered `arcade-five-more` at `22eabdaa` and finished on `codex/finish-five-games`, based on production `a8153a76`.

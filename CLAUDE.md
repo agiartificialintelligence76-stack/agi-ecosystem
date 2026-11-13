@@ -13,7 +13,16 @@
 > agi1.app/games/overthinking, on the arcade kit. /games: 30 games, its tile right after TRENCHING SIMULATOR; "New" is
 > this one (the five of 2026-11-09 were New until then). **No new setting, SQL, function or service.** Its sound was
 > never heard by its author and no person has played it on a real phone yet (said under "Not checked"). See
-> "OVERTHINKING" under "AGI games".
+> "OVERTHINKING" under "AGI games". **Published as `2580b8d` to `main` on 2026-11-13** (through the branch
+> `overthinking`), after the full build passed the way Vercel runs it in a clean copy (Node 24, UTC: 2,108 tests: 2,104
+> passed, 4 skipped, 0 failed; Vite, the share pages and the secret check) and the built pages passed under the site's
+> real CSP on a phone and a computer (the game's title, a run with real pointer loops, pause; /games: 30 tiles, its tile
+> second with the only New badge, its preview playing, `#rate-overthinking`). Vercel: the branch's preview
+> `4d55jN4r5zZHpfC4CEsaViqXUAfz`, then production `4bYiR33MugWtjeWUeULRFDsp9rnf`, both completed. Live: agi1.app/games
+> serves the picker with 30 games, OVERTHINKING second and New, with its link and its still. **Two things this session
+> could not do:** open the live game's own page (reading it needed an approval nobody was there to give, and the link to
+> the owner's computer was down), so the owner's first tap on it is that check; and bring the new files into the owner's
+> Desktop folder, which stays behind GitHub `main` (as it already was since the five games of 2026-11-10).
 
 > **Five-game expansion finished (2026-11-10):** BUBBLE SORT, AIR GAP, ACCEPT ALL COOKIES, PACKET LOSS and AUTOCOMPLETE,
 > recovered from `arcade-five-more` at `22eabdaa`, completed on `codex/finish-five-games`. All five have gameplay loops,
