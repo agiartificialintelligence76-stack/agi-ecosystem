@@ -24,9 +24,11 @@ How it's put together and how to tune it (`node tools/games/goinglive/balance.mj
 Chromium at phone sizes upright and sideways, a computer and the tile's square, by touch, mouse and keys. **Not
 validated:** its sound by ear and play by a person on a real phone. No new service, database change or setting.
 
-**Published to `main` on 2026-11-14**, straight to production, after the full release build in a clean copy
-(Node 24, UTC, fake deployment settings: the whole suite; Vite, the share pages, the secret check) and the built page under
-the site's real CSP on a phone and a computer.
+**Published as `498dd63` to `main` on 2026-11-14**, straight to production, after the full release build in a clean
+copy (Node 24, UTC, fake deployment settings: 2,151 tests, 2,147 passed, 4 skipped, 0 failed; Vite, the share pages, the
+secret check) and the built page under the site's real CSP on a phone and a computer (no errors, no CSP reports). Vercel
+production `F43AfxeWvQ9iFWCcXD6n8x8pFVDL`: Ready. Live in the owner's Chrome: a fresh career, a video made, a webcam
+bought, unboxed and placed, no console errors.
 
 ## GROWTH STOCK, one new game — 2026-11-14
 

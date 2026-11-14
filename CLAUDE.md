@@ -14,9 +14,13 @@
 > hour and a half (a person, longer, over a few visits; she earns while you're away). Ours in every way: nothing of the
 > original's (its name, pets, jokes, money or art); every streamer, idea and number made up. A first-version career keeps
 > its followers and views. **No new setting, SQL, function or service.** See "GOING LIVE" under "AGI games".
-> **Published to `main` on 2026-11-14** (straight to production, as the owner was told), after the full build
-> passed the way Vercel runs it (the whole suite; Vite, the share pages and the secret check) and the built page passed under
-> the site's real CSP on a phone and a computer (a video made, a thing bought, unboxed and placed, a stream played).
+> **Published as `498dd63` to `main` on 2026-11-14** (straight to production, as the owner was told), after the full
+> build passed the way Vercel runs it (2,151 tests: 2,147 passed, 4 skipped, 0 failed; Vite, the share pages and the secret
+> check) and the built page passed under the site's real CSP on a phone and a computer (a video made from an idea by a
+> real tap, a thing bought; a stream played by taps to its end card and back to her room). Vercel production
+> `F43AfxeWvQ9iFWCcXD6n8x8pFVDL`: Ready. Live in the owner's Chrome: the new page and description, a fresh career (Level
+> 1, the Bedroom, #17), a video made (3 followers), her career kept after a reload, a webcam bought, its box tapped open and
+> placed on her desk, no console errors (that check left a small career in that browser).
 
 > **GOING LIVE, the streamer sim (2026-11-14, afternoon; rebuilt the same evening, the entry above):** the owner: "do u
 > know the game pewdiepie tuber simulator?", then "yes exactly" to an AGI-1 version for the arcade, ours in every way. The
