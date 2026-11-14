@@ -165,8 +165,8 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
     synapse: 'synapse.html', overclock: 'overclock.html', beattheagi: 'beattheagi.html', hallucination: 'hallucination.html', guardrails: 'guardrails.html',
     // (2026-11-09) five more
     bubblesort: 'bubblesort.html', airgap: 'airgap.html', cookies: 'cookies.html', packetloss: 'packetloss.html', autocomplete: 'autocomplete.html',
-    // (2026-11-13) and OVERTHINKING, (2026-11-14) and GROWTH STOCK
-    overthinking: 'overthinking.html', growthstock: 'growthstock.html',
+    // (2026-11-13) and OVERTHINKING, (2026-11-14) and GROWTH STOCK, then GOING LIVE
+    overthinking: 'overthinking.html', growthstock: 'growthstock.html', goinglive: 'goinglive.html',
   }, 'only website entries, including the owner editor and its custom-page shell; never the clips page or live-show scene');
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the

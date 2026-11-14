@@ -194,8 +194,8 @@ test("the games' rules: its games and their ids, a player's id, plays a report, 
     'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails',
     // (2026-11-09) five more on the kit
     'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete',
-    // (2026-11-13) and OVERTHINKING, (2026-11-14) and GROWTH STOCK
-    'overthinking', 'growthstock']);
+    // (2026-11-13) and OVERTHINKING, (2026-11-14) and GROWTH STOCK, then GOING LIVE
+    'overthinking', 'growthstock', 'goinglive']);
   assert.equal(GAMES.vladrunner2049.name, 'VLAD RUNNER 2049');
   assert.equal(GAMES.vladrunner2049.path, '/games/vladrunner2049');
   assert.equal(GAMES.skybreak.name, 'SKYBREAK');

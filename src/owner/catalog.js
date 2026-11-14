@@ -43,6 +43,7 @@ export const BUILTIN_PAGES = Object.freeze([
   { path: '/games/autocomplete', title: "AUTOCOMPLETE" },
   { path: '/games/overthinking', title: "OVERTHINKING" },
   { path: '/games/growthstock', title: "GROWTH STOCK" },
+  { path: '/games/goinglive', title: "GOING LIVE" },
   { path: '/cloakmesh', title: 'CloakMesh' },
   { path: '/studio', title: 'AGI Studio' },
   { path: '/studio/explore', title: 'Studio · Explore' },
@@ -84,6 +85,7 @@ const ALIASES = Object.freeze({
   '/autocomplete': '/games/autocomplete',
   '/overthinking': '/games/overthinking',
   '/growthstock': '/games/growthstock',
+  '/goinglive': '/games/goinglive',
 });
 
 export function normalizePath(value = '/') {

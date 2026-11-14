@@ -70,6 +70,8 @@
     { "source": "/games/overthinking/", "destination": "/overthinking" },
     { "source": "/games/growthstock", "destination": "/growthstock" },
     { "source": "/games/growthstock/", "destination": "/growthstock" },
+    { "source": "/games/goinglive", "destination": "/goinglive" },
+    { "source": "/games/goinglive/", "destination": "/goinglive" },
     { "source": "/vote/owner", "destination": "/vote" },
     { "source": "/vote/owner/", "destination": "/vote" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" },

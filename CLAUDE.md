@@ -1,5 +1,20 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **GOING LIVE, the streamer sim (2026-11-14, afternoon):** the owner: "do u know the game pewdiepie tuber simulator?",
+> then "yes exactly" to an AGI-1 version for the arcade, ours in every way, then "continue and finish". AGI-1 starts
+> streaming with zero followers in a bare bedroom. Pick what she streams (eight kinds, opening as she grows: chatting,
+> gaming, karaoke, art, cooking, coding, cozy nights, dance parties), then run her one-minute stream live: answer chat's
+> questions, ban spam bots, welcome raids, fix tech problems (the lights go out, the stream lags, her model freezes),
+> catch hearts, clip her best moments and tap through her big moment; good moments in a row build a combo and the hype
+> brings viewers. Her views buy her room's things (twelve, four tiers each) and bigger homes (a studio flat, a penthouse,
+> a space station), her room makes every stream better, her old streams keep earning while you're away (8 hours at most),
+> and she climbs a board of sixteen made-up streamers (MegaModel 9000 … A Literal Potato) to #1 trending, in about an
+> hour for a good player. **No real creator, platform or their looks: every streamer, chat line and number is made up**,
+> and the game says so. At agi1.app/games/goinglive, on the arcade kit; /games: 32 games, this one New. **No new
+> setting, SQL, function or service.** See "GOING LIVE" under "AGI games". **Released to `main` on 2026-11-14**, straight
+> to production like GROWTH STOCK (the owner was told so and didn't object), after the full build passed the way Vercel
+> runs it and the built page passed under the site's real CSP on a phone and a computer.
+
 > **GROWTH STOCK, the stock farm (2026-11-14):** the owner forwarded a Discord ask ("can you do some farming simulator
 > like AGI farming stocks"): "can u add/create a game like these just 1 and publish it to production right away no
 > preview", then "Stocks are the crops" and "i want real stock names". AGI-1's farm, where the crops are stocks: GME,
@@ -10843,12 +10858,84 @@ harvests, holding Sell sells (touch and mouse), the keys; whole quarters at spee
 **Not checked, said plainly:** its sound by ear, and play by a person on a real phone.
 
 **On /games:** 31 games. Its tile is second, after TRENCHING SIMULATOR, and "New" is this one alone (OVERTHINKING was
-New until then and is now third). `src/games/shelf.js` ("Stock farm", Sim & idle), `games.html` (its tile, its ratings
+New until then and is now third). (Later the same day GOING LIVE took second place and "New": GROWTH STOCK is third.)
+`src/games/shelf.js` ("Stock farm", Sim & idle), `games.html` (its tile, its ratings
 panel `#rate-growthstock`, its place in the game picker, the counts and her line), `src/games/list.js` (genre Sim),
 `vercel.json`, `vite.config.js`, `scripts/share-pages.js`, `src/owner/catalog.js`, `server/arcade.js` (a review may talk
 about the stocks' names and the game's pretend market; never advice about real stocks), the preview and still
 (`public/images/games/growthstock.mp4` and `.webp`), its cover (`public/cards/games/growthstock.jpg`) and the wall
 (`public/cards/games-all.jpg`: "Thirty-one games, one girlfriend.").
+
+### GOING LIVE (2026-11-14)
+
+The owner: "do u know the game pewdiepie tuber simulator?" (a famous YouTuber's game where you grow a streamer's
+channel and room). Claude offered an AGI-1 version of our own for the arcade, and the owner: **"yes exactly"**, then
+"continue and finish". Claude had said it would publish it straight to production like GROWTH STOCK, unless told
+otherwise. One game, at **agi1.app/games/goinglive** (`goinglive.html`, `src/games/goinglive/`), on the arcade kit like
+the others (its frame, title, pause, end card, local saves `agi_arcade:goinglive`, `?demo` self-play, the AGI GAMES
+intro). **No new setting, SQL, function or service**; never money; nothing asked of a wallet.
+
+**Ours, nobody else's.** No real creator, platform, channel or their in-jokes, words or looks: no YouTube or Twitch, no
+subscribers, donations or super chats (followers and **views**, the game's own points), our own streamers on its board,
+our own chat (64 made-up names), her own room drawn in code with her 2D picture (`/images/agi1-live-2d.webp`).
+`tests/goinglive.test.js` checks every line, name and the page against a list of real names and money words.
+
+**The game.** Between streams, her room (the view) and its panel: what to stream (a card each with about how many will
+watch, 🔥 when it's trending for 3 streams, 😴 when chat is tired of it), **GO LIVE**, Her room (the shop), Trending
+(the board), Records (her numbers, six award mics, 14 stickers). Live, the camera glides in on her and her desk: LIVE,
+viewers, the clock (a minute), the **hype** meter and the combo on her stream; her **chat** beside it (under it on a
+phone held upright), scrolling, busier with more viewers. What turns up (each waits a few seconds for a tap; at most four
+at once):
+
+- **a question or a request** in chat ("can you hit the high note?"): tap **Answer** and she answers in chat and out loud
+  (her bubble); **a spam bot** ("FREE FOLLOWERS 🔥🔥 dm me"): **Ban** it before it scares viewers off;
+- **a raid** from a streamer on the board: **Welcome!** brings their viewers (missed, a few stay anyway);
+- **a tech problem**: her mic muted, the stream lagging (the picture tears), her model frozen (a cold tint, she stops),
+  the lights out (the room goes dark), her cat on the keyboard (once she has a cat): fix it fast, her viewers leave
+  while it lasts;
+- **hearts** to catch (views), **CLIP IT!** when the hype is high (views, and the clip keeps earning), and once a stream
+  **her big moment** (a boss fight, the high note, a speed-draw, a pancake flip…): 11 quick taps.
+
+Good moments in a row build a **combo** (more viewers); a miss breaks it. After the minute: peak viewers, new followers,
+views, a grade (S, A, B, C) and her line. **Her career:** views buy her room's **twelve things** (mic, computer, model
+rig, chair, lights, wall, shelf, window, plants, art corner, kitchen, her cat), four tiers each, each helping some kinds
+of stream more than others (the shop marks the best two for what's picked); **homes** (Studio flat at 10K followers and
+60K views, Penthouse studio at 500K and 9M, Space station at 8M and 400M) make every stream draw more; chat gets tired of
+the same kind and comes back to it; one kind trends for 3 streams at a time; her old streams (and clips) keep earning
+views, half of it while you're away, 8 hours at most (the "While you were away" card). The board: MegaModel 9000 (30M)
+down to A Literal Potato (40). Keys: 1–8 what to stream, L or Space go live, Space or Enter takes the most urgent thing
+on her stream (her big moment while it's up).
+
+**How it's built** (all in `src/games/goinglive/`; the rules never touch the page): `data.js` (the kinds, her room's
+things and homes, the awards, the board, `TUNE`), `econ.js` (her career: what a stream draws, trending, tired chat, the
+shop, moving, away, what a stream brings), `stream.js` (a stream, pure and seeded: what turns up, taps, misses, the hype
+and the viewers, the grade), `ai.js` (the game's own streamers: `newbie`, `casual`, `good`, `pro`, and `demo` for the
+tile's preview), `progress.js` (what's kept, loaded with care; the stickers), `lines.js` (her words, her chat, the bots,
+the raids, the tech problems), `art.js` (her room in canvas 2D, four homes, every thing at every tier; the shop's
+pictures), `render.js` (the camera: the room between streams, her and her desk live; tech problems on the picture),
+`ui.js` (the panel, her chat, the stream's overlay, the cards), `sound.js` (made in the browser: chat pings, bans,
+raids, a lo-fi loop in her room, a faster one live that speeds up with the hype), `game.js`, `style.css` (`gl-`
+classes). `?qa` (a test page: nothing kept or counted) takes `&hub`, `&live=<kind>`, `&auto=<player>`, `&f=`, `&tier=`,
+`&room=`, `&speed=`.
+
+**Tuning it.** `node tools/games/goinglive/balance.mjs [seeds] [streams]`. As published (6 seeds, the median stream and
+minutes of play, a minute a stream and 25 s between): a **good** player opens Karaoke at stream 5, Art 8, Cooking 14,
+moves to the Studio flat at 19, Coding 20, Cozy 27, the Penthouse 34, Dance 35, the Space station 48, and is **#1 at
+stream 56 (about 80 minutes)**; casual #1 at 70, pro at 50, newbie at 102. Followers keep growing after #1.
+
+**Checked.** `tests/goinglive.test.js` (18 tests) in `npm test`. In headless Chromium: phones held upright (390 × 844,
+360 × 640) and sideways (844 × 390, 667 × 375), a computer (1440 × 900), the tile's square (480 × 480): the title, her
+room, the shop (a buy), the board, records, the away card, whole streams played by taps (an S stream), by the keys and
+by the game's own player, the end card and back; no page errors. **Not checked, said plainly:** its sound by ear, and
+play by a person on a real phone.
+
+**On /games:** 32 games. Its tile is second, after TRENCHING SIMULATOR, and "New" is this one alone (GROWTH STOCK, New
+until then, is third). `src/games/shelf.js` ("Streamer sim", Sim & idle, `added` with its hour so Newest puts it first),
+`games.html` (its tile, its ratings panel `#rate-goinglive`, its place in the game picker, the counts and her line),
+`src/games/list.js` (genre Sim), `vercel.json`, `vite.config.js`, `scripts/share-pages.js`, `src/owner/catalog.js`,
+`server/arcade.js` (a review may talk about streaming, chat, raids, bots and the made-up board; never other real
+streamers or channels), the preview and still (`public/images/games/goinglive.mp4` and `.webp`), its cover
+(`public/cards/games/goinglive.jpg`) and the wall (`public/cards/games-all.jpg`: "Thirty-two games, one girlfriend.").
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 

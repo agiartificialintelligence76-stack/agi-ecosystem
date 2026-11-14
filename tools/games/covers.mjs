@@ -49,6 +49,7 @@ export const COVERS = {
   overthinking: { lines: ['OVER', 'THINKING'], bg: '#170b3d', bg2: '#5a2ca0', accent: '#ffc933', line: "She can't sleep. Loop her thoughts before they spiral.", tag: 'Lasso arcade', small: true },
   // (2026-11-14)
   growthstock: { lines: ['GROWTH', 'STOCK'], bg: '#0f2a1e', bg2: '#1f6a45', accent: '#ffc933', line: 'Plant TSLA. Water NVDA. Sell the spike. Shoo the bear.', tag: 'Stock farm' },
+  goinglive: { lines: ['GOING', 'LIVE'], bg: '#1d1238', bg2: '#5a2ca0', accent: '#ff4da6', line: 'Zero followers, one bedroom. Take her to #1 trending.', tag: 'Streamer sim' },
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');

@@ -1,5 +1,24 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## GOING LIVE, one new game — 2026-11-14
+
+The owner asked about a famous YouTuber's streamer sim, said "yes exactly" to an AGI-1 version of our own for the
+arcade, then "continue and finish"; Claude had said it would go straight to production like GROWTH STOCK. Built on the
+branch `goinglive` (local only), based on production `0f4af3a`, and pushed straight to `main`.
+
+**GOING LIVE** (agi1.app/games/goinglive, `src/games/goinglive/`, on the arcade kit): AGI-1 starts streaming with zero
+followers in a bare bedroom. Pick what she streams (eight kinds), run her one-minute stream live (answer chat, ban spam
+bots, welcome raids, fix tech problems, catch hearts, clip, tap through her big moment), spend her views on her room
+(twelve things, four tiers) and bigger homes (up to a space station), and climb a board of sixteen made-up streamers to
+#1 trending (about an hour for a good player). Her old streams earn while you're away (8 hours at most). Every
+streamer, chat line and number is made up; no real creator or platform. The arcade has 32 games; its tile is second
+and the only one marked New (GROWTH STOCK is third).
+
+How it's put together and how to tune it (`node tools/games/goinglive/balance.mjs`): `CLAUDE.md` → "GOING LIVE" under
+"AGI games". Validation: `tests/goinglive.test.js` (18 tests) in `npm test`, the whole suite and the build; in headless
+Chromium at phone sizes upright and sideways, a computer and the tile's square, by touch, mouse and keys. **Not
+validated:** its sound by ear and play by a person on a real phone. No new service, database change or setting.
+
 ## GROWTH STOCK, one new game — 2026-11-14
 
 The owner forwarded a Discord ask for "some farming simulator like AGI farming stocks": "can u add/create a game like

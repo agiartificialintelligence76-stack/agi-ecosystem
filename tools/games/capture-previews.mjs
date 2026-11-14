@@ -42,6 +42,7 @@ export const RECIPES = {
   // (2026-11-14) GROWTH STOCK: its own farmer works the field (the farm's been going since Monday: stocks ripe, coins
   // flying into the market's chips)
   growthstock: kit('growthstock', 7, { poster: 0.5 }),
+  goinglive: kit('goinglive', 7, { poster: 0.5 }),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],
