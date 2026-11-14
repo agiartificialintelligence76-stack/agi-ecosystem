@@ -1,29 +1,32 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
-## GOING LIVE, one new game — 2026-11-14
+## GOING LIVE, one new game, rebuilt the same day — 2026-11-14
 
 The owner asked about a famous YouTuber's streamer sim, said "yes exactly" to an AGI-1 version of our own for the
-arcade, then "continue and finish"; Claude had said it would go straight to production like GROWTH STOCK. Built on the
-branch `goinglive` (local only), based on production `0f4af3a`, and pushed straight to `main`.
+arcade, then "continue and finish". The first version (pick what she streams, run her stream live, twelve room
+upgrades) was **published as `c13c23e`** (Vercel production `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`). Then the owner: "the
+original pewdipie tuber simulator is more fun to be honest the game mechanics there is so good and the graphics too",
+"Rebuild both (Recommended)" and "Short waits (Recommended)". Rebuilt on the branch `goinglive` (local only) and pushed
+straight to `main`, as the owner was told.
 
-**GOING LIVE** (agi1.app/games/goinglive, `src/games/goinglive/`, on the arcade kit): AGI-1 starts streaming with zero
-followers in a bare bedroom. Pick what she streams (eight kinds), run her one-minute stream live (answer chat, ban spam
-bots, welcome raids, fix tech problems, catch hearts, clip, tap through her big moment), spend her views on her room
-(twelve things, four tiers) and bigger homes (up to a space station), and climb a board of sixteen made-up streamers to
-#1 trending (about an hour for a good player). Her old streams earn while you're away (8 hours at most). Every
-streamer, chat line and number is made up; no real creator or platform. The arcade has 32 games; its tile is second
-and the only one marked New (GROWTH STOCK is third).
+**GOING LIVE** (agi1.app/games/goinglive, `src/games/goinglive/`, on the arcade kit), as it is now: a room sim in pixel
+art. AGI-1, a little pixel girl, walks round her room, types at her desk while a video is made, sits, naps and visits her
+pets. Three video ideas at a time (made-up titles about two of ten topics; trending topics bring more), each made in
+seconds; her views pay for 90 things that come in boxes and are placed, moved and put away on her room's grid, each
+making videos about its topics better; four homes (a bedroom up to a space station); levels, idea points for ten skills,
+quests, a fan-mail drone, spam bots to zap, awards as plaques, and going live (the first version's one-minute stream,
+with a facecam) every few minutes. A good player who never stops is #1 in about an hour and a half; she earns while
+you're away (8 hours at most). Every streamer, idea and number is made up; nothing of the original's. A first-version
+career keeps its followers and views (a fresh bedroom). The arcade has 32 games; its tile is second and the only New one.
 
 How it's put together and how to tune it (`node tools/games/goinglive/balance.mjs`): `CLAUDE.md` → "GOING LIVE" under
-"AGI games". Validation: `tests/goinglive.test.js` (18 tests) in `npm test`, the whole suite and the build; in headless
+"AGI games". Validation: `tests/goinglive.test.js` (29 tests) in `npm test`, the whole suite and the build; in headless
 Chromium at phone sizes upright and sideways, a computer and the tile's square, by touch, mouse and keys. **Not
 validated:** its sound by ear and play by a person on a real phone. No new service, database change or setting.
 
-**Published as `c13c23e` to `main` on 2026-11-14**, straight to production (no preview, as with GROWTH STOCK), after the
-full release build in a clean copy (Node 24, UTC, fake deployment settings: 2,140 tests, 2,136 passed, 4 skipped, 0
-failed; Vite, the share pages, the secret check) and the built pages under the site's real CSP on a phone and a computer
-(no errors, no CSP reports). Vercel production `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`: Ready. The live page wasn't opened from
-this session (the workspace can't reach agi1.app): worth a look on a phone.
+**Published to `main` on 2026-11-14**, straight to production, after the full release build in a clean copy
+(Node 24, UTC, fake deployment settings: the whole suite; Vite, the share pages, the secret check) and the built page under
+the site's real CSP on a phone and a computer.
 
 ## GROWTH STOCK, one new game — 2026-11-14
 
