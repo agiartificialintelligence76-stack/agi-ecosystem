@@ -39,6 +39,9 @@ export const RECIPES = {
   bubblesort: kit('bubblesort'), airgap: kit('airgap'), cookies: kit('cookies'), packetloss: kit('packetloss'), autocomplete: kit('autocomplete'),
   // (2026-11-13) OVERTHINKING: its own player draws the loops (its still: a loop about to close round five of a kind)
   overthinking: kit('overthinking', 7, { poster: 0.86 }),
+  // (2026-11-14) GROWTH STOCK: its own farmer works the field (the farm's been going since Monday: stocks ripe, coins
+  // flying into the market's chips)
+  growthstock: kit('growthstock', 7, { poster: 0.5 }),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],

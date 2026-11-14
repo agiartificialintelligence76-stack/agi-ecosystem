@@ -1,5 +1,17 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **GROWTH STOCK, the stock farm (2026-11-14):** the owner forwarded a Discord ask ("can you do some farming simulator
+> like AGI farming stocks"): "can u add/create a game like these just 1 and publish it to production right away no
+> preview", then "Stocks are the crops" and "i want real stock names". AGI-1's farm, where the crops are stocks: GME,
+> KO, AAPL, TSLA, AMZN, MSFT, BRK.A, NVDA and NFLX grow as little candle charts until their shares bloom as coins; drag
+> to plant, water and harvest, hold Sell to sell on the farm's own market (each share sold pushes the rate down), read
+> the farm's news (fairs, trends, gluts, rumours, robot buyers' orders), shoo the bear, ride the bull, and make the most
+> gold by Sunday's closing bell. Four quarters, a Daily and Endless. **Only the names are real:** the rates (in gold),
+> the charts and the news are made up and the game says so; the coins are our own pictures, never a company's logo.
+> At agi1.app/games/growthstock, on the arcade kit; /games: 31 games, this one New. **No new setting, SQL, function or
+> service.** See "GROWTH STOCK" under "AGI games". **Published straight to `main` on 2026-11-14** (no preview, the
+> owner's wish), after the full build passed here.
+
 > **OVERTHINKING, one new game (2026-11-13):** the owner: "Create an original game that is creative , addictive, visually
 > good, best game of the year in agi1.app/games. just 1 game then publish it to production when youre done". It's
 > midnight, AGI-1 can't sleep, and her thoughts drift round her mind as little glowing creatures: draw a ribbon of light
@@ -10766,6 +10778,72 @@ narrower in Pop mode (`pop.css`: `font-stretch: 84%` under 560 px), so a one-wor
 HALLUCINATION, SINGULARITY) stays whole on its line instead of breaking in the middle. The ten ids of the batch that was published
 and taken back on 2026-11-10 (botworks, deepdive, drift, harvest, nightshift, orbital, polarity, prism, switchyard,
 timeloop) are not used.
+
+### GROWTH STOCK (2026-11-14)
+
+The owner, forwarding a Discord message ("me2, can you do some farming simulator like AGI farming stocks or smthng like
+that 😁👀", in reply to "i like simulation games"): "can u add/create a game like these just 1 and publish it to
+production right away no preview". A first version grew vegetables; the owner: "why u create a literal farming lol, do u
+get what it said farming stocks?", then picked **"Stocks are the crops"**, then **"i want real stock names"**. One game,
+at **agi1.app/games/growthstock** (`growthstock.html`, `src/games/growthstock/`), on the arcade kit like the others (its
+frame, title, pause, end card, local saves `agi_arcade:growthstock`, `?demo` self-play, the AGI GAMES intro). **No new
+setting, SQL, function or service**; never money; nothing asked of a wallet. **Published straight to `main`** (the
+owner's "no preview": no branch push, no preview deployment), after the full build here.
+
+**The game.** AGI-1 traded her GPUs for a little farm in Gradient Hills, where the crops are stocks. Each grows as a
+little candle chart (green candles on stalks, each higher than the last) until its **shares** bloom on top as coins.
+Drag across the field to plant the chosen stock, water a dry plot (a drop) and harvest a ripe one (it glows) into the
+barn; hold **Sell** to sell the chosen stock's shares at its rate on the farm's market (each share sold pushes the rate
+down a little; it comes back with time); make the most gold by Sunday's 6 PM closing bell, which sells what's left.
+
+- **Nine real tickers, nothing else real:** GME, KO, AAPL, TSLA, AMZN, MSFT, BRK.A, NVDA, NFLX (`crops.js`, with their
+  company names). Their rates (in **gold**, never dollars), their charts and all the news are made up; the title says
+  "Real company names, made-up rates and news · play gold only", and so do its page's description and how-to. Each
+  coin has **our own little picture** (a controller, a cup, a phone, a bolt, a parcel, a cloud, columns, a chip,
+  popcorn: `GLYPH` in `art.js`), **never a company's logo**. AGI-1 never calls one her favourite.
+- **Each stock grows its own way:** how fast, how many shares, what planting costs, its usual rate, how much it
+  wanders, how fast it comes back, how much a sale moves it; TSLA and NVDA leap on rumours; NFLX grows faster in frost
+  and at night. At its usual rate every stock earns about one gold an hour a plot: the market and the news decide.
+- **The farm:** a 5 × 5 field (the middle 3 × 3 open; more land costs more each time), a barn (40, 80, 160 shares),
+  sprinklers, compost; a stock never dry while it grew gives one more share (a **bumper**); a ripe one left 18 hours
+  **wilts** (red candles, grey coins; a tap clears it). **Shares never spoil.**
+- **The farm's news** (`lines.js`): fairs (one a quarter, announced two days ahead), trends, gluts, rumours, orders from
+  made-up robot buyers (Robo Fund, Unit 7, Bolt Capital…), weather, **a bear** that walks in and eats ripe stocks while
+  the market's down (three taps shoo it), **a bull** that runs across and lifts everything. The news is about the farm
+  (a cat video, the hens, the scarecrow's newsletter), **never about the companies** (no earnings, CEOs, lawsuits…:
+  `tests/growthstock.test.js` checks every line), and never money talk.
+
+**Modes.** **Seasons** (Q1 Spring, Q2 Summer, Q3 Autumn, Q4 Winter: a week each, each opened by a star in the one
+before, four or five stocks each, its own weather, a fair for one stock; stars at `stars` in `seasons.js`), a **Daily**
+(the same week for everyone that date) and **Endless** (the quarters going round, opened by a star in Spring). Kept in
+the browser: stars and bests, the Daily's streak, Endless's best, the farm's totals and **14 stickers** (`progress.js`).
+
+**How it's built** (all in `src/games/growthstock/`; the rules never touch the page): `crops.js` (the stocks),
+`seasons.js` (the quarters, the week's plan from the seed, a day at a time), `sim.js` (the rules, pure and seeded: the
+market's stream is its own, so selling never changes what another stock does), `ai.js` (the game's own farmers:
+`newbie`, `casual`, `steady`, `expert`, and `demo` for the preview and the title), `game.js` (the page), `render.js`,
+`art.js`, `chart.js` (canvas 2D: the sky by the hour, the plants, the coins, the candles), `ui.js` (the market panel: a
+chip per stock with its sparkline, the chosen stock's chart, Hold to sell, the tools; on a wide screen the stocks are a
+watchlist, one row each), `sound.js`, `lines.js`, `progress.js`, `style.css` (`gs-` classes). The title's farm and the
+preview start on a busy Tuesday with all the land open (`openAll` in `makeConfig`).
+
+**Tuning it.** `node tools/games/growthstock/balance.mjs [seeds] [season …]` (`CROPS=1` adds what each farmer grew).
+As published (12 seeds, median gold): Q1 newbie 1,277, casual 2,840, steady 3,303, expert 3,195; Q2 1,925 / 3,106 /
+3,101 / 3,199; Q3 3,701 / 4,539 / 4,473 / 4,292; Q4 1,923 / 2,955 / 3,460 / 3,320. Stars: Q1 900 / 1,900 / 2,900, Q2
+1,200 / 2,300 / 3,200, Q3 2,200 / 3,500 / 4,500, Q4 1,100 / 2,300 / 3,300.
+
+**Checked.** `tests/growthstock.test.js` (14 tests) in `npm test`. In headless Chromium: a phone (390 × 844, 375 × 667,
+360 × 640), a phone on its side (844 × 390), a computer (1440 × 900); a tap plants, a drag plants a row, a ripe one
+harvests, holding Sell sells (touch and mouse), the keys; whole quarters at speed to the end card with no page error.
+**Not checked, said plainly:** its sound by ear, and play by a person on a real phone.
+
+**On /games:** 31 games. Its tile is second, after TRENCHING SIMULATOR, and "New" is this one alone (OVERTHINKING was
+New until then and is now third). `src/games/shelf.js` ("Stock farm", Sim & idle), `games.html` (its tile, its ratings
+panel `#rate-growthstock`, its place in the game picker, the counts and her line), `src/games/list.js` (genre Sim),
+`vercel.json`, `vite.config.js`, `scripts/share-pages.js`, `src/owner/catalog.js`, `server/arcade.js` (a review may talk
+about the stocks' names and the game's pretend market; never advice about real stocks), the preview and still
+(`public/images/games/growthstock.mp4` and `.webp`), its cover (`public/cards/games/growthstock.jpg`) and the wall
+(`public/cards/games-all.jpg`: "Thirty-one games, one girlfriend.").
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 

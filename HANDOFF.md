@@ -1,5 +1,23 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## GROWTH STOCK, one new game — 2026-11-14
+
+The owner forwarded a Discord ask for "some farming simulator like AGI farming stocks": "can u add/create a game like
+these just 1 and publish it to production right away no preview", then "Stocks are the crops" and "i want real stock
+names". Built on the branch `growthstock` (local only), based on production `a32eff5`, and pushed straight to `main`.
+
+**GROWTH STOCK** (agi1.app/games/growthstock, `src/games/growthstock/`, on the arcade kit): AGI-1's farm, where nine
+real tickers (GME, KO, AAPL, TSLA, AMZN, MSFT, BRK.A, NVDA, NFLX) grow as candle-chart plants; harvest the shares and
+sell them on the farm's made-up market for gold. Four quarters, a Daily and Endless; stars, bests and 14 stickers kept
+in the browser. Only the names are real (the title, how-to and page say so); the coins are our own pictures, never a
+company's logo; the news is about the farm, never the companies. The arcade has 31 games; its tile is second and the
+only one marked New (OVERTHINKING is third).
+
+How it's put together and how to tune it (`node tools/games/growthstock/balance.mjs`): `CLAUDE.md` → "GROWTH STOCK"
+under "AGI games". Validation: `tests/growthstock.test.js` (14 tests) in `npm test`, the whole suite and the build; in
+headless Chromium at three phone sizes, a phone on its side and a computer, by touch, mouse and keys. **Not validated:**
+its sound by ear and play by a person on a real phone. No new service, database change or setting.
+
 ## OVERTHINKING, one new game — 2026-11-13
 
 The owner: "Create an original game that is creative , addictive, visually good, best game of the year in agi1.app/games.

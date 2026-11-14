@@ -24,13 +24,15 @@ export const SORTS = Object.freeze([
   { id: 'rated', label: 'Top rated' },
 ]);
 
-// "Featured": the order of the tiles when the page opens. New: OVERTHINKING (2026-11-13, the owner: "Create an original
-// game … just 1 game"), right after TRENCHING SIMULATOR; the five of 2026-11-09 (the owner: "create 5 more new games"), every
-// other tile after it, were New until then, and before them the second night's ten (2026-11-08, `added` with its hour so
-// Newest puts them before the first night's ten)
+// "Featured": the order of the tiles when the page opens. New: GROWTH STOCK (2026-11-14, the owner: "can u add/create a
+// game like these just 1", a farming sim where the crops are stocks), right after TRENCHING SIMULATOR, then OVERTHINKING
+// (2026-11-13, New until then); the five of 2026-11-09 (the owner: "create 5 more new games"), every other tile after them,
+// were New before that, and before them the second night's ten (2026-11-08, `added` with its hour so Newest puts them
+// before the first night's ten)
 export const SHELF = Object.freeze([
   { id: 'trenchingsimulator', genre: 'Trading sim', line: 'Six trading terminals, play money only', tags: ['chill'], added: '2026-10-20', badge: 'Play money' },
-  { id: 'overthinking', genre: 'Lasso arcade', line: 'Draw loops round her 3 a.m. thoughts', tags: ['new', 'arcade', 'puzzle'], added: '2026-11-13' },
+  { id: 'growthstock', genre: 'Stock farm', line: 'Grow stocks as candle charts, sell high', tags: ['new', 'chill'], added: '2026-11-14' },
+  { id: 'overthinking', genre: 'Lasso arcade', line: 'Draw loops round her 3 a.m. thoughts', tags: ['arcade', 'puzzle'], added: '2026-11-13' },
   { id: 'bubblesort', genre: 'Bubble shooter', line: 'Match three, drop the rest', tags: ['puzzle', 'arcade'], added: '2026-11-09' },
   { id: 'realorai', genre: 'Photo quiz', line: 'Real photo or AI? Swipe and find out', tags: ['puzzle'], added: '2026-11-08T10:00' },
   { id: 'airgap', genre: 'Air hockey', line: 'Air hockey vs her, or a friend', tags: ['arcade', 'action'], added: '2026-11-09' },

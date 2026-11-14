@@ -42,6 +42,9 @@ export const GAMES = {
   // since 2026-11-13 (the owner: "Create an original game … just 1 game"): one more on the arcade kit, drawn with one
   // finger: loop AGI-1's 3 a.m. thoughts before her context fills (see CLAUDE.md, "OVERTHINKING")
   overthinking: { name: "OVERTHINKING", path: '/games/overthinking', genre: 'Arcade', kit: true },
+  // since 2026-11-14 (the owner: "can u add/create a game like these just 1", a farming sim about stocks, then "Stocks
+  // are the crops" and "i want real stock names"): AGI-1's stock farm (see CLAUDE.md, "GROWTH STOCK")
+  growthstock: { name: "GROWTH STOCK", path: '/games/growthstock', genre: 'Sim', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

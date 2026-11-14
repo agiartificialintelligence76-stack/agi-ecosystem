@@ -339,6 +339,16 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  growthstock: Object.freeze({
+    what: '"GROWTH STOCK", a cartoon farming game where an anime girl, AGI-1, grows crops named after real stock tickers '
+      + '(GME, KO, AAPL, TSLA, AMZN, MSFT, BRK.A, NVDA, NFLX) that grow as little candle charts, and sells their "shares" '
+      + 'for made-up gold on the farm\'s own pretend market (its rates and news are made up): talk about planting, watering, '
+      + 'harvesting, the stocks\' names, selling the game\'s shares high, the bear, the bull, the seasons, gold and stars '
+      + 'is part of reviewing it',
+    promo: 'other games, coins, tokens, trading apps, channels, groups, services',
+    advice: 'financial advice about real stocks, coins or real money (telling people to buy or sell something real, price '
+      + 'targets, sure gains)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];
