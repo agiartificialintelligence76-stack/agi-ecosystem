@@ -1,29 +1,34 @@
-// GOING LIVE (2026-11-14; rebuilt the same day), an arcade-kit game on agi1.app/games: AGI-1 starts streaming with zero
-// followers in a bare bedroom and climbs to #1 trending (the owner: "yes exactly" to an AGI-1 version of a famous
-// YouTuber's streamer game, ours in every way; then, of that game, "the game mechanics there is so good and the graphics
-// too" → "Rebuild both" and "Short waits"). What the game is made of (topics, things, video ideas, homes, skills, the
-// board); her room's grid (what fits where, moving things, her way round them); her career (videos, trends, levels, the
-// shop and its boxes, skills, going live, the drone and the bots, away, quests); the same seed giving the same career;
-// a live stream's rules (the mini-game: unchanged from the first version); the game's own players and the pace of a
-// whole career; what's kept (and a career from the first version); every thing's pixel art; her words; and its code.
-// All in Node (no browser). Run: node --test tests/goinglive.test.js
+// GOING LIVE (2026-11-14; rebuilt the same day, then taken down and reworked that night), an arcade-kit game on
+// agi1.app/games: AGI-1 starts streaming with zero followers in a bare bedroom and climbs to #1 trending (the owner: "yes
+// exactly" to an AGI-1 version of a famous YouTuber's streamer game, ours in every way; then "Rebuild both" and "Short
+// waits"; then "take it down the site first then rework it": more space, a room that comes alive, boxes worth opening).
+// What the game is made of (topics, things and box finds, video ideas, homes, skills, the board); her room's grid (what
+// fits where, moving things, her way round them); her career (videos, trends, levels, the shop and its deliveries,
+// mystery boxes and her collection, skills, going live, the drone and the bots, away, quests); what she does with her
+// things; the same seed giving the same career; a live stream's rules (the mini-game: unchanged from the first version);
+// the game's own players and the pace of a whole career; what's kept (and a career from the earlier versions); every
+// thing's pixel art; her words; and its code. All in Node (no browser). Run: node --test tests/goinglive.test.js
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
-import { TOPICS, TOPIC_IDS, topicOf, KINDS, ITEMS, ALL_ITEMS, itemOf, pointsOf, HOMES, homeOf, PERKS, AWARDS, RIVALS, rankOf, nextRival, TUNE } from '../src/games/goinglive/data.js';
+import {
+  TOPICS, TOPIC_IDS, topicOf, KINDS, ITEMS, ALL_ITEMS, itemOf, pointsOf, HOMES, homeOf, PERKS, AWARDS, RIVALS, rankOf, nextRival, TUNE, RARITIES, SETS, setOf, BOXES,
+} from '../src/games/goinglive/data.js';
 import { TITLES } from '../src/games/goinglive/titles.js';
 import { STARTER, canPlace, place, move, store, spotsFor, blocked, path, freeCell, deskSpot } from '../src/games/goinglive/room.js';
 import {
   newCareer, drain, openTopics, shopItems, scores, quality, trendsOf, trendMult, expected, expectedFollowers, makeTime, startVideo, uploadLeft,
   tick, newIdeas, ideasReady, xpNeed, addXp, deliverTime, canBuy, buy, boxLeft, tapBox, openBox, placeFromInv, autoSpot, nextHome, canMoveHome,
   moveHome, canPerk, buyPerk, perkCost, slotsOf, liveNeed, liveReady, liveStart, liveWorth, liveDone, catchDrone, zap, pet, awayGain, comeBack,
-  idleRate, invCount, reachOf, bestIdea, videosPerStream,
+  idleRate, invCount, reachOf, bestIdea, videosPerStream, grantBox, openMystery, boxPool, got, gotCount, levelBox, dupViews, ownedOf, setBonus,
 } from '../src/games/goinglive/econ.js';
 import { createStream, step, tap, drain as drainS, targetOf, KINDS as TARGETS } from '../src/games/goinglive/stream.js';
 import { PROFILES, createPlayer, playStream, playCareer, pickIdea, pickBuy, career } from '../src/games/goinglive/ai.js';
 import { STICKERS, stickerOf, fresh, load, saveOf, earned, levelFor } from '../src/games/goinglive/progress.js';
 import { NAMES, nameOf, chatLine, askOf, botLine, botName, raidLine, techOf, say, TIPS, endLine, shareText, liveShare, questText, giftText } from '../src/games/goinglive/lines.js';
-import { ART, ITEM_ART_IDS } from '../src/games/goinglive/pixel.js';
+import { ART, ITEM_ART_IDS, EMOTE_IDS, OUTFITS } from '../src/games/goinglive/pixel.js';
+import { USES, USE_LINES, ITEM_LINES, PLAQUE_LINES, linesOf, useOf } from '../src/games/goinglive/uses.js';
+import { createActors, update as updateActors, useSpot, usable, requestUse, herPose, drainActors } from '../src/games/goinglive/actor.js';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const MONEY = /\$AGI|\binvest|\bprofit|financial advice|\bprice\b|\bpump\b|\bdump\b|\bbuy\b|\bmoney\b|\bcash\b|\bdollars?\b|\bpaid\b|\bcrypto|\btoken\b|\bcoin\b/i;
@@ -51,8 +56,9 @@ test('topics: ten, four to start and the rest opening level by level, each with 
   assert.equal(topicOf('nope'), null);
 });
 
-test('her things: ninety, each with a place, a size, a price, a level and topics; the starter room free; plaques given', () => {
-  assert.equal(ITEMS.length, 90);
+test('her things: ninety in the shop and twenty-two only in mystery boxes, each with a place, a size, a price, a level, topics and a rarity; the starter room free; plaques given', () => {
+  assert.equal(ITEMS.length, 112);
+  assert.equal(ITEMS.filter((x) => !x.box).length, 90);
   const ids = new Set();
   for (const x of ALL_ITEMS) {
     assert.ok(!ids.has(x.id), `${x.id}: once`); ids.add(x.id);
@@ -76,6 +82,37 @@ test('her things: ninety, each with a place, a size, a price, a level and topics
   // the plaques: given, never sold, hung on the wall
   for (const a of AWARDS) { const x = itemOf(`plaque_${a.id}`); assert.ok(x && x.given && x.price === 0 && x.place === 'wall', a.id); }
   assert.equal(itemOf('nope'), null);
+  // rarities: common, rare, epic, legendary; the shop's dearer things rarer; the box finds never common, never sold
+  assert.deepEqual(RARITIES.map((r) => r.id), ['common', 'rare', 'epic', 'legendary']);
+  for (const x of ALL_ITEMS) assert.ok(RARITIES.some((r) => r.id === x.rarity), `${x.id}: a rarity`);
+  const finds = ITEMS.filter((x) => x.box);
+  assert.equal(finds.length, 22);
+  assert.deepEqual(RARITIES.map((r) => finds.filter((x) => x.rarity === r.id).length), [0, 9, 9, 4]);
+  assert.ok(finds.every((x) => x.level === 1 && !x.starter && !x.given), 'box finds: any level');
+  assert.ok(shopItems({ level: 99 }).every((x) => !x.box), 'never in the shop');
+  assert.equal(itemOf('statue').rarity, 'legendary'); assert.equal(itemOf('duck').rarity, 'common'); assert.equal(itemOf('arcade').rarity, 'rare');
+  assert.ok(sum(pointsOf(itemOf('agicore'))) > sum(pointsOf(itemOf('quantum'))), 'a legendary find is worth a lot');
+});
+
+test('sets and mystery boxes: eleven sets of six for a topic; three boxes, a rarer one with better odds', () => {
+  assert.equal(SETS.length, 11);
+  const inSets = new Set();
+  for (const s of SETS) {
+    assert.equal(s.items.length, 6, s.id);
+    assert.ok(s.items.every((id) => itemOf(id) && !itemOf(id).given && !itemOf(id).starter), `${s.id}: real things`);
+    assert.ok(TOPIC_IDS.includes(s.topic) && s.name && s.icon, s.id);
+    assert.equal(setOf(s.id), s);
+    for (const id of s.items) inSets.add(id);
+  }
+  assert.ok(ITEMS.filter((x) => x.box && inSets.has(x.id)).length >= 15, 'most finds complete a set');
+  assert.equal(new Set(SETS.map((x) => x.id)).size, 11);
+  for (const t of TOPIC_IDS) assert.ok(SETS.some((x) => x.topic === t), `${t}: a set for it`);
+  assert.deepEqual(BOXES.map((b) => b.id), ['bronze', 'silver', 'gold']);
+  for (const b of BOXES) assert.ok(Math.abs(sum(b.odds) - 100) < 1e-9, `${b.id}: odds add up`);
+  // a rarer box: better odds of an epic or a legendary, never a common from gold
+  const rare = (b) => b.odds[2] + b.odds[3];
+  assert.ok(rare(BOXES[2]) > rare(BOXES[1]) && rare(BOXES[1]) > rare(BOXES[0]));
+  assert.equal(BOXES[2].odds[0], 0);
 });
 
 test('video ideas: eighty-odd made-up titles, each about two topics; plenty for the first four; every topic has its own', () => {
@@ -90,14 +127,16 @@ test('video ideas: eighty-odd made-up titles, each about two topics; plenty for 
   for (const t of TOPIC_IDS) assert.ok(TITLES.filter((x) => x[1] === t || x[2] === t).length >= 6, `${t}: ideas about it`);
 });
 
-test('her homes, skills, awards and the board: four homes (the room grows), ten skills, six mics, sixteen made-up streamers', () => {
-  assert.deepEqual(HOMES.map((h) => h.id), ['bedroom', 'studio', 'penthouse', 'orbit']);
+test('her homes, skills, awards and the board: six homes (the room grows), ten skills, six mics, sixteen made-up streamers', () => {
+  assert.deepEqual(HOMES.map((h) => h.id), ['bedroom', 'apartment', 'loft', 'penthouse', 'mansion', 'orbit']);
+  for (const h of HOMES) assert.ok(h.cols >= 14 && h.rows >= 6 && h.wall >= 4 && h.view && h.paper && h.floor && /^#[0-9a-f]{6}$/.test(h.wallA), `${h.id}: its look`);
+  assert.equal(new Set(HOMES.map((h) => h.paper)).size, HOMES.length, 'every home its own wallpaper');
   assert.equal(HOMES[0].cost, 0);
   for (let i = 1; i < HOMES.length; i++) {
     const a = HOMES[i - 1], b = HOMES[i];
     assert.ok(b.cols >= a.cols && b.rows >= a.rows && b.wall >= a.wall && b.cols * b.rows > a.cols * a.rows && b.at > a.at && b.cost > a.cost, b.id);
   }
-  assert.equal(homeOf({ home: 9 }), HOMES[3]); assert.equal(homeOf({}), HOMES[0]);
+  assert.equal(homeOf({ home: 9 }), HOMES[5]); assert.equal(homeOf({}), HOMES[0]);
   assert.equal(PERKS.length, 10);
   for (const p of PERKS) assert.ok(p.max >= 1 && p.max <= 5 && p.level >= 2 && p.desc.length > 10, p.id);
   assert.deepEqual(AWARDS.map((a) => a.at), [100, 1000, 10000, 100000, 1000000, 10000000]);
@@ -117,13 +156,14 @@ test('her room\'s grid: things take cells, never overlap and stay inside; rugs l
   assert.equal(laptop.on, desk.uid, 'her laptop is on her desk');
   for (const it of c.items) assert.ok(canPlace(c, it.id, it.x, it.y, { on: it.on, ignore: it.uid }).ok, `${it.id} fits where it is`);
   assert.equal(canPlace(c, 'pc', 3, 0).why, 'taken', 'not where the desk is');
-  assert.equal(canPlace(c, 'pc', 9, 0).why, 'outside');
+  assert.equal(canPlace(c, 'pc', 14, 0).why, 'outside');
+  assert.ok(canPlace(c, 'pc', 13, 5).ok, 'her bedroom is fourteen cells across, six deep');
   assert.equal(canPlace(c, 'pc', -1, 2).why, 'outside');
   assert.ok(canPlace(c, 'pc', 0, 3).ok);
   assert.ok(canPlace(c, 'rug', 3, 0).ok, 'a rug lies under the desk');
   assert.ok(canPlace(c, 'gameposter', 4, 0).ok, 'the wall has its own grid');
   assert.equal(canPlace(c, 'gameposter', 1, 0).why, 'taken', 'the window is there');
-  assert.equal(canPlace(c, 'gameposter', 0, 2).why, 'outside', 'a poster is two cells tall');
+  assert.equal(canPlace(c, 'gameposter', 0, 3).why, 'outside', 'a poster is two cells tall');
   assert.equal(canPlace(c, 'webcam', 4, 0, { on: desk.uid }).why, 'taken', 'the laptop is there');
   assert.ok(canPlace(c, 'webcam', 5, 0, { on: desk.uid }).ok);
   assert.equal(canPlace(c, 'webcam', 0, 3).why, 'surface', 'a small thing needs something to stand on');
@@ -135,7 +175,16 @@ test('her room\'s grid: things take cells, never overlap and stay inside; rugs l
   assert.deepEqual(c.inv, { desk: 1, laptop: 1 });
   assert.equal(c.items.some((t) => t.id === 'laptop'), false);
   // every spot a thing could go
-  assert.equal(spotsFor(fresh2(), 'pc').length, 9 * 4 - 3 - 1 - 6, 'every free floor cell');
+  assert.equal(spotsFor(fresh2(), 'pc').length, 14 * 6 - 3 - 1 - 6, 'every free floor cell');
+  // the same answers as asking cell by cell, for every thing
+  const full = fresh2();
+  for (const id of ['sofa', 'bed', 'rug', 'tv', 'gameposter', 'monstera', 'pottedplant']) { const at = autoSpot(full, id); full.inv[id] = 1; if (at) placeFromInv(full, id, at.x, at.y, { on: at.on }); }
+  for (const x of ALL_ITEMS) {
+    if (x.place === 'top') continue;
+    const rows = x.place === 'wall' ? homeOf(full).wall : homeOf(full).rows, all = [];
+    for (let y = 0; y + x.h <= rows; y++) for (let k = 0; k + x.w <= homeOf(full).cols; k++) if (canPlace(full, x.id, k, y).ok) all.push({ x: k, y });
+    assert.deepEqual(spotsFor(full, x.id), all, x.id);
+  }
   assert.deepEqual(spotsFor(fresh2(), 'webcam').map((s) => s.x), [3, 5], 'either side of her laptop');
   assert.equal(place(fresh2(), 'pc', 3, 0), null, 'place checks first');
 });
@@ -319,9 +368,11 @@ test('going live: her first stream after a handful of videos, then about three m
   const minute = expectedFollowers(c, bestIdea(c, r.cat)) * videosPerStream(c), w = liveWorth(c, r);
   assert.ok(w.followers >= minute * TUNE.live.worth[0] && w.followers <= minute * (TUNE.live.worth[0] + TUNE.live.worth[1] + TUNE.live.worth[2]) + 1, `${w.followers} for a minute of ${Math.round(minute)}`);
   assert.ok(w.followers > minute, 'a pro\'s stream is worth more than the videos it replaces');
-  const f = c.followers, got = liveDone(c, r);
-  assert.deepEqual(got, w);
-  assert.equal(c.followers, f + got.followers);
+  const f = c.followers, { box, ...gain } = liveDone(c, r);
+  assert.deepEqual(gain, w);
+  assert.equal(box, r.grade === 'S' ? 'silver' : r.grade === 'A' ? 'bronze' : null, 'a good stream brings a mystery box');
+  assert.equal(c.mystery.filter((x) => x.why === 'live').length, box ? 1 : 0);
+  assert.equal(c.followers, f + gain.followers);
   assert.equal(c.totals.live, 1); assert.equal(c.peak, Math.round(r.peak));
   const quiet = liveWorth(c, { ...r, grade: 'C', hypeAvg: 0 }), best = liveWorth(c, { ...r, grade: 'S', hypeAvg: 100 });
   assert.ok(best.followers > quiet.followers * 3.5, 'a hyped S is worth over three quiet streams');
@@ -345,7 +396,7 @@ test('the drone and the bots: a gift for a tap while it flies; bots slow her old
       if (e.type === 'bot') bots.push(e.bot.id);
     }
   }
-  assert.ok(gift && ['views', 'item', 'point'].includes(gift.kind), 'a gift');
+  assert.ok(gift && ['views', 'item', 'point', 'box'].includes(gift.kind), 'a gift');
   assert.ok(bots.length >= 1, 'bots came');
   const slow = idleRate(c);
   for (const id of bots) assert.ok(zap(c, id) > 0);
@@ -372,15 +423,17 @@ test('away: her old videos earn half (eight hours at most) and her videos finish
   assert.equal(c.uploads.length, 0); assert.equal(c.videos, 1);
   // a bigger home: its followers and its views; everything stays where it was
   const h = nextHome(c);
-  assert.equal(h.id, 'studio');
+  assert.equal(h.id, 'apartment');
   c.views = h.cost - 1; assert.equal(canMoveHome(c), false); assert.equal(moveHome(c), null);
   c.views = h.cost;
   const items = JSON.stringify(c.items);
-  assert.equal(moveHome(c).id, 'studio');
+  assert.equal(canPlace(c, 'pc', 16, 6).why, 'outside');
+  assert.equal(moveHome(c).id, 'apartment');
   assert.equal(c.home, 1); assert.equal(c.views, 0); assert.equal(JSON.stringify(c.items), items);
-  assert.ok(canPlace(c, 'pc', 11, 4).ok, 'more room');
-  c.followers = 1e9; c.views = 1e12; moveHome(c); moveHome(c);
-  assert.equal(c.home, 3); assert.equal(nextHome(c), null); assert.equal(moveHome(c), null);
+  assert.ok(canPlace(c, 'pc', 16, 6).ok, 'more room');
+  c.followers = 1e9; c.views = 1e12;
+  while (moveHome(c));
+  assert.equal(c.home, HOMES.length - 1); assert.equal(nextHome(c), null); assert.equal(moveHome(c), null);
 });
 
 test('quests: three at a time, paid at once when done and replaced; awards hang plaques in her things', () => {
@@ -399,6 +452,96 @@ test('quests: three at a time, paid at once when done and replaced; awards hang 
   assert.ok(c.followers >= 1000);
   assert.ok(c.awards.includes('bronze') && c.awards.includes('silver'));
   assert.ok(c.items.some((t) => t.id === 'plaque_bronze') || c.inv.plaque_bronze >= 1, 'the bronze plaque is hers');
+});
+
+test('mystery boxes: from levels, quests, good streams, the drone and sets; opened by the box\'s odds; new finds fill her collection; a third copy comes as views', () => {
+  // levels: one for each of the first, then every third, a silver every fifth, a gold every tenth
+  assert.deepEqual([2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 15, 20].map(levelBox), ['bronze', 'bronze', 'bronze', 'silver', 'bronze', null, null, 'bronze', 'gold', null, 'silver', 'gold']);
+  const c = fresh2();
+  const b = grantBox(c, 'bronze', 'test');
+  assert.equal(c.mystery.length, 1);
+  assert.deepEqual(drain(c).map((e) => e.type), ['mystery']);
+  const r = openMystery(c, b.uid);
+  assert.ok(r && itemOf(r.id) && r.isNew && r.dup === 0 && c.inv[r.id] === 1 && c.got[r.id], 'a new find, in her things');
+  assert.equal(c.mystery.length, 0); assert.equal(openMystery(c, b.uid), null, 'once');
+  assert.equal(c.totals.boxes, 1); assert.equal(gotCount(c), 6, 'her starter room and the find');
+  // what can come out: box finds and the shop's things up to a few levels ahead (never what's given or her starter room)
+  for (const k of RARITIES) for (const x of boxPool(c, k.id)) assert.ok(x.rarity === k.id && !x.given && !x.starter && (x.box || x.level <= c.level + TUNE.boxes.ahead), x.id);
+  // the odds: bronze mostly common, gold never; the rarer the box, the more epic and legendary finds
+  const share = (tier, n = 1500) => {
+    const d = fresh2(); d.level = 30; const k = { common: 0, rare: 0, epic: 0, legendary: 0 };
+    for (let i = 0; i < n; i++) { const bb = grantBox(d, tier); k[openMystery(d, bb.uid).rarity]++; d.inv = {}; d.got = {}; }
+    return k;
+  };
+  const br = share('bronze'), go = share('gold');
+  assert.ok(br.common / 1500 > 0.62 && br.common / 1500 < 0.78, JSON.stringify(br));
+  assert.ok(br.legendary < 20 && br.epic > 25 && br.epic < 115, JSON.stringify(br));
+  assert.equal(go.common, 0); assert.ok((go.epic + go.legendary) / 1500 > 0.36, JSON.stringify(go));
+  // a third copy: views instead (more for a rarer one), nothing more in her things
+  const e = fresh2(); e.followers = 20000;
+  for (const x of ITEMS) { e.inv[x.id] = 2; e.got[x.id] = 1; }
+  const inv = JSON.stringify(e.inv), v = e.views;
+  const d1 = openMystery(e, grantBox(e, 'bronze').uid);
+  assert.ok(d1.dup > 0 && !d1.isNew && e.views === v + d1.dup && JSON.stringify(e.inv) === inv, 'a duplicate comes as views');
+  assert.equal(ownedOf(e, 'desk'), 3, 'what she has: in her room and put away');
+  assert.ok(dupViews(e, itemOf('agicore')) > dupViews(e, itemOf('snackjar')) && dupViews(e, itemOf('snackjar')) > dupViews(e, itemOf('duck')));
+  // a set: all six found, its topic's videos better, and a gold box
+  const s = fresh2(), set = SETS.find((x) => x.id === 'gamer'), idea = { a: set.topic, b: 'cute' };
+  const was = setBonus(s, idea);
+  for (const id of set.items) got(s, id);
+  assert.deepEqual(s.sets, ['gamer']);
+  assert.ok(drain(s).some((x) => x.type === 'set'));
+  assert.equal(s.mystery.at(-1).tier, 'gold');
+  assert.ok(Math.abs(setBonus(s, idea) - was - TUNE.sets.bonus) < 1e-9 && setBonus(s, { a: 'art', b: 'music' }) === 1);
+  assert.equal(got(s, 'pc'), false, 'once');
+  // the career gives them: a few levels in, the boxes have come
+  const k = newCareer(5), bot = createPlayer('good', 5);
+  while (k.clock < 600) playCareer(k, bot, 1);
+  assert.ok(k.totals.boxes >= 6 && k.totals.boxes <= 30, `${k.totals.boxes} boxes in ten minutes`);
+  assert.ok(gotCount(k) >= 25, `${gotCount(k)} things found`);
+});
+
+test('what she does with her things: every use has a place to stand, a pose and words; tap a thing and she goes; a video calls her to her desk', () => {
+  for (const x of ALL_ITEMS) {
+    if (x.use) assert.ok(useOf(x.use), `${x.id}: ${x.use}`);
+    assert.ok(linesOf(x.id).length >= 2, `${x.id}: her words about it`);
+  }
+  assert.ok(ALL_ITEMS.filter((x) => x.use).length >= 80, 'most things do something');
+  for (const [k, u] of Object.entries(USES)) {
+    assert.ok(['seat', 'bed', 'front', 'surface', 'near', 'on', 'pet'].includes(u.at), k);
+    assert.ok(u.dur[0] > 0 && u.dur[1] >= u.dur[0] && u.dur[1] <= 12, k);
+    assert.ok(!u.emote || EMOTE_IDS.includes(u.emote), `${k}: ${u.emote}`);
+    assert.ok(USE_LINES[k]?.length >= 2, `${k}: what she says`);
+  }
+  assert.ok(OUTFITS.length >= 6 && OUTFITS.every((o) => /^#[0-9a-f]{6}$/.test(o.shirt) && o.name), 'her outfits');
+  // her room with things to use
+  const c = fresh2(); c.level = 40; c.home = 1;
+  for (const id of ['arcade', 'sofa', 'easel', 'cat', 'monstera', 'dancefloor', 'jukebox', 'treadmill', 'bear', 'tv']) { c.inv[id] = 1; const at = autoSpot(c, id); assert.ok(at, id); placeFromInv(c, id, at.x, at.y, { on: at.on }); }
+  const A = createActors(); A.her.x = 0; A.her.y = homeOf(c).rows - 1;
+  const run = (secs) => { for (let t = 0; t < secs; t += 0.05) updateActors(A, c, 0.05, {}); };
+  run(0.1);
+  const list = usable(c, A);
+  assert.ok(list.length >= 9 && !list.some((t) => itemOf(t.id).desk), 'what she can use (never her desk: she records there)');
+  for (const it of list) {
+    const p = useSpot(c, A, it);
+    assert.ok(p && p.x >= 0 && p.y >= 0 && p.x < homeOf(c).cols && p.y < homeOf(c).rows, `${it.id}: somewhere to stand`);
+  }
+  const by = (id) => c.items.find((t) => t.id === id);
+  assert.equal(useSpot(c, A, by('jukebox')).on, undefined, 'she dances beside the jukebox, never on it');
+  assert.equal(useSpot(c, A, by('treadmill')).on, by('treadmill').uid, 'she runs on the treadmill');
+  assert.equal(useSpot(c, A, by('sofa')).sit, by('sofa').uid, 'she sits on the sofa');
+  assert.equal(useSpot(c, A, by('arcade')).face, 'back', 'she faces the arcade');
+  // tap it: she walks over and plays
+  drainActors(A);
+  assert.ok(requestUse(A, c, by('arcade').uid));
+  run(9);
+  assert.ok(drainActors(A).some((e) => e.type === 'use' && e.id === 'arcade'), 'she played');
+  assert.ok(c.totals.uses >= 1);
+  // a video: she leaves what she's doing for her desk and types
+  startVideo(c, 0);
+  run(8);
+  assert.equal(A.her.state, 'work'); assert.match(herPose(A), /^type[01]$/);
+  assert.equal(requestUse(A, c, by('arcade').uid), false, 'busy recording');
 });
 
 test('the same seed and the same choices give the same career', () => {
@@ -516,9 +659,10 @@ test('the pace: a good player is #1 in about an hour and a half of perfect play 
     const m = (f) => at(log, f) / 60;
     assert.ok(m(RIVALS[0].f + 1) >= 70 && m(RIVALS[0].f + 1) <= 120, `${seed}: #1 at ${Math.round(m(RIVALS[0].f + 1))} minutes`);
     assert.ok(m(100) >= 1 && m(100) <= 5, `${seed}: 100 followers at ${m(100).toFixed(1)} minutes`);
-    assert.ok(m(HOMES[1].at) >= 6 && m(HOMES[1].at) <= 16, `${seed}: 10K at ${m(HOMES[1].at).toFixed(1)} minutes`);
+    assert.ok(m(HOMES[1].at) >= 5 && m(HOMES[1].at) <= 16, `${seed}: ${HOMES[1].at} at ${m(HOMES[1].at).toFixed(1)} minutes`);
     assert.ok(m(1e6) >= 25 && m(1e6) <= 50, `${seed}: a million at ${m(1e6).toFixed(1)} minutes`);
-    assert.ok(c.home === 3 && c.level >= 30 && c.items.length >= 100, `${seed}: her space station full of things (${c.items.length})`);
+    assert.ok(c.home === HOMES.length - 1 && c.level >= 30 && c.items.length >= 150, `${seed}: her space station full of things (${c.items.length})`);
+    assert.ok(c.totals.boxes >= 40 && c.sets.length >= 1, `${seed}: ${c.totals.boxes} mystery boxes, ${c.sets.length} sets`);
     assert.ok(c.totals.live >= 15 && c.totals.live <= 45, `${seed}: ${c.totals.live} streams`);
     assert.ok(log.every((l, i) => i === 0 || l.f >= log[i - 1].f), 'followers never go down');
   }
@@ -532,7 +676,7 @@ test('the pace: a good player is #1 in about an hour and a half of perfect play 
   while (a.clock < 30 * 60) playCareer(a, careless, 1);
   while (b.clock < 30 * 60) { b.live = 0; playCareer(b, lazy, 1); }
   assert.equal(b.totals.live, 0);
-  assert.ok(a.followers < good.c.followers / 1.5, `careful shopping pays (${a.followers} and ${good.c.followers})`);
+  assert.ok(a.followers < good.c.followers / 1.2, `careful shopping pays (${a.followers} and ${good.c.followers})`);
   assert.ok(b.followers < good.c.followers / 1.5, `going live pays (${b.followers} and ${good.c.followers})`);
 });
 
@@ -558,7 +702,7 @@ test('what\'s kept: a round trip; anything odd starts fresh or is clamped; a roo
   assert.deepEqual(back.stickers, ['first'], 'an unknown sticker dropped');
   assert.equal(back.at, 1700000000000); assert.deepEqual(back.tips, { hub: true }); assert.equal(back.played, 7);
   // odd saves
-  for (const raw of [null, 'x', 5, { career: { v: 3 } }, { career: 5 }]) assert.equal(JSON.stringify(load(raw)), JSON.stringify(fresh()), JSON.stringify(raw));
+  for (const raw of [null, 'x', 5, { career: { v: 4 } }, { career: 5 }]) assert.equal(JSON.stringify(load(raw)), JSON.stringify(fresh()), JSON.stringify(raw));
   const odd = load({ career: { v: 2, followers: -9, views: 'x', level: 999, home: 99, perks: { thumbs: 99, nope: 3 },
     items: [{ uid: 1, id: 'desk', x: 3, y: 0 }, { uid: 2, id: 'pc', x: 3, y: 0 }, { uid: 3, id: 'laptop', x: 4, on: 1 }, { uid: 4, id: 'zzz', x: 0, y: 0 }, { uid: 5, id: 'webcam', x: 2, on: 1 }],
     inv: { duck: 2, nope: 1 }, uploads: [{ a: 'nope', b: 'chat' }], quests: [{ kind: 'videos' }] } });
@@ -582,7 +726,23 @@ test('what\'s kept: a round trip; anything odd starts fresh or is clamped; a roo
   g.career.totals.videos = 1; g.career.followers = 150;
   assert.deepEqual(earned(g, { grade: 'S' }).map((x) => x.id), ['first', 'hundred', 'srank']);
   assert.deepEqual(earned(g, { grade: 'S' }), [], 'earned once');
-  assert.equal(STICKERS.length, 14); assert.ok(STICKERS.every((x) => stickerOf(x.id) === x && x.how.length > 8));
+  assert.equal(STICKERS.length, 17); assert.ok(STICKERS.every((x) => stickerOf(x.id) === x && x.how.length > 8));
+  g.career.totals.boxes = 25; g.career.sets = ['gamer']; got(g.career, 'goldmic');
+  assert.deepEqual(earned(g).map((x) => x.id), ['unbox', 'set', 'legend']);
+  // her boxes, her collection, her sets and her outfit come back; a day's box is remembered
+  const m = fresh(9), mc = m.career;
+  grantBox(mc, 'gold', 'level'); grantBox(mc, 'bronze', 'quest'); got(mc, 'jukebox'); mc.sets = ['nope']; mc.outfit = 3; m.daily = '2026-11-14';
+  const mb = load(JSON.parse(JSON.stringify(saveOf(m))));
+  assert.deepEqual(mb.career.mystery.map((x) => x.tier), ['gold', 'bronze']);
+  assert.ok(mb.career.got.jukebox && mb.career.got.desk);
+  assert.deepEqual(mb.career.sets, [], 'a set she hasn\'t done is dropped');
+  assert.equal(mb.career.outfit, 3); assert.equal(mb.daily, '2026-11-14');
+  assert.equal(load({ ...JSON.parse(JSON.stringify(saveOf(m))), daily: 'yesterday' }).daily, '');
+  // a career from before the rework: its home mapped to the same-sized one, its things all found
+  const v2 = load({ career: { v: 2, followers: 60000, views: 5000, level: 14, home: 1, items: [{ uid: 1, id: 'desk', x: 3, y: 0 }, { uid: 2, id: 'laptop', x: 4, on: 1 }], inv: { sofa: 1 } } });
+  assert.equal(v2.career.home, 1); assert.equal(v2.career.v, 3);
+  assert.ok(v2.career.got.sofa && v2.career.got.desk && v2.career.got.laptop, 'what she had is in her collection');
+  assert.deepEqual(v2.career.mystery, []);
 });
 
 // ---------- the art ----------
@@ -608,12 +768,19 @@ test('her words, her chat and her ideas: made up, PG-13, never money, no real cr
   }
   const kinds = ['ban', 'raid', 'raidMiss', 'fix', 'techMiss', 'heart', 'clip', 'big', 'bigMiss', 'combo', 'first', 'record', 'video', 'viral', 'trend',
     'idle', 'back', 'box', 'boxWait', 'placed', 'stored', 'bought', 'level', 'topic', 'quest', 'mail', 'missMail', 'zap', 'bots', 'pet', 'tap', 'live',
-    'moved', 'homeReady', 'award', 'perk', 'full', 'number1'];
+    'moved', 'homeReady', 'award', 'perk', 'full', 'number1', 'mystery', 'daily', 'set'];
   for (const k of kinds) for (let q = 0; q < 6; q++) { const l = say(k, null, q / 6); assert.ok(l, k); lines.push(l); }
   for (const id of TOPIC_IDS) for (let q = 0; q < 3; q++) { const l = say('start', id, q / 3); assert.ok(l, id); lines.push(l); }
+  for (const r of RARITIES) for (let q = 0; q < 3; q++) { const l = say('opened', r.id, q / 3); assert.ok(l, r.id); lines.push(l); }
+  for (const x of ALL_ITEMS) lines.push(...linesOf(x.id));
+  for (const l of Object.values(ITEM_LINES)) lines.push(...l);
+  for (const l of Object.values(USE_LINES)) lines.push(...l);
+  lines.push(...PLAQUE_LINES, ...OUTFITS.map((o) => o.name));
+  for (const x of [...SETS, ...BOXES, ...RARITIES]) lines.push(x.name);
   for (const grade of ['S', 'A', 'B', 'C']) for (let q = 0; q < 3; q++) lines.push(endLine({ grade }, q / 3));
   for (const kind of ['videos', 'topic', 'place', 'trend', 'kind', 'one', 'live', 'zap', 'mail', 'pet', 'followers']) for (const target of [1, 3, 25000]) lines.push(questText({ kind, target, topic: 'art', shelf: 'plant' }));
-  lines.push(giftText({ kind: 'views', n: 120 }), giftText({ kind: 'item', id: 'duck' }), giftText({ kind: 'point' }));
+  lines.push(giftText({ kind: 'views', n: 120 }), giftText({ kind: 'item', id: 'duck' }), giftText({ kind: 'point' }), giftText({ kind: 'box', tier: 'bronze' }));
+  assert.equal(giftText({ kind: 'box', tier: 'bronze' }), 'a mystery box 🎁');
   lines.push(raidLine({ who: 'GPU Goblin', size: 1234 }));
   for (const x of ALL_ITEMS) lines.push(x.name);
   for (const k of KINDS) lines.push(k.name);
@@ -646,7 +813,10 @@ test('its code: the kit\'s shell with its id, its rules free of the page and the
   for (const f of ['data.js', 'titles.js', 'room.js', 'econ.js', 'stream.js', 'ai.js', 'progress.js']) {
     assert.doesNotMatch(bare(f), /\b(document|window|navigator|localStorage|Math\.random|requestAnimationFrame|performance|Date\.now)\b/, `${f}: pure and seeded`);
   }
+  // (her words about her window are keyed by its id)
+  assert.doesNotMatch(bare('uses.js'), /\b(document|navigator|localStorage|Math\.random|requestAnimationFrame|performance|Date\.now)\b|window\./, 'uses.js: pure');
   assert.doesNotMatch(bare('lines.js'), /\b(document|window|navigator|localStorage)\b/);
+  assert.doesNotMatch(bare('actor.js'), /\b(document|window|navigator|localStorage|performance|Date\.now)\b/, 'actor.js: no page, no clock (her whims are its only dice)');
   const game = read('src/games/goinglive/game.js');
   assert.match(game, /createShell\(\{\s*game: 'goinglive'/);
   assert.match(game, /shell\.started\(\{ count: !QA && !DEMO \}\)/, 'a play counts once (never in a test page or the tile)');

@@ -1,38 +1,35 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
-## GOING LIVE, one new game, rebuilt the same day — 2026-11-14
-
-**Taken down the same night, to be reworked** (the owner: "this game is boring asf … pure ai slop", then "take it down
-the site first then rework it then publish it to production"): agi1.app/games is back to how it was before it (31 games),
-and its links send people to /games. See `CLAUDE.md`'s top entry; `git revert` the takedown commit to bring it back.
+## GOING LIVE, one new game, rebuilt, taken down and reworked — 2026-11-14 and 15
 
 The owner asked about a famous YouTuber's streamer sim, said "yes exactly" to an AGI-1 version of our own for the
-arcade, then "continue and finish". The first version (pick what she streams, run her stream live, twelve room
-upgrades) was **published as `c13c23e`** (Vercel production `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`). Then the owner: "the
-original pewdipie tuber simulator is more fun to be honest the game mechanics there is so good and the graphics too",
-"Rebuild both (Recommended)" and "Short waits (Recommended)". Rebuilt on the branch `goinglive` (local only) and pushed
-straight to `main`, as the owner was told.
+arcade. The first version was **published as `c13c23e`**; the rebuild (a pixel-art room sim: "Rebuild both" and "Short
+waits") as **`498dd63`**. After playing it, the owner: "this game is boring asf, the original pewdiepie tuber simulator
+is more fun and the room have more space and that game actually made with life made with human creative minds unlike
+this this is pure ai slop", then "take it down the site first then rework it then publish it to production". So:
+**taken down** first (`be98472`, published: the arcade as it was before it, agi1.app/games/goinglive sent to /games),
+then **reworked** on the branch `goinglive` (`674af54`, local only) and brought back on the branch `goinglive-rework`
+(the takedown reverted, the rework on top), pushed straight to `main` as the owner asked.
 
-**GOING LIVE** (agi1.app/games/goinglive, `src/games/goinglive/`, on the arcade kit), as it is now: a room sim in pixel
-art. AGI-1, a little pixel girl, walks round her room, types at her desk while a video is made, sits, naps and visits her
-pets. Three video ideas at a time (made-up titles about two of ten topics; trending topics bring more), each made in
-seconds; her views pay for 90 things that come in boxes and are placed, moved and put away on her room's grid, each
-making videos about its topics better; four homes (a bedroom up to a space station); levels, idea points for ten skills,
-quests, a fan-mail drone, spam bots to zap, awards as plaques, and going live (the first version's one-minute stream,
-with a facecam) every few minutes. A good player who never stops is #1 in about an hour and a half; she earns while
-you're away (8 hours at most). Every streamer, idea and number is made up; nothing of the original's. A first-version
-career keeps its followers and views (a fresh bedroom). The arcade has 32 games; its tile is second and the only New one.
+**GOING LIVE** (agi1.app/games/goinglive, `src/games/goinglive/`, on the arcade kit), as it is now: her room fills the
+screen and scrolls sideways (drag, flick, wheel, ← →; 🔍 shows all of it), in six bigger homes (a 14 × 6 bedroom up to a
+40 × 9 space station, each with its own wallpaper, floor and view). Between videos she lives in it: 83 of its 112 things
+do something (she games, naps, cooks, paints, plays music, dances, waters plants, hugs plushies, changes outfits…), and
+every thing tapped bounces and gets its own line from her, and she goes and uses it. Mystery boxes (bronze, silver,
+gold) from levels, quests, good streams, the drone, sets and one a day hold rare, epic and legendary finds (22 only boxes
+hold); a third copy comes as views; a collection book with eleven sets of six (each +12% for its topic and a gold box).
+New pixel art (lit and outlined; her in six outfits and ~45 poses), and a game's HUD: level, idea points, home, rank and
+trends up top; her boxes, her videos, three ideas and a dock (Shop, Decorate, Go live, Collection, More) below; a column
+on the right on a phone held sideways. Going live (the one-minute stream), skills, quests, the board and away as before.
+A good player who never stops is #1 in about 83 minutes, a newbie about two hours. A career from before keeps
+everything.
 
 How it's put together and how to tune it (`node tools/games/goinglive/balance.mjs`): `CLAUDE.md` → "GOING LIVE" under
-"AGI games". Validation: `tests/goinglive.test.js` (29 tests) in `npm test`, the whole suite and the build; in headless
-Chromium at phone sizes upright and sideways, a computer and the tile's square, by touch, mouse and keys. **Not
-validated:** its sound by ear and play by a person on a real phone. No new service, database change or setting.
-
-**Published as `498dd63` to `main` on 2026-11-14**, straight to production, after the full release build in a clean
-copy (Node 24, UTC, fake deployment settings: 2,151 tests, 2,147 passed, 4 skipped, 0 failed; Vite, the share pages, the
-secret check) and the built page under the site's real CSP on a phone and a computer (no errors, no CSP reports). Vercel
-production `F43AfxeWvQ9iFWCcXD6n8x8pFVDL`: Ready. Live in the owner's Chrome: a fresh career, a video made, a webcam
-bought, unboxed and placed, no console errors.
+"AGI games". Validation: `tests/goinglive.test.js` (32 tests) in `npm test`, the whole suite and the build; in headless
+Chromium on phones upright and sideways, computers and the tile's square, by touch, mouse and keys (a first visit and
+its box of the day, the room dragged, things tapped and used, boxes opened and placed, shop, collection, decorating,
+every home by day and night, a stream). **Not validated:** its sound by ear and play by a person on a real phone. No new
+service, database change or setting.
 
 ## GROWTH STOCK, one new game — 2026-11-14
 

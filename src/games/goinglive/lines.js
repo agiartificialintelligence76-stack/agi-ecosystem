@@ -1,7 +1,7 @@
-// GOING LIVE: the words. AGI-1's (lowercase, dry, a little smug, very online), her chat's (made-up viewers: names and
+// GOING LIVE: the words. AGI-1’s (lowercase, dry, a little smug, very online), her chat’s (made-up viewers: names and
 // messages, PG-13), the spam bots she bans, the raids, the tech problems, the quests and the gifts. Every name here is
-// made up; no real person, creator or platform, and never money: views and followers are the game's own points.
-import { topicOf, itemOf, KINDS } from './data.js';
+// made up; no real person, creator or platform, and never money: views and followers are the game’s own points.
+import { topicOf, itemOf, KINDS, boxOf } from './data.js';
 const catOf = topicOf;
 
 export const pick = (list, roll = Math.random()) => list[Math.floor(roll * list.length) % list.length];
@@ -76,7 +76,7 @@ export function askOf(cat, n) {
   return { q, a };
 }
 
-// the spam bots (she bans them): the kind of thing that turns up in a new streamer's chat
+// the spam bots (she bans them): the kind of thing that turns up in a new streamer’s chat
 const BOTS = [
   'FREE FOLLOWERS 🔥🔥 dm me', 'u won a prize!! claim it in my bio', 'get 1000 viewers fast → my profile', 'want more viewers? dm me now',
   'click my link for free emotes', 'follow4follow?? 🙏🙏', 'i can make u famous, check my bio', 'HOT NEW GAME link in bio 😳',
@@ -157,6 +157,16 @@ const SAY = {
   perk: ['new skill!', 'i feel smarter already.'],
   full: ['no room for that here. move something?', 'it doesn’t fit. like my jeans.'],
   number1: 'number one trending. i’d like to thank my chat, my cat and my GPU.',
+  // mystery boxes, the collection
+  mystery: ['a mystery box! tap it, tap it.', 'ooh. a mystery box. shake it first.', 'presents! for me!'],
+  daily: ['a box of the day! because you came back.', 'daily box. i love mail.'],
+  opened: {
+    common: ['cute. into the room it goes.', 'nice. useful, even.', 'i’ll find a spot for it.'],
+    rare: ['ooh, a rare one!', 'rare! chat is going to ask about this.', 'okay that’s actually cool.'],
+    epic: ['EPIC. i’m screaming.', 'no way. an epic one!', 'chat. CHAT. look at this.'],
+    legendary: ['LEGENDARY. i need to sit down.', 'the rarest thing i own. besides my personality.', 'this is the best day of my career.'],
+  },
+  set: ['a whole set! that topic just got better.', 'set complete. interior design: mastered.'],
 };
 export function say(kind, arg, roll = Math.random()) {
   let v = SAY[kind];
@@ -172,6 +182,8 @@ export const TIPS = Object.freeze({
   live: 'The live meter is full: go live for a big boost!',
   stream: 'Tap chat questions to answer them, ban the spam bots, welcome raids, fix problems fast.',
   perks: 'You have an idea point 💡: spend it in Skills.',
+  room: 'Drag her room sideways to look around. Tap her things: she’ll go and use them.',
+  mystery: 'A mystery box! Tap it to open it: common, rare, epic… or legendary.',
 });
 
 // a quest, in words
@@ -197,6 +209,7 @@ export function questText(q) {
 export function giftText(g) {
   if (!g) return '';
   if (g.kind === 'point') return 'an idea point 💡';
+  if (g.kind === 'box') return `a ${boxOf(g.tier).name.toLowerCase()} 🎁`;
   if (g.kind === 'item') return `a ${itemOf(g.id)?.name || 'present'} (in her things)`;
   return `${Math.round(g.n).toLocaleString('en-US')} views`;
 }

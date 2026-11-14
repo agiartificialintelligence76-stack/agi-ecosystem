@@ -1,4 +1,4 @@
-// GOING LIVE: her video ideas. Each is a made-up title and the two topics it's about (./data.js TOPICS); an idea turns up
+// GOING LIVE: her video ideas. Each is a made-up title and the two topics it’s about (./data.js TOPICS); an idea turns up
 // only once both of its topics are open. PG-13, about her, her room and her chat: never a real person, game, brand or
 // platform, and never money.
 export const TITLES = Object.freeze([

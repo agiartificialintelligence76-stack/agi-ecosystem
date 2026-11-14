@@ -1,14 +1,14 @@
 // GOING LIVE: her career, pure (no page, no clock of its own: the page moves `c.clock` with `tick(c, dt)`). Followers,
-// views (the game's points), her level and idea points (💡), her room and what's in it, deliveries, the videos she's
-// making, her video ideas and what's trending, quests, the fan-mail drone and the spam bots, the live meter, her old
-// videos earning while you're away, the awards and her place on the board. Its own dice (`c.rng`): the same career and
+// views (the game’s points), her level and idea points (💡), her room and what’s in it, deliveries, the videos she’s
+// making, her video ideas and what’s trending, quests, the fan-mail drone and the spam bots, the live meter, her old
+// videos earning while you’re away, the awards and her place on the board. Its own dice (`c.rng`): the same career and
 // the same choices give the same results. What happened comes out of `drain(c)`.
-import { TOPICS, topicOf, ITEMS, itemOf, pointsOf, HOMES, homeOf, perkOf, AWARDS, RIVALS, rankOf, TUNE } from './data.js';
+import { TOPICS, topicOf, ITEMS, itemOf, pointsOf, HOMES, homeOf, perkOf, AWARDS, RIVALS, rankOf, SETS, BOXES, boxOf, RARITIES, TUNE } from './data.js';
 import { TITLES } from './titles.js';
-import { starterItems, place as roomPlace, spotsFor, layer, blocked, deskSpot } from './room.js';
+import { starterItems, place as roomPlace, spotsFor, layer, blockedGrid, deskSpot } from './room.js';
 
 export const hashOf = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
-// the career's dice (mulberry32 on c.rng)
+// the career’s dice (mulberry32 on c.rng)
 export function roll(c) {
   c.rng = (c.rng + 0x6d2b79f5) >>> 0;
   let t = c.rng; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
@@ -20,17 +20,20 @@ export const drain = (c) => { const o = c.out; c.out = []; return o; };
 
 export function newCareer(seed = 1) {
   const c = {
-    v: 2, seed: seed >>> 0 || 1, rng: (seed * 2654435761) >>> 0 || 7, clock: 0,
+    v: 3, seed: seed >>> 0 || 1, rng: (seed * 2654435761) >>> 0 || 7, clock: 0,
     followers: TUNE.start.followers, views: TUNE.start.views, xp: 0, level: 1, points: 0, perks: {},
     home: 0, items: starterItems(), nextUid: 0, inv: {}, fresh: {},
+    // mystery boxes to open; every thing she’s ever had (the collection book); the sets she’s completed; her outfit
+    mystery: [], got: {}, sets: [], outfit: 0,
     deliveries: [], uploads: [], videos: 0, ideas: [], ideasAt: 0, recent: [],
     live: 0, quests: [], questN: 0,
     drone: { next: 25, until: -1, gift: null }, bots: { next: 100, list: [], n: 0 },
     awards: [], peak: 0, bestCombo: 0, best: null,
-    totals: { views: 0, followers: 0, videos: 0, viral: 0, live: 0, zapped: 0, mail: 0, placed: 0, bought: 0, raids: 0, clips: 0, answered: 0, pets: 0, byTopic: {} },
+    totals: { views: 0, followers: 0, videos: 0, viral: 0, live: 0, zapped: 0, mail: 0, placed: 0, bought: 0, raids: 0, clips: 0, answered: 0, pets: 0, boxes: 0, uses: 0, byTopic: {} },
     out: [],
   };
   c.nextUid = 1 + Math.max(...c.items.map((t) => t.uid));
+  for (const it of c.items) c.got[it.id] = 1;
   refillIdeas(c);
   while (c.quests.length < 3) c.quests.push(newQuest(c));
   return c;
@@ -40,12 +43,12 @@ export function newCareer(seed = 1) {
 export const openTopics = (c) => TOPICS.filter((t) => c.level >= t.level);
 export const isOpen = (c, id) => Boolean(topicOf(id)) && c.level >= topicOf(id).level;
 export const nextTopic = (c) => TOPICS.find((t) => c.level < t.level) || null;
-export const shopItems = (c) => ITEMS.filter((x) => !x.starter && !x.given && c.level >= x.level);
+export const shopItems = (c) => ITEMS.filter((x) => !x.starter && !x.given && !x.box && c.level >= x.level);
 export const perkRank = (c, id) => c.perks[id] || 0;
 export const slotsOf = (c) => 1 + perkRank(c, 'slot2') + perkRank(c, 'slot3');
 
-// ---------- her room's points ----------
-// a topic's points: every placed thing's (what's put away doesn't count)
+// ---------- her room’s points ----------
+// a topic’s points: every placed thing’s (what’s put away doesn’t count)
 export function scores(c) {
   const s = Object.fromEntries(TOPICS.map((t) => [t.id, 0]));
   for (const it of c.items) { const p = pointsOf(itemOf(it.id)); for (const k in p) s[k] += p[k]; }
@@ -53,7 +56,7 @@ export function scores(c) {
 }
 export const quality = (pts) => 1 + Math.max(0, pts / TUNE.video.q) ** TUNE.video.qPow;
 
-// ---------- what's trending: up to three open topics, for `every` videos at a time ----------
+// ---------- what’s trending: up to three open topics, for `every` videos at a time ----------
 export function trendsOf(c) {
   const open = openTopics(c).map((t) => t.id);
   const n = Math.min(TUNE.trend.n, Math.max(1, open.length - 1));
@@ -73,12 +76,14 @@ export const reachOf = (f) => TUNE.video.base + TUNE.video.reach * Math.max(0, f
 // the views an idea would get now (before luck)
 export function expected(c, idea, s = scores(c)) {
   const pts = (s[idea.a] || 0) + (s[idea.b] || 0);
-  return reachOf(c.followers) * quality(pts) * trendMult(c, idea.a, idea.b) * (1 + 0.2 * perkRank(c, 'thumbs'));
+  return reachOf(c.followers) * quality(pts) * trendMult(c, idea.a, idea.b) * setBonus(c, idea) * (1 + 0.2 * perkRank(c, 'thumbs'));
 }
+// her completed sets: each one about a topic of the idea’s makes it a bit better
+export const setBonus = (c, idea) => 1 + TUNE.sets.bonus * SETS.filter((x) => (c.sets || []).includes(x.id) && (x.topic === idea.a || x.topic === idea.b)).length;
 // the new followers an idea would bring now (before luck)
 export function expectedFollowers(c, idea, s = scores(c)) {
   const V = TUNE.video, pts = (s[idea.a] || 0) + (s[idea.b] || 0);
-  return V.grow * (Math.max(0, c.followers) + V.growStart) ** V.growPow * quality(pts) ** V.growQ * trendMult(c, idea.a, idea.b) * (1 + 0.15 * perkRank(c, 'follow'));
+  return V.grow * (Math.max(0, c.followers) + V.growStart) ** V.growPow * quality(pts) ** V.growQ * trendMult(c, idea.a, idea.b) * setBonus(c, idea) * (1 + 0.15 * perkRank(c, 'follow'));
 }
 export const makeTime = (c) => Math.min(TUNE.make.max, TUNE.make.base + TUNE.make.per * c.level ** TUNE.make.pow) * (1 - TUNE.make.fast * perkRank(c, 'fast'));
 
@@ -143,9 +148,67 @@ export function addXp(c, n) {
     c.xp -= xpNeed(c.level); c.level++;
     const pts = 1 + (c.level % 5 === 0 ? 1 : 0);
     c.points += pts;
-    emit(c, 'level', { level: c.level, points: pts, topic: TOPICS.find((t) => t.level === c.level) || null, items: ITEMS.filter((x) => x.level === c.level && !x.starter && !x.given).length });
+    emit(c, 'level', { level: c.level, points: pts, topic: TOPICS.find((t) => t.level === c.level) || null, items: ITEMS.filter((x) => x.level === c.level && !x.starter && !x.given && !x.box).length });
+    const box = levelBox(c.level);
+    if (box) grantBox(c, box, 'level');
   }
 }
+
+// ---------- mystery boxes, the collection, sets ----------
+// a level’s box: one for each of the first levels, then every third level, a silver every fifth and a gold every tenth
+export const levelBox = (L) => (L % 10 === 0 ? 'gold' : L % 5 === 0 ? 'silver' : L <= 4 || L % 3 === 0 ? 'bronze' : null);
+export function grantBox(c, tier, why = '') {
+  const b = { uid: c.nextUid++, tier: boxOf(tier).id, why };
+  c.mystery.push(b);
+  emit(c, 'mystery', { box: b });
+  return b;
+}
+// what a box could hold of a rarity: the shop’s things up to a few levels ahead, and the finds only boxes have
+export const boxPool = (c, rarity) => ITEMS.filter((x) => x.rarity === rarity && !x.starter && !x.given && (x.box || x.level <= c.level + TUNE.boxes.ahead));
+// a find she already has two of comes as views instead (a few videos’ worth, more the rarer it is)
+const DUP = { common: 1, rare: 2.5, epic: 6, legendary: 15 };
+export const dupViews = (c, x) => Math.round((reachOf(c.followers) * TUNE.boxes.dup + 60) * (DUP[x.rarity] || 1));
+export const ownedOf = (c, id) => (c.inv[id] || 0) + c.items.filter((t) => t.id === id).length;
+// open one: its rarity by the box’s odds (a rarer box, better odds), then one of that rarity → { id, rarity, tier, isNew,
+// dup } (`dup`: the views it came as, when she already had two)
+export function openMystery(c, uid) {
+  const b = c.mystery.find((x) => x.uid === uid);
+  if (!b) return null;
+  c.mystery = c.mystery.filter((x) => x !== b);
+  const odds = boxOf(b.tier).odds;
+  let r = roll(c) * odds.reduce((a, v) => a + v, 0), k = 0;
+  for (; k < odds.length - 1; k++) { r -= odds[k]; if (r < 0) break; }
+  let pool = boxPool(c, RARITIES[k].id);
+  while (!pool.length && k > 0) pool = boxPool(c, RARITIES[--k].id);
+  // what she hasn’t got yet comes up a little more
+  const w = pool.map((x) => (c.got[x.id] ? 1 : 2));
+  let t = roll(c) * w.reduce((a, v) => a + v, 0), x = pool[0];
+  for (let i = 0; i < pool.length; i++) { t -= w[i]; if (t <= 0) { x = pool[i]; break; } }
+  const isNew = !c.got[x.id];
+  c.totals.boxes++;
+  if (!isNew && ownedOf(c, x.id) >= TUNE.boxes.keep) {
+    const dup = dupViews(c, x);
+    c.views += dup;
+    emit(c, 'opened', { box: b, id: x.id, rarity: x.rarity, isNew, dup });
+    return { id: x.id, rarity: x.rarity, tier: b.tier, isNew, dup };
+  }
+  c.inv[x.id] = (c.inv[x.id] || 0) + 1; c.fresh[x.id] = (c.fresh[x.id] || 0) + 1;
+  got(c, x.id);
+  emit(c, 'opened', { box: b, id: x.id, rarity: x.rarity, isNew, dup: 0 });
+  return { id: x.id, rarity: x.rarity, tier: b.tier, isNew, dup: 0 };
+}
+// a thing she’s got (for the collection book): new ones count toward sets; a set done is a bonus and a gold box
+export function got(c, id) {
+  if (!itemOf(id) || c.got[id]) return false;
+  c.got[id] = 1;
+  for (const x of SETS) if (!c.sets.includes(x.id) && x.items.every((i) => c.got[i])) {
+    c.sets.push(x.id);
+    emit(c, 'set', { set: x });
+    grantBox(c, 'gold', 'set');
+  }
+  return true;
+}
+export const gotCount = (c) => ITEMS.filter((x) => c.got[x.id] && !x.given).length;
 
 // ---------- the shop ----------
 export function deliverTime(c, price) {
@@ -153,7 +216,7 @@ export function deliverTime(c, price) {
   if (price < D.free) return 0;
   return Math.min(D.max, D.base + D.per * Math.log10(price / D.free) ** D.pow) * (1 - D.express * perkRank(c, 'express'));
 }
-export const canBuy = (c, id) => { const x = itemOf(id); return Boolean(x) && !x.starter && !x.given && c.level >= x.level && c.views >= x.price; };
+export const canBuy = (c, id) => { const x = itemOf(id); return Boolean(x) && !x.starter && !x.given && !x.box && c.level >= x.level && c.views >= x.price; };
 // buy a thing: it comes in a box (at once, for cheap things) → the delivery
 export function buy(c, id) {
   if (!canBuy(c, id)) return null;
@@ -167,23 +230,24 @@ export function buy(c, id) {
   return d;
 }
 export const boxLeft = (c, d) => Math.max(0, d.ready - c.clock);
-// a tap on a box that's still on its way: a bit sooner
+// a tap on a box that’s still on its way: a bit sooner
 export function tapBox(c, uid) {
   const d = c.deliveries.find((x) => x.uid === uid);
   if (!d || boxLeft(c, d) <= 0) return false;
   d.ready -= Math.max(0.35, boxLeft(c, d) * TUNE.deliver.tap);
   return true;
 }
-// open a box that's arrived → its thing (it's hers now: to place, or kept with her things)
+// open a box that’s arrived → its thing (it’s hers now: to place, or kept with her things)
 export function openBox(c, uid) {
   const d = c.deliveries.find((x) => x.uid === uid);
   if (!d || boxLeft(c, d) > 0) return null;
   c.deliveries = c.deliveries.filter((x) => x !== d);
   c.inv[d.id] = (c.inv[d.id] || 0) + 1;
   if (d.fresh) c.fresh[d.id] = (c.fresh[d.id] || 0) + 1;
+  got(c, d.id);
   return d.id;
 }
-// place one of her things that's put away (a new one gives experience, once) → the placed thing
+// place one of her things that’s put away (a new one gives experience, once) → the placed thing
 export function placeFromInv(c, id, x, y, opts = {}) {
   if (!(c.inv[id] > 0)) return null;
   const it = roomPlace(c, id, x, y, opts);
@@ -199,7 +263,7 @@ export function placeFromInv(c, id, x, y, opts = {}) {
   return it;
 }
 // a spot for it: floor things along the back first, never in front of her desk, and never shutting off part of the
-// floor (she has to get round); rugs in the middle; small things and wall things wherever there's room
+// floor (she has to get round); rugs in the middle; small things and wall things wherever there’s room
 export const hasSpot = (c, id) => spotsFor(c, id).length > 0;
 export function autoSpot(c, id) {
   const home = homeOf(c), def = itemOf(id), list = spotsFor(c, id);
@@ -214,25 +278,25 @@ export function autoSpot(c, id) {
   };
   const ranked = list.map((p) => ({ p, v: score(p) })).sort((a, b) => a.v - b.v).map((x) => x.p);
   if (def.place !== 'floor' || def.pet) return ranked[0];
-  return ranked.find((p) => staysOpen(c, def, p)) || null;
+  const base = blockedGrid(c);
+  return ranked.find((p) => staysOpen(c, def, p, base)) || null;
 }
-// would the floor's free cells all still reach each other with this thing there?
-function staysOpen(c, def, p) {
-  const home = homeOf(c), b = blocked(c);
-  for (let i = 0; i < def.w; i++) for (let j = 0; j < def.h; j++) b.add(`${p.x + i},${p.y + j}`);
-  const free = [];
-  for (let y = 0; y < home.rows; y++) for (let x = 0; x < home.cols; x++) if (!b.has(`${x},${y}`)) free.push(`${x},${y}`);
-  if (!free.length) return false;
-  const seen = new Set([free[0]]), q = [free[0]];
-  while (q.length) {
-    const [x, y] = q.shift().split(',').map(Number);
-    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      const k = `${x + dx},${y + dy}`;
-      if (x + dx < 0 || y + dy < 0 || x + dx >= home.cols || y + dy >= home.rows || b.has(k) || seen.has(k)) continue;
-      seen.add(k); q.push(k);
-    }
+// would the floor’s free cells all still reach each other with this thing there? (`base`: what stands there now)
+function staysOpen(c, def, p, base = blockedGrid(c)) {
+  const home = homeOf(c), cols = home.cols, b = base.slice();
+  for (let i = 0; i < def.w; i++) for (let j = 0; j < def.h; j++) { const x = p.x + i, y = p.y + j; if (x >= 0 && y >= 0 && x < cols && y < home.rows) b[y * cols + x] = 1; }
+  let free = 0, start = -1;
+  for (let k = 0; k < b.length; k++) if (!b[k]) { free++; if (start < 0) start = k; }
+  if (free < 3) return false;
+  const seen = new Uint8Array(b.length), q = new Int32Array(b.length);
+  let head = 0, tail = 0, n = 1;
+  q[tail++] = start; seen[start] = 1;
+  while (head < tail) {
+    const k = q[head++], x = k % cols;
+    const next = [x > 0 ? k - 1 : -1, x < cols - 1 ? k + 1 : -1, k - cols, k + cols];
+    for (const m of next) if (m >= 0 && m < b.length && !b[m] && !seen[m]) { seen[m] = 1; q[tail++] = m; n++; }
   }
-  return seen.size === free.length && free.length >= 3;
+  return n === free;
 }
 export const invCount = (c) => Object.values(c.inv).reduce((a, b) => a + b, 0);
 
@@ -265,13 +329,13 @@ export function buyPerk(c, id) {
 // (her first stream comes sooner: a handful of videos)
 export const liveNeed = (c) => (c.totals.live ? Math.max(4, Math.round(TUNE.live.charge * videosPerStream(c) * (1 - TUNE.live.energy * perkRank(c, 'energy')))) : TUNE.live.first);
 export const liveReady = (c) => c.live >= liveNeed(c);
-// the topic she'd go live with: her best, a trending one first
+// the topic she’d go live with: her best, a trending one first
 export function liveTopic(c) {
   const s = scores(c), tr = trendsOf(c);
   const v = (t) => s[t.id] + (tr.includes(t.id) ? 1000 : 0);
   return [...openTopics(c)].sort((a, b) => v(b) - v(a))[0].id;
 }
-// → what the stream starts with (./stream.js's createStream)
+// → what the stream starts with (./stream.js’s createStream)
 export function liveStart(c, topic = liveTopic(c)) {
   if (!liveReady(c)) return null;
   c.live = 0;
@@ -291,7 +355,7 @@ export function bestIdea(c, topic = liveTopic(c), s = scores(c)) {
 }
 // how many videos she could make in the minute a stream takes
 export const videosPerStream = (c) => (TUNE.dur / makeTime(c)) * slotsOf(c);
-// a live stream takes the minute she could've spent making videos, so it's worth that minute of her best video: a bit
+// a live stream takes the minute she could’ve spent making videos, so it’s worth that minute of her best video: a bit
 // less for a quiet stream, about twice as much with chat hyped, more for an S → { views, followers, xp }
 export function liveWorth(c, r) {
   const s = scores(c), W = TUNE.live.worth;
@@ -315,7 +379,9 @@ export function liveDone(c, r) {
   progress(c, 'live', 1);
   addXp(c, xp);
   grew(c, before);
-  return { views, followers, xp };
+  const box = r.grade === 'S' ? 'silver' : r.grade === 'A' ? 'bronze' : null;
+  if (box) grantBox(c, box, 'live');
+  return { views, followers, xp, box };
 }
 
 // ---------- the clock ----------
@@ -348,19 +414,21 @@ export function tick(c, dt, { events = true } = {}) {
 function droneGift(c) {
   const m = perkRank(c, 'mail'), r = roll(c);
   if (r < 0.03 + 0.015 * m) return { kind: 'point' };
-  if (r < 0.4) {
+  if (r < TUNE.boxes.mail + 0.03 * m) return { kind: 'box', tier: 'bronze' };
+  if (r < 0.45) {
     const cheap = shopItems(c).filter((x) => x.price <= Math.max(250, c.views * 0.6));
     if (cheap.length) { const x = cheap[Math.floor(roll(c) * cheap.length)]; return { kind: 'item', id: x.id }; }
   }
   return { kind: 'views', n: Math.round((30 + idleRate(c) * 35 + reachOf(c.followers) * 1.5) * (1 + 0.25 * m)) };
 }
-// a tap on the drone while it's over her room → its gift
+// a tap on the drone while it’s over her room → its gift
 export function catchDrone(c) {
   if (c.drone.until < 0 || c.clock > c.drone.until || !c.drone.gift) return null;
   const g = c.drone.gift;
   c.drone.until = -1; c.drone.gift = null;
   if (g.kind === 'point') c.points++;
-  else if (g.kind === 'item') { c.inv[g.id] = (c.inv[g.id] || 0) + 1; c.fresh[g.id] = (c.fresh[g.id] || 0) + 1; }
+  else if (g.kind === 'item') { c.inv[g.id] = (c.inv[g.id] || 0) + 1; c.fresh[g.id] = (c.fresh[g.id] || 0) + 1; got(c, g.id); }
+  else if (g.kind === 'box') grantBox(c, g.tier, 'mail');
   else c.views += g.n;
   c.totals.mail++;
   progress(c, 'mail', 1);
@@ -402,7 +470,7 @@ export function comeBack(c, seconds) {
   return g;
 }
 
-// ---------- quests: three at a time, claimed as they're done ----------
+// ---------- quests: three at a time, claimed as they’re done ----------
 const QUEST_KINDS = ['videos', 'topic', 'place', 'trend', 'kind', 'one', 'live', 'zap', 'mail', 'pet', 'followers'];
 function newQuest(c) {
   const n = ++c.questN, open = openTopics(c);
@@ -422,6 +490,7 @@ function newQuest(c) {
   else if (kind === 'pet') q.target = 5;
   else if (kind === 'followers') { q.target = round2(Math.max(20, c.followers * 1.6)); q.have = c.followers; }
   q.reward = { views: round2(reachOf(c.followers) * (3 + roll(c) * 3) + 40), xp: 12 + 4 * c.level, point: n % 4 === 0 };
+  if (n % TUNE.boxes.quest === 0) q.reward.box = 'silver';
   return q;
 }
 const round2 = (v) => { const p = 10 ** Math.max(0, Math.floor(Math.log10(Math.max(1, v))) - 1); return Math.ceil(v / p) * p; };
@@ -437,6 +506,7 @@ export function progress(c, kind, n = 1, keys = null) {
     c.quests = c.quests.filter((x) => x !== q);
     c.views += q.reward.views; if (q.reward.point) c.points++;
     emit(c, 'quest', { quest: q });
+    if (q.reward.box) grantBox(c, q.reward.box, 'quest');
     addXp(c, q.reward.xp);
     c.quests.push(newQuest(c));
   }
@@ -452,4 +522,4 @@ function grew(c, before) {
   const passed = RIVALS.filter((r) => before <= r.f && c.followers > r.f);
   if (passed.length) emit(c, 'passed', { rivals: passed, rank: rankOf(c.followers) });
 }
-export { rankOf, layer };
+export { rankOf, layer, BOXES };

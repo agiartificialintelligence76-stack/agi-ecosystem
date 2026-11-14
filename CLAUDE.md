@@ -1,16 +1,17 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
-> **GOING LIVE taken down (2026-11-14, night), to be reworked:** the owner, after playing the rebuild: "this game is
-> boring asf, the original pewdiepie tuber simulator is more fun and the room have more space and that game actually made
-> with life made with human creative minds unlike this this is pure ai slop", then "take it down the site first then
-> rework it then publish it to production". Off the site: agi1.app/games is back to how it was before GOING LIVE (31
-> games, GROWTH STOCK New again: its tiles, picker, ratings, counts and wall, `src/games/list.js`, `shelf.js`, the review
-> words in `server/arcade.js`, the build's inputs in `vite.config.js`, `scripts/share-pages.js`, `package.json` and the
-> tests, all as they were at `0f4af3a`), and agi1.app/games/goinglive (and /goinglive) sends people to /games
-> (temporary redirects in `vercel.json`). Its code, page, pictures and tests stay in the repo for the rework
-> (`src/games/goinglive/`, `goinglive.html`, `tests/goinglive.test.js`: not built or run meanwhile); its plays and ratings
-> stay in the database. To bring it back: `git revert` the takedown commit, then the rework. **No new setting, SQL,
-> function or service.**
+> **GOING LIVE, reworked (2026-11-15, night):** the owner, after playing the rebuild: "this game is boring asf, the
+> original pewdiepie tuber simulator is more fun and the room have more space and that game actually made with life made
+> with human creative minds unlike this this is pure ai slop", then "take it down the site first then rework it then
+> publish it to production". Taken down first (`be98472`: the arcade as it was before it, agi1.app/games/goinglive sent
+> to /games), then reworked and brought back: **her room fills the screen and scrolls sideways** (six bigger homes, from
+> a 14 × 6 bedroom to a 40 × 9 space station, each with its own wallpaper, floor and view; 🔍 shows all of it); **she
+> lives in it** between videos (83 things do something: she games, naps, cooks, paints, plays music, dances, waters her
+> plants, hugs her plushies, changes outfits…), and **every thing tapped reacts** with its own line and she goes to use
+> it; **mystery boxes** (levels, quests, good streams, the drone, sets and one a day) with 22 rare, epic and legendary
+> finds the shop doesn't sell, a collection book and eleven sets; new pixel art throughout; and a game's HUD (her level
+> up top; her boxes, her videos, three ideas and a dock of buttons below; a column on a phone held sideways). Ours in
+> every way, as before. **No new setting, SQL, function or service.** See "GOING LIVE" under "AGI games".
 
 > **GOING LIVE, rebuilt (2026-11-14, evening):** the owner, after the first version: "the original pewdipie tuber
 > simulator is more fun to be honest the game mechanics there is so good and the graphics too", then "Rebuild both
@@ -10891,98 +10892,117 @@ about the stocks' names and the game's pretend market; never advice about real s
 (`public/images/games/growthstock.mp4` and `.webp`), its cover (`public/cards/games/growthstock.jpg`) and the wall
 (`public/cards/games-all.jpg`: "Thirty-one games, one girlfriend.").
 
-### GOING LIVE (2026-11-14)
+### GOING LIVE (2026-11-14, reworked 2026-11-15)
 
 The owner: "do u know the game pewdiepie tuber simulator?" (a famous YouTuber's game where you grow a streamer's
 channel and decorate their room). Claude offered an AGI-1 version of our own for the arcade, and the owner: **"yes
 exactly"**, then "continue and finish". The first version (pick what she streams, then run her stream live; her room's
 twelve things in tiers) was **published as `c13c23e`** the same afternoon. Then the owner: "the original pewdipie tuber
 simulator is more fun to be honest the game mechanics there is so good and the graphics too", and of Claude's choices
-**"Rebuild both (Recommended)"** (a pixel-art room decorated thing by thing, a little AGI-1 walking in it, video ideas
-with topics and trends, levels, quests, surprises) and **"Short waits (Recommended)"** (seconds to a few minutes, sooner
-by playing, earning while away). Claude said it would publish it straight to production when it was done and tested,
-like before. One game, at **agi1.app/games/goinglive** (`goinglive.html`, `src/games/goinglive/`), on the arcade kit
-(its frame, title, pause, end card, local saves `agi_arcade:goinglive`, `?demo` self-play, the AGI GAMES intro). **No
-new setting, SQL, function or service**; never money; nothing asked of a wallet.
+**"Rebuild both (Recommended)"** and **"Short waits (Recommended)"**: a pixel-art room sim, **published as `498dd63`** the
+same evening. Then, after playing it: **"this game is boring asf, the original pewdiepie tuber simulator is more fun and
+the room have more space and that game actually made with life made with human creative minds unlike this this is pure
+ai slop"**, and **"take it down the site first then rework it then publish it to production"**. It was taken off the
+site (`be98472`: the arcade as it was before it, its links sent to /games) and reworked, as Claude said it would: more
+space (her room fills the screen, bigger homes, scrolled sideways), a room that comes alive (she uses her things, and
+every thing tapped reacts), boxes worth opening (mystery boxes, rare finds, a collection book, sets), better pixel art,
+and a game's buttons along the bottom instead of a website's side panel. One game, at **agi1.app/games/goinglive**
+(`goinglive.html`, `src/games/goinglive/`), on the arcade kit (its frame, title, pause, end card, local saves
+`agi_arcade:goinglive`, `?demo` self-play, the AGI GAMES intro). **No new setting, SQL, function or service**; never
+money; nothing asked of a wallet.
 
 **Ours, nobody else's.** No real creator, platform, channel or their in-jokes, words or looks: no YouTube or Twitch, no
-subscribers, donations, super chats, pugs, eagles or "Bux" (followers and **views**, the game's own points), our own
-streamers on its board, our own chat and video ideas, her room and everything in it drawn in code.
-`tests/goinglive.test.js` checks every line, title, name and the page against a list of real names and money words.
+subscribers, donations, super chats, pugs, eagles or "Bux" (followers and **views**, the game's own points), no
+"loot" money (a mystery box is opened, never bought), our own streamers on its board, our own chat, video ideas and
+things, her room and everything in it drawn in code. `tests/goinglive.test.js` checks every line, title, name, thing,
+set and the page against a list of real names and money words.
 
-**The game.** Her room (the view, pixel art: `pixel.js` draws every sprite once on a small canvas with an ink outline;
-`render.js` draws the room at a whole-number scale, things sorted front to back, night with lit lamps) and beside it
-(under it on a phone held upright) her panel: her level and its bar, 💡 idea points, 🔥 the three trending topics (they
-change every 5 videos), her videos being made (a bar each), **three video ideas** (each a made-up title about two of ten
-topics, with about how many views and new followers it'd bring and how long it takes; 🔄 New ideas every 30 s), and
-Shop, Decorate, Go live (its meter), Skills, Quests, Board, Records.
+**The game.** **Her room fills the screen** (between streams): drawn in pixel art at a whole-number scale that fills the
+height between the HUD's bars, wider than the screen, so it **scrolls sideways** (drag it, flick it, a mouse wheel, ← →;
+🔍 zooms out to the whole room). The room follows her when you haven't looked round for 5 seconds. Over it, **up top**:
+her level and its bar, 💡 idea points (a tap: Skills), her home and rank, 🔥 the three trending topics and how many
+videos they last. **Down below**: her boxes (deliveries and mystery boxes, a stack on the left), 🔍, the videos being
+made (a bar and the time left each), **three video ideas** (two topics each, about how many new followers and views,
+🔄 new ones every 30 s), and **a dock**: Shop, Decorate, **Go live** (its meter), Collection, More (Skills, Quests, the
+Board, Records). On a phone held sideways all of that is a column on the right. Her words in a bubble over her head.
 
-- **Videos.** Tap an idea: AGI-1 walks to her desk and types while its bar fills (7 s at first, about 25 s at level 20,
-  less with Faster editing; one at a time until a second and third channel). Then views and new followers (now and then a
-  video goes viral: four times the views) and experience. A video's views grow with her followers; its followers with
-  her followers too (less and less as she grows), and both with **her room's points for its two topics** and trending
-  topics (one ×1.5, both ×2.2).
+- **Videos.** Tap an idea: AGI-1 leaves what she's doing, walks to her desk and types (from behind) while its bar fills
+  (7 s at first, about 25 s at level 20, less with Faster editing; one at a time until a second and third channel). Then
+  views and new followers (now and then a video goes viral: four times the views) and experience. A video's views grow
+  with her followers, both with **her room's points for its two topics**, trending topics (one ×1.5, both ×2.2) and
+  her complete sets.
+- **She lives in her room.** When she isn't recording she uses her things (83 of the 112 do something; `uses.js`): she
+  sits on chairs and sofas, naps in bed (more at night), games at her PC, console and arcade (from behind), paints at
+  her easel, cooks, makes coffee, plays the synth, piano, drums and DJ decks, sings into her mic, dances beside the
+  jukebox and on the dance floor, runs on the treadmill, jumps in the ball pit, slides down the slide, waters her plants,
+  hugs her plushies, pets her cat and robot dog, watches her fish, reads, tinkers, puts on VR, plays the claw machine,
+  changes her **outfit** at her dresser (six), throws confetti… with a little picture over her head while she does it
+  (💤, a note, steam, a heart…), a sound and now and then a line. **Tap any thing**: it bounces, she says something about
+  it (two lines for each of the 112 things, in her dry lowercase voice), and if she's free she goes and uses it. Tap her
+  for a line, her pets for hearts.
 - **Her room.** Ten topics: Chatting, Gaming, Cute, Funny from the start, then Music (level 3), Art (5), Cooking (8),
-  Tech (11), Cozy (14), Dance (18). **90 things** on ten shelves (Desk & tech, Seats & beds, Furniture, Kitchen, Music &
-  dance, Art, Plants, Pets & plushies, On the wall, Silly stuff), each with its size, where it goes (the floor, a rug
-  under things, the wall, or on a desk or table), a level and points for its topics (dearer things more). Bought with
-  views; cheap ones come at once, dearer ones **in a box** at the front of her room (tap it: sooner), opened with a tap
-  and then **placed**: drag it on her grid (green where it fits), ↔ to flip it, ✓. **Decorate**: tap a thing to move it
-  or put it away (📦; her things are kept in the Shop's "Her things"); a desk takes what's on it along; her last desk
-  stays (she records at it). A new kind of thing placed gives experience once. Her cat and robot dog wander and nap.
-- **Homes.** Bedroom (9 × 4), Studio flat (12 × 5, at 10K followers and 60K views), Penthouse (14 × 5, at 500K and
-  9M), Space station (16 × 6, at 8M and 400M), from the Shop; everything comes along where it was.
-- **Levels and skills.** Experience from videos, streams, quests and new things; each level an idea point (two every
-  fifth) and new things and topics. Ten skills, a point a rank (the next rank costs its number): Better thumbnails, Old
-  videos, Express delivery, Faster editing, Trend radar, Second channel (level 6), Fan mail, Live energy, Follow button,
-  Third channel (level 16).
-- **Surprises.** The **fan-mail drone** flies across now and then: tap it for views, a thing or an idea point. **Spam
-  bots** walk in (from 30 followers): her old videos earn less until they're zapped (tap them). Quests, three at a time
-  (make videos about a topic, place things, catch the drone…), paid at once. Awards at 100, 1K, 10K, 100K, 1M and 10M
-  followers: mics, and **plaques** for her wall. 14 stickers.
-- **Going live.** Her first stream after 8 videos, then the meter fills with about three minutes of her videos (less
-  with Live energy). Live: the first version's one-minute stream (answer chat, ban spam bots, welcome raids, fix tech
-  problems, catch hearts, clip her best moments, her big moment) over her room at her desk, with a **facecam**; a stream
-  is worth about the minute of her best video it takes (a quiet one), up to about two and a half for a hyped S.
-- **Away.** Her old videos keep earning, half of it while you're away, 8 hours at most ("While you were away"); videos
-  and boxes finish.
+  Tech (11), Cozy (14), Dance (18). **90 things in the shop** on ten shelves, each with its size, where it goes (the
+  floor, a rug, the wall, on a desk or table), a level, points for its topics and a **rarity** (common, rare under 1M
+  views, epic; the golden statue legendary). Bought with views; cheap ones come at once, dearer ones **in a box** (in
+  her box stack: tap it to hurry it, then to open it) and are then **placed**: drag it (green where it fits; dragged to
+  the edge, the room scrolls), ↔, 📦 put away, ✓. **Decorate**: tap a thing to move it or put it away; her last desk
+  stays (she records at it).
+- **Mystery boxes and her collection.** Bronze, silver and gold boxes (`BOXES`: a rarer box, better odds; gold is never
+  common): one each for her first levels, then every third level, a silver every fifth and a gold every tenth; every
+  sixth quest; an S or A stream (silver, bronze); now and then the fan-mail drone; a gold one for a complete set; and
+  **a box of the day** (silver, once a day you visit). Opened with a tap (it shakes, then rays in its rarity's colour,
+  the find, its name and her line): **22 finds only boxes hold** (9 rare, 9 epic, 4 legendary: a lava-lamp moon, a
+  plushie of her, a GPU shrine, a gaming pod, a ramen bar, a wall aquarium, a holo cat and a robot butler as pets, a
+  golden mic, a slide, a cloud bed, an AGI core…) and shop things up to six levels ahead. A find she has two of already
+  comes as views instead. **Her collection book**: every thing (a silhouette until she's found one) and **eleven sets**
+  of six (Gamer den, Studio…), each worth +12% for its topic's videos and a gold box when complete.
+- **Homes.** Bedroom (14 × 6, four cells up the wall), Cozy apartment (18 × 7, at 5K followers and 25K views), Studio
+  loft (22 × 7, five up the wall, 50K and 400K), Penthouse (28 × 8, 500K and 9M), Creator mansion (34 × 8, 4M and 120M),
+  Space station (40 × 9, 15M and 900M), each with its own wallpaper, floor and view (a suburb, the city, a skyline at
+  sunset, a garden, the Earth); everything comes along where it was.
+- **Levels and skills, surprises, going live, away:** as before (ten skills; the drone, spam bots, quests, awards and
+  plaques, **17 stickers** now with Unboxer, Set collector and Legendary; her first stream after 8 videos, the first
+  version's one-minute stream with a facecam; her old videos keep earning while you're away, 8 hours at most).
 
-The board: MegaModel 9000 (30M) down to A Literal Potato (40), sixteen made up. Keys: 1–3 an idea, S the shop, D
-decorate, L go live; placing: the arrows, F flip, Space or Enter ✓, Backspace put it away; live: Space or Enter takes the
-most urgent thing.
+Keys: 1–3 an idea, ← → look around, S shop, D decorate, L go live, C collection, Z zoom; placing: the arrows, F flip,
+Space or Enter ✓, Backspace put it away; live: Space or Enter takes the most urgent thing.
 
 **How it's built** (all in `src/games/goinglive/`; the rules never touch the page): `data.js` (topics, things and their
-points, homes, skills, awards, the board, `TUNE`), `titles.js` (the video ideas), `room.js` (her room's grid: what fits
-where, moving and putting away, her way round it, her desk spot), `econ.js` (her career: ideas, trends, videos, levels,
-the shop and boxes, a spot for a new thing, homes, skills, quests, the drone, the bots, going live, away; pure and
-seeded), `stream.js` (a live stream, unchanged), `ai.js` (the game's own players: `newbie`, `casual`, `good`, `pro`, and
-`demo` for the tile; a careful one picks the idea that grows her most, buys the most points for the room a thing takes
-and makes room for better things), `progress.js` (what's kept, checked thing by thing; a first-version career keeps its
-followers and views, a level to match, a fresh bedroom), `lines.js` (her words, chat, quests' and gifts' words), `pixel.js`
-(every sprite: her, her pets, bots, the drone, boxes, every thing, every home), `actor.js` (who moves: her walking,
-working, sitting, napping; pets; bots; the drone), `render.js`, `ui.js`, `sound.js` (made in the browser: a chiptune in
-her room), `game.js`, `style.css` (`gl-` classes). `?qa` (nothing kept or counted) takes `&hub`, `&live`, `&auto=<player>`,
-`&f=`, `&level=`, `&points=`, `&home=`, `&views=`, `&items=a,b,c`, `&day` or `&night`, `&speed=`.
+points and rarities, the box finds, sets, boxes, homes and their looks, skills, awards, the board, `TUNE`), `titles.js`,
+`room.js` (her room's grid; `spotsFor` and `blockedGrid` read it as grids of cells, fast in big rooms), `econ.js` (her
+career, now with `grantBox`, `openMystery`, `got`, `levelBox`, `setBonus`, duplicates as views; pure and seeded),
+`stream.js`, `ai.js` (the game's own players, who open their boxes too), `progress.js` (what's kept: her boxes, what
+she's found, her sets, her outfit, the day's box; a career from before the rework keeps everything, its home mapped to
+the one its size), `lines.js`, **`uses.js`** (what she does with each kind of thing: where she stands, her pose, how
+long, what floats over her head, its sound, her lines; two lines for every thing), `pixel.js` (every sprite, lit from the
+top left and outlined: her at 20 × 27 in six outfits and ~45 poses, her pets, bots, the drone, deliveries, mystery
+boxes, what floats over her head, all 112 things, six homes), `actor.js` (her: walking, working, using things on a whim
+or when tapped; pets; bots; the drone), `render.js` (the room at a whole-number scale, the sideways camera, soft
+shadows, night and lamps), `ui.js` (the HUD, the dock, the cards: shop, collection, a mystery box, more, skills, quests,
+board, records), `sound.js` (made in the browser), `game.js`, `style.css` (`gl-` classes). `?qa` (nothing kept or
+counted) takes `&hub`, `&live`, `&auto=<player>`, `&f=`, `&level=`, `&points=`, `&home=`, `&views=`, `&items=a,b,c`,
+`&boxes=bronze,gold`, `&outfit=`, `&got=all`, `&day` or `&night`, `&speed=`; `window.__gl` reads its state.
 
-**Tuning it.** `node tools/games/goinglive/balance.mjs [seeds] [minutes] [players]`. As published (seeds 1–3, minutes of
-play by a player who never stops): a **good** player has 100 followers at 3, 1K at 5, 10K at 10 (the Studio flat), 100K
-at 19, the Penthouse at 29, 1M at 35, the Space station at 59, 10M at 62, and is **#1 at 81–97 minutes** (about 30
-streams, 700 videos, level 37); a newbie at 128–143. The same good player buying anything that fits, or never going
-live, is far behind (`tests/goinglive.test.js`). Followers keep growing after #1.
+**Tuning it.** `node tools/games/goinglive/balance.mjs [seeds] [minutes] [players]`. As published (3 seeds, minutes of
+play by a player who never stops): a **good** player has 1K followers at 5, 10K at 10 (the Cozy apartment), 100K at 18,
+1M at 32, 10M at 61 (the Space station at 68) and is **#1 at about 83 minutes**; a newbie at about 115. Boxes: a good
+player opens about 12 in the first 5 minutes and about one a minute after (a newbie fewer). A good player buying
+anything that fits is about 1.3× behind, one who never goes live about 1.5× (`tests/goinglive.test.js`).
 
-**Checked.** `tests/goinglive.test.js` (29 tests) in `npm test`. In headless Chromium: phones held upright (390 × 844,
-360 × 640) and sideways (844 × 390), a computer (1440 × 900), the tile's square (480 × 480): the title, her room by day
-and night, ideas made into videos, the shop (a buy, a box tapped and opened, a thing placed by dragging), decorating (a
-thing moved, one put away), skills, quests, the board, records, a stream played by taps and by the game's own player,
-the end card and back; no page errors. **Not checked, said plainly:** its sound by ear, and play by a person on a real
-phone.
+**Checked.** `tests/goinglive.test.js` (32 tests) in `npm test`. In headless Chromium: phones held upright (390 × 844)
+and sideways (844 × 390), a computer (1280 × 800, 1440 × 900), the tile's square (480 × 480): a first visit (Play, the
+day's box opened), her room dragged sideways and zoomed out, a thing tapped (she went and used it), every kind of use
+seen close up, a mystery box opened and its find placed, a thing bought, its box opened and dragged to the room's edge,
+the collection book, More, Skills, decorating (the bed picked up and put away), every home by day and at night, a
+stream; no page errors. **Not checked, said plainly:** its sound by ear, and play by a person on a real phone.
 
-**On /games:** 32 games; its tile second, the only New one. `src/games/shelf.js` ("Streamer sim"), `games.html` (its
-tile, `#rate-goinglive`, the game picker), `src/games/list.js`, `vercel.json`, `vite.config.js`,
-`scripts/share-pages.js`, `src/owner/catalog.js`, `server/arcade.js` (a review may talk about videos, ideas, her room and
-its things, the drone, bots, streams and the made-up board; never other real streamers or channels), the preview and
-still (`public/images/games/goinglive.mp4`, `.webp`: her room, two videos landing, the drone), its cover
-(`public/cards/games/goinglive.jpg`) and the wall (`public/cards/games-all.jpg`).
+**On /games:** 32 games, its tile second and New. `src/games/shelf.js` ("Streamer sim"), `games.html` (its tile,
+`#rate-goinglive`, the game picker), `src/games/list.js`, `vercel.json`, `vite.config.js`, `scripts/share-pages.js`,
+`src/owner/catalog.js`, `server/arcade.js` (a review may talk about videos, ideas, her room and its things, mystery
+boxes, rarities, the collection, sets, outfits, the drone, bots, streams and the made-up board; never other real
+streamers or channels), the preview and still (`public/images/games/goinglive.mp4`, `.webp`: her loft, her dancing, a
+video called, the drone, a bot), its cover (`public/cards/games/goinglive.jpg`) and the wall
+(`public/cards/games-all.jpg`).
 
 ## TRENCHING SIMULATOR (2026-10-20 and 21)
 

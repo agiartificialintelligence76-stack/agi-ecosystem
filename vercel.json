@@ -70,6 +70,8 @@
     { "source": "/games/overthinking/", "destination": "/overthinking" },
     { "source": "/games/growthstock", "destination": "/growthstock" },
     { "source": "/games/growthstock/", "destination": "/growthstock" },
+    { "source": "/games/goinglive", "destination": "/goinglive" },
+    { "source": "/games/goinglive/", "destination": "/goinglive" },
     { "source": "/vote/owner", "destination": "/vote" },
     { "source": "/vote/owner/", "destination": "/vote" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" },
@@ -84,11 +86,7 @@
   ],
   "redirects": [
     { "source": "/", "has": [{ "type": "host", "value": "inference.agi1.app" }], "destination": "/cloakmesh", "permanent": false },
-    { "source": "/", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/explore", "permanent": false },
-    { "source": "/games/goinglive", "destination": "/games", "permanent": false },
-    { "source": "/games/goinglive/", "destination": "/games", "permanent": false },
-    { "source": "/goinglive", "destination": "/games", "permanent": false },
-    { "source": "/goinglive.html", "destination": "/games", "permanent": false }
+    { "source": "/", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/explore", "permanent": false }
   ],
   "functions": {
     "api/feed.js": {

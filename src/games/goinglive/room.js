@@ -1,6 +1,6 @@
-// GOING LIVE: her room's grid, pure (no page): where things can go and what's in the way. The floor is `cols` × `rows`
+// GOING LIVE: her room’s grid, pure (no page): where things can go and what’s in the way. The floor is `cols` × `rows`
 // cells (row 0 against the back wall), the wall `cols` × `wall` cells (row 0 at the top). A thing on the floor takes
-// w × h cells; a rug ('flat') lies under things; a thing for the wall takes w × h wall cells; a small thing ('top')
+// w × h cells; a rug (’flat’) lies under things; a thing for the wall takes w × h wall cells; a small thing (’top’)
 // stands on a surface (a desk, a table, a shelf) in w of its columns. Moving to a bigger home keeps every thing where it
 // was (the grid only grows). Her path across the floor goes round the things standing on it.
 import { itemOf, homeOf } from './data.js';
@@ -90,7 +90,17 @@ export function store(c, uid) {
   for (const t of gone) c.inv[t.id] = (c.inv[t.id] || 0) + 1;
   return gone.map((t) => t.id);
 }
-// every place a thing could go now (the game's own players, "find it a spot")
+// what’s taken on a layer of her room: a grid of its cells (1 = taken), for many checks at once
+export function takenGrid(c, L) {
+  const home = homeOf(c), rows = L === 'wall' ? home.wall : home.rows, g = new Uint8Array(home.cols * rows);
+  for (const t of c.items) {
+    if (layer(t) !== L) continue;
+    const d = itemOf(t.id);
+    for (let j = 0; j < d.h; j++) for (let i = 0; i < d.w; i++) { const x = t.x + i, y = t.y + j; if (x >= 0 && y >= 0 && x < home.cols && y < rows) g[y * home.cols + x] = 1; }
+  }
+  return g;
+}
+// every place a thing could go now (the game’s own players, "find it a spot"): the same answers as canPlace, cell by cell
 export function spotsFor(c, id) {
   const def = itemOf(id), home = homeOf(c), L = layerOf(def), out = [];
   if (L === 'top') {
@@ -101,13 +111,17 @@ export function spotsFor(c, id) {
     }
     return out;
   }
-  const rows = L === 'wall' ? home.wall : home.rows;
-  for (let y = 0; y + def.h <= rows; y++) for (let x = 0; x + def.w <= home.cols; x++) if (canPlace(c, id, x, y).ok) out.push({ x, y });
+  const rows = L === 'wall' ? home.wall : home.rows, cols = home.cols, g = takenGrid(c, L);
+  for (let y = 0; y + def.h <= rows; y++) for (let x = 0; x + def.w <= cols; x++) {
+    let ok = true;
+    for (let j = 0; j < def.h && ok; j++) for (let i = 0; i < def.w; i++) if (g[(y + j) * cols + x + i]) { ok = false; break; }
+    if (ok) out.push({ x, y });
+  }
   return out;
 }
 
 // ---------- walking ----------
-// the floor cells a thing stands on (rugs don't count)
+// the floor cells a thing stands on (rugs don’t count)
 export function blocked(c) {
   const b = new Set();
   for (const t of c.items) {
@@ -118,9 +132,20 @@ export function blocked(c) {
   }
   return b;
 }
+// the same, as a grid of the floor’s cells (1 = something stands there)
+export function blockedGrid(c) {
+  const home = homeOf(c), g = new Uint8Array(home.cols * home.rows);
+  for (const t of c.items) {
+    if (layer(t) !== 'floor') continue;
+    const d = itemOf(t.id);
+    if (d.pet) continue;
+    for (let i = 0; i < d.w; i++) for (let j = 0; j < d.h; j++) { const x = t.x + i, y = t.y + j; if (x >= 0 && y >= 0 && x < home.cols && y < home.rows) g[y * home.cols + x] = 1; }
+  }
+  return g;
+}
 export const thingAt = (c, x, y) => c.items.find((t) => layer(t) === 'floor' && !itemOf(t.id).pet && x >= t.x && x < t.x + itemOf(t.id).w && y >= t.y && y < t.y + itemOf(t.id).h) || null;
-// the shortest way between two floor cells (4 directions), going round what's in the way; `to` may be a seat or a bed
-// (she sits on it). → [cells…] (without `from`), or null when there's no way
+// the shortest way between two floor cells (4 directions), going round what’s in the way; `to` may be a seat or a bed
+// (she sits on it). → [cells…] (without `from`), or null when there’s no way
 export function path(c, from, to) {
   const home = homeOf(c), b = blocked(c);
   const key = (p) => `${p.x},${p.y}`, goal = key(to);
@@ -147,11 +172,11 @@ export function freeCell(c, near = null, dice = () => 0.5) {
   if (near) return all.sort((p, q) => Math.abs(p.x - near.x) + Math.abs(p.y - near.y) - Math.abs(q.x - near.x) - Math.abs(q.y - near.y))[0];
   return all[Math.floor(dice() * all.length)];
 }
-// where she sits to record: in front of the middle of her desk (on a seat if there's one there), facing it
+// where she sits to record: in front of the middle of her desk (on a seat if there’s one there), facing it
 export function deskSpot(c) {
   const desks = c.items.filter((t) => itemOf(t.id).desk && layer(t) === 'floor');
   if (!desks.length) return null;
-  // the desk with the most on it (her computer's there)
+  // the desk with the most on it (her computer’s there)
   desks.sort((a, b) => c.items.filter((t) => t.on === b.uid).length - c.items.filter((t) => t.on === a.uid).length);
   const d = desks[0], dd = itemOf(d.id), home = homeOf(c);
   const y = d.y + dd.h;

@@ -349,6 +349,21 @@ export const LOOK_GAMES = Object.freeze({
     advice: 'financial advice about real stocks, coins or real money (telling people to buy or sell something real, price '
       + 'targets, sure gains)',
   }),
+  goinglive: Object.freeze({
+    what: '"GOING LIVE", a cartoon pixel-art streamer simulator where an anime girl, AGI-1, starts with zero followers in '
+      + 'a bare bedroom: you pick her video ideas (chatting, gaming, cute, funny, music, art, cooking, tech, cozy, dance; '
+      + 'trending topics get more views), fill her room with things that make better videos (a gaming PC, a ring light, '
+      + 'plants, a cat…) and watch her use them between videos (she games, naps, cooks, paints, dances, changes outfits), '
+      + 'open her deliveries and mystery boxes (rare, epic and legendary finds for a collection book with sets), catch a '
+      + 'fan-mail drone, zap spam bots, spend idea points on skills, and go live in one-minute streams (answering chat, '
+      + 'banning spam bots, welcoming raids, fixing tech problems, catching hearts, clipping her best moments); her "views" '
+      + 'pay for her things and bigger homes up to a space station, and her room scrolls sideways; every streamer on its '
+      + 'trending board is made up (MegaModel 9000, A Literal Potato…): talk about streaming, videos, ideas, chat, viewers, '
+      + 'followers, raids, bots, the drone, her room and its things, mystery boxes, rarities, the collection, sets, outfits, '
+      + 'levels, quests, the board, combos, grades and stickers is part of reviewing it',
+    promo: 'other games, real streamers or channels, coins, tokens, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

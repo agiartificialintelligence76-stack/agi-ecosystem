@@ -1,35 +1,40 @@
-// GOING LIVE: the page around her pixel room, made with DOM methods in the arcade kit's sticker look. Under (or beside)
-// her room: her level and idea points, what's trending, the videos she's making, three video ideas to pick from, and
-// the tools (the shop, decorating, going live, skills, quests, the board, records). While a thing is being placed, a bar
-// on her room (✓ · flip · put away · ✕). Live: her stream's own overlay (LIVE, viewers, the clock, the hype, the combo;
-// raids, tech problems, clips, her big moment and hearts to tap) and her chat. Everything to tap is a real button.
+// GOING LIVE: the game’s screens over her pixel room, made with DOM methods in the arcade kit’s sticker look. Between
+// streams her room fills the screen and scrolls sideways; over it, up top, her level, idea points, home, rank and what’s
+// trending; down below, her boxes (deliveries and mystery boxes), the videos she’s making, three video ideas to tap, and
+// a dock: the shop, decorating, going live, her collection book, and the rest (skills, quests, the board, records).
+// While a thing is being placed, a bar (✓ · flip · put away · ✕). Live: her stream’s own overlay and her chat. Everything
+// to tap is a real button.
 import { el, icon } from '../kit/shell.js';
 import { REDUCED } from '../kit/env.js';
 import { shareUrl } from '../kit/share.js';
-import { TOPICS, topicOf, KINDS, ITEMS, itemOf, pointsOf, HOMES, PERKS, RIVALS, AWARDS, TUNE } from './data.js';
+import { TOPICS, topicOf, KINDS, ITEMS, itemOf, pointsOf, HOMES, PERKS, RIVALS, AWARDS, SETS, RARITIES, rarityOf, boxOf, TUNE } from './data.js';
 import {
   openTopics, nextTopic, trendsOf, trendLeft, expected, expectedFollowers, makeTime, slotsOf, uploadLeft, xpNeed, scores, shopItems,
-  canBuy, deliverTime, nextHome, canMoveHome, canPerk, perkRank, perkCost, liveNeed, liveReady, ideasReady, rankOf, idleRate, invCount, boxLeft,
+  canBuy, deliverTime, nextHome, canMoveHome, canPerk, perkRank, perkCost, liveNeed, liveReady, ideasReady, rankOf, idleRate, invCount, boxLeft, gotCount,
 } from './econ.js';
-import { itemSprite } from './pixel.js';
+import { itemSprite, mysterySprite, boxSprite } from './pixel.js';
 import { STICKERS } from './progress.js';
 import { questText, shareText } from './lines.js';
+import { linesOf } from './uses.js';
 
 const NF = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 });
 export const fmt = (n) => (Math.abs(n) < 1000 ? String(Math.round(n)) : NF.format(n));
 export const full = (n) => Math.round(n).toLocaleString('en-US');
 const clock = (s) => (s >= 60 ? `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}` : `${Math.ceil(s)}s`);
 const closeX = (fn) => el('button', { class: 'ak-ibtn ak-close', type: 'button', 'aria-label': 'Close', onclick: fn }, icon('close'));
-const chipOf = (id, hot = false) => { const t = topicOf(id); const b = el('span', `gl-topic${hot ? ' is-hot' : ''}`, el('i', { 'aria-hidden': 'true' }, t.icon), t.name); b.style.setProperty('--gl-c', t.color); return b; };
-// a thing's picture, crisp: its sprite on a small canvas, scaled up by CSS (image-rendering: pixelated)
-export function thumb(id, size = 56) {
-  const s = itemSprite(id, 0, { view: 'suburb' });
-  const cv = el('canvas', { class: 'gl-thumb', width: String(s.canvas.width), height: String(s.canvas.height), 'aria-hidden': 'true' });
-  cv.getContext('2d').drawImage(s.canvas, 0, 0);
+const chipOf = (id, hot = false) => { const t = topicOf(id); const b = el('span', `gl-topic${hot ? ' is-hot' : ''}`, el('i', { 'aria-hidden': 'true' }, t.icon), el('span', 'gl-topic-n', t.name)); b.style.setProperty('--gl-c', t.color); return b; };
+const dotOf = (id) => { const t = topicOf(id); const b = el('i', { class: 'gl-tdot', title: t.name }, t.icon); b.style.setProperty('--gl-c', t.color); return b; };
+// a sprite, crisp: on a small canvas, scaled up by CSS (image-rendering: pixelated); `ghost`: its silhouette
+function spriteCanvas(s, size, { ghost = false, cls = 'gl-thumb' } = {}) {
+  const cv = el('canvas', { class: cls, width: String(s.canvas.width), height: String(s.canvas.height), 'aria-hidden': 'true' });
+  const ctx = cv.getContext('2d');
+  ctx.drawImage(s.canvas, 0, 0);
+  if (ghost) { ctx.globalCompositeOperation = 'source-in'; ctx.fillStyle = '#3a2a5e'; ctx.fillRect(0, 0, cv.width, cv.height); }
   const k = Math.max(1, Math.floor(size / Math.max(s.canvas.width, s.canvas.height * 0.9)));
   cv.style.width = `${s.canvas.width * k}px`; cv.style.height = `${s.canvas.height * k}px`;
   return cv;
 }
+export const thumb = (id, size = 56, ghost = false) => spriteCanvas(itemSprite(id, 0, { view: 'suburb' }), size, { ghost });
 
 export function createUI(stage, on) {
   // ---------- the view: her room, or her stream ----------
@@ -44,13 +49,27 @@ export function createUI(stage, on) {
   const targets = el('div', { class: 'gl-targets', 'aria-label': 'Things happening on her stream' }, pops);
   const sayP = el('p', null, '');
   const sayBox = el('div', { class: 'gl-say', hidden: true, role: 'status' }, el('b', null, 'AGI-1'), sayP);
+  const tipText = el('span', null, '');
+  const tip = el('div', { class: 'gl-tip', hidden: true, role: 'status' }, el('b', null, 'Tip'), tipText);
+
+  // ---------- up top: her level, idea points, home, rank, what’s trending ----------
+  const lvl = el('b', 'gl-lvl', '');
+  const xpFill = el('i', 'gl-xp-fill');
+  const pts = el('button', { class: 'gl-pts', type: 'button', hidden: true, onclick: () => on.perks() }, '');
   const roomName = el('span', 'gl-roomname', '');
   const rankTag = el('span', 'gl-ranktag', '');
-  const roomTag = el('div', 'gl-roomtag', roomName, rankTag);
-  // a tip: on her stream, over it; between streams, at the top of her panel (her room stays in view)
-  const tipText = el('span', null, ''), hubTipText = el('span', null, '');
-  const tip = el('div', { class: 'gl-tip', hidden: true, role: 'status' }, el('b', null, 'Tip'), tipText);
-  const hubTip = el('div', { class: 'gl-tip gl-tip-hub', hidden: true, role: 'status' }, el('b', null, 'Tip'), hubTipText);
+  const trendRow = el('div', 'gl-trends', '');
+  const zoomBtn = el('button', { class: 'gl-zoom', type: 'button', 'aria-label': 'Zoom out', onclick: () => on.zoom() }, '🔍');
+  const topHud = el('div', 'gl-tophud',
+    el('div', 'gl-tophud-l', el('span', 'gl-lvlbox', lvl, el('span', 'gl-xp', xpFill)), pts, el('span', 'gl-place', roomName, rankTag)),
+    el('div', 'gl-tophud-r', trendRow));
+
+  // ---------- down below ----------
+  const boxes = el('div', { class: 'gl-boxes', 'aria-label': 'Her boxes' });
+  const uploads = el('div', { class: 'gl-uploads', 'aria-live': 'polite' });
+  const ideasList = el('div', { class: 'gl-ideas', role: 'list' });
+  const refresh = el('button', { class: 'gl-refresh', type: 'button', 'aria-label': 'New ideas', onclick: () => on.newIdeas() }, '🔄');
+  const tray = el('div', 'gl-tray', el('div', 'gl-tray-top', uploads, refresh), ideasList);
   // decorating: what to do, and Done
   const editText = el('span', null, 'Tap a thing to move it.');
   const editBar = el('div', { class: 'gl-bar gl-editbar', hidden: true }, editText, el('button', { class: 'gl-bbtn is-go', type: 'button', onclick: () => on.editDone() }, 'Done'));
@@ -61,102 +80,106 @@ export function createUI(stage, on) {
   const storeBtn = el('button', { class: 'gl-bbtn', type: 'button', 'aria-label': 'Put it away', onclick: () => on.placeStore() }, '📦');
   const cancelBtn = el('button', { class: 'gl-bbtn', type: 'button', 'aria-label': 'Cancel', onclick: () => on.placeCancel() }, '✕');
   const placeBar = el('div', { class: 'gl-bar gl-placebar', hidden: true }, placeName, el('span', 'gl-place-btns', flipBtn, storeBtn, cancelBtn, okBtn));
-  const view = el('div', 'gl-view', hud, targets, sayBox, roomTag, tip);
-
-  // ---------- between videos: her panel ----------
-  const lvl = el('b', 'gl-lvl', '');
-  const xpFill = el('i', 'gl-xp-fill');
-  const pts = el('button', { class: 'gl-pts', type: 'button', hidden: true, onclick: () => on.perks() }, '');
-  const trendRow = el('div', 'gl-trends', '');
-  const status = el('div', 'gl-status', el('div', 'gl-lvlrow', lvl, el('span', 'gl-xp', xpFill), pts), trendRow);
-  const uploads = el('div', { class: 'gl-uploads', 'aria-live': 'polite' });
-  const ideasList = el('div', { class: 'gl-ideas', role: 'list' });
-  const refresh = el('button', { class: 'gl-refresh', type: 'button', onclick: () => on.newIdeas() }, '🔄 New ideas');
-  const ideasHead = el('div', 'gl-ideas-head', el('p', 'gl-h', 'Video ideas'), refresh);
-  const tool = (ico, label, fn, cls = '') => {
+  const dockBtn = (ico, label, fn, cls = '') => {
     const badge = el('b', { class: 'gl-badge', hidden: true }, '');
-    const b = el('button', { class: `gl-tool ${cls}`.trim(), type: 'button', onclick: fn }, el('span', { 'aria-hidden': 'true' }, ico), el('span', 'gl-tool-l', label), badge);
+    const b = el('button', { class: `gl-dbtn ${cls}`.trim(), type: 'button', onclick: fn }, el('span', { class: 'gl-dico', 'aria-hidden': 'true' }, ico), el('span', 'gl-dl', label), badge);
     b.badge = badge;
     return b;
   };
-  const shopBtn = tool('🛒', 'Shop', () => on.shop());
-  const editBtn = tool('✏️', 'Decorate', () => on.edit());
+  const shopBtn = dockBtn('🛒', 'Shop', () => on.shop());
+  const editBtn = dockBtn('✏️', 'Decorate', () => on.edit());
   const liveFill = el('i', 'gl-live-fill');
-  const liveBtn = el('button', { class: 'gl-tool gl-golive', type: 'button', onclick: () => on.live() }, el('span', { class: 'gl-dot', 'aria-hidden': 'true' }), el('span', 'gl-tool-l', 'Go live'), el('span', 'gl-live-meter', liveFill));
-  const perksBtn = tool('💡', 'Skills', () => on.perks());
-  const questsBtn = tool('📋', 'Quests', () => on.quests());
-  const boardBtn = tool('📈', 'Board', () => on.board());
-  const recBtn = tool('🏆', 'Records', () => on.records());
-  const tools = el('div', 'gl-tools', shopBtn, editBtn, liveBtn, perksBtn, questsBtn, boardBtn, recBtn);
-  const hub = el('div', 'gl-hub', editBar, placeBar, hubTip, status, uploads, ideasHead, ideasList, tools);
+  const liveBtn = el('button', { class: 'gl-dbtn gl-golive', type: 'button', onclick: () => on.live() }, el('span', { class: 'gl-dot', 'aria-hidden': 'true' }), el('span', 'gl-dl', 'Go live'), el('span', 'gl-live-meter', liveFill));
+  const bookBtn = dockBtn('📒', 'Collection', () => on.collection());
+  const moreBtn = dockBtn('☰', 'More', () => on.more());
+  const dock = el('div', 'gl-dock', shopBtn, editBtn, liveBtn, bookBtn, moreBtn);
+  const bottom = el('div', 'gl-bottom', boxes, zoomBtn, tray, editBar, placeBar, dock);
+  const view = el('div', 'gl-view', hud, targets, topHud, sayBox, tip, bottom);
 
   // ---------- her chat (live) ----------
   const chatList = el('ol', { class: 'gl-chat-list', 'aria-label': 'Her chat' });
   const chatCount = el('span', 'gl-chat-n', '');
   const chat = el('div', { class: 'gl-chat', hidden: true }, el('div', 'gl-chat-head', el('b', null, 'Chat'), chatCount), chatList);
-  const side = el('div', 'gl-side', hub, chat);
+  const side = el('div', 'gl-side', chat);
   const root = el('div', { class: 'gl-ui', 'data-mode': 'hub' }, view, side);
   stage.append(root);
 
-  let sayTimer = 0, tipTimer = 0, last = {}, round = null, ideaKey = '', upKey = '';
+  let sayTimer = 0, tipTimer = 0, last = {}, round = null, ideaKey = '', upKey = '', boxKey = '', bandKeep = null;
   const byId = new Map();
 
-  // ---------- the panel ----------
+  // ---------- her room’s screen ----------
   function hubRender(c) {
     const need = xpNeed(c.level);
-    if (last.lvl !== c.level) { lvl.textContent = `Level ${c.level}`; last.lvl = c.level; }
+    if (last.lvl !== c.level) { lvl.textContent = `Lv ${c.level}`; last.lvl = c.level; }
     xpFill.style.width = `${Math.min(100, (c.xp / need) * 100).toFixed(1)}%`;
     pts.hidden = !c.points; pts.textContent = `💡 ${c.points}`;
+    roomName.textContent = HOMES[c.home || 0].name; rankTag.textContent = `#${rankOf(c.followers)}`;
     // trending
     const tr = trendsOf(c), tk = `${tr.join()}:${trendLeft(c)}`;
     if (last.tr !== tk) {
       last.tr = tk;
-      trendRow.replaceChildren(el('span', 'gl-trends-l', '🔥 Trending'), ...tr.map((id) => chipOf(id, true)), el('span', 'gl-trends-n', `${trendLeft(c)} more video${trendLeft(c) === 1 ? '' : 's'}`));
+      trendRow.replaceChildren(el('span', 'gl-trends-l', '🔥'), ...tr.map((id) => chipOf(id, true)), el('span', 'gl-trends-n', `${trendLeft(c)}`));
+      trendRow.setAttribute('aria-label', `Trending: ${tr.map((id) => topicOf(id).name).join(', ')}, for ${trendLeft(c)} more videos`);
     }
+    // her boxes: deliveries on their way or here, mystery boxes
+    const bk = `${c.deliveries.map((d) => `${d.uid}:${boxLeft(c, d) <= 0}`).join()}|${c.mystery.map((b) => b.uid).join()}`;
+    if (boxKey !== bk) {
+      boxKey = bk;
+      const list = [
+        ...c.mystery.map((b) => { const s = spriteCanvas(mysterySprite(b.tier), 40, { cls: 'gl-boxpic' }); return el('button', { class: `gl-box is-mystery is-${b.tier}`, type: 'button', 'aria-label': `Open your ${boxOf(b.tier).name}`, onclick: () => on.mystery(b.uid) }, s, el('span', 'gl-box-t', '?')); }),
+        ...c.deliveries.map((d) => {
+          const ready = boxLeft(c, d) <= 0, s = spriteCanvas(boxSprite(ready ? 'ready' : 'wait'), 34, { cls: 'gl-boxpic' }), t = el('span', 'gl-box-t', ready ? 'Open' : clock(boxLeft(c, d)));
+          const b = el('button', { class: `gl-box${ready ? ' is-ready' : ''}`, type: 'button', 'aria-label': ready ? `Open the box: ${itemOf(d.id).name}` : `A box on its way: tap to hurry it`, onclick: () => on.box(d.uid) }, s, t);
+          b.t = t; b.d = d;
+          return b;
+        }),
+      ];
+      boxes.replaceChildren(...list.slice(0, 7), ...(list.length > 7 ? [el('span', 'gl-box-more', `+${list.length - 7}`)] : []));
+      boxes.hidden = !list.length;
+    }
+    for (const b of boxes.children) if (b.d && boxLeft(c, b.d) > 0) b.t.textContent = clock(boxLeft(c, b.d));
     // the videos being made
     const slots = slotsOf(c), uk = `${slots}:${c.uploads.map((u) => u.start).join()}`;
     if (upKey !== uk) {
       upKey = uk;
       uploads.replaceChildren(...Array.from({ length: slots }, (_, s) => {
         const u = c.uploads.find((x) => x.slot === s);
-        if (!u) return el('div', 'gl-up is-free', el('span', 'gl-up-ico', '🎬'), el('span', 'gl-up-t', slots > 1 ? `Channel ${s + 1}: free` : 'Pick an idea to make a video'));
+        if (!u) return el('span', 'gl-up is-free', '🎬 Free');
         const bar = el('i', 'gl-up-fill'), left = el('span', 'gl-up-left', '');
-        const row = el('div', 'gl-up', el('span', 'gl-up-ico', '⏺'), el('span', 'gl-up-t', u.title), left, el('span', 'gl-up-bar', bar));
-        row.dataset.start = String(u.start); row.dataset.dur = String(u.dur);
-        row.bar = bar; row.left = left; row.u = u;
+        const row = el('span', 'gl-up', el('span', 'gl-up-ico', '⏺'), left, el('span', 'gl-up-bar', bar));
+        row.title = u.title; row.bar = bar; row.left = left; row.u = u;
         return row;
       }));
     }
     for (const row of uploads.children) if (row.u) { const p = 1 - uploadLeft(c, row.u) / row.u.dur; row.bar.style.width = `${Math.min(100, p * 100).toFixed(1)}%`; row.left.textContent = clock(uploadLeft(c, row.u)); }
     // the ideas
     const busy = c.uploads.length >= slots, s = scores(c);
-    const ik = `${c.ideas.map((x) => x.i).join()}:${busy}:${tr.join()}:${c.level}:${Math.round(Math.log10(c.followers + 10) * 20)}:${Object.values(s).join()}:${JSON.stringify(c.perks)}`;
+    const ik = `${c.ideas.map((x) => x.i).join()}:${busy}:${tr.join()}:${c.level}:${Math.round(Math.log10(c.followers + 10) * 20)}:${Object.values(s).join()}:${JSON.stringify(c.perks)}:${(c.sets || []).length}`;
     if (ideaKey !== ik) {
       ideaKey = ik;
       ideasList.replaceChildren(...c.ideas.map((idea, k) => {
         const v = expected(c, idea, s), f = expectedFollowers(c, idea, s), hot = [idea.a, idea.b].filter((t) => tr.includes(t)).length;
-        const b = el('button', { class: `gl-idea${hot ? ' is-hot' : ''}`, type: 'button', role: 'listitem', disabled: busy, onclick: () => on.idea(k) },
+        const b = el('button', { class: `gl-idea${hot ? ' is-hot' : ''}${hot === 2 ? ' is-hot2' : ''}`, type: 'button', role: 'listitem', disabled: busy, onclick: () => on.idea(k) },
+          el('span', 'gl-idea-tags', dotOf(idea.a), dotOf(idea.b), hot ? el('span', 'gl-idea-fire', '🔥'.repeat(hot)) : null),
           el('span', 'gl-idea-t', idea.title),
-          el('span', 'gl-idea-tags', chipOf(idea.a, tr.includes(idea.a)), chipOf(idea.b, tr.includes(idea.b))),
-          el('span', 'gl-idea-n', el('span', null, `👁 ~${fmt(v)}`), el('span', null, `👥 +${fmt(f)}`), el('span', 'gl-idea-time', `⏱ ${clock(makeTime(c))}`)));
-        b.setAttribute('aria-label', `${idea.title}: ${topicOf(idea.a).name} and ${topicOf(idea.b).name}${hot ? ', trending' : ''}, about ${fmt(v)} views and ${fmt(f)} new followers`);
+          el('span', 'gl-idea-n', el('b', null, `+${fmt(f)} 👥`), el('span', null, `${fmt(v)} 👁`)));
+        b.setAttribute('aria-label', `${idea.title}: ${topicOf(idea.a).name} and ${topicOf(idea.b).name}${hot ? ', trending' : ''}, about ${fmt(v)} views and ${fmt(f)} new followers, ${clock(makeTime(c))}`);
         return b;
       }));
     }
     const ready = ideasReady(c);
     refresh.disabled = !ready;
-    refresh.textContent = ready ? '🔄 New ideas' : `🔄 ${clock(Math.max(0, c.ideasAt - c.clock))}`;
-    // the tools' badges
+    refresh.textContent = ready ? '🔄' : clock(Math.max(0, c.ideasAt - c.clock));
+    // the dock’s badges
     const can = shopItems(c).filter((x) => canBuy(c, x.id)).length;
-    shopBtn.badge.hidden = !(can || canMoveHome(c) || invCount(c)); shopBtn.badge.textContent = canMoveHome(c) ? '🏠' : invCount(c) ? '📦' : String(Math.min(99, can));
-    perksBtn.badge.hidden = !PERKS.some((p) => canPerk(c, p.id)); perksBtn.badge.textContent = String(c.points);
-    questsBtn.badge.hidden = true;
+    shopBtn.badge.hidden = !(can || canMoveHome(c) || invCount(c)); shopBtn.badge.textContent = canMoveHome(c) ? '🏠' : invCount(c) ? String(Math.min(99, invCount(c))) : String(Math.min(99, can));
+    shopBtn.badge.classList.toggle('is-things', Boolean(invCount(c)) && !canMoveHome(c));
+    moreBtn.badge.hidden = !PERKS.some((p) => canPerk(c, p.id)); moreBtn.badge.textContent = `💡${c.points}`;
+    bookBtn.badge.hidden = true;
     const lv = Math.min(1, c.live / liveNeed(c));
     liveFill.style.width = `${(lv * 100).toFixed(0)}%`;
     liveBtn.classList.toggle('is-ready', liveReady(c));
-    liveBtn.disabled = false;
     liveBtn.setAttribute('aria-label', liveReady(c) ? 'Go live: ready' : `Go live: ${c.live} of ${liveNeed(c)} videos`);
-    roomName.textContent = HOMES[c.home || 0].name; rankTag.textContent = `#${rankOf(c.followers)}`;
   }
 
   // ---------- live (her stream) ----------
@@ -241,14 +264,27 @@ export function createUI(stage, on) {
     root, view,
     mode(m) {
       root.dataset.mode = m;
-      hub.hidden = m !== 'hub'; chat.hidden = m !== 'live';
-      hud.hidden = m !== 'live'; roomTag.hidden = m !== 'hub';
+      chat.hidden = m !== 'live';
+      hud.hidden = m !== 'live'; topHud.hidden = m !== 'hub'; bottom.hidden = m !== 'hub';
       if (m !== 'live') { pops.replaceChildren(); targets.replaceChildren(pops); byId.clear(); }
       if (m !== 'hub') { editBar.hidden = true; placeBar.hidden = true; }
       root.hidden = m === 'title';
-      upKey = ''; ideaKey = ''; last.tr = null; last.lvl = null;
+      upKey = ''; ideaKey = ''; boxKey = ''; last.tr = null; last.lvl = null;
     },
     hub: hubRender,
+    // how much of her room the HUD covers (CSS pixels): her room fits between its bars. (Kept while a thing’s being
+    // placed or she’s decorating, so the room doesn’t jump when the tray steps aside.)
+    band() {
+      if (bandKeep && (root.classList.contains('is-placing') || root.classList.contains('is-edit'))) return bandKeep;
+      const v = view.getBoundingClientRect();
+      if (!v.height) return bandKeep || { top: 0, bottom: 0, left: 0, right: 0 };
+      const t = topHud.hidden ? null : topHud.getBoundingClientRect(), panel = bottom.getBoundingClientRect();
+      const side = !bottom.hidden && panel.height > v.height * 0.45 && panel.width < v.width * 0.5;
+      let lowest = v.bottom;
+      if (!bottom.hidden && !side) for (const n of [tray, dock]) { const r = n.getBoundingClientRect(); if (r.height) lowest = Math.min(lowest, r.top); }
+      bandKeep = { top: t ? Math.max(0, t.bottom - v.top + 6) : 0, bottom: Math.max(0, v.bottom - lowest + 6), left: 0, right: side ? Math.max(0, v.right - panel.left + 4) : 0 };
+      return bandKeep;
+    },
     // decorating, placing
     edit(onOff, text = 'Tap a thing to move it.') { editBar.hidden = !onOff; editText.textContent = text; root.classList.toggle('is-edit', onOff); },
     place(state) {
@@ -256,6 +292,7 @@ export function createUI(stage, on) {
       if (!state) return;
       placeName.textContent = state.name; okBtn.disabled = !state.ok; storeBtn.hidden = !state.canStore; flipBtn.hidden = state.flat;
     },
+    zoomed(out) { zoomBtn.textContent = out ? '🔎' : '🔍'; zoomBtn.setAttribute('aria-label', out ? 'Zoom in' : 'Zoom out'); },
     live: {
       reset(viewers0) { chatList.replaceChildren(); pops.replaceChildren(); targets.replaceChildren(pops); byId.clear(); last = { rw: last.rw }; liveHud({ viewers: viewers0, hype: 0, combo: 0, t: 0, dur: TUNE.dur }); },
       hud: liveHud, msg, add: addTarget, settle, bigTap,
@@ -267,20 +304,28 @@ export function createUI(stage, on) {
       sayBox.classList.remove('is-in'); void sayBox.offsetWidth; sayBox.classList.add('is-in');
       clearTimeout(sayTimer); sayTimer = setTimeout(() => { sayBox.hidden = true; }, ms);
     },
-    tip(text, ms = 6000) {
-      const live = root.dataset.mode === 'live', box = live ? tip : hubTip;
-      (live ? tipText : hubTipText).textContent = text; box.hidden = false; (live ? hubTip : tip).hidden = true;
-      clearTimeout(tipTimer); tipTimer = setTimeout(() => { box.hidden = true; }, ms);
+    // her bubble follows her (between streams: over her head; CSS pixels in the view)
+    sayAt(x, y, minY = 8) {
+      if (sayBox.hidden || root.dataset.mode !== 'hub') return;
+      const w = view.clientWidth, bw = sayBox.offsetWidth;
+      sayBox.style.left = `${Math.round(Math.max(8, Math.min(w - bw - 8, x - bw / 2)))}px`;
+      sayBox.style.top = `${Math.round(Math.max(minY, y - sayBox.offsetHeight - 6))}px`;
     },
-    hideTip() { tip.hidden = true; hubTip.hidden = true; },
+    tip(text, ms = 6000) {
+      tipText.textContent = text; tip.hidden = false;
+      clearTimeout(tipTimer); tipTimer = setTimeout(() => { tip.hidden = true; }, ms);
+    },
+    hideTip() { tip.hidden = true; },
     rect() {
       const r = view.getBoundingClientRect(), s = stage.getBoundingClientRect();
       if (round == null || r.width !== last.rw) { round = parseFloat(getComputedStyle(view).borderTopLeftRadius) || 0; last.rw = r.width; }
       return { x: r.left - s.left, y: r.top - s.top, w: r.width, h: r.height, round };
     },
-    // a stream target's place on the page (for the sparkles), or the chat's
+    // a stream target’s place on the page (for the sparkles), or the chat’s
     whereOf(id) { const t = byId.get(id); const n = t?.node || chatList; const r = n.getBoundingClientRect(), s = stage.getBoundingClientRect(); return { x: r.left - s.left + r.width / 2, y: r.top - s.top + r.height / 2 }; },
-    forceRender() { upKey = ''; ideaKey = ''; last.tr = null; },
+    // where her boxes are (the delivery sparkles), and her views on the bar
+    boxesAt() { const r = boxes.getBoundingClientRect(), s = stage.getBoundingClientRect(); return { x: r.left - s.left + 24, y: r.top - s.top + 20 }; },
+    forceRender() { upKey = ''; ideaKey = ''; boxKey = ''; last.tr = null; },
   };
 }
 
@@ -290,7 +335,7 @@ export function shopCard({ career: c, tab = 'tech', onBuy, onPlace, onMove, onCl
   let sel = tab;
   const render = () => {
     const tabs = el('div', { class: 'gl-tabs', role: 'tablist' },
-      ...[...KINDS, { id: 'mine', name: 'Her things', icon: '📦' }].map((k) => {
+      ...[{ id: 'mine', name: 'Her things', icon: '📦' }, ...KINDS].map((k) => {
         const n = k.id === 'mine' ? invCount(c) : 0;
         return el('button', { class: `gl-tab${sel === k.id ? ' is-on' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(sel === k.id), onclick: () => { sel = k.id; render(); } },
           el('span', { 'aria-hidden': 'true' }, k.icon), el('span', 'gl-tab-l', k.name), n ? el('b', 'gl-badge', String(n)) : null);
@@ -298,15 +343,15 @@ export function shopCard({ career: c, tab = 'tech', onBuy, onPlace, onMove, onCl
     let body;
     if (sel === 'mine') {
       const ids = Object.keys(c.inv).filter((id) => c.inv[id] > 0);
-      body = ids.length ? el('ul', 'gl-grid', ...ids.map((id) => el('li', 'gl-item',
+      body = ids.length ? el('ul', 'gl-grid', ...ids.map((id) => el('li', `gl-item is-${itemOf(id).rarity}`,
         thumb(id), el('b', 'gl-item-n', itemOf(id).name), el('span', 'gl-item-p', ...ptsLine(id)),
         el('button', { class: 'gl-buy', type: 'button', onclick: () => onPlace(id) }, `Place it${c.inv[id] > 1 ? ` (${c.inv[id]})` : ''}`))))
-        : el('p', 'gl-empty', 'Things you put away, your plaques and the drone’s gifts wait here.');
+        : el('p', 'gl-empty', 'Things you put away, mystery box finds, your plaques and the drone’s gifts wait here.');
     } else {
-      const list = ITEMS.filter((x) => x.kind === sel && !x.starter && !x.given).sort((a, b) => a.level - b.level || a.price - b.price);
+      const list = ITEMS.filter((x) => x.kind === sel && !x.starter && !x.given && !x.box).sort((a, b) => a.level - b.level || a.price - b.price);
       body = el('ul', 'gl-grid', ...list.map((x) => {
         const locked = c.level < x.level, can = canBuy(c, x.id), wait = deliverTime(c, x.price);
-        return el('li', `gl-item${locked ? ' is-locked' : ''}`,
+        return el('li', `gl-item is-${x.rarity}${locked ? ' is-locked' : ''}`,
           locked ? el('span', 'gl-thumb gl-lock', '🔒') : thumb(x.id),
           el('b', 'gl-item-n', locked ? `Level ${x.level}` : x.name), el('span', 'gl-item-p', ...(locked ? [] : ptsLine(x.id))),
           locked ? el('span', 'gl-buy is-off', `Opens at level ${x.level}`)
@@ -315,10 +360,10 @@ export function shopCard({ career: c, tab = 'tech', onBuy, onPlace, onMove, onCl
     }
     const h = nextHome(c);
     const move = h ? el('div', 'gl-move',
-      el('span', null, el('b', null, `Move to the ${h.name}`), el('small', null, `A bigger room (${h.cols} × ${h.rows}). Needs ${full(h.at)} followers and ${fmt(h.cost)} views. Everything comes along.`)),
+      el('span', null, el('b', null, `Move to the ${h.name}`), el('small', null, `A bigger room (${h.cols} × ${h.rows}, ${h.wall} up the wall). Needs ${full(h.at)} followers and ${fmt(h.cost)} views. Everything comes along.`)),
       el('button', { class: 'gl-buy', type: 'button', disabled: !canMoveHome(c), onclick: () => { onMove(); render(); } }, c.followers >= h.at ? `Move · 👁 ${fmt(h.cost)}` : `${fmt(h.at)} followers`)) : null;
     wrap.replaceChildren(closeX(onClose), el('h2', 'ak-card-title', 'Shop'),
-      el('p', 'gl-card-sub', `👁 ${full(c.views)} views to spend. Things help the topics on them: a better room makes better videos.`),
+      el('p', 'gl-card-sub', `👁 ${full(c.views)} views to spend. Things help the topics on them: a better room makes better videos. Rare finds only come in mystery boxes.`),
       move, tabs, body,
       el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: onClose }, 'Done')));
   };
@@ -330,7 +375,91 @@ function ptsLine(id) {
   const p = pointsOf(itemOf(id));
   return Object.entries(p).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([t, v]) => el('span', 'gl-pt', `${topicOf(t).icon}+${v}`));
 }
-// ---------- skills ----------
+// ---------- her collection book: every thing (a silhouette until she’s had one), and the sets ----------
+export function collectionCard({ career: c, onClose }) {
+  const wrap = el('div', 'ak-card gl-card gl-book');
+  let sel = 'sets';
+  const render = () => {
+    const tabs = el('div', { class: 'gl-tabs', role: 'tablist' },
+      ...[{ id: 'sets', name: 'Sets', icon: '⭐' }, { id: 'box', name: 'Box finds', icon: '🎁' }, ...KINDS].map((k) => el('button', { class: `gl-tab${sel === k.id ? ' is-on' : ''}`, type: 'button', role: 'tab', 'aria-selected': String(sel === k.id), onclick: () => { sel = k.id; render(); } },
+        el('span', { 'aria-hidden': 'true' }, k.icon), el('span', 'gl-tab-l', k.name))));
+    let body;
+    if (sel === 'sets') {
+      body = el('ul', 'gl-sets', ...SETS.map((s) => {
+        const have = s.items.filter((i) => c.got[i]).length, done = (c.sets || []).includes(s.id);
+        return el('li', `gl-set${done ? ' is-done' : ''}`,
+          el('div', 'gl-set-head', el('b', null, `${s.icon} ${s.name}`), el('span', 'gl-set-n', done ? 'Done ✓' : `${have} / ${s.items.length}`)),
+          el('small', null, `Bonus when it’s complete: ${topicOf(s.topic).icon} ${topicOf(s.topic).name} videos +${Math.round(TUNE.sets.bonus * 100)}%`),
+          el('div', 'gl-set-row', ...s.items.map((i) => el('span', `gl-set-it is-${itemOf(i).rarity}`, thumb(i, 34, !c.got[i])))));
+      }));
+    } else {
+      const list = ITEMS.filter((x) => (sel === 'box' ? x.box : x.kind === sel && !x.box) && !x.given).sort((a, b) => RARITIES.findIndex((r) => r.id === a.rarity) - RARITIES.findIndex((r) => r.id === b.rarity) || a.price - b.price);
+      body = el('ul', 'gl-grid gl-grid-book', ...list.map((x) => {
+        const have = Boolean(c.got[x.id]);
+        return el('li', `gl-item is-${x.rarity}${have ? '' : ' is-ghost'}`, thumb(x.id, 50, !have), el('b', 'gl-item-n', have ? x.name : '???'), el('span', `gl-rar is-${x.rarity}`, rarityOf(x.rarity).name));
+      }));
+    }
+    const total = ITEMS.length;
+    wrap.replaceChildren(closeX(onClose), el('h2', 'ak-card-title', 'Collection'),
+      el('p', 'gl-card-sub', `${gotCount(c)} / ${total} things found · ${(c.sets || []).length} / ${SETS.length} sets. Things from the shop and from mystery boxes count; a complete set makes its topic’s videos better and brings a gold box.`),
+      tabs, body,
+      el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: onClose }, 'Back')));
+  };
+  render();
+  return wrap;
+}
+// ---------- a mystery box: tap to open, then what’s inside ----------
+export function mysteryCard({ box, onShake, onOpen, onPlace, onClose }) {
+  const wrap = el('div', `ak-card gl-card gl-reveal is-${box.tier}`);
+  const pic = spriteCanvas(mysterySprite(box.tier), 150, { cls: 'gl-reveal-box' });
+  const openBtn = el('button', { class: 'ak-btn ak-btn-primary gl-reveal-go', type: 'button' }, 'Open it');
+  const stageEl = el('div', 'gl-reveal-stage', el('span', 'gl-reveal-rays', ''), pic);
+  const go = () => {
+    if (openBtn.disabled) return;
+    openBtn.disabled = true;
+    wrap.classList.add('is-shaking');
+    onShake?.();
+    setTimeout(() => {
+      const r = onOpen();
+      if (!r) { onClose(); return; }
+      const x = itemOf(r.id), rar = rarityOf(r.rarity);
+      wrap.classList.remove('is-shaking'); wrap.classList.add('is-open', `is-r-${r.rarity}`);
+      wrap.style.setProperty('--gl-rar', rar.color);
+      stageEl.replaceChildren(el('span', 'gl-reveal-rays', ''), thumb(r.id, 120));
+      // one she has two of already: it came as views
+      if (r.dup) {
+        wrap.replaceChildren(stageEl,
+          el('p', `gl-rar is-${r.rarity} gl-reveal-rar`, rar.name, el('b', 'gl-new is-dup', 'DUPLICATE')),
+          el('h2', 'ak-card-title gl-reveal-name', x.name),
+          el('p', 'gl-card-sub gl-reveal-line', 'She has two already, so this one came as views.'),
+          el('p', 'gl-reveal-dup', `+${fmt(r.dup)} 👁`),
+          el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: onClose }, 'Nice')));
+        return;
+      }
+      wrap.replaceChildren(stageEl,
+        el('p', `gl-rar is-${r.rarity} gl-reveal-rar`, rar.name, r.isNew ? el('b', 'gl-new', 'NEW') : null),
+        el('h2', 'ak-card-title gl-reveal-name', x.name),
+        el('p', 'gl-card-sub gl-reveal-line', `“${linesOf(r.id)[0]}”`),
+        el('p', 'gl-reveal-pts', ...ptsLine(r.id)),
+        el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: () => onPlace(r.id) }, 'Place it'), el('button', { class: 'ak-btn', type: 'button', onclick: onClose }, 'Later')));
+    }, REDUCED ? 60 : 900);
+  };
+  openBtn.onclick = go;
+  pic.onclick = go;
+  wrap.append(el('p', 'gl-reveal-kicker', boxOf(box.tier).name), stageEl, el('p', 'gl-card-sub', box.why === 'daily' ? 'Her box of the day. One every day you visit.' : 'What’s inside? Common, rare, epic… or legendary.'), el('div', 'ak-card-actions', openBtn));
+  return wrap;
+}
+// ---------- the rest: skills, quests, the board, records ----------
+export function moreCard({ career: c, onPick, onClose }) {
+  const b = (ico, label, sub, id) => el('button', { class: 'gl-more-btn', type: 'button', onclick: () => onPick(id) }, el('span', 'gl-dico', ico), el('b', null, label), el('small', null, sub));
+  return el('div', 'ak-card gl-card gl-more', closeX(onClose), el('h2', 'ak-card-title', 'More'),
+    el('div', 'gl-more-grid',
+      b('💡', 'Skills', c.points ? `${c.points} idea point${c.points === 1 ? '' : 's'} to spend` : 'Her upgrades', 'perks'),
+      b('📋', 'Quests', `${c.quests.length} to do`, 'quests'),
+      b('📈', 'Board', `#${rankOf(c.followers)} trending`, 'board'),
+      b('🏆', 'Records', 'Her numbers and stickers', 'records')),
+    el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: onClose }, 'Back')));
+}
 export function perksCard({ career: c, onBuy, onClose }) {
   const wrap = el('div', 'ak-card gl-card');
   const render = () => {
@@ -348,7 +477,6 @@ export function perksCard({ career: c, onBuy, onClose }) {
   render();
   return wrap;
 }
-// ---------- quests ----------
 export function questsCard({ career: c, onClose }) {
   return el('div', 'ak-card gl-card', closeX(onClose), el('h2', 'ak-card-title', 'Quests'),
     el('p', 'gl-card-sub', 'Three at a time. Done ones pay out at once and a new one comes.'),
@@ -356,11 +484,10 @@ export function questsCard({ career: c, onClose }) {
       const p = Math.min(1, q.have / q.target), fill = el('i', null);
       fill.style.width = `${(p * 100).toFixed(0)}%`;
       return el('li', 'gl-quest', el('b', null, questText(q)), el('span', 'gl-qbar', fill),
-        el('small', null, `${fmt(Math.min(q.have, q.target))} / ${fmt(q.target)} · 👁 ${fmt(q.reward.views)}${q.reward.point ? ' · 💡 1' : ''}`));
+        el('small', null, `${fmt(Math.min(q.have, q.target))} / ${fmt(q.target)} · 👁 ${fmt(q.reward.views)}${q.reward.point ? ' · 💡 1' : ''}${q.reward.box ? ` · 🎁 ${boxOf(q.reward.box).name.toLowerCase()}` : ''}`));
     })),
     el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: onClose }, 'Back')));
 }
-// ---------- the trending board ----------
 export function boardCard({ career: c, onClose }) {
   const list = [...RIVALS.map((r) => ({ ...r, her: false })), { name: 'AGI-1 (you)', f: c.followers, color: '#9b6bff', her: true }].sort((a, b) => b.f - a.f);
   const items = list.map((r, i) => { const li = el('li', r.her ? 'is-her' : '', el('span', 'gl-pos', `#${i + 1}`), el('span', 'gl-dot', ''), el('b', null, r.name), el('span', 'gl-f', fmt(r.f))); li.querySelector('.gl-dot').style.background = r.color; return li; });
@@ -369,11 +496,10 @@ export function boardCard({ career: c, onClose }) {
     el('ol', 'gl-board', ...items),
     el('div', 'ak-card-actions', el('button', { class: 'ak-btn ak-btn-primary', type: 'button', onclick: onClose }, 'Back')));
 }
-// ---------- her records and stickers ----------
 export function recordsCard({ save, onClose, onReset }) {
   const c = save.career, t = c.totals;
   const rows = [['Followers', full(c.followers)], ['Level', String(c.level)], ['Videos', full(t.videos)], ['Best video', c.best ? `${fmt(c.best.views)} views` : '—'],
-    ['Views earned', fmt(t.views)], ['Things placed', full(t.placed)], ['Live streams', full(t.live)], ['Most viewers live', full(c.peak)], ['Bots zapped', full(t.zapped)], ['Fan mail', full(t.mail)]];
+    ['Views earned', fmt(t.views)], ['Things found', `${gotCount(c)} / ${ITEMS.length}`], ['Mystery boxes', full(t.boxes || 0)], ['Live streams', full(t.live)], ['Most viewers live', full(c.peak)], ['Bots zapped', full(t.zapped)]];
   let armed = false;
   const reset = el('button', { class: 'gl-reset', type: 'button', onclick: () => { if (!armed) { armed = true; reset.textContent = 'Tap again to start her career over'; return; } onReset(); } }, 'Start over');
   return el('div', 'ak-card gl-card',
@@ -398,7 +524,7 @@ export function awayCard({ gain, done = 0, onClose }) {
 }
 // the end of a live stream: her grade and what it brought
 export function overExtra({ result: r, gained }) {
-  return el('div', 'gl-over', el('p', 'gl-grade', el('b', `gl-g gl-g-${r.grade}`, r.grade), el('span', null, `+${full(gained.followers)} followers · +${fmt(gained.views)} views`)));
+  return el('div', 'gl-over', el('p', 'gl-grade', el('b', `gl-g gl-g-${r.grade}`, r.grade), el('span', null, `+${full(gained.followers)} followers · +${fmt(gained.views)} views${gained.box ? ` · 🎁 ${boxOf(gained.box).name.toLowerCase()}` : ''}`)));
 }
 export function titleExtra({ onRecords }) {
   return el('div', 'gl-title-links', el('button', { class: 'gl-link', type: 'button', onclick: onRecords }, 'Records & stickers'));

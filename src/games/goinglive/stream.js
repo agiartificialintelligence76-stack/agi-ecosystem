@@ -39,7 +39,7 @@ export function createStream({ cat = 'talk', v0 = 4, busy = 0, followers = 0, se
 export const rateOf = (S) => TUNE.rate.min + (TUNE.rate.max - TUNE.rate.min) * S.busy;
 export const techOn = (S) => S.targets.some((x) => x.kind === 'tech');
 export const comboMult = (S) => 1 + Math.min(S.combo, 24) * 0.03;
-// the viewers she's heading for: her start, the hype, the combo, word of mouth over the stream; halved while tech is down
+// the viewers she’s heading for: her start, the hype, the combo, word of mouth over the stream; halved while tech is down
 export const targetOf = (S) => S.v0 * (0.55 + S.hype / 55) * comboMult(S) * (1 + 0.35 * Math.min(1, S.t / S.dur)) * (techOn(S) ? 0.55 : 1);
 
 function add(S, kind, extra = {}) {
@@ -70,7 +70,7 @@ function spawn(S) {
   S.spawnT = (1 / rateOf(S)) * r.range(0.55, 1.45);
 }
 
-// a target's moment passed without a tap
+// a target’s moment passed without a tap
 function miss(S, x) {
   S.targets = S.targets.filter((y) => y !== x);
   const k = x.kind;
@@ -86,7 +86,7 @@ function miss(S, x) {
   emit(S, 'miss', { target: x });
 }
 
-// The player taps a target (or the game's own player does). For the big moment, each tap counts toward it.
+// The player taps a target (or the game’s own player does). For the big moment, each tap counts toward it.
 export function tap(S, id) {
   if (S.over) return null;
   const x = S.targets.find((y) => y.id === id);

@@ -2,9 +2,9 @@
 // followers in a bare bedroom. She makes videos (an idea, two topics, a short wait while she records and uploads),
 // the views buy things for her room one by one, every thing helps some topics, her room makes her videos better, and
 // she climbs the board of made-up streamers to #1. Everything here is made up: the streamers, the chat, the numbers.
-// "Views" are the game's own points, never money. (The owner, 2026-11-14: "yes exactly" to an AGI-1 version of a famous
-// YouTuber's game, ours in every way; then, of that game, "the game mechanics there is so good and the graphics too" →
-// "Rebuild both" and "Short waits". No real creator, platform, name or look; nothing of the original's art.)
+// "Views" are the game’s own points, never money. (The owner, 2026-11-14: "yes exactly" to an AGI-1 version of a famous
+// YouTuber’s game, ours in every way; then, of that game, "the game mechanics there is so good and the graphics too" →
+// "Rebuild both" and "Short waits". No real creator, platform, name or look; nothing of the original’s art.)
 
 // ---------- topics: what a video is about ----------
 // `level`: the level it opens at; `mash`: its big moment when she goes live (tap fast).
@@ -26,9 +26,9 @@ export const topicOf = (id) => TOPICS.find((t) => t.id === id) || null;
 export const CATS = TOPICS;
 export const catOf = topicOf;
 
-// ---------- her room's things ----------
-// `place`: 'floor' (w × h cells of the floor: h rows deep), 'flat' (a rug: on the floor, walked over, things stand on
-// it), 'wall' (w × h cells of the wall), 'top' (w cells on a surface: a desk, a table, a shelf). `kind`: its shelf in
+// ---------- her room’s things ----------
+// `place`: ’floor’ (w × h cells of the floor: h rows deep), ’flat’ (a rug: on the floor, walked over, things stand on
+// it), ’wall’ (w × h cells of the wall), ’top’ (w cells on a surface: a desk, a table, a shelf). `kind`: its shelf in
 // the shop. `pts`: how it splits its points between topics (its total grows with its price: `pointsOf`). Flags:
 // `surface` (the height in art pixels where things stand on it), `desk` (she records there), `seat`, `bed`, `light`
 // (glows at night), `pet` (it walks around), `anim` (it moves).
@@ -44,7 +44,36 @@ export const KINDS = Object.freeze([
   { id: 'wall', name: 'On the wall', icon: '🖼️' },
   { id: 'fun', name: 'Silly stuff', icon: '🦆' },
 ]);
-const I = (id, name, kind, place, w, h, price, level, pts, more = {}) => Object.freeze({ id, name, kind, place, w, h, price, level, pts: Object.freeze(pts), ...more });
+// `rarity`: common, rare, epic or legendary (the shop’s by their cost in views: under 30K common, under 1M rare, then
+// epic; the golden statue legendary); `box`: only ever found in a mystery box (its cost in views is only what its
+// points are worth). `use`: what AGI-1 does with it when she’s free (./uses.js): sit, nap, game, cook, paint, dance…
+export const RARITIES = Object.freeze([
+  { id: 'common', name: 'Common', color: '#b9b2d0' },
+  { id: 'rare', name: 'Rare', color: '#3fa9ff' },
+  { id: 'epic', name: 'Epic', color: '#b46bff' },
+  { id: 'legendary', name: 'Legendary', color: '#ffb800' },
+]);
+export const rarityOf = (id) => RARITIES.find((r) => r.id === id) || RARITIES[0];
+const byPrice = (price) => (price >= 1e6 ? 'epic' : price >= 30000 ? 'rare' : 'common');
+const USE = {
+  stool: 'sit', gamerchair: 'sit', beanbag: 'sit', sofa: 'sit', eggchair: 'sit', throne: 'sit', whoopee: 'whoopee',
+  bed: 'nap', canopy: 'nap', cloudbed: 'nap',
+  pc: 'game', monitor: 'game', dual: 'game', arcade: 'game', vr: 'vr', console: 'game', gamingpod: 'game',
+  ringlight: 'pose', greenscreen: 'pose', webcam: 'wave', mic: 'sing', studiomic: 'sing', karaoke: 'sing', goldmic: 'sing',
+  tablet: 'paint', easel: 'paint', artdesk: 'paint', sculpture: 'admire', gallery: 'admire', neuralart: 'admire',
+  rack: 'tinker', robotarm: 'tinker', holo: 'dance', quantum: 'tinker', agicore: 'tinker', gpushrine: 'pray', brainjar: 'admire',
+  bookshelf: 'read', dresser: 'outfit', aquarium: 'fish', fishbowl: 'fish', wallaquarium: 'fish',
+  minifridge: 'snack', popcorn: 'snack', bobabar: 'snack', snackjar: 'snack', capsule: 'capsule',
+  stove: 'cook', pizzaoven: 'cook', counter: 'cook', ramenbar: 'cook', espresso: 'coffee',
+  synth: 'keys', piano: 'keys', drums: 'drums', dj: 'dj', jukebox: 'dance', discoball: 'dance', dancefloor: 'dance', bubbler: 'dance',
+  treadmill: 'run', cactus: 'water', pottedplant: 'water', monstera: 'water', hangingplant: 'water', bonsai: 'water', tree: 'water',
+  bear: 'hug', bunny: 'hug', giantplush: 'hug', plushpile: 'hug', plushagi: 'hug',
+  cat: 'pet', robodog: 'pet', holocat: 'pet', robobutler: 'pet',
+  trophy: 'admire', statue: 'admire', ballpit: 'jump', slide: 'slide', clawmachine: 'claw', confetti: 'party', snowglobe: 'admire',
+};
+const I = (id, name, kind, place, w, h, price, level, pts, more = {}) => Object.freeze({
+  id, name, kind, place, w, h, price, level, pts: Object.freeze(pts), rarity: id === 'statue' ? 'legendary' : byPrice(price), use: USE[id] || null, ...more,
+});
 export const ITEMS = Object.freeze([
   // the starter room (free, she has them already)
   I('desk', 'Wobbly desk', 'tech', 'floor', 3, 1, 0, 1, { chat: 1, gaming: 1 }, { surface: 15, desk: true, starter: true }),
@@ -147,6 +176,29 @@ export const ITEMS = Object.freeze([
   I('clawmachine', 'Claw machine', 'fun', 'floor', 1, 1, 78000, 17, { funny: 2, cute: 2, gaming: 1 }, { light: true }),
   I('confetti', 'Confetti cannon', 'fun', 'floor', 1, 1, 270000, 23, { funny: 2, dance: 1 }),
   I('statue', 'Golden AGI-1 statue', 'fun', 'floor', 1, 1, 21000000, 40, { chat: 1, gaming: 1, cute: 1, funny: 1, music: 1, art: 1, cooking: 1, tech: 1, cozy: 1, dance: 1 }),
+  // only in mystery boxes (made up for her: an AI’s things)
+  I('snackjar', 'Jar of snacks', 'kitchen', 'top', 1, 1, 60000, 1, { cooking: 2, funny: 1 }, { box: true, rarity: 'rare' }),
+  I('moonlamp', 'Moon lamp', 'furn', 'top', 1, 1, 70000, 1, { cozy: 3, cute: 1 }, { box: true, rarity: 'rare', light: true }),
+  I('rocketlamp', 'Rocket lamp', 'furn', 'floor', 1, 1, 80000, 1, { tech: 2, cozy: 1 }, { box: true, rarity: 'rare', light: true }),
+  I('bubbler', 'Bubble machine', 'fun', 'floor', 1, 1, 90000, 1, { funny: 2, cute: 1, dance: 1 }, { box: true, rarity: 'rare', anim: true }),
+  I('snowglobe', 'Snow globe', 'cute', 'top', 1, 1, 75000, 1, { cozy: 2, cute: 2 }, { box: true, rarity: 'rare', anim: true }),
+  I('capsule', 'Capsule machine', 'fun', 'floor', 1, 1, 110000, 1, { funny: 2, cute: 2 }, { box: true, rarity: 'rare' }),
+  I('karaoke', 'Karaoke machine', 'music', 'floor', 1, 1, 120000, 1, { music: 2, funny: 1, dance: 1 }, { box: true, rarity: 'rare', light: true }),
+  I('neuralart', 'Neural net art', 'art', 'wall', 2, 2, 140000, 1, { art: 2, tech: 2 }, { box: true, rarity: 'rare' }),
+  I('losscurve', 'Loss curve poster', 'wall', 'wall', 1, 2, 100000, 1, { tech: 2, funny: 2 }, { box: true, rarity: 'rare' }),
+  I('plushagi', 'AGI-1 plushie', 'cute', 'top', 1, 1, 900000, 1, { cute: 3, funny: 1, chat: 1 }, { box: true, rarity: 'epic' }),
+  I('brainjar', 'Glowing brain jar', 'tech', 'top', 1, 1, 1100000, 1, { tech: 3, funny: 1, art: 1 }, { box: true, rarity: 'epic', light: true, anim: true }),
+  I('gpushrine', 'GPU shrine', 'tech', 'floor', 1, 1, 1300000, 1, { tech: 3, gaming: 2, funny: 1 }, { box: true, rarity: 'epic', light: true, anim: true }),
+  I('jukebox', 'Jukebox', 'music', 'floor', 1, 1, 1400000, 1, { music: 3, dance: 2, cozy: 1 }, { box: true, rarity: 'epic', light: true, anim: true }),
+  I('gamingpod', 'Gaming pod', 'tech', 'floor', 2, 1, 1700000, 1, { gaming: 4, tech: 1 }, { box: true, rarity: 'epic', seat: true, light: true }),
+  I('ramenbar', 'Ramen bar', 'kitchen', 'floor', 3, 1, 1600000, 1, { cooking: 4, cozy: 2 }, { box: true, rarity: 'epic', surface: 16 }),
+  I('wallaquarium', 'Wall aquarium', 'furn', 'wall', 3, 2, 1900000, 1, { cozy: 3, cute: 2 }, { box: true, rarity: 'epic', anim: true, light: true }),
+  I('holocat', 'Hologram cat', 'cute', 'floor', 1, 1, 2000000, 1, { cute: 3, tech: 2, funny: 1 }, { box: true, rarity: 'epic', pet: true }),
+  I('robobutler', 'Robot butler', 'tech', 'floor', 1, 1, 2400000, 1, { tech: 3, cozy: 1, funny: 1 }, { box: true, rarity: 'epic', pet: true }),
+  I('goldmic', 'Golden mic', 'music', 'top', 1, 1, 12000000, 1, { music: 4, chat: 3 }, { box: true, rarity: 'legendary', light: true }),
+  I('slide', 'Rainbow slide', 'fun', 'floor', 3, 2, 14000000, 1, { funny: 3, cute: 2, dance: 1 }, { box: true, rarity: 'legendary' }),
+  I('cloudbed', 'Actual cloud bed', 'seat', 'floor', 3, 2, 16000000, 1, { cozy: 4, cute: 2 }, { box: true, rarity: 'legendary', bed: true }),
+  I('agicore', 'AGI core', 'tech', 'floor', 2, 1, 25000000, 1, { tech: 3, chat: 1, gaming: 1, cute: 1, funny: 1, music: 1, art: 1, cooking: 1, cozy: 1, dance: 1 }, { box: true, rarity: 'legendary', light: true, anim: true }),
 ]);
 // the award plaques: given (never sold), hung on the wall like anything else
 export const AWARDS = Object.freeze([
@@ -162,7 +214,7 @@ export const ALL_ITEMS = Object.freeze([...ITEMS, ...PLAQUES]);
 export const ITEM_IDS = Object.freeze(ALL_ITEMS.map((x) => x.id));
 const BY_ID = new Map(ALL_ITEMS.map((x) => [x.id, x]));
 export const itemOf = (id) => BY_ID.get(id) || null;
-// an item's points: its total grows with its price (cheap things a point or two, the dearest a few hundred), split
+// an item’s points: its total grows with its price (cheap things a point or two, the dearest a few hundred), split
 // between its topics by `pts`; a plaque is worth what its mic is
 const PTS = new Map();
 export function pointsOf(item) {
@@ -176,12 +228,39 @@ export function pointsOf(item) {
   return PTS.get(item.id);
 }
 
+// ---------- sets: collect every thing in one (ever, placed or put away) for a bonus on its topic’s videos ----------
+export const SETS = Object.freeze([
+  { id: 'gamer', name: 'Gamer den', icon: '🎮', topic: 'gaming', items: ['pc', 'monitor', 'gamerchair', 'console', 'arcade', 'gamingpod'] },
+  { id: 'studio', name: 'Pro studio', icon: '🎙️', topic: 'chat', items: ['webcam', 'mic', 'ringlight', 'studiomic', 'greenscreen', 'dual'] },
+  { id: 'plush', name: 'Plushie party', icon: '🧸', topic: 'cute', items: ['bear', 'bunny', 'giantplush', 'plushpile', 'cattree', 'plushagi'] },
+  { id: 'silly', name: 'Silly corner', icon: '🦆', topic: 'funny', items: ['duck', 'banana', 'whoopee', 'trophy', 'ballpit', 'capsule'] },
+  { id: 'concert', name: 'Concert night', icon: '🎤', topic: 'music', items: ['synth', 'drums', 'piano', 'karaoke', 'jukebox', 'goldmic'] },
+  { id: 'artist', name: 'Artist loft', icon: '🎨', topic: 'art', items: ['easel', 'artdesk', 'tablet', 'gallery', 'sculpture', 'neuralart'] },
+  { id: 'cafe', name: 'Little café', icon: '☕', topic: 'cooking', items: ['espresso', 'minifridge', 'stove', 'counter', 'bobabar', 'ramenbar'] },
+  { id: 'lab', name: 'AI lab', icon: '🧠', topic: 'tech', items: ['rack', 'robotarm', 'quantum', 'brainjar', 'gpushrine', 'agicore'] },
+  { id: 'cozy', name: 'Cozy corner', icon: '🌙', topic: 'cozy', items: ['sofa', 'lamp', 'rug', 'bookshelf', 'moonlamp', 'cloudbed'] },
+  { id: 'jungle', name: 'Indoor jungle', icon: '🪴', topic: 'cozy', items: ['cactus', 'pottedplant', 'monstera', 'hangingplant', 'bonsai', 'tree'] },
+  { id: 'disco', name: 'Disco fever', icon: '🪩', topic: 'dance', items: ['discoball', 'dancefloor', 'dj', 'ledwall', 'bubbler', 'slide'] },
+]);
+export const setOf = (id) => SETS.find((s) => s.id === id) || null;
+
+// ---------- mystery boxes: from levels, quests, the drone, good streams, every day; what’s inside by rarity ----------
+// `odds`: common, rare, epic, legendary (in hundredths)
+export const BOXES = Object.freeze([
+  { id: 'bronze', name: 'Mystery box', color: '#d08a4e', odds: [70, 25, 4.5, 0.5] },
+  { id: 'silver', name: 'Silver mystery box', color: '#b9c6dc', odds: [40, 45, 13, 2] },
+  { id: 'gold', name: 'Gold mystery box', color: '#ffc933', odds: [0, 55, 37, 8] },
+]);
+export const boxOf = (id) => BOXES.find((b) => b.id === id) || BOXES[0];
+
 // ---------- her homes: the room grows (floor cols × rows, wall rows); moving keeps every thing where it was ----------
 export const HOMES = Object.freeze([
-  { id: 'bedroom', name: 'Bedroom', cols: 9, rows: 4, wall: 3, at: 0, cost: 0, wallA: '#ffd9ea', wallB: '#ffc6df', floorA: '#d9a26e', floorB: '#c98f5c', trim: '#ff8ac0', view: 'suburb' },
-  { id: 'studio', name: 'Studio flat', cols: 12, rows: 5, wall: 3, at: 10000, cost: 60000, wallA: '#dcd3ff', wallB: '#cbbfff', floorA: '#b8875e', floorB: '#a7764f', trim: '#9b6bff', view: 'city' },
-  { id: 'penthouse', name: 'Penthouse', cols: 14, rows: 5, wall: 4, at: 500000, cost: 9000000, wallA: '#d3f2fb', wallB: '#bfe8f6', floorA: '#e8e2f2', floorB: '#d8d0e8', trim: '#3fa9ff', view: 'skyline' },
-  { id: 'orbit', name: 'Space station', cols: 16, rows: 6, wall: 4, at: 8000000, cost: 400000000, wallA: '#2e2758', wallB: '#3a3270', floorA: '#4d4a6e', floorB: '#43405f', trim: '#7fe0ff', view: 'space' },
+  { id: 'bedroom', name: 'Bedroom', cols: 14, rows: 6, wall: 4, at: 0, cost: 0, wallA: '#ffd9ea', wallB: '#ffc2dc', floorA: '#d9a26e', floorB: '#c98f5c', trim: '#ff8ac0', view: 'suburb', paper: 'dots', floor: 'planks' },
+  { id: 'apartment', name: 'Cozy apartment', cols: 18, rows: 7, wall: 4, at: 5000, cost: 25000, wallA: '#d6f0e0', wallB: '#bfe4cd', floorA: '#c99a6c', floorB: '#b5865a', trim: '#2fb8a0', view: 'city', paper: 'stripes', floor: 'herring' },
+  { id: 'loft', name: 'Studio loft', cols: 22, rows: 7, wall: 5, at: 50000, cost: 400000, wallA: '#c9785c', wallB: '#b0644b', floorA: '#8f8aa6', floorB: '#807b96', trim: '#ff9a3d', view: 'city', paper: 'brick', floor: 'concrete' },
+  { id: 'penthouse', name: 'Penthouse', cols: 28, rows: 8, wall: 5, at: 500000, cost: 9000000, wallA: '#d9f3fb', wallB: '#c2e8f5', floorA: '#ece7f4', floorB: '#d9d1e8', trim: '#3fa9ff', view: 'skyline', paper: 'panels', floor: 'marble' },
+  { id: 'mansion', name: 'Creator mansion', cols: 34, rows: 8, wall: 5, at: 4000000, cost: 120000000, wallA: '#5b3a8c', wallB: '#6a479f', floorA: '#a8445c', floorB: '#933a50', trim: '#ffc933', view: 'garden', paper: 'damask', floor: 'carpet' },
+  { id: 'orbit', name: 'Space station', cols: 40, rows: 9, wall: 5, at: 15000000, cost: 900000000, wallA: '#2e2758', wallB: '#3a3270', floorA: '#4d4a6e', floorB: '#43405f', trim: '#7fe0ff', view: 'space', paper: 'metal', floor: 'metal' },
 ]);
 export const homeOf = (c) => HOMES[Math.max(0, Math.min(HOMES.length - 1, c.home || 0))];
 
@@ -229,21 +308,27 @@ export const TUNE = Object.freeze({
   // a video: views = (base + reach × followers^reachPow) × quality × trend × luck × perks; quality = 1 + (points / q)^qPow
   // new followers from a video: grow × (followers + start)^growPow × quality^growQ × trend (each video adds a bit less, in
   // proportion, as she gets bigger)
-  video: { base: 9, reach: 0.9, reachPow: 0.8, q: 10, qPow: 0.45, luck: [0.85, 1.2], grow: 0.33, growPow: 0.54, growStart: 20, growQ: 0.6, viral: 0.04, viralX: 4 },
+  video: { base: 9, reach: 0.9, reachPow: 0.8, q: 10, qPow: 0.45, luck: [0.85, 1.2], grow: 0.28, growPow: 0.54, growStart: 20, growQ: 0.6, viral: 0.04, viralX: 4 },
   trend: { one: 1.5, two: 2.2, radar: 0.25, every: 5, n: 3 },
   // how long a video takes (s): base + per × level^pow, less with Faster editing
   make: { base: 5, per: 2.6, pow: 0.72, max: 50, fast: 0.15 },
-  // a delivery (s): nothing under `free` views, then up to `max`; a tap on the box takes `tap` of what's left
+  // a delivery (s): nothing under `free` views, then up to `max`; a tap on the box takes `tap` of what’s left
   deliver: { free: 100, base: 2.5, per: 6, pow: 1.25, max: 60, express: 0.25, tap: 0.12 },
   // experience: a level needs base + per × level^pow; what each thing gives
   xp: { base: 20, per: 16, pow: 1.5, video: 6, perLevel: 1, live: 0.8, quest: 25, place: 3, placePer: 4 },
   ideas: { n: 3, refresh: 30 },
+  // mystery boxes: the shop’s things up to `ahead` levels past hers can come out of one; every `quest`th quest gives a
+  // silver one; the fan-mail drone brings one this often; a find she has `keep` of already comes as views (`dup` videos’
+  // reach, more for rarer ones)
+  boxes: { ahead: 6, quest: 6, mail: 0.15, keep: 2, dup: 3 },
+  // a completed set: this much more for videos about its topic
+  sets: { bonus: 0.12 },
   // going live: the meter fills with every video; a few in every hundred followers watch; worth: [base, × hype, + an S]
   // of her best video
   live: { first: 8, charge: 3, energy: 0.12, watch: 0.08, worth: [0.5, 0.9, 0.4] },
   // her old videos: views a second per follower; away: this much of it, at most `cap` seconds
   idle: { perF: 0.0022, base: 0.05, old: 0.5, away: 0.5, cap: 8 * 3600, min: 60, bots: 0.7 },
-  // events: the fan-mail drone and the spam bots (seconds between, from the career's own dice)
+  // events: the fan-mail drone and the spam bots (seconds between, from the career’s own dice)
   drone: { every: [40, 85], mail: 0.15, fly: 7 },
   bots: { every: [70, 140], from: 30, life: 26, n: [1, 3] },
   // the one-minute live stream (./stream.js)

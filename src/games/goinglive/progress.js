@@ -1,11 +1,12 @@
-// GOING LIVE: what's kept in the player's browser (the arcade kit's local save, `agi_arcade:goinglive`): her career (her
-// followers, views, level, skills, her room and her things, the videos she's making, the boxes on their way, her ideas
-// and quests), when the page last saw her (so her old videos can earn while she's away), her stickers and the tips
+// GOING LIVE: what’s kept in the player’s browser (the arcade kit’s local save, `agi_arcade:goinglive`): her career (her
+// followers, views, level, skills, her room and her things, the videos she’s making, the boxes on their way, her ideas
+// and quests), when the page last saw her (so her old videos can earn while she’s away), her stickers and the tips
 // already shown. Loaded with care: anything odd starts that part fresh; the room is rebuilt thing by thing, so nothing
-// can end up where it doesn't fit. A career from the first GOING LIVE (2026-11-14, before the rebuild) keeps its
-// followers and views and starts in the new bedroom.
+// can end up where it doesn’t fit. A career from the first GOING LIVE (2026-11-14, before the rebuild) keeps its
+// followers and views and starts in the new bedroom; one from the rebuild’s first version (v2, smaller homes) keeps
+// everything, in the matching bigger home.
 import { newCareer, refillIdeas, xpNeed } from './econ.js';
-import { TOPIC_IDS, ITEM_IDS, itemOf, PERKS, AWARDS, HOMES, RIVALS } from './data.js';
+import { TOPIC_IDS, ITEM_IDS, itemOf, PERKS, AWARDS, HOMES, RIVALS, SETS, BOXES } from './data.js';
 import { TITLES } from './titles.js';
 import { canPlace, starterItems } from './room.js';
 
@@ -19,17 +20,20 @@ export const STICKERS = Object.freeze([
   { id: 'raid', name: 'Raid party', how: 'Welcome 10 raids when she’s live.' },
   { id: 'srank', name: 'S rank', how: 'An S live stream: almost nothing missed, chat hyped.' },
   { id: 'variety', name: 'Variety channel', how: 'Make videos about all ten topics.' },
-  { id: 'moved', name: 'Moving up', how: 'Move to the studio flat.' },
+  { id: 'moved', name: 'Moving up', how: 'Move out of her bedroom.' },
   { id: 'million', name: 'Ruby Mic', how: 'Reach 1,000,000 followers.' },
   { id: 'brain', name: 'Big brain', how: 'Learn 10 skill ranks.' },
   { id: 'orbit', name: 'Streaming from space', how: 'Move to the space station.' },
   { id: 'no1', name: '#1 trending', how: 'Pass every streamer on the board.' },
+  { id: 'unbox', name: 'Unboxer', how: 'Open 25 mystery boxes.' },
+  { id: 'set', name: 'Collector', how: 'Complete a set in her collection book.' },
+  { id: 'legend', name: 'Legendary find', how: 'Find a legendary thing in a mystery box.' },
 ]);
 export const stickerOf = (id) => STICKERS.find((s) => s.id === id) || null;
 
 const num = (v, d = 0, lo = 0, hi = Number.MAX_SAFE_INTEGER) => (Number.isFinite(v) ? Math.min(hi, Math.max(lo, v)) : d);
 const int = (v, d = 0, lo = 0, hi = 1e9) => Math.round(num(v, d, lo, hi));
-export function fresh(seed = 1) { return { career: newCareer(seed), at: null, stickers: [], tips: {}, played: 0 }; }
+export function fresh(seed = 1) { return { career: newCareer(seed), at: null, stickers: [], tips: {}, played: 0, daily: '' }; }
 // a level for a number of followers (a career from the first GOING LIVE, or one whose level looks wrong)
 export const levelFor = (f) => Math.max(1, Math.min(40, Math.round(2 + 2.4 * Math.log10(Math.max(1, f)) ** 1.2)));
 
@@ -42,6 +46,7 @@ export function load(raw, seed = 1) {
     stickers: Array.isArray(raw.stickers) ? raw.stickers.filter((id) => stickerOf(id)) : [],
     tips: raw.tips && typeof raw.tips === 'object' ? Object.fromEntries(Object.entries(raw.tips).filter(([, v]) => v === true)) : {},
     played: int(raw.played, 0, 0, 1e7),
+    daily: typeof raw.daily === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw.daily) ? raw.daily : '',
   };
   // the first GOING LIVE: followers, views and a level to match; a fresh bedroom
   if (r.v === 1) {
@@ -50,15 +55,16 @@ export function load(raw, seed = 1) {
     c.ideas = []; refillIdeas(c);
     return { career: c, ...keep, stickers: [], tips: {} };
   }
-  if (r.v !== 2) return f;
+  if (r.v !== 2 && r.v !== 3) return f;
   c.seed = int(r.seed, c.seed, 1, 4294967295); c.rng = int(r.rng, c.rng, 1, 4294967295);
   c.clock = num(r.clock, 0, 0, 1e12);
   c.followers = int(r.followers, 0, 0, 1e15); c.views = num(r.views, c.views, 0, 1e18);
   c.level = int(r.level, 1, 1, 200); c.xp = int(r.xp, 0, 0, xpNeed(c.level)); c.points = int(r.points, 0, 0, 1e4);
   c.perks = {};
   for (const p of PERKS) { const n = int(r.perks?.[p.id], 0, 0, p.max); if (n) c.perks[p.id] = n; }
-  c.home = int(r.home, 0, 0, HOMES.length - 1);
-  // her room, thing by thing (what doesn't fit goes to her things)
+  // (the rebuild’s first version had four smaller homes: its bedroom, studio flat, penthouse and space station)
+  c.home = r.v === 2 ? [0, 1, 3, 5][int(r.home, 0, 0, 3)] : int(r.home, 0, 0, HOMES.length - 1);
+  // her room, thing by thing (what doesn’t fit goes to her things)
   c.items = []; c.inv = {};
   const items = Array.isArray(r.items) ? r.items : starterItems();
   const map = new Map();
@@ -94,7 +100,7 @@ export function load(raw, seed = 1) {
   c.questN = int(r.questN, 3, 0, 1e9);
   const okQuest = (q) => q && typeof q.kind === 'string' && Number.isFinite(q.target) && q.target > 0 && Number.isFinite(q.have) && q.reward && Number.isFinite(q.reward.views);
   const qs = (Array.isArray(r.quests) ? r.quests : []).filter(okQuest).slice(0, 3);
-  if (qs.length === 3) c.quests = qs.map((q) => ({ n: int(q.n, 1), kind: q.kind, topic: TOPIC_IDS.includes(q.topic) ? q.topic : undefined, shelf: typeof q.shelf === 'string' ? q.shelf : undefined, have: num(q.have, 0, 0, 1e15), target: num(q.target, 1, 1, 1e15), reward: { views: num(q.reward.views, 0, 0, 1e15), xp: int(q.reward.xp, 0, 0, 1e6), point: Boolean(q.reward.point) } }));
+  if (qs.length === 3) c.quests = qs.map((q) => ({ n: int(q.n, 1), kind: q.kind, topic: TOPIC_IDS.includes(q.topic) ? q.topic : undefined, shelf: typeof q.shelf === 'string' ? q.shelf : undefined, have: num(q.have, 0, 0, 1e15), target: num(q.target, 1, 1, 1e15), reward: { views: num(q.reward.views, 0, 0, 1e15), xp: int(q.reward.xp, 0, 0, 1e6), point: Boolean(q.reward.point), ...(BOXES.some((b) => b.id === q.reward.box) ? { box: q.reward.box } : {}) } }));
   c.awards = (Array.isArray(r.awards) ? r.awards : []).filter((id) => AWARDS.some((a) => a.id === id));
   c.peak = int(r.peak, 0, 0, 1e15); c.bestCombo = int(r.bestCombo, 0, 0, 1e6);
   c.best = r.best && typeof r.best.title === 'string' ? { title: r.best.title.slice(0, 80), views: int(r.best.views, 0, 0, 1e15) } : null;
@@ -103,13 +109,23 @@ export function load(raw, seed = 1) {
   if (t.byTopic && typeof t.byTopic === 'object') for (const id of TOPIC_IDS) if (Number.isFinite(t.byTopic[id])) c.totals.byTopic[id] = Math.max(0, t.byTopic[id]);
   c.drone = { next: c.clock + 20, until: -1, gift: null };
   c.bots = { next: c.clock + 60, list: [], n: int(r.bots?.n, 0, 0, 1e9) };
+  // mystery boxes, the collection book, her sets, her outfit (v3; a v2 career has got what it has)
+  c.mystery = (Array.isArray(r.mystery) ? r.mystery : []).filter((b) => b && BOXES.some((x) => x.id === b.tier)).slice(0, 99).map((b) => ({ uid: c.nextUid++, tier: b.tier, why: typeof b.why === 'string' ? b.why.slice(0, 12) : '' }));
+  c.got = {};
+  for (const id of Object.keys(r.got && typeof r.got === 'object' ? r.got : {})) if (ITEM_IDS.includes(id)) c.got[id] = 1;
+  for (const it of c.items) c.got[it.id] = 1;
+  for (const id of Object.keys(c.inv)) c.got[id] = 1;
+  for (const d of c.deliveries) c.got[d.id] = 1;
+  c.sets = SETS.filter((x) => x.items.every((i) => c.got[i])).map((x) => x.id);
+  c.outfit = int(r.outfit, 0, 0, 5);
+  c.v = 3;
   return { career: c, ...keep };
 }
-// what to keep (the career without what's only for this visit)
+// what to keep (the career without what’s only for this visit)
 export function saveOf(save) {
   const { out, ...c } = save.career;
   void out;
-  return { career: { ...c, drone: undefined, bots: { n: c.bots.n } }, at: save.at, stickers: save.stickers, tips: save.tips, played: save.played };
+  return { career: { ...c, drone: undefined, bots: { n: c.bots.n } }, at: save.at, stickers: save.stickers, tips: save.tips, played: save.played, daily: save.daily || '' };
 }
 // the stickers earned now (after a live stream: its result, for the ones about one stream)
 export function earned(save, r = null) {
@@ -129,6 +145,9 @@ export function earned(save, r = null) {
   give('brain', Object.values(c.perks).reduce((a, b) => a + b, 0) >= 10);
   give('orbit', c.home >= HOMES.length - 1);
   give('no1', c.followers > RIVALS[0].f);
+  give('unbox', (t.boxes || 0) >= 25);
+  give('set', (c.sets || []).length >= 1);
+  give('legend', Object.keys(c.got || {}).some((id) => itemOf(id)?.rarity === 'legendary' && itemOf(id)?.box));
   save.stickers = [...got];
   return add;
 }

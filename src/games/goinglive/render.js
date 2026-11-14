@@ -1,41 +1,72 @@
-// GOING LIVE: the picture. Her room is drawn in art pixels on a small canvas of its own (the walls and floor, the things
-// on the wall, the rugs, then everything standing on the floor and everyone walking about, nearest last), then scaled
-// up onto the page by a whole number of screen pixels so every art pixel stays a crisp square. At night (her player's
-// clock) the room's darker and her lamps glow. When she goes live the view is her stream: her face up close in front
-// of her room. A second canvas over the page carries what flies: hearts, sparkles, the views she earns.
+// GOING LIVE: the picture. Her room is drawn in art pixels on a canvas of its own (the walls and floor, the things on
+// the wall, the rugs, soft shadows, then everything standing on the floor and everyone walking about, nearest last), then
+// scaled onto the page by a whole number of screen pixels so every art pixel stays a crisp square. Between streams the
+// room fills the screen’s height and scrolls sideways (drag it, or it glides to her); live, her stream: her room at her
+// desk and her face cam. At night (her player’s clock) the room’s darker and her lamps glow. A second canvas over the
+// page carries what flies: hearts, sparkles, the views she earns.
 import { fitCanvas } from '../kit/canvas.js';
 import { Particles, FloatText } from '../kit/fx.js';
 import { REDUCED } from '../kit/env.js';
 import { itemOf, homeOf } from './data.js';
-import { layer, canPlace } from './room.js';
-import { CELL, ROW, WROW, INK, roomGeom, roomSprite, itemSprite, framesOf, herSprite, bustSprite, catSprite, dogSprite, botSprite, droneSprite, boxSprite, HER } from './pixel.js';
+import { layer, canPlace, deskSpot } from './room.js';
+import { CELL, ROW, WROW, INK, roomGeom, roomSprite, itemSprite, framesOf, herSprite, bustSprite, petSprite, botSprite, droneSprite, emoteSprite, HER } from './pixel.js';
 import { herPose, petPose, droneAt } from './actor.js';
+import { useOf } from './uses.js';
 
 const bufferOf = (w, h) => { if (typeof OffscreenCanvas === 'function') return new OffscreenCanvas(w, h); const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
 export function createRenderer(canvas, top) {
   const view = fitCanvas(canvas, { maxDpr: 3 });
   const over = fitCanvas(top, { maxDpr: 2 });
-  return { view, over, rect: { x: 0, y: 0, w: 1, h: 1, round: 0 }, buf: null, bw: 0, bh: 0, cam: null, parts: new Particles(420), text: new FloatText(), t: 0, hits: [] };
+  return {
+    view, over, rect: { x: 0, y: 0, w: 1, h: 1, round: 0 }, band: { top: 0, bottom: 0, left: 0, right: 0 }, fit: false, buf: null, bw: 0, bh: 0, cam: null,
+    pan: { x: 0, v: 0, target: null, held: false }, vx: 0, vw: 1, parts: new Particles(420), text: new FloatText(), t: 0, hits: [], bump: null,
+  };
 }
-export function setRect(R, r) { R.rect = { x: r.x, y: r.y, w: Math.max(1, r.w), h: Math.max(1, r.h), round: r.round || 0 }; }
-export function update(R, dt) { R.t += dt; R.parts.update(dt); R.text.update(dt); }
-
-// the camera: art pixels → the page (CSS pixels). The room as big as fits in whole device pixels.
-function camera(R, G, zoom = 1, focus = null) {
-  const d = R.view.dpr, r = R.rect;
-  const k = Math.max(1, Math.floor(Math.min((r.w * d) / G.W, (r.h * d) / G.H) * zoom)), s = k / d;
-  let cx = G.W / 2, cy = G.H / 2;
-  if (focus) { cx = focus.x; cy = focus.y; }
-  let ox = r.x + r.w / 2 - cx * s, oy = r.y + r.h / 2 - cy * s;
-  if (focus) { ox = Math.min(r.x, Math.max(r.x + r.w - G.W * s, ox)); oy = Math.min(r.y, Math.max(r.y + r.h - G.H * s, oy)); }
-  return { k, s, ox: Math.round(ox * d) / d, oy: Math.round(oy * d) / d };
+export function setRect(R, r, band = null) { R.rect = { x: r.x, y: r.y, w: Math.max(1, r.w), h: Math.max(1, r.h), round: r.round || 0 }; if (band) R.band = band; }
+export function update(R, dt) {
+  R.t += dt; R.parts.update(dt); R.text.update(dt);
+  const p = R.pan;
+  if (p.target != null && !p.held) { const d = p.target - p.x; p.x += d * Math.min(1, dt * 6); if (Math.abs(d) < 0.5) p.target = null; }
+  else if (!p.held && Math.abs(p.v) > 1) { p.x += p.v * dt; p.v *= Math.exp(-dt * 5); } else if (!p.held) p.v = 0;
+  if (R.bump) { R.bump.t += dt; if (R.bump.t > 0.4) R.bump = null; }
+}
+// the room’s scale and where it sits: art pixels → the page (CSS pixels). Her room fills the height between the HUD’s
+// bars (`band`: what they cover, CSS pixels); zoomed out (`fit`), the whole room fits.
+function camera(R, G, mode) {
+  const d = R.view.dpr, r = R.rect, b = mode === 'room' ? R.band : { top: 0, bottom: 0, left: 0, right: 0 };
+  const avail = Math.max(40, r.h - b.top - b.bottom), availW = Math.max(40, r.w - (b.left || 0) - (b.right || 0));
+  const byH = (avail * d) / G.H, byW = (availW * d) / G.W;
+  // (behind the title: smaller, so it reads as her room)
+  const k = Math.max(1, Math.floor(mode === 'room' && R.fit ? Math.min(byH, byW) : mode === 'title' ? byH * 0.62 : byH)), s = k / d;
+  const vw = availW / s, wide = G.W > vw + 0.5;
+  const p = R.pan;
+  if (mode === 'live') { const desk = R.deskX ?? G.W / 2; p.x = desk - vw / 2; }
+  if (mode === 'title') p.x = (G.W - vw) * (0.5 + 0.45 * Math.sin(R.t * 0.08));
+  const max = Math.max(0, G.W - vw);
+  if (p.x < 0 || p.x > max) { p.x = Math.max(0, Math.min(max, p.x)); p.v = 0; }
+  if (p.target != null) p.target = Math.max(0, Math.min(max, p.target));
+  const ox = wide ? r.x + (b.left || 0) - p.x * s : r.x + (b.left || 0) + (availW - G.W * s) / 2;
+  const oy = r.y + b.top + (avail - G.H * s) / 2;
+  R.vx = wide ? p.x : 0; R.vw = Math.min(G.W, vw);
+  return { k, s, ox: Math.round(ox * d) / d, oy: Math.round(oy * d) / d, wide };
 }
 export const toScreen = (R, ax, ay) => (R.cam ? { x: R.cam.ox + ax * R.cam.s, y: R.cam.oy + ay * R.cam.s } : { x: 0, y: 0 });
 export const toArt = (R, sx, sy) => (R.cam ? { x: (sx - R.cam.ox) / R.cam.s, y: (sy - R.cam.oy) / R.cam.s } : { x: -1, y: -1 });
+// drag the room sideways (CSS pixels), let it glide, or bring something into view
+export function panBy(R, dx) { if (R.cam) { R.pan.x -= dx / R.cam.s; R.pan.target = null; } }
+export function fling(R, vx) { if (R.cam) R.pan.v = -vx / R.cam.s; }
+export function panTo(R, ax, { ifHidden = false } = {}) {
+  if (!R.cam || !R.cam.wide) return;
+  if (ifHidden && ax > R.vx + R.vw * 0.15 && ax < R.vx + R.vw * 0.85) return;
+  R.pan.target = ax - R.vw / 2;
+}
+export const cellX = (G, x) => G.x0 + (x + 0.5) * CELL;
+// tapped: the thing bounces
+export function bump(R, uid) { R.bump = { uid, t: 0 }; }
 
 // where things are, in art pixels
 export function cellPos(G, x, y) { return { x: G.x0 + x * CELL, y: G.floorTop + y * ROW }; }
-// a thing's sprite and where its top-left goes
+// a thing’s sprite and where its top-left goes
 function placeOf(c, G, it, frame, v) {
   const def = itemOf(it.id), L = layer(it), spr = itemSprite(it.id, frame, v);
   if (!spr) return null;
@@ -51,15 +82,21 @@ function placeOf(c, G, it, frame, v) {
   const base = G.floorTop + (it.y + def.h) * ROW;
   return { spr, x, y: base - spr.h, base };
 }
-const drawSpr = (ctx, spr, x, y, flip = false, alpha = 1) => {
+const drawSpr = (ctx, spr, x, y, flip = false, alpha = 1, squash = 0) => {
   if (!spr) return;
   ctx.globalAlpha = alpha;
-  if (flip) { ctx.save(); ctx.translate(Math.round(x) + spr.w + 1, 0); ctx.scale(-1, 1); ctx.drawImage(spr.canvas, -1, Math.round(y) - 1); ctx.restore(); } else ctx.drawImage(spr.canvas, Math.round(x) - 1, Math.round(y) - 1);
+  const w = spr.w + 2, h = spr.h + 2, sw = Math.round(w * (1 - squash * 0.08)), sh = Math.round(h * (1 + squash * 0.14));
+  const dx = Math.round(x) - 1 + Math.round((w - sw) / 2), dy = Math.round(y) - 1 + (h - sh);
+  if (flip) { ctx.save(); ctx.translate(dx + sw, 0); ctx.scale(-1, 1); ctx.drawImage(spr.canvas, 0, dy, sw, sh); ctx.restore(); } else ctx.drawImage(spr.canvas, dx, dy, sw, sh);
   ctx.globalAlpha = 1;
+};
+const shadow = (ctx, cx, y, rx, ry = 2) => {
+  ctx.fillStyle = 'rgba(42,20,64,0.2)';
+  for (let j = -ry; j <= ry; j++) { const half = Math.round(rx * Math.sqrt(Math.max(0, 1 - (j / (ry + 0.5)) ** 2))); ctx.fillRect(Math.round(cx - half), Math.round(y + j), half * 2, 1); }
 };
 
 // ---------- the room ----------
-// `scene`: { night, edit, ghost: { id, x, y, on, flip, ok }, picked (uid being moved), boxes (deliveries), frame, hide (her) }
+// `scene`: { night, edit, ghost: { id, x, y, on, flip, ok }, picked (uid being moved), frame, outfit, hide (her) }
 export function drawRoom(R, c, A, scene) {
   const home = homeOf(c), G = roomGeom(home);
   if (!R.buf || R.bw !== G.W || R.bh !== G.H) { R.buf = bufferOf(G.W, G.H); R.bw = G.W; R.bh = G.H; }
@@ -70,67 +107,78 @@ export function drawRoom(R, c, A, scene) {
   const v = { view: home.view, night: scene.night };
   const t = R.t, fr = (id) => (framesOf(id) > 1 && !REDUCED ? Math.floor(t * 4 + id.length) % framesOf(id) : 0);
   const hits = [];
-  // the floor grid while decorating
+  const sq = (uid) => (R.bump && R.bump.uid === uid ? Math.sin((R.bump.t / 0.4) * Math.PI) : 0);
+  // the grid while decorating
   if (scene.edit || scene.ghost) {
-    ctx.fillStyle = 'rgba(42,20,64,0.18)';
+    ctx.fillStyle = 'rgba(42,20,64,0.16)';
     for (let x = 0; x <= G.cols; x++) ctx.fillRect(G.x0 + x * CELL, G.floorTop, 1, G.rows * ROW);
     for (let y = 0; y <= G.rows; y++) ctx.fillRect(G.x0, G.floorTop + y * ROW, G.cols * CELL, 1);
     for (let x = 0; x <= G.cols; x++) ctx.fillRect(G.x0 + x * CELL, G.wallTop, 1, G.wall * WROW);
     for (let y = 0; y <= G.wall; y++) ctx.fillRect(G.x0, G.wallTop + y * WROW, G.cols * CELL, 1);
   }
-  // wall things, then rugs
+  // wall things, then rugs; then soft shadows under what stands on the floor
   const list = [];
   for (const it of c.items) {
     if (it.uid === scene.picked) continue;
+    const def = itemOf(it.id);
+    if (def.pet) continue;
     const p = placeOf(c, G, it, fr(it.id), v);
-    if (!p || itemOf(it.id).pet) continue;
-    if (p.base === -1 || p.base === -2) { drawSpr(ctx, p.spr, p.x, p.y, it.flip); hits.push({ kind: 'item', uid: it.uid, x: p.x, y: p.y, w: p.spr.w, h: p.spr.h, z: p.base }); }
-    else list.push({ z: p.base + (layer(it) === 'top' ? 0.3 : 0), draw: () => drawSpr(ctx, p.spr, p.x, p.y, it.flip), hit: { kind: 'item', uid: it.uid, x: p.x, y: p.y, w: p.spr.w, h: p.spr.h } });
+    if (!p) continue;
+    const s = sq(it.uid);
+    if (p.base === -1 || p.base === -2) { drawSpr(ctx, p.spr, p.x, p.y, it.flip, 1, s); hits.push({ kind: 'item', uid: it.uid, x: p.x, y: p.y, w: p.spr.w, h: p.spr.h, z: p.base }); }
+    else {
+      if (layer(it) === 'floor') shadow(ctx, p.x + p.spr.w / 2, p.base - 1, p.spr.w * 0.46, Math.min(3, def.h * 2));
+      list.push({ z: p.base + (layer(it) === 'top' ? 0.3 : 0), draw: () => drawSpr(ctx, p.spr, p.x, p.y, it.flip, 1, s), hit: { kind: 'item', uid: it.uid, x: p.x, y: p.y, w: p.spr.w, h: p.spr.h } });
+    }
   }
   // her
-  const h = A.her;
+  const h = A.her, task = h.task && h.task.started ? h.task : null;
   if (!scene.hide) {
-    const pose = herPose(A), spr = herSprite(pose);
-    const seat = h.sit && h.sit !== 'desk' ? c.items.find((t) => t.uid === h.sit) : null;
-    let x = G.x0 + (h.x + 0.5) * CELL - HER.w / 2, base = G.floorTop + (h.y + 1) * ROW - 2;
-    if (pose === 'sleep' && seat) { x = G.x0 + seat.x * CELL + 2; base = G.floorTop + (seat.y + itemOf(seat.id).h) * ROW - 6; }
-    else if (seat && pose === 'sit') base -= 3;
-    const z = seat ? G.floorTop + (seat.y + itemOf(seat.id).h) * ROW + 0.2 : base + 2;
-    list.push({ z: pose === 'sleep' ? z + 0.1 : z, draw: () => drawSpr(ctx, spr, x, base - spr.h, h.face < 0 && pose.startsWith('walk')), hit: { kind: 'her', x, y: base - spr.h, w: spr.w, h: spr.h } });
+    const pose = herPose(A), spr = herSprite(pose, scene.outfit || 0);
+    const seat = h.sit && h.sit !== 'desk' ? c.items.find((x) => x.uid === h.sit) : null;
+    const on = h.on ? c.items.find((x) => x.uid === h.on) : null;
+    let x = G.x0 + (h.x + 0.5) * CELL - HER.fx, base = G.floorTop + (h.y + 1) * ROW - 2, z = base + 2;
+    if (pose === 'sleep' && seat) { x = G.x0 + seat.x * CELL + 2; base = G.floorTop + (seat.y + itemOf(seat.id).h) * ROW - 6; z = base + 6.2; }
+    else if (seat) { if (pose === 'sit' || pose === 'talk') base -= 3; z = G.floorTop + (seat.y + itemOf(seat.id).h) * ROW + 0.2; }
+    if (on) { const od = itemOf(on.id), ob = G.floorTop + (on.y + od.h) * ROW; x = G.x0 + (on.x + od.w / 2) * CELL - HER.fx; base = ob - (on.id === 'treadmill' ? 7 : on.id === 'slide' ? 20 : 4); z = ob + 0.5; }
+    const shown = pose !== 'hide';
+    if (shown && !(pose === 'sleep' && seat) && !on) shadow(ctx, x + HER.fx, base, 5, 1);
+    if (shown) list.push({ z, draw: () => drawSpr(ctx, spr, x, base - spr.h, h.face < 0 && (pose.startsWith('walk') || pose.startsWith('run'))), hit: { kind: 'her', x: x + 3, y: base - spr.h + 2, w: spr.w - 6, h: spr.h - 2 } });
+    // what she’s doing, over her head
+    if (h.emote && task) {
+      const e = emoteSprite(h.emote), bob = REDUCED ? 0 : Math.round(Math.sin(t * 4) * 1.5), rise = h.emote === 'zzz' || h.emote === 'note' || h.emote === 'steam' ? Math.floor((t * 6) % 6) : 0;
+      if (e) list.push({ z: 9999, draw: () => drawSpr(ctx, e, x + HER.fx - 4, base - HER.h - 9 + bob - rise + (pose === 'sleep' ? 10 : 0), false, 0.95) });
+    }
   }
   // her pets, the bots
   for (const p of A.pets.values()) {
-    const spr = p.id === 'cat' ? catSprite(petPose(p)) : dogSprite(petPose(p));
-    const x = G.x0 + (p.x + 0.5) * CELL - spr.w / 2, base = G.floorTop + (p.y + 1) * ROW - 1;
     if (scene.picked === p.uid) continue;
-    list.push({ z: base + 1, draw: () => drawSpr(ctx, spr, x, base - spr.h, p.face < 0), hit: { kind: 'pet', uid: p.uid, x, y: base - spr.h, w: spr.w, h: spr.h } });
+    const spr = petSprite(p.id, petPose(p));
+    const x = G.x0 + (p.x + 0.5) * CELL - spr.w / 2, base = G.floorTop + (p.y + 1) * ROW - 1;
+    shadow(ctx, x + spr.w / 2, base, spr.w * 0.4, 1);
+    list.push({ z: base + 1, draw: () => drawSpr(ctx, spr, x, base - spr.h, p.face < 0, p.id === 'holocat' ? 0.8 : 1, sq(p.uid)), hit: { kind: 'pet', uid: p.uid, x: x - 2, y: base - spr.h - 2, w: spr.w + 4, h: spr.h + 4 } });
   }
   for (const b of A.bots.values()) {
     const spr = botSprite(Math.floor(t * 6 + b.id) % 2);
     const x = G.x0 + (b.x + 0.5) * CELL - spr.w / 2, base = G.floorTop + (b.y + 1) * ROW - 1;
-    list.push({ z: base + 1, draw: () => drawSpr(ctx, spr, x, base - spr.h, b.face < 0, b.leaving ? 0.6 : 1), hit: { kind: 'bot', id: b.id, x: x - 3, y: base - spr.h - 3, w: spr.w + 6, h: spr.h + 6 } });
+    shadow(ctx, x + spr.w / 2, base, 4, 1);
+    list.push({ z: base + 1, draw: () => drawSpr(ctx, spr, x, base - spr.h, b.face < 0, b.leaving ? 0.6 : 1), hit: { kind: 'bot', id: b.id, x: x - 4, y: base - spr.h - 4, w: spr.w + 8, h: spr.h + 8 } });
   }
   list.sort((a, b) => a.z - b.z);
   for (const e of list) { e.draw(); if (e.hit) hits.push({ ...e.hit, z: e.z }); }
-  // what's being placed: a ghost on its cells, green where it fits
+  // what’s being placed: a ghost on its cells, green where it fits
   if (scene.ghost) drawGhost(ctx, c, G, scene.ghost, v);
-  // the drone, across the wall
+  // the drone, across what’s in view
   const dk = droneAt(A);
   if (dk >= 0) {
-    const spr = droneSprite(Math.floor(t * 12) % 2), x = -20 + dk * (G.W + 40), y = G.wallTop + 8 + Math.sin(t * 5) * 2;
+    const spr = droneSprite(Math.floor(t * 12) % 2), x = R.vx - 20 + dk * (R.vw + 40), y = G.wallTop + 10 + Math.sin(t * 5) * 2;
     drawSpr(ctx, spr, x, y);
-    hits.push({ kind: 'drone', x: x - 6, y: y - 6, w: spr.w + 12, h: spr.h + 12, z: 999 });
+    hits.push({ kind: 'drone', x: x - 8, y: y - 8, w: spr.w + 16, h: spr.h + 16, z: 999 });
   }
-  // the boxes on their way, along the front edge of the floor from the right (the room's name is down on the left)
-  (scene.boxes || []).forEach((d, i) => {
-    const spr = boxSprite(d.ready ? 'ready' : 'wait'), x = G.x0 + G.cols * CELL - 2 - spr.w - i * 16, y = G.floorBottom - spr.h + 4 + (d.ready ? Math.round(Math.sin(t * 6 + i) * 1) : 0);
-    drawSpr(ctx, spr, x, y);
-    hits.push({ kind: 'box', uid: d.uid, x: x - 2, y: y - 4, w: spr.w + 4, h: spr.h + 6, z: 1000 + i, ready: d.ready, left: d.left });
-  });
   // night: darker, and her lamps glow
   if (scene.night) {
     ctx.globalCompositeOperation = 'multiply';
-    ctx.fillStyle = '#7a72c8'; ctx.fillRect(0, 0, G.W, G.H);
+    ctx.fillStyle = '#9d95dc'; ctx.fillRect(0, 0, G.W, G.H);
     ctx.globalCompositeOperation = 'lighter';
     for (const it of c.items) {
       if (!itemOf(it.id).light) continue;
@@ -143,6 +191,8 @@ export function drawRoom(R, c, A, scene) {
     ctx.globalCompositeOperation = 'source-over';
   }
   R.hits = hits;
+  const desk = deskSpot(c);
+  R.deskX = desk ? G.x0 + (desk.x + 0.5) * CELL : G.W / 2;
   return G;
 }
 function drawGhost(ctx, c, G, g, v) {
@@ -158,17 +208,19 @@ function drawGhost(ctx, c, G, g, v) {
 }
 
 // ---------- onto the page ----------
-// `mode`: 'room' (the whole room), 'live' (her stream: her face up close), 'title' (the room, dimmed)
+// `mode`: ’room’ (her room, scrolling), ’live’ (her stream: her desk, her face cam), ’title’ (the room, dimmed, drifting)
 export function draw(R, c, A, scene, mode = 'room') {
   const G = drawRoom(R, c, A, scene);
   const ctx = R.view.begin(), d = R.view.dpr, r = R.rect;
-  // the backdrop beyond the room
   ctx.save();
   ctx.beginPath();
   if (r.round && ctx.roundRect) ctx.roundRect(r.x, r.y, r.w, r.h, r.round); else ctx.rect(r.x, r.y, r.w, r.h);
   ctx.clip();
-  ctx.fillStyle = mode === 'live' ? '#1d1238' : '#2a1440'; ctx.fillRect(r.x, r.y, r.w, r.h);
-  const cam = camera(R, G);
+  // the backdrop beyond the room: her wall’s colour, darker
+  const bg = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+  bg.addColorStop(0, '#2a1440'); bg.addColorStop(1, mode === 'live' ? '#1d1238' : '#1a0f33');
+  ctx.fillStyle = bg; ctx.fillRect(r.x, r.y, r.w, r.h);
+  const cam = camera(R, G, mode);
   R.cam = cam;
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.imageSmoothingEnabled = false;
@@ -188,10 +240,9 @@ function drawLive(R, ctx, A, scene) {
   ctx.fillStyle = 'rgba(29,18,56,0.18)'; ctx.fillRect(r.x, r.y, r.w, r.h);
   const h = A.her, talk = h.talk > 0 && Math.floor(t * 8) % 2;
   const pose = scene.happy ? 'happy' : talk ? 'talk' : h.blink < 0 ? 'blink' : 'idle';
-  const spr = bustSprite(pose);
+  const spr = bustSprite(pose, scene.outfit || 0);
   const k = Math.max(2, Math.floor((Math.min(r.h * 0.42, r.w * 0.3) * d) / 34)), s = k / d, size = 34 * s;
   const pad = 6, fx0 = r.x + r.w - size - pad * 2 - 10, fy0 = r.y + r.h - size - pad - 10;
-  // the cam's frame
   ctx.fillStyle = '#2a1440'; roundRect(ctx, fx0 - 3, fy0 - 3, size + pad * 2 + 6, size + pad + 6, 12); ctx.fill();
   const bg = ctx.createLinearGradient(0, fy0, 0, fy0 + size + pad);
   bg.addColorStop(0, '#ffd1ea'); bg.addColorStop(1, '#c9b2ff');
@@ -205,14 +256,13 @@ function drawLive(R, ctx, A, scene) {
   ctx.restore();
   ctx.fillStyle = '#ff3b5c'; roundRect(ctx, fx0 + 6, fy0 + 6, 30, 13, 6); ctx.fill();
   ctx.fillStyle = '#ffffff'; ctx.font = '800 9px system-ui, sans-serif'; ctx.fillText('CAM', fx0 + 12, fy0 + 16);
-  // the stream's own frame: a soft vignette
   const g = ctx.createRadialGradient(r.x + r.w / 2, r.y + r.h / 2, Math.min(r.w, r.h) * 0.4, r.x + r.w / 2, r.y + r.h / 2, Math.max(r.w, r.h) * 0.75);
   g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(1, 'rgba(10,4,30,0.4)');
   ctx.fillStyle = g; ctx.fillRect(r.x, r.y, r.w, r.h);
 }
 
 function roundRect(ctx, x, y, w, h, r) { ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(x, y, w, h, r); else ctx.rect(x, y, w, h); }
-// what's under a point on the page: the drone, a box, a bot, a pet, her, a thing (the nearest first)
+// what’s under a point on the page: the drone, a bot, a pet, her, a thing (the nearest first)
 export function hitAt(R, sx, sy, kinds = null) {
   const a = toArt(R, sx, sy);
   const list = R.hits.filter((h) => (!kinds || kinds.includes(h.kind)) && a.x >= h.x && a.x < h.x + h.w && a.y >= h.y && a.y < h.y + h.h);
@@ -233,7 +283,6 @@ export function ghostAt(R, c, id, sx, sy) {
   const x = Math.round((a.x - G.x0) / CELL - def.w / 2);
   if (L === 'wall') return { x, y: Math.round((a.y - G.wallTop) / WROW - def.h / 2) };
   if (L === 'top') {
-    // the surface whose top is nearest the point
     let best = null, bd = Infinity;
     for (const s of c.items) {
       const sd = itemOf(s.id);
@@ -249,6 +298,14 @@ export function ghostAt(R, c, id, sx, sy) {
   return { x, y: Math.round((a.y - G.floorTop) / ROW - def.h + 0.5) };
 }
 export const fits = (c, g, ignore = null) => canPlace(c, g.id, g.x, g.y, { on: g.on, ignore }).ok;
+// a thing’s middle on the page (for sparkles, and bringing it into view)
+export function itemAt(R, c, it) {
+  const G = roomGeom(homeOf(c)), def = itemOf(it.id), L = layer(it);
+  const ax = G.x0 + (it.x + def.w / 2) * CELL;
+  const ay = L === 'wall' ? G.wallTop + (it.y + def.h / 2) * WROW : G.floorTop + (it.y + def.h / 2) * ROW - 8;
+  return { ax, ay, ...toScreen(R, ax, ay) };
+}
+void useOf;
 
 // ---------- what flies ----------
 export const fx = {

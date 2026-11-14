@@ -1,6 +1,6 @@
-// GOING LIVE: the game's own players. In a live stream they tap the way a person does (a moment to notice each thing, now
+// GOING LIVE: the game’s own players. In a live stream they tap the way a person does (a moment to notice each thing, now
 // and then a miss, the big moment as fast as their thumbs go). In her career they pick video ideas, buy and place things,
-// spend idea points, catch the drone, zap the bots and go live when the meter's full. The tile's preview plays with
+// spend idea points, open mystery boxes, catch the drone, zap the bots and go live when the meter’s full. The tile’s preview plays with
 // `demo`; tools/games/goinglive/balance.mjs runs whole careers with the others to tune the numbers; the tests hold the
 // promises.
 import { createStream, step, tap, drain, dice } from './stream.js';
@@ -8,7 +8,7 @@ import { itemOf, pointsOf, PERKS, TUNE } from './data.js';
 import { layer, store } from './room.js';
 import {
   newCareer, tick, drain as drainCareer, startVideo, expected, expectedFollowers, slotsOf, shopItems, canBuy, buy, boxLeft, tapBox, openBox, placeFromInv,
-  autoSpot, hasSpot, canPerk, buyPerk, canMoveHome, moveHome, liveReady, liveStart, liveDone, catchDrone, zap, pet, scores, newIdeas, ideasReady,
+  autoSpot, hasSpot, canPerk, buyPerk, canMoveHome, moveHome, liveReady, liveStart, liveDone, catchDrone, zap, pet, scores, newIdeas, ideasReady, openMystery,
 } from './econ.js';
 
 // react: seconds to notice (± half); miss: the chance of not tapping something that needs it; heart: the chance of
@@ -26,7 +26,7 @@ export function createPlayer(profile = 'good', seed = 1) {
   return { name: profile, p: PROFILES[profile] || PROFILES.good, r: dice((seed ^ 0x2545f491) >>> 0), plan: new Map(), mashT: 0, last: null, shopT: 0 };
 }
 // ---------- a live stream ----------
-// one step: decide about what's new, tap what's due (`last`: the target it tapped, for the page to show)
+// one step: decide about what’s new, tap what’s due (`last`: the target it tapped, for the page to show)
 export function playStep(bot, S, dt) {
   bot.last = null;
   const { p, r } = bot;
@@ -44,7 +44,7 @@ export function playStep(bot, S, dt) {
     } else { tap(S, x.id); bot.last = x; bot.plan.delete(x.id); }
   }
 }
-// a new stream: what it planned for the last one is forgotten (a stream's targets count from 1 again)
+// a new stream: what it planned for the last one is forgotten (a stream’s targets count from 1 again)
 export function resetPlayer(bot) { bot.plan.clear(); bot.mashT = 0; bot.last = null; }
 // a whole stream, as fast as the rules go
 export function playStream(S, bot, dt = 1 / 30) {
@@ -70,14 +70,14 @@ export function worth(x, top) {
   return v / (x.place === 'top' ? x.w : x.w * x.h);
 }
 const isLastDesk = (c, t) => itemOf(t.id).desk && c.items.filter((u) => itemOf(u.id).desk && layer(u) === 'floor').length <= 1;
-// the least worth of what's on that layer of her room (never her last desk)
+// the least worth of what’s on that layer of her room (never her last desk)
 function worstOn(c, L, top) {
   let w = Infinity;
   for (const t of c.items) if (layer(t) === L && !isLastDesk(c, t)) w = Math.min(w, worth(itemOf(t.id), top));
   return w;
 }
 // a careful player makes room for something much better: puts away the least worth on its layer, worst first, until it
-// fits (tried on a copy first, so nothing's put away for nothing)
+// fits (tried on a copy first, so nothing’s put away for nothing)
 export function makeRoom(c, id, top = topOf(c)) {
   const L = layer({ id }), v = worth(itemOf(id), top);
   const worse = c.items.filter((t) => layer(t) === L && !isLastDesk(c, t) && worth(itemOf(t.id), top) * 2 <= v)
@@ -86,7 +86,7 @@ export function makeRoom(c, id, top = topOf(c)) {
   for (const t of worse) { store(sim, t.uid); out.push(t.uid); if (autoSpot(sim, id)) { for (const u of out) store(c, u); return true; } }
   return false;
 }
-// what's best to buy. A careful player: the most worth for the room it takes, if it fits or is worth making room for (so
+// what’s best to buy. A careful player: the most worth for the room it takes, if it fits or is worth making room for (so
 // it saves up for good things); a less careful one: anything that fits
 export function pickBuy(c, bot) {
   const can = shopItems(c).filter((x) => canBuy(c, x.id));
@@ -131,12 +131,14 @@ export function playCareer(c, bot, dt = 0.5) {
     }
     if (!startVideo(c, pickIdea(c, bot))) break;
   }
-  // boxes: tap the ones on their way now and then, open the ones that came, place what's in them
+  // boxes: tap the ones on their way now and then, open the ones that came, place what’s in them
   let opened = false;
   for (const d of [...c.deliveries]) {
     if (boxLeft(c, d) > 0) { if (bot.r() < bot.p.catch * dt) tapBox(c, d.uid); continue; }
     opened = Boolean(openBox(c, d.uid)) || opened;
   }
+  // mystery boxes: opened as they come
+  for (const b of [...c.mystery]) opened = Boolean(openMystery(c, b.uid)) || opened;
   // the shop and her room, now and then (and as soon as a box is opened)
   bot.shopT -= dt;
   if (opened && bot.shopT > 0) placeThings(c, bot);
@@ -148,7 +150,7 @@ export function playCareer(c, bot, dt = 0.5) {
     for (const id of PERK_ORDER) while (canPerk(c, id)) buyPerk(c, id);
     if (c.items.some((t) => itemOf(t.id).pet) && bot.r() < bot.p.catch) pet(c);
   }
-  // live, when the meter's full
+  // live, when the meter’s full
   if (liveReady(c) && !c.uploads.some((u) => c.clock - u.start < 0.1)) {
     const L = liveStart(c);
     const S = createStream({ cat: L.topic, v0: L.v0, busy: L.busy, followers: c.followers, seed: c.seed * 7919 + c.totals.live + 1 });

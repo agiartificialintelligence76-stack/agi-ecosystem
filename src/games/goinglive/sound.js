@@ -1,4 +1,4 @@
-// GOING LIVE: its sound, all made in the browser (the arcade kit's audio: no files). In her room a little chiptune loop
+// GOING LIVE: its sound, all made in the browser (the arcade kit’s audio: no files). In her room a little chiptune loop
 // (square and triangle waves, like her pixel room); live, a bouncy loop that speeds up with the hype. Blips for a video
 // out, a box, a thing put down, the drone, a zap, a level. A ding for an answered question, a bonk for a banned
 // bot, a fanfare for a raid, a shutter for a clip, a drum for each tap of her big moment. Nothing here was heard by its
@@ -45,6 +45,42 @@ export function createSound(audio) {
     quest() { a.tone({ freq: 1175, type: 'square', dur: 0.07, vol: 0.035, filter: 3000 }); a.tone({ freq: 1568, type: 'square', dur: 0.12, vol: 0.035, at: 0.08, filter: 3000 }); },
     pet() { a.tone({ freq: 880, type: 'triangle', dur: 0.12, vol: 0.05, slide: 1200 }); },
     perk() { a.sfx('select'); a.tone({ freq: 1319, type: 'square', dur: 0.1, vol: 0.035, at: 0.05, filter: 3000 }); },
+    // a thing tapped: a little boop, higher for small things
+    thing(small = false) { a.tone({ freq: small ? 1175 : 784, type: 'square', dur: 0.05, vol: 0.03, slide: small ? 1568 : 988, filter: 2600 }); },
+    // what she does with her things
+    use(kind) {
+      const f = {
+        whoopee: () => a.tone({ freq: 90, type: 'sawtooth', dur: 0.5, vol: 0.05, slide: 60, filter: 700 }),
+        game: () => [0, 1, 2].forEach((i) => a.tone({ freq: [659, 784, 988][i], type: 'square', dur: 0.06, vol: 0.03, at: i * 0.08, filter: 2600 })),
+        camera: () => { a.noise({ dur: 0.05, vol: 0.1, filter: 5000, type: 'highpass' }); a.tone({ freq: 2093, type: 'sine', dur: 0.08, vol: 0.03, at: 0.06 }); },
+        sing: () => [0, 1, 2, 3].forEach((i) => a.tone({ freq: [523, 587, 659, 784][i], type: 'triangle', dur: 0.16, vol: 0.05, at: i * 0.15 })),
+        tinker: () => [0, 1, 2].forEach((i) => a.noise({ dur: 0.03, vol: 0.06, filter: 3200, type: 'bandpass', at: i * 0.11 })),
+        bubble: () => [0, 1, 2].forEach((i) => a.tone({ freq: 600 + i * 260, type: 'sine', dur: 0.06, vol: 0.04, slide: 1200 + i * 200, at: i * 0.09 })),
+        munch: () => [0, 1].forEach((i) => a.noise({ dur: 0.06, vol: 0.06, filter: 1400, type: 'bandpass', at: i * 0.14 })),
+        sizzle: () => a.noise({ dur: 0.7, vol: 0.035, filter: 4200, type: 'highpass' }),
+        keys: () => [0, 1, 2, 3].forEach((i) => a.tone({ freq: [523, 659, 784, 1046][i], type: 'triangle', dur: 0.2, vol: 0.05, at: i * 0.12 })),
+        drums: () => { a.tone({ freq: 110, type: 'sine', dur: 0.15, vol: 0.12, slide: 55 }); a.noise({ dur: 0.08, vol: 0.06, filter: 2000, at: 0.18 }); a.tone({ freq: 110, type: 'sine', dur: 0.15, vol: 0.12, slide: 55, at: 0.36 }); },
+        beat: () => [0, 1, 2, 3].forEach((i) => (i % 2 ? a.noise({ dur: 0.05, vol: 0.05, filter: 2600, at: i * 0.16 }) : a.tone({ freq: 100, type: 'sine', dur: 0.12, vol: 0.1, slide: 50, at: i * 0.16 }))),
+        water: () => a.noise({ dur: 0.4, vol: 0.04, filter: 1800, type: 'bandpass', slideFilter: 900 }),
+        pet: () => a.tone({ freq: 880, type: 'triangle', dur: 0.12, vol: 0.05, slide: 1200 }),
+        splash: () => a.noise({ dur: 0.3, vol: 0.08, filter: 1600, type: 'bandpass', slideFilter: 500 }),
+        wheee: () => a.tone({ freq: 1400, type: 'triangle', dur: 0.5, vol: 0.05, slide: 500 }),
+        claw: () => { a.tone({ freq: 300, type: 'square', dur: 0.4, vol: 0.025, slide: 500, filter: 1400 }); a.tone({ freq: 660, type: 'square', dur: 0.06, vol: 0.03, at: 0.45, filter: 2400 }); },
+        party: () => { a.noise({ dur: 0.12, vol: 0.1, filter: 3000, type: 'highpass' }); a.chord([784, 988, 1175], { dur: 0.3, type: 'triangle', vol: 0.05, strum: 0.04, at: 0.1 }); },
+        capsule: () => { a.tone({ freq: 392, type: 'square', dur: 0.1, vol: 0.03, filter: 1600 }); a.tone({ freq: 1046, type: 'triangle', dur: 0.12, vol: 0.05, at: 0.3 }); },
+      }[kind];
+      if (f) f();
+    },
+    // a mystery box: a rattle, then what’s inside (a bigger chord the rarer it is)
+    shake() { for (let i = 0; i < 6; i++) a.noise({ dur: 0.04, vol: 0.05, filter: 1400, type: 'bandpass', at: i * 0.13 }); },
+    reveal(rarity = 'common') {
+      const k = { common: 0, rare: 1, epic: 2, legendary: 3 }[rarity] ?? 0;
+      a.noise({ dur: 0.1, vol: 0.08, filter: 2600, type: 'bandpass' });
+      a.chord([523, 659, 784, 1046, 1319].slice(0, 3 + Math.min(2, k)), { dur: 0.5 + k * 0.2, type: k >= 2 ? 'square' : 'triangle', vol: 0.05, strum: 0.05, at: 0.05, filter: 3200 });
+      if (k >= 3) { a.sfx('levelup'); for (let i = 0; i < 6; i++) a.tone({ freq: 1568 * (1 + i * 0.12), type: 'sine', dur: 0.1, vol: 0.04, at: 0.5 + i * 0.06 }); }
+    },
+    mystery() { a.chord([784, 1046, 1319], { dur: 0.3, type: 'triangle', vol: 0.05, strum: 0.06 }); },
+    set() { a.sfx('levelup'); a.chord([523, 659, 784, 1046, 1319], { dur: 0.9, type: 'triangle', vol: 0.06, strum: 0.06, at: 0.25 }); },
   };
 
   const bar = (fill) => Array.from({ length: 16 }, (_, i) => fill(i));
