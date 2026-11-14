@@ -9,8 +9,12 @@
 > gold by Sunday's closing bell. Four quarters, a Daily and Endless. **Only the names are real:** the rates (in gold),
 > the charts and the news are made up and the game says so; the coins are our own pictures, never a company's logo.
 > At agi1.app/games/growthstock, on the arcade kit; /games: 31 games, this one New. **No new setting, SQL, function or
-> service.** See "GROWTH STOCK" under "AGI games". **Published straight to `main` on 2026-11-14** (no preview, the
-> owner's wish), after the full build passed here.
+> service.** See "GROWTH STOCK" under "AGI games". **Published as `25582c5` to `main` on 2026-11-14**, straight to
+> production (no preview, the owner's wish), after the full build passed the way Vercel runs it (2,122 tests: 2,118
+> passed, 4 skipped, 0 failed; Vite, the share pages and the secret check) and the built page passed under the site's
+> real CSP on a phone and a computer (a tap and a drag plant, no errors). Vercel production
+> `2ZaHzwJbyTFGTE5AUERBeDsKDxha`: Ready. Not checked from this session: the live page in a browser (that check needed
+> an approval nobody was there to give).
 
 > **OVERTHINKING, one new game (2026-11-13):** the owner: "Create an original game that is creative , addictive, visually
 > good, best game of the year in agi1.app/games. just 1 game then publish it to production when youre done". It's
@@ -10787,8 +10791,9 @@ production right away no preview". A first version grew vegetables; the owner: "
 get what it said farming stocks?", then picked **"Stocks are the crops"**, then **"i want real stock names"**. One game,
 at **agi1.app/games/growthstock** (`growthstock.html`, `src/games/growthstock/`), on the arcade kit like the others (its
 frame, title, pause, end card, local saves `agi_arcade:growthstock`, `?demo` self-play, the AGI GAMES intro). **No new
-setting, SQL, function or service**; never money; nothing asked of a wallet. **Published straight to `main`** (the
-owner's "no preview": no branch push, no preview deployment), after the full build here.
+setting, SQL, function or service**; never money; nothing asked of a wallet. **Published as `25582c5` to `main`** (the
+owner's "no preview": no branch push, no preview deployment) after the full build here; Vercel production
+`2ZaHzwJbyTFGTE5AUERBeDsKDxha` Ready.
 
 **The game.** AGI-1 traded her GPUs for a little farm in Gradient Hills, where the crops are stocks. Each grows as a
 little candle chart (green candles on stalks, each higher than the last) until its **shares** bloom on top as coins.

@@ -18,6 +18,12 @@ under "AGI games". Validation: `tests/growthstock.test.js` (14 tests) in `npm te
 headless Chromium at three phone sizes, a phone on its side and a computer, by touch, mouse and keys. **Not validated:**
 its sound by ear and play by a person on a real phone. No new service, database change or setting.
 
+**Published as `25582c5` to `main` on 2026-11-14**, straight to production as the owner asked (no preview), after the
+full release build in a clean copy (Node 24, UTC, fake deployment settings: 2,122 tests, 2,118 passed, 4 skipped, 0
+failed; bundling, share pages, secret scan) and the built page under the site's real CSP on a phone and a computer.
+Vercel production `2ZaHzwJbyTFGTE5AUERBeDsKDxha` completed. Not done from this session: opening the live page in a
+browser (it needed an approval nobody was there to give) and copying the new files into the owner's Desktop folder.
+
 ## OVERTHINKING, one new game — 2026-11-13
 
 The owner: "Create an original game that is creative , addictive, visually good, best game of the year in agi1.app/games.
