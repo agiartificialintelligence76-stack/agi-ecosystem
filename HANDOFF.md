@@ -31,6 +31,14 @@ its box of the day, the room dragged, things tapped and used, boxes opened and p
 every home by day and night, a stream). **Not validated:** its sound by ear and play by a person on a real phone. No new
 service, database change or setting.
 
+**Published as `213c925`, then `be79a83` (her room refitted as soon as the HUD changes size), to `main` on 2026-11-15**,
+straight to production, each after the full release build in a clean copy (Node 24, UTC, fake deployment settings:
+2,154 tests, 2,150 passed, 4 skipped, 0 failed; Vite, the share pages, the secret check) and the built page under the
+site's real CSP on three phone sizes and a computer (no errors, no CSP reports). Vercel production
+`Bgyg1dzQUPKPP1sM63Q3FcaDCc1j`, then `72twwmywtXXs95YAuKGsXqForW7g`: Ready. Live in the owner's Chrome: the title, an
+earlier career carried over, the box of the day opened and placed, a thing tapped and used, /games with 32 tiles and
+GOING LIVE second and New, no console errors.
+
 ## GROWTH STOCK, one new game — 2026-11-14
 
 The owner forwarded a Discord ask for "some farming simulator like AGI farming stocks": "can u add/create a game like

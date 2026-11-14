@@ -12,6 +12,17 @@
 > finds the shop doesn't sell, a collection book and eleven sets; new pixel art throughout; and a game's HUD (her level
 > up top; her boxes, her videos, three ideas and a dock of buttons below; a column on a phone held sideways). Ours in
 > every way, as before. **No new setting, SQL, function or service.** See "GOING LIVE" under "AGI games".
+> **Published as `213c925` to `main` on 2026-11-15** (the takedown reverted and the rework, one commit, through the
+> branch `goinglive-rework`), then **`be79a83`** (found in the live check: right after loading, her room could stay a size
+> too big, over the ideas, until a later re-measure; the HUD's bars are now watched, so it's refitted at once). Each
+> after the full build passed the way Vercel runs it (2,154 tests: 2,150 passed, 4 skipped, 0 failed; Vite, the share
+> pages and the secret check) and the built page passed under the site's real CSP on phones upright (390 × 844,
+> 360 × 640) and sideways (844 × 390) and a computer (the box of the day opened, a video made from an idea by a real tap,
+> a thing bought; a stream played by taps to its end card and back). Vercel production `Bgyg1dzQUPKPP1sM63Q3FcaDCc1j`,
+> then `72twwmywtXXs95YAuKGsXqForW7g`: Ready. Live in the owner's Chrome: the new title with her room behind it, her
+> earlier career carried over ("While you were away"), the box of the day opened (a rare Bubble machine), placed with ✓,
+> tapped (she got out of bed and went to it), her room fitted between the HUD's bars, /games with 32 tiles and GOING LIVE
+> second and New, no console errors (that check left her career in that browser a little further along).
 
 > **GOING LIVE, rebuilt (2026-11-14, evening):** the owner, after the first version: "the original pewdipie tuber
 > simulator is more fun to be honest the game mechanics there is so good and the graphics too", then "Rebuild both
