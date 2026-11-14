@@ -11,9 +11,13 @@
 > and she climbs a board of sixteen made-up streamers (MegaModel 9000 … A Literal Potato) to #1 trending, in about an
 > hour for a good player. **No real creator, platform or their looks: every streamer, chat line and number is made up**,
 > and the game says so. At agi1.app/games/goinglive, on the arcade kit; /games: 32 games, this one New. **No new
-> setting, SQL, function or service.** See "GOING LIVE" under "AGI games". **Released to `main` on 2026-11-14**, straight
-> to production like GROWTH STOCK (the owner was told so and didn't object), after the full build passed the way Vercel
-> runs it and the built page passed under the site's real CSP on a phone and a computer.
+> setting, SQL, function or service.** See "GOING LIVE" under "AGI games". **Published as `c13c23e` to `main` on
+> 2026-11-14**, straight to production like GROWTH STOCK (the owner was told so and didn't object), after the full build
+> passed the way Vercel runs it (2,140 tests: 2,136 passed, 4 skipped, 0 failed; Vite, the share pages and the secret
+> check) and the built pages passed under the site's real CSP on a phone and a computer (her stream gone live and played
+> by taps; /games: 32 tiles, this one second with the only New badge, `#rate-goinglive`). Vercel production
+> `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`: Ready. Not checked from this session: the live page in a browser (this workspace can't
+> reach agi1.app).
 
 > **GROWTH STOCK, the stock farm (2026-11-14):** the owner forwarded a Discord ask ("can you do some farming simulator
 > like AGI farming stocks"): "can u add/create a game like these just 1 and publish it to production right away no
@@ -10873,7 +10877,9 @@ channel and room). Claude offered an AGI-1 version of our own for the arcade, an
 "continue and finish". Claude had said it would publish it straight to production like GROWTH STOCK, unless told
 otherwise. One game, at **agi1.app/games/goinglive** (`goinglive.html`, `src/games/goinglive/`), on the arcade kit like
 the others (its frame, title, pause, end card, local saves `agi_arcade:goinglive`, `?demo` self-play, the AGI GAMES
-intro). **No new setting, SQL, function or service**; never money; nothing asked of a wallet.
+intro). **No new setting, SQL, function or service**; never money; nothing asked of a wallet. **Published as `c13c23e`
+to `main`** (no preview, like GROWTH STOCK) after the full build here; Vercel production `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`
+Ready.
 
 **Ours, nobody else's.** No real creator, platform, channel or their in-jokes, words or looks: no YouTube or Twitch, no
 subscribers, donations or super chats (followers and **views**, the game's own points), our own streamers on its board,

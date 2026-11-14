@@ -19,6 +19,12 @@ How it's put together and how to tune it (`node tools/games/goinglive/balance.mj
 Chromium at phone sizes upright and sideways, a computer and the tile's square, by touch, mouse and keys. **Not
 validated:** its sound by ear and play by a person on a real phone. No new service, database change or setting.
 
+**Published as `c13c23e` to `main` on 2026-11-14**, straight to production (no preview, as with GROWTH STOCK), after the
+full release build in a clean copy (Node 24, UTC, fake deployment settings: 2,140 tests, 2,136 passed, 4 skipped, 0
+failed; Vite, the share pages, the secret check) and the built pages under the site's real CSP on a phone and a computer
+(no errors, no CSP reports). Vercel production `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`: Ready. The live page wasn't opened from
+this session (the workspace can't reach agi1.app): worth a look on a phone.
+
 ## GROWTH STOCK, one new game — 2026-11-14
 
 The owner forwarded a Discord ask for "some farming simulator like AGI farming stocks": "can u add/create a game like
