@@ -1,5 +1,17 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **GOING LIVE taken down (2026-11-14, night), to be reworked:** the owner, after playing the rebuild: "this game is
+> boring asf, the original pewdiepie tuber simulator is more fun and the room have more space and that game actually made
+> with life made with human creative minds unlike this this is pure ai slop", then "take it down the site first then
+> rework it then publish it to production". Off the site: agi1.app/games is back to how it was before GOING LIVE (31
+> games, GROWTH STOCK New again: its tiles, picker, ratings, counts and wall, `src/games/list.js`, `shelf.js`, the review
+> words in `server/arcade.js`, the build's inputs in `vite.config.js`, `scripts/share-pages.js`, `package.json` and the
+> tests, all as they were at `0f4af3a`), and agi1.app/games/goinglive (and /goinglive) sends people to /games
+> (temporary redirects in `vercel.json`). Its code, page, pictures and tests stay in the repo for the rework
+> (`src/games/goinglive/`, `goinglive.html`, `tests/goinglive.test.js`: not built or run meanwhile); its plays and ratings
+> stay in the database. To bring it back: `git revert` the takedown commit, then the rework. **No new setting, SQL,
+> function or service.**
+
 > **GOING LIVE, rebuilt (2026-11-14, evening):** the owner, after the first version: "the original pewdipie tuber
 > simulator is more fun to be honest the game mechanics there is so good and the graphics too", then "Rebuild both
 > (Recommended)" and "Short waits (Recommended)", then "continue and finish". The same game at agi1.app/games/goinglive,

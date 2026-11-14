@@ -2,6 +2,10 @@
 
 ## GOING LIVE, one new game, rebuilt the same day — 2026-11-14
 
+**Taken down the same night, to be reworked** (the owner: "this game is boring asf … pure ai slop", then "take it down
+the site first then rework it then publish it to production"): agi1.app/games is back to how it was before it (31 games),
+and its links send people to /games. See `CLAUDE.md`'s top entry; `git revert` the takedown commit to bring it back.
+
 The owner asked about a famous YouTuber's streamer sim, said "yes exactly" to an AGI-1 version of our own for the
 arcade, then "continue and finish". The first version (pick what she streams, run her stream live, twelve room
 upgrades) was **published as `c13c23e`** (Vercel production `HUBmN6wgfc7ckJNT8F7dRVQj8Lbj`). Then the owner: "the
