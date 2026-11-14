@@ -132,7 +132,12 @@
 > Evidence: output/phomo-release-browser-verification.json and output/terminal-kols-browser-verification-20261103.json.
 > Final startup follow-up: restored single-perpetual workspaces select the Perps tab even with older missing
 > or stale navigation preferences. Split workspaces retain their chosen rail; 23 UI regressions pass on Node 20/22.
-> Production publication authorized by the owner; preview verification follows this release commit.
+> **Published as e71217d to main on 2026-11-03.** The initial 2aae416 preview 63Uu57hnBUkoyPkjM2kUv4kxU9bU
+> and final production 2eGXyj36CgUDUH2B7bdtHq2r36LA are Ready. All 29 game/chart/font/logo/cover assets match the tested build
+> byte-for-byte. The production public KOL endpoint returns 564 verified Solana profiles, 50 observed avatars,
+> and 50 ranked entries per 24h/7d/30d period; real activity remains explicitly unavailable.
+> Verification: output/phomo-kols-production-verification.json. Hosted preview verification used the existing
+> Vercel sign-in; production verification is anonymous. Production screenshot: output/phomo-kols-production.png.
 
 > **Results-screen refresh (2026-11-03):** the owner flagged the old cash-out screen during release verification.
 > Results now use the new menu's black/lime design, with a session summary, labeled portfolio chart,
@@ -143,6 +148,11 @@
 > The combined clean Node 24/UTC release build passes: 1,536 tests, 1,530 passed, 6 skipped, no failures.
 > Results/currency/replay checks pass on Node 20 and 22. Browser checks cover zero-trade and filled-trade
 > results, all ten statistics, mixed Live practice provenance, replay/library controls, and 360 px layout.
+> **Published as e06dcda to main on 2026-11-03.** Preview EYAeSVmfZBm1awMp4zcwcwVSo4pw and production
+> 7HQAjdCK2joYUNj3dyxtnwpYdTLU are Ready. All 19 game/font/logo/cover assets match the clean build.
+> Production browser verification launched PLAY in Clank Live, filled its $10 practice buy, and displayed
+> the redesigned cash-out screen with one filled order, correct fees and mixed-practice provenance, without errors.
+> Evidence: output/clank-live-launch-production-verification.json and output/trench-results-launch-production.png.
 
 > **Clank Live practice launches (2026-11-03):** the owner reported that launching a coin in Clank Live was blocked.
 > Clank free play now explicitly enables local practice launches alongside public Robinhood Clank listings.
@@ -175,7 +185,13 @@
 > no failures; bundling, share pages and secret scan pass. The 143 engine/feed/replay checks pass on Node 20 and 22,
 > as do all 76 focused board checks. Built browser checks use unchanged public feed messages through a loopback-only
 > read-only QA proxy because the source permits the production origin; GNGM/Pomp/Phomo fills, moving candles/volume,
-> real source artwork, 360 px GNGM charts and practice replay provenance pass. The source files are ready for preview.
+> real source artwork, 360 px GNGM charts and practice replay provenance pass. Axium and BasedBott also pass their
+> built real-coin practice fills, loaded artwork, chart markers and volume checks; all five report no browser errors.
+> **Published as d33759e to main on 2026-11-03.** Preview FxtLzaseKCJNfAJUDHNx8RTksN6a and production
+> FsTcubrk2fgYCcfvUXzGhvqCEQ5D are Ready. All 19 game/font/logo/cover assets match the clean build byte-for-byte.
+> Production serves the new games-page artwork and description and connects directly to the public Solana feed.
+> Evidence: output/trench-live-practice-production-verification.json, output/trench-live-practice-browser-verification.json,
+> output/trench-live-practice-production-cover.png and output/trench-live-practice-gngm-mobile.png.
 
 > **Terminal refresh and smoother charts (2026-11-03):** the owner asked for Clank's ticker to run smoothly,
 > a closer Pump.fun / GMGN / Fomo match, a beginner-friendly menu and new logo, and production publication.
@@ -198,25 +214,68 @@
 > production deployment, with all 16 generated game/font/logo assets verified byte-for-byte on agi1.app.
 > The final live visual check found CSS minification combined font stretch into an unsupported font shorthand.
 > The menu heading now keeps its intended Anybody display font after bundling; built desktop/phone checks and
-> the complete 1,512-test release build pass again. The small typography correction is ready for publication.
+> the complete 1,512-test release build pass again. **Published as `fd452a4` to `main` on 2026-11-03**;
+> Vercel deployment `8ff4roQjYKHbUhFhRH2Bv8a4AVqC` Ready. All 16 final game/font/logo assets match the clean
+> build byte-for-byte; production renders the intended 66.56 px Anybody hero at 1280 px. Clank's live ticker moves,
+> all 100 visible artwork images loaded, and the final page has no browser errors. Verification evidence:
+> `output/terminal-refresh-production-verification.json` and `output/trenching-refresh-production-menu.png`.
 
 
-> **Trenching Simulator terminal release (2026-11-02):** the owner requested production publication of Axium,
-> BasedBott and Clank.trade. All six terminals are playable. Clank uses the original public fonts, branding and
-> credited CC BY-SA Vladcat model, measured desktop/phone layouts and a dedicated Robinhood-only public feed.
-> The owner's follow-up explicitly chose real Clank coins with locally simulated prices and volume. Each coin's
-> initial public quote seeds a practice market; crowd activity and the player's buys/sells then move its candles,
-> price and volume. Listing refreshes update identity and discovery without resetting that practice market.
-> The UI labels the distinction, and listing outages do not pause seeded practice prices. Logos use validated
-> source CIDs, bounded loading, shared caching and retryable failures. No wallet transactions or real market impact.
-> Axium/BasedBott use their own layouts, search, charts, order tickets, history and portfolios; simulated Clank
-> free play can launch a practice coin, recorded for replay. No new environment variables or serverless functions.
-> The chart is a recreation, not Clank's proprietary Charting Library; account/livestream services stay outside
-> the simulator. This release is prepared from production 54c888f and excludes other workspace changes.
-> Clean production build: Node 24, UTC, all 79 documented settings supplied as fixtures; 1,485 tests,
-> 1,479 passed, 6 skipped, zero failures; bundling, share pages and secret scan passed. The 169 focused terminal,
-> engine and replay tests also passed on Node 20 and 22. Browser testing found and fixed a native image-timer
-> receiver issue, now covered by a regression test; real artwork loads and practice fills move the chart and volume.
+> **Clank practice prices and release follow-up (2026-11-02):** the owner authorized production publication, then
+> explicitly chose "Yes—real coins with simulated prices and volume" so their play-money buys/sells move the chart.
+> This supersedes the source-only price behavior described below. Live still discovers only actual Clank.trade coins
+> on Robinhood Chain. Their first public quote seeds a local practice pool; source refreshes keep identity and
+> discovery current without resetting practice prices/volume. Seeded practice continues through listing outages.
+> The chart and setup label simulated prices/volume, and the original stock feed remains public source data.
+> Missing-logo handling now uses bounded downloads, shared CID caching and transient retries. Browser verification
+> caught and fixed a native timer receiver error in the image queue, with a regression test covering it.
+> **Published as `d3be80b` to `main` on 2026-11-02**, from a clean production 54c888f checkout under
+> `output/clank-production-20261102`, excluding other workspace work. Preview and production Vercel deployments Ready;
+> production deployment `DEWNtQCjkWEh377eFUP5d4FN7pnH`. Clean Node 24/UTC build with all 79 documented settings as
+> fixtures: 1,485 tests, 1,479 passed, 6 skipped, zero failures; bundling, share pages and secret scan passed. The
+> 169 focused terminal/engine/replay checks also passed on Node 20 and 22. Desktop/360px checks show real artwork,
+> local moving candles/volume, filled buys/sells and mobile trade sheets with no overflow or final-build script errors.
+> Production's three terminal bundles match the clean build byte for byte; Clank discovery returns 60 real Robinhood
+> coins, and its image endpoint returns actual WebP artwork. Evidence: `output/clank-production-verification.json`.
+
+> **Clank terminal correction (2026-11-02, local only):** the owner rejected the first approximation and requested
+> Clank's fonts, 3D character, chart and real Robinhood-only listings. The terminal now uses the original public
+> SuisseIntl fonts, branding, stock icons and credited CC BY-SA Vladcat model, measured desktop/phone layouts,
+> real coin artwork, the stock rail, recent-trades ticker and mobile trade sheet. The independent chart uses
+> TradingView Lightweight Charts with Clank's colors, controls, UTC labels and official candle history.
+> Clank Live has its own same-origin read-only adapter in `server/clank-live.js` and `clank-live.js`, routed through
+> `/api/checker?terminal=clank` (still 12 functions). Chain is enforced as Robinhood/4663, including saved settings;
+> only Clank's listed coins enter this market. Public listing/trending, stocks, quote rates, trades, holders,
+> candles and statistics poll every 3–4 seconds plus request latency. No simulated fallback; stale individual
+> quotes cannot fill orders. Images use validated source CIDs, fixed public gateways and bounded caching.
+> Chart and table updates are incremental, model rendering pauses when hidden, and search/pagination retain
+> source ordering. Quiet chart intervals carry the previous confirmed close with zero volume only through
+> Clank's validated `indexedThroughTimestamp`, matching its public datafeed; long gaps are bounded.
+> Practice trades and launches remain local. This does not reproduce the original's wallet,
+> account or livestream services, or bundle its licensed proprietary TradingView Charting Library.
+> Production bundling and secret scan pass. Full suite before the final narrow chart additions: 1,467 tests,
+> 1,460 passed, 6 skipped, the same unrelated SKYBREAK asset-list failure. The final focused checks pass 34/34;
+> the final small layout changes also pass the 12 terminal/chart checks. Desktop/360 px browser checks cover
+> real images, the model, source updates, chart controls, a practice fill/holding and a simulated launch with
+> its stock pair and social link; production CSP introduces no console errors. No commit or publication.
+
+> **Three more TRENCHING SIMULATOR terminals (2026-11-02, local only):** the owner requested working Axium and
+> BasedBott versions based on Axiom and Basedbot, plus Clank.trade. All six terminal cards now open their own workspace.
+> Axium uses the signed-in Axiom layout and Geist styling; BasedBott follows Basedbot's dense teal tables and trade
+> ticket; Clank follows its lavender launchpad, Explore cards, holdings, profile and launch form. These share the game's
+> existing play-money account, fills, fees, live-feed adapter and saved run recordings. Axium/BasedBott include search,
+> watchlists, filters, charts, limit/DCA orders, portfolios and history. Clank can launch a coin in simulated free play;
+> launches are validated, capped at 20 per run and recorded before their orders so replay stays deterministic.
+> BasedBott's simulated ETH uses an explicit $3,000 practice reference; multiplayer races keep identical underlying
+> starting funds across currencies. Live Clank pairs show Unknown unless the feed explicitly supplies the quote asset.
+> Desktop and 360 px browser checks cover fills, limit cancellation, navigation, Clank launch/discovery and history;
+> no page overflow, script errors or CSP violations. CSV exports escape formula-like live token names. Production
+> bundling and its secret scan pass. Final suite: 1,448 tests, 1,441 passed, 6 skipped, one pre-existing SKYBREAK
+> public-asset whitelist mismatch; its unrelated files were left alone.
+> **Not complete original-product parity:** account/wallet services, real trading, Axiom Predictions/Vision/Rewards,
+> outside social/copy-trading feeds and some provider-specific filters are absent. The later Clank correction above
+> replaces its initial Arial fallback. Axium's read-only Perpetuals shows the existing feed's unavailable fallback when needed.
+> Not committed or published. New code is in `boards/{axium,basedbott,clank}*`, with focused tests in `tests/`.
 
 > **The page's scrollbar matches the looks (2026-11-02):** the owner: "is it possible to design the scroll bar as well
 > that will match the website", then "just publish it in production after ur done". Pop mode: a violet pill outlined in
@@ -226,7 +285,9 @@
 > neither). Chrome, Edge and Safari get the whole design (`::-webkit-scrollbar` on the page itself); Firefox only its two
 > colors (`scrollbar-color`, only there: Chrome would draw its plain bar in those colors instead); phones draw their own
 > thin bar over the page. Checked in Chromium in all four looks, and live while switching (the bar follows at once).
-> Pushed to `main` (production) on 2026-11-02, on top of `823631b`.
+> **Published 2026-11-02 as `54c888f` to `main`** (on top of `823631b`; the full build first: 1,423 tests, 0 failed, 4
+> skipped; Vite, share pages, secret check). Vercel: Ready. Live: agi1.app serves the new `base` and `menu` CSS, and in
+> the owner's Chrome the page's scrollbar is the new 18 px Pop mode bar (its night colors: `#8b66ff` on `#1c1036`).
 
 > **Pop mode by day for first visits (2026-11-02):** the owner: "can you make the default light mode and pop mode when
 > they first visit the site, publish to production". A visitor with nothing saved now gets Pop mode in the light theme
@@ -14280,7 +14341,8 @@ the old Supabase project (`js/supabase-config.js`), and unoptimized models.
 | 2026-11-08 | SKYBREAK on a touchscreen: a floating stick that sprints at its edge, ROLL added, SWING lit near a diamond, RECOVER held 0.45 s (a stray thumb never throws a climb away), camera follow on by default (Settings can turn it off) |
 | 2026-11-08 | SKYBREAK's settings kept with its best times (`agi1-skybreak-v2`): sound, graphics (Auto, High, Medium, Low), camera speed, and on a touchscreen camera follow and button size |
 
-| 2026-11-02 | Publish the approved Axium, BasedBott and Clank simulator terminals. The owner chose real Clank coins on Robinhood Chain with locally simulated prices and volume affected by play-money trades. Preserve production configuration and exclude unrelated workspace edits. |
+| 2026-11-02 | Axium, BasedBott and Clank.trade become playable simulator terminals. Their native layouts operate the same play-money engine; practice launches are free-play only and logged for deterministic replay. BasedBott displays ETH using a labelled practice rate, while shared races preserve identical funds regardless of display currency. Unknown live stock-pair metadata stays Unknown. Original account services remain outside the simulator; local changes only. |
+| 2026-11-02 | The owner rejected the first Clank approximation. Use the observed original assets and layouts, a dedicated Clank/Robinhood-only public feed, actual candles/stocks/trades/holders and no simulated fallback. Keep play-money execution local, refuse stale individual quotes, and use incremental chart/table updates. The source's licensed Charting Library is represented with Lightweight Charts; no real account or wallet integration. |
 
 ## Open questions
 
