@@ -104,8 +104,13 @@ export function createUI(stage, on) {
   const root = el('div', { class: 'gl-ui', 'data-mode': 'hub' }, view, side);
   stage.append(root);
 
-  let sayTimer = 0, tipTimer = 0, last = {}, round = null, ideaKey = '', upKey = '', boxKey = '', bandKeep = null;
+  let sayTimer = 0, tipTimer = 0, last = {}, round = null, ideaKey = '', upKey = '', boxKey = '', bandKeep = null, bandStale = true;
   const byId = new Map();
+  // the HUD's bars changed size (the ideas came in, a phone turned, a bar swapped in): her room is fitted again
+  if (typeof ResizeObserver === 'function') {
+    const ro = new ResizeObserver(() => { bandStale = true; });
+    for (const n of [view, topHud, bottom, tray, dock, editBar, placeBar]) ro.observe(n);
+  }
 
   // ---------- her room’s screen ----------
   function hubRender(c) {
@@ -274,6 +279,7 @@ export function createUI(stage, on) {
     hub: hubRender,
     // how much of her room the HUD covers (CSS pixels): her room fits between its bars. (Kept while a thing’s being
     // placed or she’s decorating, so the room doesn’t jump when the tray steps aside.)
+    bandDirty() { const d = bandStale; bandStale = false; return d; },
     band() {
       if (bandKeep && (root.classList.contains('is-placing') || root.classList.contains('is-edit'))) return bandKeep;
       const v = view.getBoundingClientRect();

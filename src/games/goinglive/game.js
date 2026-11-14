@@ -633,7 +633,7 @@ function titleRect() {
   return { x: 0, y: Math.max(0, top), w: box.width, h: box.height - Math.max(0, top) };
 }
 function frame() {
-  if (mode === 'hub') { bandT -= 1; if (bandT <= 0) { bandT = 15; setRect(R, ui.rect(), ui.band()); } else setRect(R, ui.rect()); }
+  if (mode === 'hub') { bandT -= 1; if (ui.bandDirty() || bandT <= 0) { bandT = 30; setRect(R, ui.rect(), ui.band()); } else setRect(R, ui.rect()); }
   else setRect(R, mode === 'title' ? titleRect() : ui.rect());
   draw(R, c, A, {
     night: night(), edit: editing && !placing, picked: placing?.uid ?? null, outfit: c.outfit,
