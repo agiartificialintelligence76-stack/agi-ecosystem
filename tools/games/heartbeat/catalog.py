@@ -24,11 +24,11 @@ def original(song_id):
 
 
 def game_audio(song_id):
-    return os.path.join(OUT, 'audio', f'{song_id}.m4a')
+    return os.path.join(OUT, 'audio', f'{song_id}.mp3')
 
 
 def preview_audio(song_id):
-    return os.path.join(OUT, 'preview', f'{song_id}.m4a')
+    return os.path.join(OUT, 'preview', f'{song_id}.mp3')
 
 
 def cover(song_id):

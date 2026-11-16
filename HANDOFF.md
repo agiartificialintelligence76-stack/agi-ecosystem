@@ -1,5 +1,15 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## HEARTBEAT's songs sound like the originals again — 2026-11-16
+
+The owner heard the songs "scuffed" in game (all four of: worse than the original, clicky noise on top, muffled, crackles
+or stutters; phone and computer). Measured by recording what the game sends to the speakers (`hbrec.mjs`-style: an
+AudioWorklet on the context's destination, against the song as the browser decoded it). Fixed: the originals' own MP3
+audio (`public/games/heartbeat/audio/<id>.mp3`, byte for byte, tags off; previews LAME V0 from the originals), no
+low-pass on a miss, tap sounds off unless chosen (a soft sine), a soft FEVER chime, song gain 0.8, and the kit's new
+`audioLatency` option ('balanced' for HEARTBEAT only). Same timeline as before in Chromium (0.00 ms). See the top of
+`CLAUDE.md`.
+
 ## GOING LIVE froze after coming back to it, fixed — 2026-11-16
 
 The owner's screen recording: the room drawn but frozen (timers stuck, deliveries stuck, the pause button doing nothing,

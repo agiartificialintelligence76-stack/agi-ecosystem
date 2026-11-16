@@ -1,24 +1,29 @@
-// HEARTBEAT (2026-11-08): the songs' sound (Web Audio), on the kit's AudioContext.
+// HEARTBEAT (2026-11-08): the songs' sound (Web Audio), on the kit’s AudioContext.
 //
 // A run plays the song from a decoded buffer, started at an exact time on the audio clock, so the chart and the music
-// share one clock. Its chain: the song → its volume (the arcade's Music switch) → a low-pass (a miss dips it for a
-// moment) → the speakers, and an analyser beside it for the skyline. `heard(perfMs)` is the audio clock's time of the
-// sample reaching the ears at that moment (getOutputTimestamp where the browser has it, else currentTime minus the
-// output latency): the game's clock follows it (clock.js).
+// share one clock. Its chain: the song → its volume (the arcade’s Music switch) → the speakers, and an analyser beside
+// it for the skyline. Nothing else touches the song: since 2026-11-16 (the owner: the songs sounded "scuffed" in game)
+// a miss no longer muffles it, the game plays the original’s own MP3 audio (an AAC copy before) and its volume leaves
+// headroom for the effects on top, so nothing clips. `heard(perfMs)` is the audio clock’s time of the sample reaching
+// the ears at that moment (getOutputTimestamp where the browser has it, else currentTime minus the output latency):
+// the game’s clock follows it (clock.js).
 //
-// Also: the song select's preview loops (small files, looped with a fade), the sync helper's metronome, and a soft tick
-// for taps (the Sound effects switch). Nothing here runs in a demo (silent, and the demo runs on the loop's clock).
+// Also: the song select’s preview loops (small files, looped with a fade), the sync helper’s metronome, and a soft tick
+// for taps (Settings → Tap sounds, off unless chosen; the Sound effects switch). Nothing here runs in a demo (silent,
+// and the demo runs on the loop’s clock).
 import { settings } from '../kit/store.js';
 import { DEMO, IOS } from '../kit/env.js';
 
-export const AUDIO = (id) => `/games/heartbeat/audio/${id}.m4a`;
-export const PREVIEW = (id) => `/games/heartbeat/preview/${id}.m4a`;
-export const FALLBACK = (id) => `/music/${id}.mp3`;      // the original, where AAC can't be decoded
+export const AUDIO = (id) => `/games/heartbeat/audio/${id}.mp3`;       // the original’s audio, its tags taken off
+export const PREVIEW = (id) => `/games/heartbeat/preview/${id}.mp3`;
+export const FALLBACK = (id) => `/music/${id}.mp3`;      // the original itself (its cover too), if the copy won’t load
+// the song’s volume: the loudest originals peak a hair under full scale, so this leaves room for the effects on top
+export const SONG_GAIN = 0.8;
 export const COVER = (id) => `/games/heartbeat/covers/${id}.webp`;
 export const BANDS = 16;
 
 export function createMusic(kit) {
-  let ctx = null, vol = null, lp = null, an = null, bins = null;
+  let ctx = null, vol = null, an = null, bins = null;
   let src = null, startCtx = 0;
   let prev = null;                 // the preview playing: { src, gain, id }
   const previews = new Map();      // id → AudioBuffer (the last few)
@@ -31,13 +36,11 @@ export function createMusic(kit) {
     ctx = kit.ctx;
     if (!ctx) return null;
     vol = ctx.createGain();
-    lp = ctx.createBiquadFilter();
-    lp.type = 'lowpass'; lp.frequency.value = 20000; lp.Q.value = 0.6;
     an = ctx.createAnalyser();
     an.fftSize = 1024; an.smoothingTimeConstant = 0.6;
     bins = new Uint8Array(an.frequencyBinCount);
-    vol.connect(lp); lp.connect(ctx.destination); lp.connect(an);
-    // the skyline's bands: log-spaced from 40 Hz to 12 kHz
+    vol.connect(ctx.destination); vol.connect(an);
+    // the skyline’s bands: log-spaced from 40 Hz to 12 kHz
     const hz = ctx.sampleRate / an.fftSize;
     edges = Array.from({ length: BANDS + 1 }, (_, i) => Math.max(1, Math.round((40 * (12000 / 40) ** (i / BANDS)) / hz)));
     applyVolume();
@@ -48,7 +51,7 @@ export function createMusic(kit) {
   }
   function applyVolume() {
     if (!ctx) return;
-    vol.gain.setTargetAtTime(settings.get().music ? 0.92 : 0, ctx.currentTime, 0.03);
+    vol.gain.setTargetAtTime(settings.get().music ? SONG_GAIN : 0, ctx.currentTime, 0.03);
   }
 
   // a file with its download progress (0..1), as an ArrayBuffer
@@ -87,7 +90,7 @@ export function createMusic(kit) {
     get ctx() { return ensure(); },
     spectrum,
 
-    // the song for a run (its AAC copy; the original MP3 if this browser can't decode AAC)
+    // the song for a run (the game’s copy; the original file if the copy won’t load)
     async load(id, onProgress, signal) {
       if (!ensure()) throw new Error('no audio');
       try {
@@ -108,8 +111,6 @@ export function createMusic(kit) {
     play(buffer, { when, from = 0 }) {
       if (!ensure()) return;
       this.stop();
-      lp.frequency.cancelScheduledValues(ctx.currentTime);
-      lp.frequency.setValueAtTime(20000, ctx.currentTime);
       src = ctx.createBufferSource();
       src.buffer = buffer;
       src.connect(vol);
@@ -133,7 +134,7 @@ export function createMusic(kit) {
     },
     get playing() { return Boolean(src); },
 
-    // the audio clock's time of what's being heard at performance.now() = perfMs
+    // the audio clock’s time of what’s being heard at performance.now() = perfMs
     heard(perfMs) {
       if (!ctx) return 0;
       const lat = ctx.outputLatency || ctx.baseLatency || 0;
@@ -147,7 +148,7 @@ export function createMusic(kit) {
       } catch { /* not this browser */ }
       return plain;
     },
-    // the song's own time being heard (s)
+    // the song’s own time being heard (s)
     songTime(perfMs) { return this.heard(perfMs) - startCtx; },
     now() { return ctx ? ctx.currentTime : 0; },
     get running() { return Boolean(ctx && ctx.state === 'running'); },
@@ -164,16 +165,7 @@ export function createMusic(kit) {
       return spectrum;
     },
 
-    // a miss: the song dips for a moment
-    dip() {
-      if (!ctx || !src) return;
-      const t = ctx.currentTime;
-      lp.frequency.cancelScheduledValues(t);
-      lp.frequency.setValueAtTime(1400, t);
-      lp.frequency.exponentialRampToValueAtTime(20000, t + 0.28);
-    },
-
-    // the song select's preview: a short loop of the song (its chorus, usually)
+    // the song select’s preview: a short loop of the song (its chorus, usually)
     async preview(id) {
       if (!ensure()) return;
       if (prev && prev.id === id) return;
@@ -216,7 +208,7 @@ export function createMusic(kit) {
     },
     get previewId() { return prev ? prev.id : null; },
 
-    // the sync helper's metronome: `count` clicks `gap` s apart from audio time `at` (the first `lead` are higher)
+    // the sync helper’s metronome: `count` clicks `gap` s apart from audio time `at` (the first `lead` are higher)
     clicks(at, count, gap, lead = 4) {
       if (!ensure()) return [];
       const times = [];
@@ -235,12 +227,17 @@ export function createMusic(kit) {
       return times;
     },
 
-    // a soft tick for a tap (the Sound effects switch)
+    // a soft tick for a tap (Settings → Tap sounds, and the Sound effects switch): one short sine, eased in and out,
+    // well under the song (a burst of noise on every hit sounded like crackle over her songs)
     tick(lane, kind) {
       if (!settings.get().sound) return;
-      const p = kind === 'perfect' ? 1.12 : kind === 'great' ? 1 : 0.9;
-      kit.noise({ dur: 0.03, vol: 0.09, filter: 2600 * p + lane * 120, q: 1.4, type: 'bandpass' });
-      kit.tone({ freq: (740 + lane * 40) * p, type: 'triangle', dur: 0.035, vol: 0.05 });
+      const p = kind === 'perfect' ? 1.06 : kind === 'great' ? 1 : 0.94;
+      kit.tone({ freq: (880 + lane * 110) * p, type: 'sine', dur: 0.05, vol: 0.03, attack: 0.003, release: 0.04 });
+    },
+    // FEVER lit: three soft rising notes (the arcade’s 8-bit level-up, square waves almost as loud as the song, was
+    // too much over her songs)
+    fever() {
+      [784, 988, 1175].forEach((f, i) => kit.tone({ freq: f, type: 'triangle', dur: 0.16, vol: 0.05, at: i * 0.07, attack: 0.006, release: 0.12 }));
     },
   };
 }

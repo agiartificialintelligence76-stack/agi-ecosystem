@@ -7,7 +7,8 @@
 # → src/games/heartbeat/charts/<id>.json and src/games/heartbeat/charts/index.json
 #
 # How (numpy, scipy and librosa):
-#   1. The game's own copy (public/games/heartbeat/audio/<id>.m4a), decoded by ffmpeg like a browser decodes it.
+#   1. The game's own copy (public/games/heartbeat/audio/<id>.mp3, the original's own audio since 2026-11-16; an AAC
+#      copy before, which ffmpeg decodes in step with it), decoded by ffmpeg like a browser decodes it.
 #   2. Onsets in three bands at 1 ms (zero-phase filters: kick/low, snare/mid, hats/high) and, from a harmonic/percussive
 #      split, the melody's onsets, its pitch movement and its sustained notes.
 #   3. The beat grid. These songs are generated, and all but one drift: they speed up by 1–6 BPM over their length, so a

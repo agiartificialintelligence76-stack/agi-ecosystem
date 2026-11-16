@@ -460,17 +460,25 @@ test('AGI-1\'s lines: about twenty, lowercase, short, never about money', () => 
   assert.equal(endLine({ stamp: null, grade: 'A', isBest: true }), END.newBest[0]);
 });
 
-test('the game ships each song (AAC, small), its cover and its preview; never the lyrics', () => {
+test('the game ships each song (the original\'s own audio), its cover and its preview; never the lyrics', () => {
   for (const id of SONGS) {
-    const a = `public/games/heartbeat/audio/${id}.m4a`;
+    const a = `public/games/heartbeat/audio/${id}.mp3`;
     const c = `public/games/heartbeat/covers/${id}.webp`;
-    const p = `public/games/heartbeat/preview/${id}.m4a`;
+    const p = `public/games/heartbeat/preview/${id}.mp3`;
     for (const f of [a, c, p]) assert.ok(existsSync(new URL(`../${f}`, import.meta.url)), f);
-    const size = statSync(new URL(`../${a}`, import.meta.url)).size;
-    assert.ok(size > 1.5e6 && size < 4e6, `${a} ${size}`);
-    assert.ok(statSync(new URL(`../${p}`, import.meta.url)).size < 300e3);
+    // since 2026-11-16 (the owner: the songs sounded worse in game) the original MP3's own frames, byte for byte: only
+    // its tags (the title, the cover) taken off the front
+    const copy = readFileSync(new URL(`../${a}`, import.meta.url));
+    const orig = readFileSync(new URL(`../public/music/${id}.mp3`, import.meta.url));
+    assert.ok(copy.length > 3e6 && copy.length < 10.5e6, `${a} ${copy.length}`);
+    assert.equal(orig.subarray(0, 3).toString('latin1'), 'ID3', `${id}: its original starts with its tags`);
+    assert.ok(orig.subarray(orig.length - copy.length).equals(copy), `${a}: the original's audio as it is`);
+    assert.ok(copy[0] === 0xff && (copy[1] & 0xe0) === 0xe0, `${a}: starts on an MPEG audio frame`);
+    assert.ok(!copy.includes(Buffer.from('APIC')) && !copy.subarray(0, 3).equals(Buffer.from('ID3')), `${a}: no tags or cover`);
+    assert.ok(statSync(new URL(`../${p}`, import.meta.url)).size < 450e3);
     assert.ok(statSync(new URL(`../${c}`, import.meta.url)).size < 60e3);
   }
+  assert.equal(existsSync(new URL('../public/games/heartbeat/audio/agi.m4a', import.meta.url)), false, 'the old AAC copies are gone');
   // the page: the intro first, its root, no inline script or style
   const html = read('heartbeat.html');
   assert.match(html, /<div class="gi" id="agi-intro"/);
@@ -502,4 +510,33 @@ test('helpers: beat positions, energy, downbeats, clock text', () => {
   assert.equal(isDownbeat(6, 1), false);
   assert.equal(clock(193.1), '3:13');
   assert.equal(clock(59.6), '1:00');
+});
+
+test('her songs play as they are: nothing muffles them, no noise on top, room to spare (2026-11-16, the owner: "in game the songs became scuffed")', async () => {
+  const music = read('src/games/heartbeat/music.js');
+  const game = read('src/games/heartbeat/game.js');
+  // the song goes to the speakers through its volume alone: no filter (a miss used to muffle it), no dip
+  assert.doesNotMatch(music, /createBiquadFilter|lowpass|dip\(/);
+  assert.doesNotMatch(game, /music\.dip\(/);
+  assert.match(music, /vol\.connect\(ctx\.destination\); vol\.connect\(an\);/);
+  // the game's copy and the preview: MP3 (the original's audio; the preview cut from the original)
+  const { AUDIO, PREVIEW, FALLBACK, SONG_GAIN } = await import('../src/games/heartbeat/music.js');
+  assert.equal(AUDIO('agi'), '/games/heartbeat/audio/agi.mp3');
+  assert.equal(PREVIEW('agi'), '/games/heartbeat/preview/agi.mp3');
+  assert.equal(FALLBACK('agi'), '/music/agi.mp3');
+  // headroom: the loudest originals peak a hair under full scale; the song plus the effects on top stays under it
+  assert.ok(SONG_GAIN > 0.6 && SONG_GAIN <= 0.8, `SONG_GAIN ${SONG_GAIN}`);
+  assert.match(music, /settings\.get\(\)\.music \? SONG_GAIN : 0/);
+  // tap sounds: off unless chosen (saves from before start off once more), and one soft sine when on, never noise
+  assert.match(game, /const prefs = \{ speed: SPEED\.def, offset: 0, taps: false, \.\.\.\(saved\.prefs \|\| \{\}\) \};\nif \(prefs\.v !== 2\) \{ prefs\.taps = false; prefs\.v = 2; \}/);
+  const tick = music.slice(music.indexOf('tick(lane, kind) {'), music.indexOf('},', music.indexOf('tick(lane, kind) {')));
+  assert.doesNotMatch(tick, /noise/);
+  assert.match(tick, /type: 'sine'/);
+  // FEVER: three soft notes, not the arcade's 8-bit level-up (square waves almost as loud as the song)
+  assert.doesNotMatch(game, /sfx\('levelup'/);
+  assert.match(game, /music\.fever\(\)/);
+  // a bigger sound buffer for this game only (the kit's other games keep theirs)
+  assert.match(game, /audioLatency: 'balanced',/);
+  assert.match(read('src/games/kit/shell.js'), /const audio = createAudio\(\{ latency: opts\.audioLatency \}\);/);
+  assert.match(read('src/games/kit/audio.js'), /export function createAudio\(\{ latency = 'interactive' \} = \{\}\) \{[\s\S]*new AC\(\{ latencyHint: latency \}\)/);
 });

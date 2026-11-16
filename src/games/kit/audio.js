@@ -2,7 +2,8 @@
 // first tap or key (browsers allow sound only after one), with two buses: effects and music, each following the
 // arcade's settings (store.js). A demo (`?demo`) stays silent.
 //
-//   const audio = createAudio();
+//   const audio = createAudio();             { latency: 'balanced' } for a game whose music matters more than the last
+//                                            few milliseconds (HEARTBEAT): a bigger buffer, so a busy phone doesn’t crackle
 //   audio.sfx('pop', { pitch: 1.2 })          a preset (see PRESETS), pitch-shifted
 //   audio.tone({ freq: 440, type: 'square', dur: .1, vol: .3, slide: 880 })
 //   audio.noise({ dur: .2, vol: .4, filter: 1200, q: 1, type: 'bandpass' })
@@ -37,7 +38,7 @@ const PRESETS = {
   click:   (a, p) => a.noise({ dur: 0.015, vol: 0.2, filter: 4000 * p, type: 'highpass' }),
 };
 
-export function createAudio() {
+export function createAudio({ latency = 'interactive' } = {}) {
   let ctx = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null;
   let s = settings.get();
   let musicLoop = null;
@@ -54,7 +55,7 @@ export function createAudio() {
     if (ctx) return ctx;
     const AC = window.AudioContext || window.webkitAudioContext;
     if (!AC) return null;
-    try { ctx = new AC({ latencyHint: 'interactive' }); } catch { return null; }
+    try { ctx = new AC({ latencyHint: latency }); } catch { return null; }
     master = ctx.createDynamicsCompressor();
     master.threshold.value = -14; master.knee.value = 18; master.ratio.value = 4;
     master.connect(ctx.destination);

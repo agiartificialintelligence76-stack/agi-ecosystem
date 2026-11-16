@@ -82,7 +82,7 @@ export function createShell(opts) {
   const { game, name, path = `/games/${game}`, root, howTo = null } = opts;
   if (!root) throw new Error('createShell: no root');
   const store = gameStore(game);
-  const audio = createAudio();
+  const audio = createAudio({ latency: opts.audioLatency });
   const site = createSite(game);
   let state = 'boot';                 // boot · title · play · pause · over · menu (a game's own screen)
   let titleOpts = null, overOpts = null;

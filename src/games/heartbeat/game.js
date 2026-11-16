@@ -76,6 +76,9 @@ const shell = createShell({
   onResume: () => resumeRun(),
   onRestart: () => startRun(),
   onQuit: () => quitRun(),
+  // a bigger sound buffer than the arcade’s other games: the song plays smoothly on a busy phone (the chart follows the
+  // time it’s heard, so the buffer’s length never moves the notes)
+  audioLatency: 'balanced',
 });
 const canvas = el('canvas', { 'aria-label': 'HEARTBEAT: four lanes of notes falling toward a hit line, AGI-1 singing on stage', role: 'img' });
 shell.stage.append(canvas);
@@ -94,7 +97,10 @@ const shake = new Shake({ max: 7, decay: 2.4 });
 
 // ---------- what's kept on this device ----------
 const saved = shell.store.read();
-const prefs = { speed: SPEED.def, offset: 0, taps: true, ...(saved.prefs || {}) };
+// tap sounds: off unless chosen (2026-11-16, the owner: a tick on every hit sounded scuffed over her songs); saves from
+// before had them on by default, so they start off once more (`v: 2`)
+const prefs = { speed: SPEED.def, offset: 0, taps: false, ...(saved.prefs || {}) };
+if (prefs.v !== 2) { prefs.taps = false; prefs.v = 2; }
 prefs.speed = clampSpeed(prefs.speed);
 prefs.offset = clampOffset(prefs.offset);
 const records = { ...(saved.records || {}) };
@@ -477,7 +483,6 @@ function handleEvents(events) {
     } else if (e.type === 'miss') {
       judgment = { kind: 'miss', err: 0, age: 0 };
       missFlash[e.lane] = 1;
-      music.dip();
       shake.kick(0.16);
       if (!DEMO) shell.haptic(16);
     } else if (e.type === 'tail') {
@@ -492,7 +497,7 @@ function handleEvents(events) {
         cheerHearts(9);
         say(STAGE.fever, 1.8);
         for (const side of [0, 1]) parts.burst({ x: side ? L.w : 0, y: L.farY + 20, count: 22, speed: [180, 420], angle: side ? [Math.PI * 0.55, Math.PI * 0.95] : [Math.PI * 0.05, Math.PI * 0.45], life: [0.7, 1.3], size: [4, 8], colors: LANE_COLORS, gravity: 380, drag: 1.2, shape: 'square', spin: 8 });
-        if (!DEMO) { shell.audio.sfx('levelup', { pitch: 1.1 }); shell.haptic([12, 40, 18]); }
+        if (!DEMO) { music.fever(); shell.haptic([12, 40, 18]); }
       } else {
         parts.burst({ x: L.cx, y: L.farY + 30, count: 10, speed: [40, 120], life: [0.4, 0.7], size: [3, 6], colors: ['#7d7396', '#4a3d6e'], gravity: 200, shape: 'circle' });
       }
