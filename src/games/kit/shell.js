@@ -243,7 +243,8 @@ export function createShell(opts) {
     opts.onQuit?.();
     if (titleOpts) api.title(titleOpts);
   }
-  pauseBtn.addEventListener('click', () => pause());
+  // (paused with no card showing, e.g. a game’s own card closed over it: the pause card again, to resume from)
+  pauseBtn.addEventListener('click', () => { if (state === 'pause' && layer.hidden) pauseCard(); else pause(); });
 
   // the tab hidden mid-run: paused (sound off until it comes back)
   document.addEventListener('visibilitychange', () => {
@@ -422,7 +423,8 @@ export function createShell(opts) {
 
     // a game's own screen over the stage (a level map, an upgrade pick…): shown in the cards' layer
     card(node, { dim = true, label } = {}) { showLayer(node, { dim, label }); },
-    closeCard() { hideLayer(); },
+    // a game’s own card closed while the game is paused: back to the pause card (never paused with nothing to resume)
+    closeCard() { hideLayer(); if (state === 'pause') pauseCard(); },
     menu() { quitToTitle(); },
     pause, resume,
     // the game's own pause: hide or show the bar's pause button (e.g. during a cutscene)

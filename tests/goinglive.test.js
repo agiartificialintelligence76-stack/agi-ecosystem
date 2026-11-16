@@ -839,3 +839,17 @@ test('its code: the kit\'s shell with its id, its rules free of the page and the
   assert.doesNotMatch(html, REAL);
   assert.match(html, /__SITE__\/cards\/games\/goinglive\.jpg/);
 });
+
+test('back from another tab or app, never frozen; she is never lost behind her things (2026-11-16, the owner\'s screen recording)', () => {
+  const g = read('src/games/goinglive/game.js');
+  // her own cards never open over the kit's pause card (closing one would leave the game paused, nothing to resume from)
+  assert.match(g, /function openCard\(make, label\) \{\s*(?:\/\/[^\n]*\n\s*)*if \(shell\.state === 'pause'\) return;/);
+  // "While you were away" waits for Resume, and only opens while she's playing with no card up
+  assert.match(g, /onResume\(\) \{ showAway\(\); \}/);
+  assert.match(g, /function showAway\(\) \{\s*if \(!awayWaiting \|\| mode !== 'hub' \|\| shell\.state !== 'play' \|\| cardOpen\(\)\) return;/);
+  // closing her card closes only hers: one the pause card replaced is gone already
+  assert.match(g, /const cardOpen = \(\) => Boolean\(cardNode\?\.isConnected\);/);
+  assert.match(g, /const close = \(\) => \{ if \(cardOpen\(\)\) shell\.closeCard\(\);/);
+  // mostly hidden behind something nearer (her kitchen counter, a bookshelf), she shows through it, faintly
+  assert.match(read('src/games/goinglive/render.js'), /if \(hid > 0\.45\) list\[me\]\.draw\(0\.42\);/);
+});

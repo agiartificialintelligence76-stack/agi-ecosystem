@@ -143,7 +143,8 @@ export function drawRoom(R, c, A, scene) {
     if (on) { const od = itemOf(on.id), ob = G.floorTop + (on.y + od.h) * ROW; x = G.x0 + (on.x + od.w / 2) * CELL - HER.fx; base = ob - (on.id === 'treadmill' ? 7 : on.id === 'slide' ? 20 : 4); z = ob + 0.5; }
     const shown = pose !== 'hide';
     if (shown && !(pose === 'sleep' && seat) && !on) shadow(ctx, x + HER.fx, base, 5, 1);
-    if (shown) list.push({ z, draw: () => drawSpr(ctx, spr, x, base - spr.h, h.face < 0 && (pose.startsWith('walk') || pose.startsWith('run'))), hit: { kind: 'her', x: x + 3, y: base - spr.h + 2, w: spr.w - 6, h: spr.h - 2 } });
+    const flip = h.face < 0 && (pose.startsWith('walk') || pose.startsWith('run'));
+    if (shown) list.push({ z, her: true, draw: (alpha = 1) => drawSpr(ctx, spr, x, base - spr.h, flip, alpha), hit: { kind: 'her', x: x + 3, y: base - spr.h + 2, w: spr.w - 6, h: spr.h - 2 } });
     // what she’s doing, over her head
     if (h.emote && task) {
       const e = emoteSprite(h.emote), bob = REDUCED ? 0 : Math.round(Math.sin(t * 4) * 1.5), rise = h.emote === 'zzz' || h.emote === 'note' || h.emote === 'steam' ? Math.floor((t * 6) % 6) : 0;
@@ -166,6 +167,20 @@ export function drawRoom(R, c, A, scene) {
   }
   list.sort((a, b) => a.z - b.z);
   for (const e of list) { e.draw(); if (e.hit) hits.push({ ...e.hit, z: e.z }); }
+  // she’s never lost behind her things: mostly hidden behind something nearer (a counter, a bookshelf), she shows
+  // through it, faintly
+  const me = list.findIndex((e) => e.her);
+  if (me >= 0) {
+    const a = list[me].hit, area = a.w * a.h;
+    let hid = 0;
+    for (let i = me + 1; i < list.length; i++) {
+      const b = list[i].hit;
+      if (!b || b.kind !== 'item') continue;
+      const w = Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x), hh = Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y);
+      if (w > 0 && hh > 0) hid = Math.max(hid, (w * hh) / area);
+    }
+    if (hid > 0.45) list[me].draw(0.42);
+  }
   // what’s being placed: a ghost on its cells, green where it fits
   if (scene.ghost) drawGhost(ctx, c, G, scene.ghost, v);
   // the drone, across what’s in view

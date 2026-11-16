@@ -1,5 +1,16 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## GOING LIVE froze after coming back to it, fixed — 2026-11-16
+
+The owner's screen recording: the room drawn but frozen (timers stuck, deliveries stuck, the pause button doing nothing,
+AGI-1 not to be seen). The tab had been hidden over a minute: the kit paused the game and showed its pause card, then
+GOING LIVE's "While you were away" replaced it, and closing that left the game paused with no card (reproduced: hidden 70
+seconds, Nice, the clock stopped). Fixed in `src/games/goinglive/game.js` (the away card waits for Resume; never a card of
+its own over the pause card) and, for every game, in `src/games/kit/shell.js` (`closeCard()` while paused shows the pause
+card again; the pause button shows it when nothing is showing). Also `render.js`: she shows through, faintly, a nearer
+thing that hides most of her (the recording's room had a kitchen counter at the front). Guarded by a test in
+`tests/arcade-kit.test.js` and one in `tests/goinglive.test.js` (both fail on the old code). See the top of `CLAUDE.md`.
+
 ## GOING LIVE, one new game, rebuilt, taken down and reworked — 2026-11-14 and 15
 
 The owner asked about a famous YouTuber's streamer sim, said "yes exactly" to an AGI-1 version of our own for the

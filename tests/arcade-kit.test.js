@@ -179,3 +179,16 @@ test('the kit\'s files: its styles scoped to ak- classes, its shell builds with 
   assert.match(read('src/games/kit/store.js'), /if \(DEMO\) return;/, 'a demo saves nothing');
   assert.match(read('src/games/kit/audio.js'), /!DEMO && s\.sound/, 'a demo is silent');
 });
+
+test('the kit never leaves a game paused with nothing on screen (2026-11-16: the owner\'s GOING LIVE froze after coming back to it)', () => {
+  const shell = read('src/games/kit/shell.js');
+  // the tab hidden mid-run pauses the game, and its pause card is the way on (a phone has no Esc key)
+  assert.match(shell, /if \(document\.visibilityState === 'hidden'\) \{ if \(state === 'play' && !DEMO\) pause\(\);/);
+  // a game's own card closed while it's paused: the pause card comes back
+  assert.match(shell, /closeCard\(\) \{ hideLayer\(\); if \(state === 'pause'\) pauseCard\(\); \},/);
+  // the bar's pause button, paused with no card showing: the pause card again (it did nothing)
+  assert.match(shell, /pauseBtn\.addEventListener\('click', \(\) => \{ if \(state === 'pause' && layer\.hidden\) pauseCard\(\); else pause\(\); \}\);/);
+  // Restart and Quit leave the pause first, so a game closing its card in onRestart or onQuit gets no pause card back
+  assert.match(shell, /restart\.addEventListener\('click', \(\) => \{ hideLayer\(\); state = 'play'; opts\.onRestart\?\.\(\); \}\);/);
+  assert.match(shell, /function quitToTitle\(\) \{\s*state = 'title';[^}]*opts\.onQuit\?\.\(\);/);
+});

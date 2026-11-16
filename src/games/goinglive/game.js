@@ -56,6 +56,8 @@ const shell = createShell({
     keys: [['1–3', 'Make that idea'], ['← →', 'Look around her room'], ['S · D · L · C', 'Shop · Decorate · Go live · Collection'], ['Z', 'Zoom out / in'], ['Arrows · Enter · F', 'Move, place, flip a thing'], ['Space / Enter (live)', 'Take the most urgent thing'], ['Esc / P', 'Pause']],
   },
   onPause() { persist(); },
+  // back from the pause card: what her old videos earned while the tab was hidden, if that’s waiting
+  onResume() { showAway(); },
   onRestart() { if (mode === 'live' && S) startLive(S.cat); else if (mode !== 'title') enterHub({ quiet: true }); },
   onQuit() { S = null; endPlacing(); mode = 'title'; ui.mode('title'); persist(); queueMicrotask(toTitle); },
 });
@@ -115,7 +117,7 @@ function showcase() {
 
 let mode = 'title', S = null, bot = null, info = new Map(), cardNode = null, hiddenAt = 0;
 let A = createActors(), placing = null, editing = false, drag = null, saveT = 5, hubT = 0, idleT = 12, demoT = 0, demoGap = 0, bandT = 0, lastPan = 99, edgeP = null;
-let tipQ = [], tipUntil = 0;
+let tipQ = [], tipUntil = 0, awayWaiting = null;
 const cardOpen = () => Boolean(cardNode?.isConnected);
 const night = () => (QUERY.has('night') ? true : QUERY.has('day') || DEMO ? false : (() => { const h = new Date().getHours(); return h >= 19 || h < 6; })());
 const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
@@ -182,6 +184,8 @@ function enterHub({ quiet = false } = {}) {
   persist();
 }
 function openCard(make, label) {
+  // never over the kit’s pause card (closing ours would leave the game paused with no card to resume it from)
+  if (shell.state === 'pause') return;
   const close = () => { if (cardOpen()) shell.closeCard(); cardNode = null; ui.forceRender(); };
   cardNode = make(close);
   shell.card(cardNode, { label });
@@ -662,7 +666,8 @@ function toTitle() {
   });
 }
 
-// her old videos kept earning while the page was hidden
+// her old videos kept earning while the page was hidden. (The kit pauses the game when the tab’s hidden: "While you
+// were away" waits for Resume, so it never covers the pause card.)
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) { hiddenAt = Date.now(); persist(); return; }
   if (!hiddenAt || QA || DEMO) return;
@@ -670,10 +675,20 @@ document.addEventListener('visibilitychange', () => {
   if (mode !== 'hub' || secs < 5) return;
   const before = c.videos, g = comeBack(c, secs);
   flush(true);
-  if (g.counted >= TUNE.idle.min && g.views >= 1 && !cardOpen()) openCard((close) => awayCard({ gain: g, done: c.videos - before, onClose: close }), 'While you were away');
+  if (g.counted >= TUNE.idle.min && g.views >= 1) {
+    const w = awayWaiting;
+    awayWaiting = w ? { gain: { views: w.gain.views + g.views, counted: w.gain.counted + g.counted, capped: w.gain.capped || g.capped }, done: w.done + c.videos - before } : { gain: g, done: c.videos - before };
+    showAway();
+  }
   if (save.daily !== today()) { save.daily = today(); grantBox(c, 'silver', 'daily'); flush(); }
   persist();
 });
+function showAway() {
+  if (!awayWaiting || mode !== 'hub' || shell.state !== 'play' || cardOpen()) return;
+  const w = awayWaiting;
+  awayWaiting = null;
+  openCard((close) => awayCard({ gain: w.gain, done: w.done, onClose: close }), 'While you were away');
+}
 addEventListener('pagehide', () => persist());
 
 const loop = createLoop({ step: 1 / 60, update: tick_, render: frame, paused: () => shell.state === 'pause' || (shell.state === 'over' && !DEMO), speed: () => qaSpeed });

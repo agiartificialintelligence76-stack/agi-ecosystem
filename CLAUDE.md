@@ -1,5 +1,19 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **GOING LIVE froze after coming back to it (2026-11-16):** the owner sent a screen recording: "there seems like a bug in
+> the game can u fix". Her room was there but nothing moved: the videos' timers stuck at 16s, six deliveries stuck, the
+> bar's pause button doing nothing, and AGI-1 nowhere to be seen. Cause: with the tab hidden for over a minute, the
+> arcade kit pauses the game and shows its pause card; coming back, GOING LIVE's "While you were away" card was put over
+> it (`shell.card` replaces what's showing), and its Nice closed the card with the game still paused and nothing on
+> screen to resume it from (the pause button only pauses, and a phone has no Esc key). Reproduced in a browser (the tab
+> hidden 70 seconds, then Nice: paused, no card, the clock stopped), then fixed: "While you were away" now waits for
+> Resume (`onResume`), GOING LIVE never opens a card of its own over the pause card, and the kit itself never leaves a
+> game paused with nothing showing (`closeCard()` while paused brings the pause card back, and so does the pause button
+> when there's no card). And she can't be lost behind her things any more: mostly hidden behind something nearer (her
+> kitchen counter, a bookshelf), she shows through it, faintly. Tests: `tests/arcade-kit.test.js` (the kit never leaves a
+> game paused with nothing on screen) and `tests/goinglive.test.js` (coming back never freezes it; she shows through); both
+> fail on the code from before. **No new setting, SQL, function or service.**
+
 > **GOING LIVE, reworked (2026-11-15, night):** the owner, after playing the rebuild: "this game is boring asf, the
 > original pewdiepie tuber simulator is more fun and the room have more space and that game actually made with life made
 > with human creative minds unlike this this is pure ai slop", then "take it down the site first then rework it then
@@ -10571,7 +10585,8 @@ leaderboards), and ChatGPT image generation allowed (not used: see below).
 | **ROBOTAXI RUSH** (`robotaxi`, racing) | An endless pseudo-3D synthwave highway through four zones (Dusk, Night City, Rain, Sunrise Coast; a checkpoint every 2 km). Near misses (+250, "SO CLOSE!" +500) chain up to ×10 and fill the boost (4 s: rammed cars fly off for +150); three shields; passenger pins (+500) and shield pickups. A guardian check keeps a way through. AGI-1's hair shows through the rear window; 47 lines; her face on billboards. | `config`, `track`, `traffic`, `sim`, `ai`, `camera`, `decor`, `zones`, `sprites`, `scenery`, `render`, `hud`, `sound`, `lines` | hold a side or drag to steer, the BOOST button (a second finger); ←/→ or A/D, ↑/W/Space boost |
 
 Every one of them: a title screen that plays itself behind its words, how to play (the **?**), pause (Esc / P, and by itself
-when the tab is hidden), AGI-1's own lines in her voice during a run and on its end card, a share on X (its words, never a
+when the tab is hidden; since 2026-11-16 a game is never left paused with nothing on screen: `shell.closeCard()` while
+paused brings the pause card back, and so does the bar's pause button when no card is showing), AGI-1's own lines in her voice during a run and on its end card, a share on X (its words, never a
 picture), its bests kept in this browser only (`agi_arcade:<game>`), and `?demo` (it plays itself: silent, nothing saved or
 counted; `?seed=n` repeats a run). Checked by their builders at 360 × 640 up to 2560 × 1440, phones held both ways, a tablet
 and a foldable's inner screen (884 × 1104), with "reduce motion" (no shake, flashes or pops), keyboard only, and the site's
@@ -10977,6 +10992,11 @@ Board, Records). On a phone held sideways all of that is a column on the right. 
 
 Keys: 1–3 an idea, ← → look around, S shop, D decorate, L go live, C collection, Z zoom; placing: the arrows, F flip,
 Space or Enter ✓, Backspace put it away; live: Space or Enter takes the most urgent thing.
+
+**Coming back** (2026-11-16, the owner's screen recording of a frozen game): the kit pauses the game when the tab's hidden;
+what her old videos earned meanwhile is added at once, and "While you were away" (over a minute away) waits until Resume.
+GOING LIVE never opens a card over the pause card (`openCard` returns while paused). She shows through, faintly, whatever
+nearer thing hides most of her (`render.js`, after the scene is drawn).
 
 **How it's built** (all in `src/games/goinglive/`; the rules never touch the page): `data.js` (topics, things and their
 points and rarities, the box finds, sets, boxes, homes and their looks, skills, awards, the board, `TUNE`), `titles.js`,
