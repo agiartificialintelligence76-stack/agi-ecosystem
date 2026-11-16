@@ -12,7 +12,15 @@
 > when there's no card). And she can't be lost behind her things any more: mostly hidden behind something nearer (her
 > kitchen counter, a bookshelf), she shows through it, faintly. Tests: `tests/arcade-kit.test.js` (the kit never leaves a
 > game paused with nothing on screen) and `tests/goinglive.test.js` (coming back never freezes it; she shows through); both
-> fail on the code from before. **No new setting, SQL, function or service.**
+> fail on the code from before. **No new setting, SQL, function or service.** **Published as `a7b0d4f` to `main` on
+> 2026-11-16** (with the owner's OK, through the branch `goinglive-rework`), after the full build passed the way Vercel runs
+> it (2,156 tests: 2,152 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check) and the built game passed
+> under the site's real CSP on a phone, a small phone, sideways and a computer. Vercel: the branch's preview
+> `ANwv2ytT3FZUogLEtKrw7AtDRWnw`, then production `5GEwJNKGiwDpVjuxeHgRdQTWmgP9`, both Ready. Live in the owner's Chrome
+> (their save set aside in the tab first and put back after, byte for byte): hidden, then back 70 seconds later: Paused;
+> Resume: "While you were away" (+2 views); Nice: playing, a new video's timer counting down, no console errors. (That
+> automated Chrome window drew about one frame a second, and the game's clock moves with its frames: slow there, never
+> stuck.)
 
 > **GOING LIVE, reworked (2026-11-15, night):** the owner, after playing the rebuild: "this game is boring asf, the
 > original pewdiepie tuber simulator is more fun and the room have more space and that game actually made with life made

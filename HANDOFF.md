@@ -9,7 +9,8 @@ seconds, Nice, the clock stopped). Fixed in `src/games/goinglive/game.js` (the a
 its own over the pause card) and, for every game, in `src/games/kit/shell.js` (`closeCard()` while paused shows the pause
 card again; the pause button shows it when nothing is showing). Also `render.js`: she shows through, faintly, a nearer
 thing that hides most of her (the recording's room had a kitchen counter at the front). Guarded by a test in
-`tests/arcade-kit.test.js` and one in `tests/goinglive.test.js` (both fail on the old code). See the top of `CLAUDE.md`.
+`tests/arcade-kit.test.js` and one in `tests/goinglive.test.js` (both fail on the old code). **Published as `a7b0d4f`**
+(production `5GEwJNKGiwDpVjuxeHgRdQTWmgP9`, Ready) and checked live in the owner's Chrome. See the top of `CLAUDE.md`.
 
 ## GOING LIVE, one new game, rebuilt, taken down and reworked — 2026-11-14 and 15
 
