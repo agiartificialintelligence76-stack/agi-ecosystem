@@ -16,7 +16,13 @@
 > the charts' own timeline). Recorded again: every note missed, the song exactly as decoded; every note hit, only the
 > FEVER chime added (11–20 dB under the song); tap sounds on, clean tones 20–27 dB under, no clicks; nothing clipped. A
 > song is now 3.7–9.6 MB to download (2.2–3.5 MB before). Tests: `tests/heartbeat.test.js`. **No new setting, SQL,
-> function or service.**
+> function or service.** **Published as `06486dc` to `main` on 2026-11-16** (with the owner's OK, through the branch
+> `heartbeat-sound`), after the full build passed the way Vercel runs it (2,157 tests: 2,153 passed, 4 skipped, 0 failed;
+> Vite, the share pages and the secret check) and the built game passed under the site's real CSP on a phone and a
+> computer (a run on the MP3 copy, the buffer `'balanced'`, no violations or errors). Vercel: the branch's preview
+> `38BwX5K94pP58dnLdQimnN1nxUH7`, then production `RmwEZJfqg5pDN8rmbVL9odbhNwrD`, both Ready. Live in the owner's Chrome
+> (the arcade muted, its keys put back after): a run of Feel the AGI on the new `feel-the-agi.mp3` (4.3 MB) and preview,
+> no `.m4a` loaded, no console errors.
 
 > **GOING LIVE froze after coming back to it (2026-11-16):** the owner sent a screen recording: "there seems like a bug in
 > the game can u fix". Her room was there but nothing moved: the videos' timers stuck at 16s, six deliveries stuck, the

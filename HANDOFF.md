@@ -7,7 +7,8 @@ or stutters; phone and computer). Measured by recording what the game sends to t
 AudioWorklet on the context's destination, against the song as the browser decoded it). Fixed: the originals' own MP3
 audio (`public/games/heartbeat/audio/<id>.mp3`, byte for byte, tags off; previews LAME V0 from the originals), no
 low-pass on a miss, tap sounds off unless chosen (a soft sine), a soft FEVER chime, song gain 0.8, and the kit's new
-`audioLatency` option ('balanced' for HEARTBEAT only). Same timeline as before in Chromium (0.00 ms). See the top of
+`audioLatency` option ('balanced' for HEARTBEAT only). Same timeline as before in Chromium (0.00 ms). **Published as
+`06486dc`** (production `RmwEZJfqg5pDN8rmbVL9odbhNwrD`, Ready) and checked live in the owner's Chrome. See the top of
 `CLAUDE.md`.
 
 ## GOING LIVE froze after coming back to it, fixed — 2026-11-16
