@@ -1,5 +1,7 @@
-import { TAU, clamp, ellipse, line, shape, rect, label, sky } from '../kit/garden-art.js';
+import { TAU, clamp, ellipse, line, shape, rect, label, sky, artwork, paintArtwork } from '../kit/garden-art.js';
 
+const hill=artwork(new URL('./scene.webp',import.meta.url));
+const groveTrees=artwork(new URL('./trees.webp',import.meta.url));
 const fruitNames=['Plum','Pear','Citrus'];
 const fruitColors=['#945d91','#cfd96c','#f5a34f'];
 const seasons=[
@@ -9,7 +11,7 @@ const seasons=[
   {name:'WINTER',top:'#afc6cc',bottom:'#e5dfca',leaves:['#6f8d82','#8fa99b','#b0c2aa'],grass:'#c8d1b4'},
 ];
 const sites=[[153,226],[322,205],[98,306],[283,298]];
-const tools=['Water','Graft','Pick'];
+const tools=['Water','Graft','Pick','Canal'];
 const totalDays=20;
 
 function fruit(ctx,x,y,k,s=1){
@@ -29,9 +31,14 @@ function tree(ctx,tree,i,t,season,selected){
  if(selected){
    ctx.strokeStyle='#f9edba';ctx.lineWidth=2.2;ctx.beginPath();ctx.ellipse(x,ground,41,13,-.06,0,TAU);ctx.stroke();
  }
+ const sway=Math.sin(t*.86+i)*1.1;
+ if(groveTrees?.naturalWidth){
+   const index=seasons.indexOf(season),w=groveTrees.naturalWidth/2,h=groveTrees.naturalHeight/2;
+   ctx.save();ctx.translate(x,y+9);ctx.rotate(sway*.0025);
+   ctx.drawImage(groveTrees,(index%2)*w,Math.floor(index/2)*h,w,h,-67,-118,134,126);ctx.restore();
+ }else{
  shape(ctx,[[x-6,y+2],[x-3,y-35],[x-13,y-56],[x-8,y-61],[x+2,y-42],[x+15,y-62],[x+19,y-59],[x+5,y-31],[x+7,y+2]],'#795c46');
  line(ctx,[[x-1,y-3],[x+1,y-29],[x-6,y-43]],'#a57c60',1.6);
- const sway=Math.sin(t*.86+i)*1.1;
  crown.forEach(([bx,by,r],j)=>{
    ellipse(ctx,x+bx+sway,y+by,r,r*.86,season.leaves[j%3]);
    for(let n=0;n<7;n++){
@@ -39,13 +46,14 @@ function tree(ctx,tree,i,t,season,selected){
      ellipse(ctx,x+dx+sway,y+dy,4,2.1,season.leaves[(j+n+1)%3],a*.5);
    }
  });
+ }
  if(tree.scion!==null){
    line(ctx,[[x+8,y-39],[x+18,y-48],[x+28,y-51]],'#846647',2.7);
    line(ctx,[[x+13,y-42],[x+16,y-38]],'#edc697',3.6);
  }
  const slots=[[-21,-53],[15,-60],[1,-80],[27,-43],[-9,-62]];
  tree.ripe.forEach((k,n)=>fruit(ctx,x+slots[n][0]+sway,y+slots[n][1],k,1.12));
- if(!tree.ripe.length){
+ if(!tree.ripe.length&&!groveTrees?.naturalWidth){
    for(let j=0;j<3;j++){
      const [bx,by]=slots[j];for(let n=0;n<5;n++){
        const a=n*TAU/5;ellipse(ctx,x+bx+Math.cos(a)*2.4+sway,y+by+Math.sin(a)*2.4,2.4,2,'#efdbc8');
@@ -57,16 +65,19 @@ export default {
  title:'POCKET GROVE',tagline:'Tend four little trees and fill fruit baskets before the year ends.',
  instructions:[
    ['One day, one action','Choose Water, Graft, or Pick, then choose a tree. You have five days in each of four seasons.'],
-   ['Keep branches growing','Water restores one tree and splashes nearby roots. Rain waters the whole orchard. Dry trees stop growing.'],
+   ['Dig irrigation canals','Choose Canal, then two trees. This takes one day and permanently links their roots. Water any linked tree to refill the whole network. The weather strip forecasts tomorrow.'],
+   ['Invite the bees','Watered trees of different varieties joined by a canal cross-pollinate. Three pollinations fill a honey jar for the harvest. Mixed grafts support more pairings.'],
    ['Fill the fruit baskets','Picking takes all ripe fruit. Graft the nursery variety onto a tree to grow mixed pairs. Complete the basket above for a bonus.'],
  ],
- keys:[['Q / W / E','Choose Water, Graft, or Pick'],['1 / 2 / 3 / 4','Use the tool on that tree']],
+ keys:[['Q / W / E / R','Choose Water, Graft, Pick, or Canal'],['1 / 2 / 3 / 4','Use the tool on that tree']],
  touch:[['Tap a tool, then a tree','Spend a day in the orchard']],
  create(api){
    const trees=[0,1,2,0].map((base,i)=>({base,scion:null,water:2,growth:i%2,ripe:i<3?[base]:[]}));
    const stock=[0,0,0];let demand=[1,1,1];
    let day=0,harvest=0,points=0,boxes=0,ended=false,tool=2,last=-1,t=0,aiWait=1.4;
-   let weather='Rain',scion=2,report='Pick ripe fruit for the market basket',reportAt=-1;
+   const canals=[];
+   let channelStart=-1,pollen=0,honey=0,waters=0;
+   let weather='Rain',tomorrow='Mild',scion=2,report='Pick ripe fruit for the market basket',reportAt=-1;
    const seasonIndex=()=>Math.min(3,Math.floor(day/5));
    function tally(){
      if(demand.every((n,k)=>stock[k]>=n)){
@@ -80,6 +91,11 @@ export default {
    }
    function grow(){
      const s=seasonIndex();
+     canals.forEach(([i,j])=>{
+       const a=trees[i],b=trees[j];
+       if(a.water>0&&b.water>0&&(a.base!==b.base||a.scion!==null||b.scion!==null))pollen++;
+     });
+     if(pollen>=3){const jars=Math.floor(pollen/3);pollen%=3;honey+=jars;points+=jars*45;report='Honey bottled  +'+jars*45;}
      trees.forEach(a=>{
        if(weather==='Rain') a.water=Math.min(3,a.water+1);
        if(a.water<=0)return;
@@ -92,10 +108,26 @@ export default {
        if(weather==='Dry'||(day%2===1&&weather!=='Rain'))a.water=Math.max(0,a.water-1);
      });
    }
+   function connected(i){
+     const visited=new Set([i]),queue=[i];
+     for(let n=0;n<queue.length;n++){
+       for(const [a,b] of canals){
+         const next=a===queue[n]?b:b===queue[n]?a:-1;
+         if(next>=0&&!visited.has(next)){visited.add(next);queue.push(next);}
+       }
+     }
+     return visited;
+   }
+   function chooseTool(k){tool=k;channelStart=-1;reportAt=t-3.2;api.sound('select');}
    function act(i){
      if(ended||i<0||i>=4)return;
      const a=trees[i];last=i;reportAt=t;
-     if(tool===2){
+     if(tool===3){
+       if(channelStart<0){channelStart=i;report='Join tree '+(i+1)+' to a second tree';api.sound('select');return;}
+       if(channelStart===i){channelStart=-1;report='Choose two different trees';return;}
+       if(connected(channelStart).has(i)){channelStart=-1;report='These roots already share water';return;}
+       canals.push([channelStart,i]);channelStart=-1;report='Canal opened · linked roots share water';api.sound('clear');
+     }else if(tool===2){
        if(a.ripe.length===0){report='Still flowering · pick another tree';api.sound('back');return;}
        const plucked=a.ripe.length;
        a.ripe.forEach(k=>stock[k]++);a.ripe=[];points+=plucked*14;harvest+=plucked;
@@ -107,19 +139,19 @@ export default {
        report='Grafted '+fruitNames[scion].toLowerCase()+' onto tree '+(i+1);
        api.sound('merge');
      }else{
-       a.water=3;
+       const wet=connected(i);wet.forEach(j=>trees[j].water=3);waters+=wet.size;
        for(let j=0;j<trees.length;j++){
          if(j!==i && Math.hypot(sites[j][0]-sites[i][0],sites[j][1]-sites[i][1])<190) trees[j].water=Math.min(3,trees[j].water+1);
        }
-       report='Watered tree '+(i+1)+' and nearby roots';api.sound('drop');
+       report=wet.size>1?'Water reached '+wet.size+' linked trees':'Watered tree '+(i+1)+' and nearby roots';api.sound('drop');
      }
      api.haptic(10);
      grow();day++;
      if(day>=totalDays){
-       ended=true;api.end(points,[['Baskets filled',boxes],['Fruit picked',harvest],['Mixed trees',trees.filter(a=>a.scion!==null).length]],'a whole year in the palm of your hand.');
+       ended=true;api.end(points,[['Baskets filled',boxes],['Fruit picked',harvest],['Mixed trees',trees.filter(a=>a.scion!==null).length],['Canals',canals.length],['Honey jars',honey],['Roots irrigated',waters]],'a whole year in the palm of your hand.');
      }else{
        const s=seasonIndex();
-       weather=api.rng()<(s===0?.5:s===1?.13:.34)?'Rain':s===1||api.rng()<.33?'Dry':'Mild';
+       weather=tomorrow;tomorrow=api.rng()<(s===0?.5:s===1?.13:.34)?'Rain':s===1||api.rng()<.33?'Dry':'Mild';
        scion=Math.floor(api.rng()*3);
      }
      hud();
@@ -128,7 +160,9 @@ export default {
    hud();
    function draw(ctx){
      const s=seasons[seasonIndex()];
-     sky(ctx,s.top,s.bottom,356);
+     const painted=paintArtwork(ctx,hill,0,0,480,366);
+     if(!painted)sky(ctx,s.top,s.bottom,366);
+     if(!painted){
      // Small distant hills and an isometric cutaway of the orchard soil.
      for(let i=0;i<8;i++)ellipse(ctx,i*82-30,157+Math.sin(i)*14,92,50,'rgba(131,163,137,.40)');
      shape(ctx,[[8,255],[285,127],[469,211],[468,249],[168,368],[10,296]],'#906d54');
@@ -144,12 +178,29 @@ export default {
        const x=14+a*263+b*163,y=253-a*119+b*74;
        line(ctx,[[x-2,y],[x,y+2],[x+2,y-1]],'#92a973',1.2);
      }
+     }
+     if(painted&&seasonIndex()>0){
+       ctx.fillStyle=['transparent','rgba(255,194,59,.08)','rgba(197,101,41,.15)','rgba(202,227,237,.27)'][seasonIndex()];
+       ctx.fillRect(0,0,480,367);
+     }
+     canals.forEach(([a,b])=>{
+       const [x,y]=sites[a],[xx,yy]=sites[b], points=[[x,y],[x+(xx-x)*.44,y+(yy-y)*.54+9],[xx,yy]];
+       line(ctx,points,'#574739',10);line(ctx,points,'#bda87b',7);line(ctx,points,'#72c6c2',4);
+       const p=(t*.35+a*.2)%1;ellipse(ctx,x+(xx-x)*p,y+(yy-y)*p+Math.sin(p*Math.PI)*5,3,1.6,'#dcfff3');
+     });
      [1,0,3,2].forEach(i=>tree(ctx,trees[i],i,t,s,last===i));
      // Paint the number plates last so a foreground crown never hides a key or water level.
      sites.forEach(([x,y],i)=>{
        rect(ctx,x-33,y+7,66,23,11,'#354e40');
        label(ctx,String(i+1),x-20,y+19,15,'#fff1d2','center');
        for(let j=0;j<3;j++)ellipse(ctx,x-5+j*11,y+19,3.6,4.7,trees[i].water>j?'#97d1c6':'#637766');
+     });
+     if(channelStart>=0){const [x,y]=sites[channelStart];ctx.strokeStyle='#ffdf8a';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,40,15,0,0,TAU);ctx.stroke();}
+     canals.forEach(([a,b],j)=>{
+       const p=.5+.5*Math.sin(t*1.8+j),[x,y]=sites[a],[xx,yy]=sites[b];
+       const bx=x+(xx-x)*p,by=y+(yy-y)*p-52+Math.sin(t*4+j)*9;
+       ellipse(ctx,bx,by,4,2.5,'#f4c052');ellipse(ctx,bx+2,by,1.2,2.1,'#45382d');
+       ellipse(ctx,bx-1,by-3,2.6,1.8,'#fff5cd',-.6);
      });
      if(weather==='Rain'){
        for(let i=0;i<22;i++){
@@ -159,36 +210,42 @@ export default {
      }
      rect(ctx,0,0,480,74,0,'#354f43');
      label(ctx,s.name+'   '+(day%5+1)+'/5',16,22,17,'#fff1d0');
-     label(ctx,weather==='Rain'?'Rain waters all trees':weather==='Dry'?'Dry · roots lose water':'Mild weather',16,50,16,'#d7dfba');
+     label(ctx,weather+'  →  '+tomorrow,16,50,16,'#d7dfba');
      label(ctx,'MARKET BASKET',304,18,15,'#eee4c4');
      demand.forEach((n,k)=>{
        const x=295+k*59;fruit(ctx,x,46,k,.94);
        label(ctx,Math.min(n,stock[k])+'/'+n,x+9,48,15,stock[k]>=n?'#cde99e':'#f7e7cc');
      });
+     rect(ctx,10,83,135,29,10,'rgba(61,68,48,.91)');
+     label(ctx,'Honey '+honey+'  ·  '+pollen+'/3',78,98,15,'#ffe5a5','center');
      rect(ctx,0,367,480,113,0,'#f4e5bf');
      label(ctx,report,240,386,16,'#3c5141','center','Georgia');
-     for(let i=0;i<3;i++){
-       const x=12+i*155,active=tool===i;
-       rect(ctx,x,407,147,55,11,active?'#3e5c47':'#ded4af');
-       label(ctx,['Q','W','E'][i]+'  '+tools[i],x+73,426,18,active?'#fff1d1':'#3d5142','center');
-       label(ctx,['Restore roots',fruitNames[scion]+' scion','Gather fruit'][i],x+73,448,15,active?'#d6e8b9':'#536149','center');
+     for(let i=0;i<4;i++){
+       const x=7+i*118,active=tool===i;
+       rect(ctx,x,407,111,55,11,active?'#3e5c47':'#ded4af');
+       label(ctx,['Q','W','E','R'][i]+' '+tools[i],x+55,426,16,active?'#fff1d1':'#3d5142','center');
+       label(ctx,['Restore roots',fruitNames[scion]+' scion','Gather fruit','Join trees'][i],x+55,448,13,active?'#d6e8b9':'#536149','center');
      }
    }
-   return {draw,update(dt){t+=dt;if(reportAt>=0&&t-reportAt>3.3){report=['Choose a tree to water','Add '+fruitNames[scion].toLowerCase()+' to a different tree','Choose a tree with ripe fruit'][tool];reportAt=-1;}},
+   return {draw,update(dt){t+=dt;if(reportAt>=0&&t-reportAt>3.3){report=['Choose a tree to water','Add '+fruitNames[scion].toLowerCase()+' to a different tree','Choose a tree with ripe fruit',channelStart<0?'Choose the start of a canal':'Choose the other end of the canal'][tool];reportAt=-1;}},
      pointer(type,x,y){
        if(type!=='down'||ended)return;
-       if(y>=406&&y<=465){tool=clamp(Math.floor(x/158),0,2);reportAt=t-3.2;api.sound('select');return;}
+       if(y>=406&&y<=465){chooseTool(clamp(Math.floor(x/118),0,3));return;}
        if(y<82||y>353)return;
        const nearest=sites.map(([px,py],i)=>({i,d:Math.hypot((px-x)/48,(py-39-y)/65)})).sort((a,b)=>a.d-b.d)[0];
        if(nearest.d<1.15)act(nearest.i);
      },
      key(type,code){
        if(type!=='down'||ended)return;
-       if(['KeyQ','KeyW','KeyE'].includes(code)){tool=['KeyQ','KeyW','KeyE'].indexOf(code);reportAt=t-3.2;api.sound('select');}
+       if(['KeyQ','KeyW','KeyE','KeyR'].includes(code))chooseTool(['KeyQ','KeyW','KeyE','KeyR'].indexOf(code));
        if(/^Digit[1234]$/.test(code))act(Number(code.slice(-1))-1);
      },
      demo(dt){
        aiWait-=dt;if(aiWait>0||ended)return;
+       if([1,5,9].includes(day)&&canals.length<3){
+         const edge=[[0,1],[1,2],[2,3]].find(([a,b])=>!connected(a).has(b));
+         tool=3;act(edge[0]);act(edge[1]);aiWait=1.1;return;
+       }
        let choice=0,move=2,best=-1;
        trees.forEach((a,i)=>{
          const pick=a.ripe.reduce((n,k)=>n+(stock[k]<demand[k]?1.55:1),0);

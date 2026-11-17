@@ -3,4 +3,4 @@ import { createShell } from '../kit/shell.js';
 import { mountCartridge } from '../kit/cartridge.js';
 import game from './game.js';
 
-mountCartridge('pearlshift', game, (options) => createShell({ game: 'pearlshift', ...options }));
+mountCartridge('pearlshift', game, (options) => createShell({ game: 'pearlshift', ...options }), new URL('./scenery.webp', import.meta.url).href);

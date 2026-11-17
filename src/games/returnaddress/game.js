@@ -1,98 +1,179 @@
-import { clip, mix, type, line, oval, polygon, gradient, panel } from '../kit/illustration.js';
+import { clip, mix, type, line, oval, polygon, gradient, panel, painting, TAU } from '../kit/illustration.js';
+import { laneAt, shotPower, stampPoints } from './sort.js';
 
-const STAMPS=[['DAWN','#ffca7c','sun'],['BLOOM','#ff9c97','flower'],['LUNA','#a9ceff','moon'],['LEAF','#a5dc91','leaf']];
-const depth=(x,y,z)=>{const scale=1/(1+z*1.09);return [240+x*scale,218+y*scale];};
-function emblem(c,x,y,size,kind,color){
-  c.save();c.translate(x,y);c.scale(size,size);
-  if(kind==='sun'){for(let i=0;i<10;i++){c.rotate(Math.PI/5);line(c,[[0,-.62],[0,-.96]],color,.12);}oval(c,0,0,.43,.43,color);}
-  if(kind==='flower'){for(let i=0;i<6;i++){c.rotate(Math.PI/3);oval(c,0,-.4,.27,.44,color);}oval(c,0,0,.24,.24,'#e4c584');}
-  if(kind==='moon'){oval(c,0,0,.75,.75,color);oval(c,.36,-.23,.61,.61,'#294c4a');}
-  if(kind==='leaf'){polygon(c,[[-.7,.6],[-.52,-.15],[-.12,-.64],[.76,-.78],[.59,.14],[.1,.63]],color);line(c,[[-.8,.75],[.44,-.42]],'#36594b',.09);}
+const hall=painting(new URL('./scene.webp',import.meta.url));
+const STAMPS=[['DAWN','#fbd180'],['BLOOM','#ffa49e'],['LUNA','#b3cfff'],['LEAF','#b9e3a1']];
+const depth=(x,y,z)=>{const scale=1/(1+z*.97);return [240+x*scale,214+y*scale];};
+const clampAim=(v,axis)=>clip(v,axis==='x'?-146:-99,axis==='x'?146:99);
+function seal(c,x,y,s,kind,color){
+  c.save();c.translate(x,y);c.scale(s,s);
+  if(kind===0){
+    for(let i=0;i<10;i++){c.rotate(Math.PI/5);line(c,[[0,-.65],[0,-.98]],color,.1);}
+    oval(c,0,0,.45,.45,color);
+  }else if(kind===1){
+    for(let i=0;i<6;i++){c.rotate(Math.PI/3);oval(c,0,-.39,.25,.47,color);}oval(c,0,0,.24,.24,'#e5be73');
+  }else if(kind===2){oval(c,0,0,.77,.77,color);oval(c,.34,-.25,.61,.61,'#284745');}
+  else {polygon(c,[[-.75,.65],[-.5,-.1],[-.1,-.69],[.76,-.78],[.59,.14],[.1,.62]],color);line(c,[[-.75,.7],[.45,-.41]],'#42564b',.09);}
   c.restore();
 }
+function stamp(c,target,kind,express){
+  const [sx,sy]=depth(target.x,target.y,1),[name,tint]=STAMPS[kind];
+  const w=express?18:23,h=express?21:25;
+  panel(c,sx-w,sy-h,w*2,h*2,tint,1.5);panel(c,sx-w+3,sy-h+3,w*2-6,h*2-6,'#284745',1);
+  for(let i=-w+3;i<w;i+=5){oval(c,sx+i,sy-h,1.4,1.4,'#344741');oval(c,sx+i,sy+h,1.4,1.4,'#344741');}
+  seal(c,sx,sy-3,express?10:13,kind,tint);type(c,express?'AIR':name,sx,sy+h-7,9,tint,'center','Georgia');
+  if(express)line(c,[[sx-w-2,sy-h+9],[sx-w-9,sy-h+9],[sx-w-14,sy-h+4]],tint,1.7);
+}
 export default {
-  title:'RETURN ADDRESS',tagline:'Play squash in the night sorting office. Send every parcel back stamped.',
-  instructions:[['Serve the parcel','Move the paddle and tap or press Space to serve.'],['Read the flight','The dotted guide marks where the parcel will reach your paddle. Catch it before it passes.'],['Stamp your returns','Hit off-center to steer toward the illustrated stamp. Print all twelve before you lose three parcels.']],
-  keys:[['Arrows / WASD','Move paddle'],['Space','Serve']],touch:[['Drag','Move paddle'],['Tap','Serve']],
+  title:'RETURN ADDRESS',tagline:'One parcel, two destinations. Play the safe stamp or bank an express delivery past the mailbags.',
+  instructions:[
+    ['Sort the outgoing mail','At the dock, aim at a stamp on the back wall. Tap and release to send, or hold until the meter turns gold for a power shot. Keyboard uses arrows and Space.'],
+    ['Choose your route','Switch between Direct and Bank. From the third delivery the winged AIR stamp counts twice if you bank it. From the fifth, crossing mailbags deflect ordinary shots. A gold power shot passes through.'],
+    ['Catch the return','Move the paddle to the dotted landing mark before the parcel reaches you. After a catch the next dispatch leaves automatically when its timer runs out. Send twelve letters with three parcels.'],
+  ],
+  keys:[['Arrows / WASD','Aim or move paddle'],['Space','Hold and release shot'],['B','Direct or bank']],
+  touch:[['Touch the back wall','Aim, hold and release'],['Direct / Bank','Select route'],['Drag in flight','Catch the parcel']],
   create(api){
-    let x=0,y=0,z=0,dx=0,dy=0,dz=0,px=0,py=10,aimX=0,aimY=10,age=0,score=0,lives=3,count=0,high=0,printed=0;
-    let target={x:0,y:-25},kind=0,state='serve',flash=0,notice='',timer=0,trail=[],sample=0;
-    const held=new Set();
-    function setStamp(){kind=(kind+1)%4;target={x:(api.rng()-.5)*200,y:(api.rng()-.5)*167};}
-    function hud(){api.hud('Postage',score,'Parcels',lives);}
-    function serve(){
-      if(state!=='serve')return;
-      state='rally';x=px;y=py;z=.025;dz=.76;dx=(target.x-x)*dz;dy=(target.y-y)*dz;trail=[];api.sound('pop');
+    let phase='ready',bank=false,held=false,charged=0,clock=0,window=Infinity,flash=0,tip='',tipTime=0;
+    let px=0,py=12,moveX=0,moveY=12,aim={x:0,y:0},target={x:0,y:0},express={x:100,y:15},kind=0;
+    let x=0,y=12,z=0,dx=0,dy=0,pace=.8,origin={x:0,y:12},dest={x:0,y:0},banked=false,strong=false,bagged=false;
+    let score=0,lives=3,printed=0,streak=0,high=0,airmail=0,rally=0,autoTime=0,paper=[],trail=[],sample=0;
+    const keys=new Set();
+    const hud=()=>api.hud('Delivered',printed+'/12','Parcels',lives);
+    const expressOpen=()=>printed>=2;
+    function rack(){
+      kind=(kind+1)%4;const sign=api.rng()>.5?1:-1;
+      target={x:sign*(24+api.rng()*78),y:(api.rng()-.5)*148};
+      express={x:-sign*(75+api.rng()*57),y:(api.rng()-.5)*155};
     }
-    function rebound(paddleX,paddleY){
-      const offX=x-paddleX,offY=y-paddleY;
-      if(Math.abs(offX)>63||Math.abs(offY)>49){lives--;high=Math.max(high,count);hud();
-        if(!lives){state='done';api.end(score,[['Longest rally',high],['Stamps printed',printed]],'postmarked and delivered. meet you on the night shift?');}
-        else {state='serve';notice='Parcel lost';timer=1;count=0;}return;}
-      count++;high=Math.max(high,count);score+=5+Math.min(count,20);hud();
-      dz=Math.min(1.4,.8+count*.04);
-      dx=clip(offX*3.2+dx*.15,-195,195);dy=clip(offY*3.5+dy*.15,-160,160);
-      z=.008;api.sound('tap');api.haptic(10);
+    function bag(){return {x:Math.sin(clock*1.6)*135,y:Math.cos(clock*.85)*44};}
+    function announce(msg){tip=msg;tipTime=1.18;}
+    function end(){phase='done';api.end(score,[['Letters delivered',printed+' / 12'],['Express routes',airmail],['Longest streak',high]],
+      printed===12?'last collection made it. the post office cat approves.':'i kept your best stamp on the noticeboard.');}
+    function dispatch(){
+      if(phase!=='ready')return;
+      origin={x:px,y:py};dest={...aim};banked=bank;strong=held&&shotPower(charged)>=.73;
+      held=false;phase='out';z=0;bagged=false;trail=[];pace=Math.min(1.22,.69+.032*rally+(strong?.11:0));
+      if(strong)announce('Gold dispatch');api.sound(strong?'power':'pop');
     }
-    function step(dt){
-      age+=dt;timer=Math.max(0,timer-dt);flash=Math.max(0,flash-dt*2.6);
-      const ax=(held.has('ArrowRight')||held.has('KeyD')?1:0)-(held.has('ArrowLeft')||held.has('KeyA')?1:0);
-      const ay=(held.has('ArrowDown')||held.has('KeyS')?1:0)-(held.has('ArrowUp')||held.has('KeyW')?1:0);
-      aimX=clip(aimX+ax*290*dt,-194,194);aimY=clip(aimY+ay*265*dt,-141,141);
-      px=mix(px,aimX,1-Math.exp(-25*dt));py=mix(py,aimY,1-Math.exp(-25*dt));
-      if(state==='serve'){x=px;y=py;z=.035;return;}
-      if(state!=='rally')return;
-      x+=dx*dt;y+=dy*dt;z+=dz*dt;
-      if(Math.abs(x)>182){x=clip(x,-182,182);dx=-Math.sign(x)*Math.abs(dx);}
-      if(Math.abs(y)>130){y=clip(y,-130,130);dy=-Math.sign(y)*Math.abs(dy);}
-      if(z>=1 && dz>0){
-        z=1;dz*=-1;
-        if(Math.abs(x-target.x)<55&&Math.abs(y-target.y)<53){printed++;score+=50+10*Math.min(8,count);notice='Postmarked!  +'+(50+10*Math.min(8,count));timer=.85;flash=1;
-          api.sound('merge');setStamp();hud();
-          if(printed===12){state='done';api.end(score,[['Longest rally',high],['Stamps printed',printed]],'every parcel made the last collection.');}}
-        else api.sound('tick');
+    function delivery(){
+      let hit='';
+      if(!bagged){
+        if(Math.hypot(x-target.x,y-target.y)<44)hit='standard';
+        else if(expressOpen()&&Math.hypot(x-express.x,y-express.y)<34)hit=banked?'air':'unsealed';
       }
-      if(z<=0&&dz<0)rebound(px,py);
-      if((sample+=dt)>.028){sample=0;trail.push(depth(x,y,z));if(trail.length>9)trail.shift();}
+      if(hit==='standard'||hit==='air'){
+        const expressHit=hit==='air';streak++;high=Math.max(high,streak);airmail+=Number(expressHit);
+        const points=stampPoints(expressHit,banked,streak,strong);score+=points;
+        printed=Math.min(12,printed+(expressHit?2:1));hud();flash=.8;announce((expressHit?'AIR MAIL':'Postmarked')+'   +'+points);
+        const [sx,sy]=depth(x,y,1);
+        for(let i=0;i<12;i++){const a=i*TAU/12;paper.push({x:sx,y:sy,vx:Math.cos(a)*50,vy:Math.sin(a)*47-30,t:.65});}
+        api.sound(expressHit?'combo':'merge');api.haptic(10);if(printed===12){end();return;}rack();
+      }else{streak=0;announce(hit==='unsealed'?'AIR needs a bank shot':bagged?'Sorting bag intercepted':'Missed the stamp');api.sound('tick');}
+      phase='in';z=1;
+      // A return comes off its destination with a new, visible landing point.
+      const spread=70+Math.min(rally,12)*7;
+      const dropX=clip(x+(api.rng()-.5)*spread*2,-171,171),dropY=clip(y+(api.rng()-.5)*spread*1.8,-123,123);
+      dx=dropX-x;dy=dropY-y;
     }
-    function predict(p,v,t,bound){const width=bound*2;let n=((p+v*t+bound)%(width*2)+width*2)%(width*2);return (n<=width?n:width*2-n)-bound;}
-    function intercept(){const delay=dz<0?-z/dz:0;return [predict(x,dx,delay,182),predict(y,dy,delay,130)];}
+    function catchParcel(){
+      if(Math.abs(x-px)>54||Math.abs(y-py)>43){
+        lives--;streak=0;rally=0;hud();api.sound('hurt');if(!lives){end();return;}announce('Parcel lost');window=Infinity;
+      }else{rally++;score+=6;api.sound('bounce');window=clip(4-rally*.12,2.5,4);}
+      phase='ready';z=0;held=false;charged=0;aim={x:clip(aim.x,-145,145),y:clip(aim.y,-95,95)};trail=[];autoTime=0;
+    }
+    function steer(k){
+      const sx=Number(keys.has('ArrowRight')||keys.has('KeyD'))-Number(keys.has('ArrowLeft')||keys.has('KeyA'));
+      const sy=Number(keys.has('ArrowDown')||keys.has('KeyS'))-Number(keys.has('ArrowUp')||keys.has('KeyW'));
+      if(phase==='ready'){aim.x=clampAim(aim.x+sx*k*174,'x');aim.y=clampAim(aim.y+sy*k*174,'y');}
+      else{moveX=clip(moveX+sx*k*346,-185,185);moveY=clip(moveY+sy*k*318,-140,140);}
+    }
+    function setAim(u,v){aim={x:clampAim((u-240)*1.97,'x'),y:clampAim((v-214)*1.97,'y')};}
+    function paddle(u,v){moveX=clip(u-240,-185,185);moveY=clip(v-214,-140,140);}
     hud();
     return {
-      update:step,
-      draw(c){
-        gradient(c,0,0,480,480,['#192e31','#335956','#132d32']);
-        type(c,'NIGHT MAIL',22,24,16,'#f7cf8c','left');type(c,'COURT   /   01',458,24,15,'#a5c8b5','right');
-        const bounds=[[-208,-155],[208,-155],[208,155],[-208,155]];
-        const far=bounds.map(([xx,yy])=>depth(xx,yy,1)), near=bounds.map(([xx,yy])=>depth(xx,yy,0));
-        polygon(c,far,'#294c4a','#f2cf94',1.6);
-        for(let n=0;n<4;n++){const i=(n+1)%4;polygon(c,[near[n],near[i],far[i],far[n]],['#344844','#485e52','#617366','#4d6661'][n],'#9ebea1',1);}
-        for(let k=0;k<8;k++){const d=k/8;const box=bounds.map(([xx,yy])=>depth(xx,yy,d));line(c,[...box,box[0]],'#d2e3bd42');}
-        for(let i=-150;i<200;i+=50){line(c,[depth(i,155,0),depth(i,155,1)],'#cad9b262');line(c,[depth(i,-155,0),depth(i,-155,1)],'#b3c8a530');}
-        const [sx,sy]=depth(target.x,target.y,1), [name,col,shape]=STAMPS[kind];
-        panel(c,sx-26,sy-27,52,54,col,2);panel(c,sx-22,sy-23,44,46,'#294c4a',1);
-        for(let i=-23;i<=23;i+=7){oval(c,sx+i,sy-27,2,2,'#294c4a');oval(c,sx+i,sy+27,2,2,'#294c4a');}
-        emblem(c,sx,sy-4,15,shape,col);type(c,name,sx,sy+17,9,col,'center','Georgia');
-        const [ix,iy]=intercept();
-        if(dz<0&&state==='rally'){const [ex,ey]=depth(ix,iy,0);c.setLineDash([3,6]);line(c,[depth(x,y,z),[ex,ey]],'#ffe5a381',1.5);c.setLineDash([]);oval(c,ex,ey,12,8,null,'#f4dca6',2);}
-        if(state==='rally')trail.forEach(([tx,ty],i)=>oval(c,tx,ty,2+i*.6,2+i*.6,'#ffce8d5e'));
-        const [bx,by]=depth(x,y,z), s=14/(1+z);
-        c.save();c.translate(bx,by);c.rotate(state==='rally'?age*2:.1);
-        polygon(c,[[-s,-s*.65],[s,-s*.65],[s,s*.65],[-s,s*.65]],'#fff2d1','#573d3b',1.8);
-        line(c,[[-s,-s*.65],[0,s*.1],[s,-s*.65]],'#ab6a54',1.2);c.restore();
-        const [cx,cy]=depth(px,py,0);
-        panel(c,cx-47,cy-33,94,66,'#b9f2d229',10);
-        c.strokeStyle='#fbddb0';c.lineWidth=2.5;c.stroke();
-        for(let j=-28;j<44;j+=13)line(c,[[cx+j,cy-30],[cx+j,cy+30]],'#abcdbd58',1);
-        for(let j=-20;j<30;j+=13)line(c,[[cx-45,cy+j],[cx+45,cy+j]],'#abcdbd58',1);
-        panel(c,15,391,450,74,'#192e31');
-        type(c,timer>0?notice:state==='serve'?'Tap to serve':'Rally  '+String(count).padStart(2,'0'),34,417,23,'#ffe7c2','left','Georgia');
-        type(c,'STAMP '+Math.min(printed+1,12)+' / 12',443,410,13,'#b6d0bd','right');type(c,name,443,435,17,col,'right');
-        type(c,state==='serve'?'Drag or use arrows to move':'Catch the dotted landing mark',34,443,15,'#b8cdbb','left');
+      cancelInput(){held=false;charged=0;keys.clear();},
+      update(dt){
+        if(phase==='done')return;clock+=dt;flash=Math.max(0,flash-dt*2);tipTime=Math.max(0,tipTime-dt);
+        steer(dt);px=mix(px,moveX,1-Math.exp(-24*dt));py=mix(py,moveY,1-Math.exp(-24*dt));
+        paper=paper.filter(p=>(p.t-=dt)>0);paper.forEach(p=>{p.x+=p.vx*dt;p.y+=p.vy*dt;p.vy+=96*dt;});
+        if(phase==='ready'){x=px;y=py;if(held)charged+=dt;if(Number.isFinite(window)&&(window-=dt)<=0)dispatch();return;}
+        if(phase==='out'){
+          const before=z;z=Math.min(1,z+dt*pace);const p=laneAt(origin,dest,banked,z);x=p.x;y=p.y;
+          if(printed>=4&&before<.55&&z>=.55){
+            const obstacle=bag();if(!strong&&Math.abs(x-obstacle.x)<35&&Math.abs(y-obstacle.y)<30){bagged=true;api.sound('hit');}
+          }
+          if(bagged)y+=32*Math.max(0,z-.55)/.45;
+          if(z===1)delivery();
+        }else if(phase==='in'){
+          const d=Math.min(z,dt*pace);x+=dx*d;y+=dy*d;z-=d;if(z<=0)catchParcel();
+        }
+        if((sample+=dt)>.035){sample=0;trail.push(depth(x,y,z));if(trail.length>9)trail.shift();}
       },
-      pointer(t,x,y){if(t==='down'||t==='move'){aimX=clip(x-240,-194,194);aimY=clip(y-218,-141,141);}if(t==='down')serve();},
-      key(t,k){if(t==='up'){held.delete(k);return;}held.add(k);if(k==='Space'||k==='Enter')serve();},
-      demo(){if(state==='serve'&&age>1){serve();}if(dz<0&&state==='rally'){const [ex,ey]=intercept();aimX=clip(ex-(target.x-ex)*.27,-194,194);aimY=clip(ey-(target.y-ey)*.26,-141,141);}}
+      draw(c){
+        gradient(c,0,0,480,480,['#223a3b','#43625c','#242c30']);hall(c,0,0,480,400);
+        const corners=[[-200,-149],[200,-149],[200,149],[-200,149]];
+        const far=corners.map(([u,v])=>depth(u,v,1)),near=corners.map(([u,v])=>depth(u,v,0));
+        polygon(c,far,'#1e3b3adb','#e9c38d',2);
+        if(flash>0){c.save();c.globalAlpha=flash*.32;line(c,[...far,far[0]],'#ffe2a2',5);c.restore();}
+        for(let i=0;i<4;i++){line(c,[near[i],far[i]],'#e9dbb783',1.8);}
+        for(let k=0;k<5;k++){const a=k/5;line(c,[depth(-200,149,a),depth(200,149,a)],'#f8e0b25e');}
+        panel(c,13,10,220,35,'#1b3534dd');type(c,'The night sorting office',25,28,18,'#f9e3bc','left','Georgia');
+        panel(c,328,10,140,35,'#1b3534dd');type(c,'BAG  '+String(printed+1).padStart(2,'0')+' / 12',398,28,15,'#f9dfab');
+        stamp(c,target,kind,false);if(expressOpen())stamp(c,express,(kind+2)%4,true);
+        if(printed>=4){
+          const b=bag(),[sx,sy]=depth(b.x,b.y,.55);
+          line(c,[[sx,82],[sx,sy-15]],'#a48d72',1.5);polygon(c,[[sx-12,sy-14],[sx+11,sy-14],[sx+16,sy+8],[sx+11,sy+16],[sx-13,sy+16],[sx-17,sy+7]],'#a96c4d','#654935',1.5);
+          line(c,[[sx-9,sy-11],[sx+10,sy-11]],'#edd09a',2);
+        }
+        if(phase==='ready'){
+          const points=[];for(let i=0;i<=32;i++){const d=i/32,p=laneAt({x:px,y:py},aim,bank,d);points.push(depth(p.x,p.y,d));}
+          c.setLineDash([4,5]);line(c,points,bank?'#ffcf84':'#b5f3df',2);c.setLineDash([]);
+          const [u,v]=points.at(-1);oval(c,u,v,9,9,null,'#fff3c3',2);
+        }else if(phase==='in'){
+          const [ex,ey]=depth(x+dx*z,y+dy*z,0);c.setLineDash([3,6]);line(c,[depth(x,y,z),[ex,ey]],'#ffefafc7',2);c.setLineDash([]);
+          oval(c,ex,ey,16,9,null,'#ffdf92',2.5);
+        }
+        trail.forEach(([u,v],i)=>oval(c,u,v,2+i*.52,2+i*.52,strong?'#ffd987a8':'#e4ead381'));
+        const [cx,cy]=depth(px,py,0);
+        panel(c,cx-46,cy-30,92,60,'#9af0cd35',10);c.strokeStyle='#fff0c7';c.lineWidth=2.2;c.stroke();
+        for(let j=-32;j<43;j+=14)line(c,[[cx+j,cy-26],[cx+j,cy+26]],'#b1dfce6b');
+        const [u,v]=depth(x,y,z),s=14/(1+z);
+        c.save();c.translate(u,v);c.rotate(phase==='ready'?-.12:clock*2);polygon(c,[[-s,-s*.7],[s,-s*.7],[s,s*.7],[-s,s*.7]],'#fff0cd','#834b3b',1.6);
+        line(c,[[-s,-s*.7],[0,s*.16],[s,-s*.7]],'#a76e57',1.2);oval(c,0,s*.14,2,2,'#b4483f');c.restore();
+        paper.forEach(p=>polygon(c,[[p.x,p.y-3],[p.x+3,p.y],[p.x,p.y+3],[p.x-2,p.y]],'#ffcf87'));
+        panel(c,0,387,480,93,'#19332f',0);
+        type(c,tipTime>0?tip:phase==='ready'?'Aim at a stamp, release to send':phase==='in'?'Catch the dotted mark':'Out for delivery',16,409,20,'#fce4b8','left','Georgia');
+        if(phase==='ready'){
+          panel(c,13,431,144,38,bank?'#d5a46d':'#bdd9bd');type(c,bank?'↳ Bank route':'→ Direct route',85,450,16,'#263d34');
+          type(c,held?'Power':'Hold for power',173,439,13,'#e7d9bf','left');panel(c,173,451,161,8,'#526556',3);panel(c,173+161*.73,451,161*.27,8,'#b99551',3);
+          if(held){const w=shotPower(charged)*161;if(w>.1)panel(c,173,451,w,8,'#ffe5a6',3);}
+          type(c,Number.isFinite(window)?window.toFixed(1)+'s':'Ready',459,450,17,'#d2e5cf','right');
+        }else{
+          type(c,expressOpen()?'AIR counts twice on a bank':'Two letters unlock air mail',17,451,16,'#bed9c7','left');
+          type(c,'×'+streak,458,451,20,'#f8cc87','right');
+        }
+      },
+      pointer(a,u,v){
+        if(phase==='ready'){
+          if(a==='down'&&v>=426&&u<161){bank=!bank;api.sound('select');return;}
+          if(a==='down'&&v<387){setAim(u,v);held=true;charged=0;}
+          if(a==='move'&&held)setAim(u,v);
+          if(a==='up'&&held){setAim(u,v);dispatch();}
+          if(a==='cancel')held=false;
+        }else if(a==='move'||a==='down')paddle(u,v);
+      },
+      key(a,k){
+        if(a==='up'){keys.delete(k);if((k==='Space'||k==='Enter')&&held&&phase==='ready')dispatch();return;}
+        keys.add(k);if(phase==='ready'&&k==='KeyB'){bank=!bank;api.sound('select');}
+        if(phase==='ready'&&(k==='Space'||k==='Enter')){held=true;charged=0;}
+      },
+      demo(dt){
+        if(phase==='ready'){
+          autoTime+=dt;bank=expressOpen();aim={...(bank?express:target)};held=true;
+          if(autoTime>1.03){dispatch();autoTime=0;}
+        }else if(phase==='in'){moveX=clip(x+dx*z,-185,185);moveY=clip(y+dy*z,-140,140);}
+      }
     };
   }
 };

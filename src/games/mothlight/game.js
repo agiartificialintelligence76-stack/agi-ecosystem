@@ -1,5 +1,6 @@
-import { TAU, clamp, ellipse, line, shape, rect, label, sky, halo } from '../kit/garden-art.js';
+import { TAU, clamp, ellipse, line, shape, rect, label, sky, halo, artwork, paintArtwork } from '../kit/garden-art.js';
 
+const conservatory = artwork(new URL('./scene.webp', import.meta.url));
 const lenses = [
   { name: 'Amber', symbol: '◆', color: '#ffc572', glow: 'rgba(255,181,86,.36)' },
   { name: 'Mint', symbol: '●', color: '#a1efc4', glow: 'rgba(114,244,176,.36)' },
@@ -9,12 +10,12 @@ const species = ['Tiger silk', 'Moon lace', 'Orchid veil', 'Copper eye', 'Jade c
 const lampX = [84, 240, 396];
 const lanternY = [277, 247, 277];
 
-function moth(ctx, x, y, kind, t, scale = 1, bank = 0) {
+function moth(ctx, x, y, kind, t, scale = 1, bank = 0, spread = null) {
   const ink = lenses[kind % 3].color;
   ctx.save();
   ctx.translate(x, y);
   ctx.rotate(bank);
-  ctx.scale(scale * (.68 + .32 * Math.abs(Math.cos(t * 8))), scale);
+  ctx.scale(scale * (.52 + .48 * (spread ?? Math.abs(Math.cos(t * 8)))), scale);
   for (const side of [-1, 1]) {
     ctx.save();
     ctx.scale(side, 1);
@@ -30,6 +31,12 @@ function moth(ctx, x, y, kind, t, scale = 1, bank = 0) {
     ellipse(ctx, 21, -8, kind % 3 === 0 ? 5 : 3, 3, '#514660', -.45);
     ellipse(ctx, 21, -9, 1.4, 1.4, '#fff7d1');
     ellipse(ctx, 11, 6, 3, 2, '#6e6669');
+    for (let vein=0;vein<4;vein++) {
+      const tip=10+vein*6;
+      line(ctx,[[3,0],[tip*.63,-4],[tip,-9-vein*2]],'#63556a',.8);
+      ellipse(ctx,tip,-10-vein*2,1.8,.9,'#fff2c1',-.3);
+    }
+    ellipse(ctx,11,6,1.5,1.2,'#f6dfa0');
     line(ctx, [[0,-4],[4,-12],[8,-14]], ink, 1.4);
     ctx.restore();
   }
@@ -39,6 +46,14 @@ function moth(ctx, x, y, kind, t, scale = 1, bank = 0) {
 }
 
 function scene(ctx, t, stars) {
+  if (paintArtwork(ctx, conservatory,0,0,480,384)) {
+    for(let i=0;i<24;i++){
+      const [sx,sy,r]=stars[i],x=sx+Math.sin(t*.4+i)*9,y=sy+95+Math.cos(t*.7+i)*12;
+      ctx.globalAlpha=.32+.25*Math.sin(t+i);ellipse(ctx,x,y,r,r,'#fffbc1');
+    }
+    ctx.globalAlpha=1;
+    return;
+  }
   sky(ctx, '#13263c', '#46546c');
   halo(ctx, 350, 76, 113, 'rgba(232,239,207,.19)', 'rgba(230,240,210,0)');
   ellipse(ctx, 350, 76, 25, 25, '#f8ebc3');
@@ -66,19 +81,36 @@ function scene(ctx, t, stars) {
 }
 export default {
   title: 'MOTHLIGHT',
-  tagline: 'Change the lantern glass. See who visits after dark.',
+  tagline: 'Lure wild silk moths into a moonlit glasshouse, then catch the instant their wings unfold.',
   instructions: [
     ['Watch the visitors', 'Each moth follows a dotted path to a lantern. Its symbol tells you which glass it loves.'],
     ['Turn the glass', 'Tap a lantern to cycle ◆ amber, ● mint, and ✦ lilac. Give the new glass a moment to warm up.'],
-    ['Fill the field journal', 'Attract six species before dawn. Unbroken visits and first sightings earn bonuses.'],
+    ['Photograph a landing', 'Tap the perched moth, or press Q, W, or E. When the viewfinder turns gold, its wings are open. Three film frames recharge over time.'],
+    ['Shoot the assignment', 'Photograph the species named on the film strip for extra film and points. Sharp exposures build a cover photo streak.'],
   ],
-  keys: [['1 / 2 / 3', 'Cycle the left, middle, or right lantern']],
-  touch: [['Tap a lantern', 'Cycle its colored glass']],
+  keys: [['1 / 2 / 3', 'Cycle lantern glass'], ['Q / W / E','Photograph a moth on that lamp']],
+  touch: [['Tap a lantern', 'Cycle its colored glass'], ['Tap a perched moth','Take a photograph']],
   create(api) {
     const lights = [0,1,2], warm = [0,0,0], flashes = [0,0,0], visitors = [], journal = new Set();
     const stars = Array.from({length: 43}, () => [api.rng()*480, 43+api.rng()*133, .6+api.rng()]);
     let t = 0, spawnAt = 0, count = 0, points = 0, landed = 0, streak = 0, high = 0, ended = false;
     let note = 'Follow each moth’s symbol to its lamp', noteTime = 3, aiWait = 0;
+    let film=3,recharge=0,frames=0,sharp=0,assignments=0,shutter=0,photos=[],target=0;
+    const openWing = v => .5+.5*Math.cos(v.depart*5.4+v.phase);
+    function shoot(lane) {
+      if(ended)return;
+      const moth=visitors.find(v=>v.lane===lane && v.landed && !v.shot);
+      if(!moth || film===0) return;
+      moth.shot=true;film--;frames++;shutter=.36;
+      const clean=openWing(moth)>.72;
+      const commission=moth.kind===target;
+      if(clean) sharp++;
+      let gift=clean?120:35;
+      if(commission){assignments++;gift+=160;film=Math.min(3,film+1);target=(target+1+Math.floor(api.rng()*5))%6;}
+      photos=[...photos.slice(-2),{kind:moth.kind,clean}];
+      points+=gift;note=(commission?'Cover shot':clean?'Wings open':'Field study')+'  +'+gift;noteTime=1.4;
+      api.sound(clean?'clear':'click');api.haptic(clean?20:8);
+    }
     function spawn() {
       const lane = count === 0 ? 0 : Math.floor(api.rng()*3);
       const kind = count < 6 ? (count * 5) % 6 : Math.floor(api.rng()*6);
@@ -101,6 +133,8 @@ export default {
     function update(dt) {
       if (ended) return;
       t += dt;
+      shutter=Math.max(0,shutter-dt);
+      if(film<3){recharge+=dt;if(recharge>=4.5){film++;recharge=0;}}else recharge=0;
       warm.forEach((v,i) => warm[i]=Math.max(0,v-dt));
       flashes.forEach((v,i) => flashes[i]=Math.max(0,v-dt));
       noteTime -= dt;
@@ -109,7 +143,7 @@ export default {
         const v = visitors[i];
         if (v.landed) {
           v.depart += dt;
-          if (v.depart > 1.55) visitors.splice(i,1);
+          if (v.depart > 2.15) visitors.splice(i,1);
           continue;
         }
         v.life += dt;
@@ -135,11 +169,13 @@ export default {
       api.hud('Journal',journal.size+'/6','Dawn',Math.ceil(Math.max(0,56-t))+'s');
       if (t>=56) {
         ended=true;
-        api.end(points,[['Species',journal.size+' / 6'],['Visitors',landed],['Best streak',high]],'the night shift has such pretty regulars.');
+        api.end(points,[['Species',journal.size+' / 6'],['Visitors',landed],['Best streak',high], ['Sharp photos',sharp+' / '+frames], ['Cover shots',assignments]],'the night shift has such pretty regulars.');
       }
     }
     function draw(ctx) {
       scene(ctx,t,stars);
+      rect(ctx,9,9,145,30,14,'rgba(13,32,40,.88)');
+      rect(ctx,288,9,184,30,14,'rgba(13,32,40,.88)');
       label(ctx,'NIGHT GARDEN',18,25,17,'#dfedd6');
       label(ctx,'FIELD JOURNAL  '+journal.size+'/6',462,25,15,'#dfedd6','right');
       visitors.filter(v=>!v.landed).forEach(v=>{
@@ -161,11 +197,33 @@ export default {
       });
       visitors.forEach(v=>{
         const [x,y]=position(v), lens=lenses[v.kind%3];
-        moth(ctx,x,y,v.kind,v.landed ? t*.22 : t+v.phase,v.landed?.52:.67,Math.sin(v.phase+t)*.13);
+        moth(ctx,x,y,v.kind,t+v.phase,v.landed?.91:.75,Math.sin(v.phase+t)*.13,v.landed?openWing(v):null);
+        if(v.landed&&!v.shot){
+          const col=openWing(v)>.72?'#ffe08a':'#d8e7df';
+          for(const edge of [-1,1])for(const side of [-1,1]){
+            line(ctx,[[x+edge*32,y+side*10],[x+edge*32,y+side*18],[x+edge*23,y+side*18]],col,2);
+          }
+          rect(ctx,x-18,y-37,36,18,5,'#182e36');
+          label(ctx,['Q','W','E'][v.lane],x,y-28,13,col,'center');
+        }
         if (!v.landed) {
           ellipse(ctx,x,y-25,13,13,'#203746');
           label(ctx,lens.symbol,x,y-25,17,lens.color,'center');
         }
+      });
+      if(shutter>0){
+        ctx.strokeStyle='rgba(255,231,168,'+shutter+')';ctx.lineWidth=7;
+        ctx.strokeRect(6,6,468,369);
+      }
+      rect(ctx,8,343,464,34,9,'rgba(20,37,47,.93)');
+      label(ctx,'Cover  ·  '+species[target],18,360,15,'#ffe4a9');
+      for(let i=0;i<3;i++){
+        rect(ctx,246+i*12,353,8,13,2,i<film?'#f4d695':'#58636b');
+      }
+      photos.forEach((shot,i)=>{
+        const x=325+i*46;
+        rect(ctx,x,347,38,26,2,shot.clean?'#ffe2a5':'#b4beb7');
+        rect(ctx,x+2,349,34,20,1,'#263746');moth(ctx,x+19,358,shot.kind,0,.36);
       });
       rect(ctx,0,384,480,96,0,'#182e36');
       label(ctx, noteTime>0?note:'Watch the symbols above the moths',240,402,17,'#f3ead9','center','Georgia');
@@ -176,11 +234,23 @@ export default {
       });
     }
     return {update,draw,
-      pointer(type,x,y) { if(type==='down' && y>=197 && y<=470) cycle(clamp(Math.floor(x/160),0,2)); },
-      key(type,code) { if(type==='down' && /^Digit[123]$/.test(code)) cycle(Number(code.slice(-1))-1); },
+      pointer(type,x,y) {
+        if(type!=='down')return;
+        const subject=visitors.find(v=>v.landed&&!v.shot&&Math.hypot((x-position(v)[0])/44,(y-position(v)[1])/30)<1);
+        if(subject){shoot(subject.lane);return;}
+        if((y>=197&&y<340)||(y>=421&&y<=470))cycle(clamp(Math.floor(x/160),0,2));
+      },
+      key(type,code) {
+        if(type!=='down')return;
+        if(/^Digit[123]$/.test(code))cycle(Number(code.slice(-1))-1);
+        const lane=['KeyQ','KeyW','KeyE'].indexOf(code);
+        if(lane>=0)shoot(lane);
+      },
       demo(dt) {
         aiWait-=dt;
         if (aiWait>0) return;
+        const model=visitors.find(v=>v.landed&&!v.shot&&openWing(v)>.83);
+        if(model && film && (film>1||model.kind===target)){shoot(model.lane);aiWait=.15;return;}
         const v=visitors.filter(m=>!m.landed).sort((a,b)=>(a.travel-a.life)-(b.travel-b.life)).find(m=>m.travel-m.life<2.7);
         if(v && lights[v.lane]!==v.kind%3) { cycle(v.lane); aiWait=.22; }
       },

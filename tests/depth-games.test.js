@@ -78,3 +78,76 @@ test('PEARL SHIFT lets both touch and keyboard pilots gather a shell, then bank 
     assert.equal(catchScore, 100, input);
   }
 });
+
+function manual(game, input) {
+  let result, points = 0;
+  const sounds = [];
+  const model = game.create({
+    rng: () => .5, sound: preset => sounds.push(preset), haptic() {},
+    hud(_label, score) { points = score; },
+    end(score, stats) { result = {score, stats:Object.fromEntries(stats)}; },
+  });
+  const wait = seconds => { for(let i=0;i<Math.round(seconds*120);i++) model.update(1/120); };
+  const press = (key, x, y) => {
+    if(input==='touch'){model.pointer('down',x,y);model.pointer('up',x,y);}
+    else {model.key('down',key);model.key('up',key);}
+  };
+  return {model,wait,press,sounds,get points(){return points;},get result(){return result;}};
+}
+
+for(const input of ['keyboard','touch']) {
+  test('the six expanded controls work directly with '+input, () => {
+    const air=manual(cloudfoil,input);
+    air.wait(3.22);
+    air.press('Space',375,438);
+    if(input==='touch') {
+      const scale=165/(165+485-74*3.22);
+      air.press('',240+85*scale,156+(130-14)*scale);
+    } else {
+      air.model.key('down','ArrowRight');air.wait(85/205);air.model.key('up','ArrowRight');
+      air.model.key('down','ArrowUp');air.wait(14/146);air.model.key('up','ArrowUp');
+    }
+    air.wait(120);
+    assert.ok(air.result.stats['Needle shortcuts']>=1,'a folded glider can thread the needle');
+
+    const rail=manual(switchyard,input);
+    rail.wait(2);rail.press('Space',360,345);rail.wait(95);
+    assert.ok(rail.result.stats['Correct platforms']>=1,'ringing the bell lets the first service reach A');
+
+    const reef=manual(pearlshift,input);
+    reef.press('Space',366,440);reef.wait(2);reef.press('KeyE',199,440);
+    if(input==='touch') reef.press('',148,273);
+    else {
+      reef.model.key('down','ArrowLeft');reef.model.key('down','ArrowUp');reef.wait(.80);
+      reef.model.key('up','ArrowUp');reef.wait(.42);reef.model.key('up','ArrowLeft');
+    }
+    reef.wait(1.7);reef.press('Space',366,440);reef.wait(3.1);
+    assert.equal(reef.points,400,'sonar reveals a four-point opal and the bell banks it');
+
+    const tug=manual(moonfreight,input);
+    tug.wait(2.3);tug.press('KeyE',370,371);tug.wait(100);
+    assert.equal(tug.result.stats['Salvage retrieved'],1,'the deck winch captures a floating supply pod');
+
+    const cable=manual(summitline,input);
+    cable.wait(4.2);cable.press('Space',370,40);cable.wait(1/120);
+    const exposure=cable.points;
+    assert.ok(exposure>=60,'a wildlife exposure earns stars');
+    cable.press('Space',370,40);cable.wait(1/120);assert.equal(cable.points,exposure,'one exposure per species');
+    cable.wait(120);assert.equal(cable.result.stats['Field guide'],'1/5');
+
+    const race=manual(driftglass,input);
+    race.press('KeyB',100,443);race.press('KeyB',100,443);race.wait(120);
+    assert.equal(race.result.stats.Boosts,1,'the second tap cannot spend the same charge');
+  });
+}
+
+test('advanced flight lines, convoys, salvage, wildlife, sonar and racing are attainable within the clock', () => {
+  const best=circuits.map(([game])=>trial(game,true,91).stats);
+  assert.ok(best[0]['Needle shortcuts']>=4);
+  assert.ok(best[1]['Double dispatches']>=1);
+  assert.ok(best[2]['Wreck opals']>=1);
+  assert.equal(best[3]['Pods unloaded'],5);
+  assert.equal(best[4]['Field guide'],'5/5');
+  assert.ok(best[5]['Apex clips']>=8);
+  assert.equal(best[5].Finish,'1st of 2');
+});

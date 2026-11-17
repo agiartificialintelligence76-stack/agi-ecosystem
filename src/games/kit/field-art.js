@@ -33,3 +33,22 @@ export function meter(c, x, y, width, value, ink, paper) {
   panel(c, x, y, width, 7, paper, 4);
   if (value > 0) panel(c, x, y, Math.max(3, width * clamp(value, 0, 1)), 7, ink, 4);
 }
+
+// Each cartridge loads only its own painting. Unit tests and blocked images use the
+// procedural terrain already drawn beneath it. The overscan allows gentle camera parallax.
+export function scenery(url) {
+  const paint = sprite(url);
+  return (ctx, panX = 0, panY = 0) =>
+    paint(ctx, -15 + clamp(panX, -14, 14), -15 + clamp(panY, -14, 14), 510, 510);
+}
+export function sprite(url) {
+  if (typeof Image === 'undefined') return () => false;
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = url.href;
+  return (ctx, x, y, width, height) => {
+    if (!image.complete || !image.naturalWidth) return false;
+    ctx.drawImage(image, x, y, width, height);
+    return true;
+  };
+}

@@ -50,3 +50,17 @@ export function halo(ctx, x, y, radius, inside, outside) {
   g.addColorStop(1, outside);
   ellipse(ctx, x, y, radius, radius, g);
 }
+
+// The scene remains playable while its local, compressed illustration is decoding.
+export function artwork(url) {
+  if (typeof Image === 'undefined') return null;
+  const image = new Image();
+  image.decoding = 'async';
+  image.src = url;
+  return image;
+}
+export function paintArtwork(ctx, image, x, y, width, height) {
+  if (!image?.naturalWidth) return false;
+  ctx.drawImage(image, x, y, width, height);
+  return true;
+}

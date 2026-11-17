@@ -7,7 +7,7 @@ import './cartridge.css';
 
 // A 480-unit playfield. The model owns the rules, illustration and demo player.
 // The shell owns the clock, input lifecycle, settings, scores and play reporting.
-export function mountCartridge(id, game, makeShell) {
+export function mountCartridge(id, game, makeShell, landscape) {
   const info = COLLECTION.find((entry) => entry.id === id);
   const root = document.getElementById('ak-root');
   root.classList.add('cartridge');
@@ -15,7 +15,10 @@ export function mountCartridge(id, game, makeShell) {
   root.style.setProperty('--ak-bg', info.ground);
   const shell = makeShell({
     root, name: info.name, howTo: { steps: game.instructions, keys: game.keys, touch: game.touch },
-    onRestart: start, onPause: release, onQuit: release, onResume: () => canvas.focus({ preventScroll: true }),
+    onRestart: () => start(runSeed), onPause: release, onQuit() {
+      release();
+      requestAnimationFrame(() => root.querySelector('.ak-title-art video')?.play().catch(() => {}));
+    }, onResume: () => canvas.focus({ preventScroll: true }),
   });
   const canvas = document.createElement('canvas');
   canvas.tabIndex = 0;
@@ -29,25 +32,31 @@ export function mountCartridge(id, game, makeShell) {
   shell.stage.append(field, hint);
   const view = fitCanvas(canvas, { maxDpr: 2 });
   const held = new Set();
-  let model, pointerId = null, lastPoint, ended = false;
+  let model, pointerId = null, lastPoint, ended = false, runSeed = 0;
   const metrics = [shell.chip('Score', 0, { accent: true }), shell.chip('Stage', 1)];
   const labels = metrics.map((m) => m.node.querySelector('.ak-chip-label'));
 
   function release() {
-    for (const key of held) model?.key?.('up', key);
+    if (model?.cancelInput) model.cancelInput();
+    else for (const key of held) model?.key?.('up', key);
     held.clear();
     if (pointerId !== null) {
-      model?.pointer?.('cancel', lastPoint.x, lastPoint.y);
+      if (!model?.cancelInput) model?.pointer?.('cancel', lastPoint.x, lastPoint.y);
       if (canvas.hasPointerCapture(pointerId)) canvas.releasePointerCapture(pointerId);
       pointerId = null;
     }
   }
-  function start() {
+  const freshSeed = () => (Math.random() * 0x100000000) >>> 0;
+  function start(seed = SEED || freshSeed()) {
     release();
+    root.querySelector('.ak-title-art video')?.pause();
     ended = false;
-    const dice = rng(SEED || undefined);
+    runSeed = seed;
+    const dice = rng(runSeed);
     model = game.create({
       rng: dice.next, reducedMotion: REDUCED,
+      personalBest: (key) => DEMO ? null : shell.store.best('collection:' + key),
+      rememberBest: (key, value) => { if (!DEMO) shell.store.recordBest('collection:' + key, value); },
       sound: (preset, options) => { if (!DEMO) shell.audio.sfx(preset, options); },
       haptic: (ms) => shell.haptic(ms),
       hud: (a, x, b, y) => {
@@ -61,7 +70,14 @@ export function mountCartridge(id, game, makeShell) {
       end: (score, stats, line) => {
         if (ended) return;
         ended = true;
-        if (!DEMO) shell.over({ score: Math.round(score), stats, line, onAgain: start, onMenu: menu });
+        if (DEMO) return;
+        const fresh = document.createElement('button');
+        fresh.className = 'ak-btn ak-btn-sm cartridge-fresh';
+        fresh.type = 'button';
+        fresh.textContent = 'Start a fresh run';
+        fresh.addEventListener('click', () => start(freshSeed()));
+        shell.over({ score: Math.round(score), stats, line, again: 'Replay this run',
+          extra: fresh, onAgain: () => start(runSeed), onMenu: menu });
       },
     });
     shell.started();
@@ -69,14 +85,20 @@ export function mountCartridge(id, game, makeShell) {
   }
   function menu() {
     release();
-    const art = new Image();
+    const animate = !REDUCED && !navigator.connection?.saveData;
+    const art = document.createElement(animate ? 'video' : 'img');
     art.className = 'cartridge-poster';
-    art.src = '/images/games/' + id + '.webp';
-    art.alt = '';
+    const poster = '/images/games/' + id + '.webp';
+    if (animate) {
+      art.muted = true; art.loop = true; art.playsInline = true; art.poster = poster;
+      art.src = '/images/games/' + id + '.mp4';
+    } else { art.src = poster; art.alt = ''; }
+    root.style.setProperty('--cartridge-art', 'url("' + (landscape || poster) + '")');
     shell.title({
       logo: info.name.split(' ').map((text, i) => ({ text, tone: i ? 'accent' : '' })),
       tagline: game.tagline, art, best: shell.store.best() || null, onPlay: start,
     });
+    if (animate) art.play().catch(() => {});
   }
   const playing = () => !DEMO && !ended && shell.state === 'play';
   function handlePointer(e) {

@@ -1,5 +1,6 @@
-import { TAU, ellipse, line, shape, rect, label, sky } from '../kit/garden-art.js';
+import { TAU, ellipse, line, shape, rect, label, sky, artwork, paintArtwork } from '../kit/garden-art.js';
 
+const coast=artwork(new URL('./scene.webp',import.meta.url));
 const types = [
   {name:'Kelp', color:'#bfd96b', need:'Likes open space', benefit:'space'},
   {name:'Urchin', color:'#e5a5dd', need:'Grazes beside kelp', benefit:'kelp'},
@@ -49,7 +50,17 @@ function organism(ctx,x,y,kind,t,s=1) {
   }
   ctx.restore();
 }
+export function reefLinks(board) {
+  return board.reduce((count,kind,i)=>count+Number(kind===2 && homes[i].some(j=>board[j]===1 && homes[j].some(k=>board[k]===0))),0);
+}
 function shore(ctx,t) {
+  if(paintArtwork(ctx,coast,0,0,480,370)){
+    for(let j=0;j<5;j++){
+      const px=110+(j*63+t*(5+j))%245,py=185+Math.sin(t*.6+j*3)*25+j*8;
+      ellipse(ctx,px,py,6.5,2.1,'rgba(20,82,83,.38)',-.18);shape(ctx,[[px-5,py],[px-9,py-3],[px-9,py+3]],'rgba(20,82,83,.34)');
+    }
+    return;
+  }
   sky(ctx,'#e8d39e','#cead79',369);
   for(let i=0;i<96;i++){
     const x=(i*137)%481,y=66+(i*67)%301;
@@ -78,14 +89,48 @@ export default {
  instructions:[
    ['Pick a settler','Choose one of two arrivals, then tap a vacant ripple to plant it. You get one placement per tide.'],
    ['Build a food web','Urchins need adjacent kelp. Stars need adjacent urchins. Keep a gap beside kelp, or two at low tide.'],
-   ['Keep the pool thriving','Each thriving settler earns 10 points every tide. The dotted links show which neighbors touch.'],
+   ['Read the surge','Every fourth tide, creatures on the three amber pockets drift into an empty downstream pocket or wash away. Watch the arrows.'],
+   ['Build a refuge','Tap Shelter, then a resident to secure it permanently. Start with two shells. A kelp–urchin–star chain surviving a surge earns another shell and a reef bonus.'],
  ],
- keys:[['1 / 2','Select an arriving species'],['Arrow keys','Choose a pool pocket'],['Space / Enter','Settle in the selected pocket']],
- touch:[['Tap a species, then a ripple','Settle one arrival']],
+ keys:[['1 / 2','Select an arriving species'],['Arrow keys','Choose a pool pocket'],['Space / Enter','Settle, or shelter the selected resident'],['R','Toggle shelter tool']],
+ touch:[['Tap a species, then a ripple','Settle one arrival'],['Tap Shelter, then a resident','Anchor it against future surges']],
  create(api){
    const board=Array(cells.length).fill(null);
    let offers=[0,1], selected=0,cursor=5,turn=0,score=0,ended=false,t=0,wash=0,aiWait=.8,keyboardFocus=false;
-   let gain=0, latest=-1;
+   let gain=0, latest=-1, shells=2,shelterMode=false,protectedCount=0,drifts=0,lost=0,rescues=0,reefBonus=0;
+   let surge=[],direction=1,report='';
+   const sheltered=new Set();
+   function forecast(){
+     const start=Math.floor(api.rng()*cells.length);
+     surge=[start,(start+5)%cells.length,(start+11)%cells.length];
+     direction=api.rng()<.5?1:-1;
+   }
+   forecast();
+   function downstream(i){
+     const x=cells[i][2];
+     return homes[i].filter(j=>direction*(cells[j][2]-x)>10 && board[j]===null)
+       .sort((a,b)=>Math.abs(cells[a][3]-cells[i][3])-Math.abs(cells[b][3]-cells[i][3]))[0];
+   }
+   function washThrough(){
+     const affected=surge.filter(i=>board[i]!==null).sort((a,b)=>direction*(cells[b][2]-cells[a][2]));
+     let moved=0,washed=0;
+     for(const i of affected){
+       if(sheltered.has(i)){rescues++;continue;}
+       const next=downstream(i), animal=board[i];
+       board[i]=null;
+       if(next===undefined){washed++;}else{board[next]=animal;moved++;}
+     }
+     drifts+=moved;lost+=washed;
+     const links=reefLinks(board);
+     gain+=55*links;reefBonus+=55*links;
+     if(links) shells=Math.min(4,shells+1);
+     report='Surge · '+moved+' drifted, '+washed+' lost'+(links?' · reef +'+55*links:'');
+   }
+   function shelter(i){
+     if(!shells||board[i]===null||sheltered.has(i))return false;
+     sheltered.add(i);shells--;protectedCount++;shelterMode=false;wash=1;
+     report='Resident sheltered';api.sound('power');api.haptic(12);return true;
+   }
    const high=()=>turn%4<2;
    function nextOffers(){
      const a=Math.floor(api.rng()*3);
@@ -99,17 +144,22 @@ export default {
      return n;
    }
    function settle(i){
-     if(ended||i<0||board[i]!==null) return;
+     if(ended||i<0)return;
+     if(shelterMode){shelter(i);return;}
+     if(board[i]!==null)return;
      board[i]=offers[selected]; latest=i;
      const active=board.filter((_,j)=>thriving(board,j,high())).length;
      gain=active*10;
+     report='Tide harvest  +'+gain;
+     if((turn+1)%4===0)washThrough();
      score+=gain;turn++;wash=1;
+     if(turn%4===0)forecast();
      api.sound(active>2?'merge':'drop');api.haptic(12);
      if(turn===12){
        ended=true;
        const diversity=new Set(board.filter(k=>k!==null)).size;
        const bonus=diversity===3?90:0;
-       api.end(score+bonus,[['Thriving on last tide',active],['Species',diversity+' / 3'],['Biodiversity bonus',bonus]],'look at the tiny world you made.');
+       api.end(score+bonus,[['Thriving on last tide',active],['Species',diversity+' / 3'],['Biodiversity bonus',bonus],['Reef bonuses',reefBonus],['Sheltered through surges',rescues],['Residents adrift',drifts],['Washed away',lost]],'look at the tiny world you made.');
      }else {
        offers=nextOffers(); selected=0;
        cursor=board.findIndex(v=>v===null);
@@ -126,7 +176,10 @@ export default {
      rect(ctx,0,0,480,55,0,'#273f40');
      label(ctx,high()?'HIGH TIDE':'LOW TIDE',16,19,17,'#f7edcf');
      label(ctx,high()?'Kelp needs 1 open neighbor':'Kelp needs 2 open neighbors',16,41,15,'#d1e7cc');
-     label(ctx,'TIDE '+Math.min(12,turn+1)+'/12',463,29,17,'#f7edcf','right');
+     rect(ctx,283,7,181,41,11,shelterMode?'#e6c077':'#395f60');
+     label(ctx,(shelterMode?'Select a resident':'R  Shelter')+'  '+shells,373,28,17,shelterMode?'#273f40':'#fff3cd','center');
+     rect(ctx,118,62,244,27,12,'rgba(22,61,66,.91)');
+     label(ctx,'Surge '+(direction===1?'→':'←')+'  in '+(4-turn%4)+' tide'+(turn%4===3?'':'s'),240,76,15,'#ffda91','center');
      homes.forEach((n,i)=>n.filter(j=>j>i).forEach(j=>{
        const occupied=board[i]!==null&&board[j]!==null;
        line(ctx,[[cells[i][2],cells[i][3]],[cells[j][2],cells[j][3]]],occupied?'rgba(236,254,199,.55)':'rgba(43,115,108,.23)',occupied?2.6:1.4);
@@ -134,6 +187,15 @@ export default {
      cells.forEach(([, ,x,y],i)=>{
        const empty=board[i]===null;
        const chosen=keyboardFocus&&cursor===i;
+       if(surge.includes(i)){
+         ellipse(ctx,x,y+2,29,18.5,'rgba(83,50,29,.46)',-.14);
+         ctx.strokeStyle='#ffbf67';ctx.lineWidth=2.3;ctx.beginPath();ctx.ellipse(x,y+2,29,18.5,-.14,0,TAU);ctx.stroke();
+         label(ctx,direction===1?'›':'‹',x+direction*23,y+3,18,'#ffda9b','center');
+       }
+       if(sheltered.has(i)){
+         ellipse(ctx,x,y+1,29,17,'#325b58',-.14);ellipse(ctx,x,y,23,12,'#75968a',-.14);
+         for(let n=0;n<5;n++)ellipse(ctx,x-21+n*9,y+12-Math.abs(n-2)*2,5,3,'#ead8ab');
+       }
        ctx.strokeStyle=chosen?'#253e40':empty?'#d2ecce':'rgba(230,248,197,.7)';
        ctx.lineWidth=chosen?3.5:1.5;
        ctx.setLineDash(empty&&!chosen?[4,5]:[]);
@@ -152,7 +214,7 @@ export default {
        }
      });
      rect(ctx,0,368,480,112,0,'#203f42');
-     label(ctx,wash>.3?'Tide harvest  +'+gain:'Pick an arrival, then an open ripple',240,387,17,'#fbefd1','center','Georgia');
+     label(ctx,shelterMode?'Choose a resident to anchor':wash>.18?report:'Pick an arrival, then an open ripple',240,387,17,'#fbefd1','center','Georgia');
      offers.forEach((k,i)=>{
        const x=12+i*232;
        rect(ctx,x,404,224,62,12,i===selected?'#e7ebcc':'#375c58');
@@ -165,12 +227,14 @@ export default {
      pointer(type,x,y){
        if(type!=='down'||ended) return;
        keyboardFocus=false;
-       if(y>=401&&y<=469){selected=x<240?0:1;api.sound('select');}
+       if(x>=283&&y<55){shelterMode=!shelterMode&&shells>0;api.sound('select');}
+       else if(y>=401&&y<=469){shelterMode=false;selected=x<240?0:1;api.sound('select');}
        else settle(getCell(x,y));
      },
      key(type,code){
        if(type!=='down'||ended)return;
-       if(code==='Digit1'||code==='Digit2'){selected=Number(code.slice(-1))-1;api.sound('select');return;}
+       if(code==='KeyR'){shelterMode=!shelterMode&&shells>0;api.sound('select');return;}
+       if(code==='Digit1'||code==='Digit2'){shelterMode=false;selected=Number(code.slice(-1))-1;api.sound('select');return;}
        if(code==='Space'||code==='Enter'){settle(cursor);return;}
        const dir={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[code];
        if(!dir)return;
@@ -184,10 +248,11 @@ export default {
      },
      demo(dt){
        aiWait-=dt;if(aiWait>0||ended)return;
+       if(turn%4===3&&shells){const at=surge.find(i=>board[i]!==null&&!sheltered.has(i));if(at!==undefined)shelter(at);}
        let best=-1,slot=0,cell=-1;
        offers.forEach((k,j)=>board.forEach((v,i)=>{
          if(v!==null)return;
-         const estimate=value(i,k)+api.rng()*.25;
+         const estimate=value(i,k)+api.rng()*.25-(turn%4===3&&surge.includes(i)?.5:0);
          if(estimate>best){best=estimate;slot=j;cell=i;}
        }));
        selected=slot;settle(cell);aiWait=2;

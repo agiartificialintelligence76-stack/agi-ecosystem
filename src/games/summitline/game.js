@@ -1,24 +1,41 @@
-import { clamp, mix, poly, line, oval, gradient, caption, panel, meter } from '../kit/field-art.js';
+import { scenery, sprite, clamp, mix, poly, line, oval, gradient, caption, panel, meter } from '../kit/field-art.js';
+
+import { species, portrait, mountainDetails, passengers, filmFrame } from './field-camera.js';
 
 const stops=[112,245,395,558,739];
 const names=['PINE BASIN','BELL RIDGE','SNOW LAKE','HIGH PASS','THE SUMMIT'];
 const heightAt = d => 23*Math.sin(d*.015)+d*.13;
 const bendAt = d => Math.sin(d*.009)*48;
+const vehicle = sprite(new URL('./vehicle.webp', import.meta.url));
+const paintScenery = scenery(new URL('./scenery.webp', import.meta.url));
+
 export default {
-  title:'SUMMIT LINE',tagline:'Run the last mountain gondola. Ease into each platform without spilling the cocoa.',
+  title:'SUMMIT LINE',tagline:'Run the last alpine gondola. Keep passengers steady and photograph five elusive animals on the climb.',
   instructions:[
     ['Set the throttle','Select Drive to accelerate, Coast to glide, or Brake to slow. Each setting stays on until you change it.'],
     ['Read the approach','The red brake mark appears when your current stopping distance reaches the platform.'],
-    ['Dock gently','Stop within five metres of the station. A centred stop and a quiet cabin earn extra. Reach the fifth stop before closing.'],
+    ['Shoot a field guide','Each span has a different animal. Coast as it approaches the gold viewfinder, then tap Shutter or press Space. Slow speed and a centered subject earn three stars.'],
+    ['Dock gently','Stop within five metres of the station. A centered stop and a quiet cabin earn extra. Photograph every species for a field guide bonus.'],
   ],
-  keys:[['1 / Left','Brake'],['2 / Down','Coast'],['3 / Right','Drive']],
-  touch:[['Tap Brake, Coast or Drive','Set the throttle']],
+  keys:[['1 / Left','Brake'],['2 / Down','Coast'],['3 / Right','Drive'],['Space','Take a photograph']],
+  touch:[['Tap Brake, Coast or Drive','Set the throttle'],['Shutter','Photograph the marked animal']],
   create(api){
     let pos=0,speed=0,mode=2,idx=0,docked=0,score=0,remaining=102,t=0,dwell=0,finished=false,go=false;
     let swing=0,swingV=0,best=0,notice='PINE BASIN AHEAD',noticeTime=2,windPhase=api.rng()*6,lastSpeed=0;
+    const sightings=stops.map((v,i)=>mix(stops[i-1]??0,v,.33+api.rng()*.22));
+    const album=Array(5).fill(null);let snapTime=0,lastPhoto=0,fieldStars=0;
     const trees=Array.from({length:115},(_,i)=>({d:i*8-90,k:api.rng(),z:30+api.rng()*77}));
     function choose(n){if(mode===n||dwell>0)return;mode=n;api.sound('select');}
     const brakeRate=8.4;
+    function photo(){
+      if(idx>=5||album[idx]!==null||dwell||finished)return;
+      const diff=Math.abs(sightings[idx]-pos);
+      if(diff>27){notice='LOOK FOR THE GOLD VIEWFINDER';noticeTime=1;return;}
+      const stars=diff<6&&speed<13&&Math.abs(swing)<.65?3:diff<14&&speed<17?2:1;
+      album[idx]=stars;fieldStars+=stars;score+=60*stars;lastPhoto=idx;snapTime=1.45;
+      notice=species[idx].toUpperCase()+'  '+('★'.repeat(stars));noticeTime=1.45;api.sound('click');api.haptic(12);
+      if(album.every(n=>n!==null))score+=320;
+    }
     function stop(right){
       const off=Math.abs(stops[idx]-pos);
       if(right){
@@ -51,13 +68,14 @@ export default {
       const [cx,cy]=project(pos);
       oval(c,cx,cy,5,4,'#343e4d');
       c.save();c.translate(cx,cy);c.rotate(swing*.36);
+      if(!vehicle(c,-35,-2,69,65)){
       line(c,[[0,0],[0,15],[5,23]],'#3e4250',3.3);
       poly(c,[[-18,22],[10,18],[22,24],[20,52],[-10,58],[-20,49]],'#ba564b');
       poly(c,[[-18,22],[10,18],[22,24],[-5,29]],'#ffe1a4');
       poly(c,[[-17,26],[-5,31],[-5,44],[-17,40]],'#8fb2c2');
       poly(c,[[-2,30],[17,26],[16,39],[-2,43]],'#4a7087');
       line(c,[[7,29],[7,41]],'#eec09c',2);line(c,[[-2,46],[16,42]],'#ffd79d',2.5);
-      oval(c,5,51,2,2,'#ffe7ab');c.restore();
+      passengers(c,t,swing);oval(c,5,51,2,2,'#ffe7ab');}c.restore();
     }
     function station(c,d,n){
       const [cx,cy,s]=project(d);
@@ -74,16 +92,19 @@ export default {
       c.restore();
     }
     return {
-      pointer(type,x,y){if(type==='down'&&y>=402)choose(clamp(Math.floor(x/160),0,2));},
-      key(type,code){if(type!=='down')return;const v={Digit1:0,ArrowLeft:0,Digit2:1,ArrowDown:1,Digit3:2,ArrowRight:2}[code];if(v!==undefined)choose(v);},
+      pointer(type,x,y){if(type!=='down')return;if(y<77&&x>=281){photo();return;}if(y>=402)choose(clamp(Math.floor(x/160),0,2));},
+      key(type,code){if(type!=='down')return;if(code==='Space'){photo();return;}const v={Digit1:0,ArrowLeft:0,Digit2:1,ArrowDown:1,Digit3:2,ArrowRight:2}[code];if(v!==undefined)choose(v);},
       demo(){
         if(dwell||go)return;
         const left=stops[idx]-pos;
         mode=left<speed*speed/(2*brakeRate)+1.2?0:left<8&&speed>3?1:2;
         if(left<1.8)mode=0;
+        const photoLeft=sightings[idx]-pos;
+        if(album[idx]===null&&photoLeft>0&&photoLeft<27&&speed>10)mode=0;
+        if(album[idx]===null&&Math.abs(photoLeft)<1.3)photo();
       },
       update(dt){
-        if(finished)return;t+=dt;noticeTime-=dt;remaining-=dt;
+        if(finished)return;t+=dt;snapTime=Math.max(0,snapTime-dt);noticeTime-=dt;remaining-=dt;
         if(dwell>0){
           dwell=Math.max(0,dwell-dt);
           if(dwell===0&&!go){mode=2;notice=names[idx]+' AHEAD';noticeTime=1.6;}
@@ -99,13 +120,15 @@ export default {
         swing=clamp(swing+swingV*dt,-1,1);lastSpeed=speed;
         api.hud('Service',score,'Closing',Math.max(0,Math.ceil(remaining))+'s');
         if((go&&dwell===0)||remaining<=0){
-          finished=true;api.end(score,[['Stations served',docked+'/5'],['Best comfort',best+'%']],docked===5?'last car up. look at that sunset.':'i warmed the cocoa for the next run.');
+          finished=true;api.end(score,[['Stations served',docked+'/5'],['Field guide',album.filter(n=>n!==null).length+'/5'],['Photo stars',fieldStars+'/15'],['Best comfort',best+'%']],docked===5?'last car up. look at that sunset.':'i warmed the cocoa for the next run.');
         }
       },
       draw(c){
         c.fillStyle=gradient(c,0,480,[[0,'#8c88a3'],[.27,'#e9b8ab'],[.54,'#f4d8b6'],[1,'#70827e']]);c.fillRect(0,0,480,480);
         oval(c,329-pos*.015,69,30,30,'#ffdfae');
+        mountainDetails(c,pos,t);
         ridge(c,0,'#a79aa6');ridge(c,1,'#948a98');ridge(c,2,'#77838b');ridge(c,3,'#627b80');
+        if(paintScenery(c,-Math.sin(pos*.0024)*12,Math.cos(pos*.006)*4)){c.fillStyle='rgba(55,55,91,'+(idx*.028)+')';c.fillRect(0,0,480,480);}
         for(const p of trees){
           if(Math.abs(p.d-pos)>160)continue;
           const [cx,cy,s]=project(p.d,-86,p.z),r=5+p.k*8;
@@ -119,12 +142,21 @@ export default {
           for(let k=0;k<3;k++)line(c,[[cx-3-k*2,cy+12+k*26],[cx+7+k*2,cy+37+k*26],[cx-5-k*2,cy+38+k*26]],'#72817e',2);
         }
         for(let i=0;i<stops.length;i++)if(Math.abs(pos-stops[i])<155)station(c,stops[i],i);
+        if(idx<5){
+          const sx=258+(sightings[idx]-pos)*2.65;
+          if(sx>-30&&sx<520){portrait(c,idx,sx,139,1.4,t);
+            if(album[idx]===null){for(const side of [-1,1]){line(c,[[258+side*23,123],[258+side*32,123],[258+side*32,132]],'#ffe09e',2);line(c,[[258+side*32,147],[258+side*32,156],[258+side*23,156]],'#ffe09e',2);}}}
+        }
         const path=[];for(let d=pos-140;d<pos+175;d+=4)path.push(project(d));line(c,path,'#3b4c55',2.3);
         line(c,path.map(([a,b])=>[a+4,b-4]),'#606e76',1.1);cabin(c);
         const distance=Math.max(0,(stops[idx]??pos)-pos);
         const braking=distance<=speed*speed/(2*brakeRate)+2&&speed>1&&!dwell;
         panel(c,14,14,222,56,'#343c4be8');caption(c,'NEXT STOP',28,31,'#dbc9b9',15,'left');
         caption(c,names[idx]??'TERMINUS',28,54,'#fff0d5',19,'left');
+        const ready=idx<5&&album[idx]===null&&Math.abs(sightings[idx]-pos)<27;
+        panel(c,283,13,181,58,ready?'#f4ce85':'#344450ed');caption(c,ready?'◉  SHUTTER':'FIELD CAMERA',374,31,ready?'#3d4244':'#f6e6c4',16);
+        caption(c,idx<5&&album[idx]===null?species[idx]+' · '+Math.max(0,Math.round(sightings[idx]-pos))+' m':'Album '+album.filter(n=>n!==null).length+'/5',374,55,ready?'#504943':'#c8d7c6',14);
+        if(snapTime>0)filmFrame(c,lastPhoto,album[lastPhoto],t);
         panel(c,13,322,454,70,'#303e4bed');
         caption(c,dwell?'AT PLATFORM':Math.round(distance)+' m',29,345,'#ffdfae',21,'left');
         caption(c,braking?'BRAKE NOW':Math.round(speed*3.6)+' km/h',451,344,braking?'#ffb190':'#e0ebda',18,'right');

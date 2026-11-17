@@ -2,8 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import forge from '../src/games/echoforge/game.js';
 import harbor, { pathTo, wharves } from '../src/games/inkveil/game.js';
-import courier, { trace, routes } from '../src/games/prismcourier/game.js';
-import rookery, { flights, legalMoves } from '../src/games/rookery/game.js';
+import courier, { trace, routes, variant } from '../src/games/prismcourier/game.js';
+import rookery, { flights, legalMoves, wetlands } from '../src/games/rookery/game.js';
 import tether, { aimAt } from '../src/games/tetherturn/game.js';
 
 function run(game, seed=7) {
@@ -101,8 +101,77 @@ test('TETHER TURN distinguishes a core pass, a near miss, and an anchor behind t
   assert.equal(g.end[0][0],0);
 });
 
+test('a quench in the gold band tempers metal on touch and keyboard; the next cold quench has no bonus',()=>{
+  for(const keyboard of [false,true]){
+    const g=run(forge);
+    for(const beat of [0,2,4,6,8]){
+      g.tick((beat===0?3:2)*60/82);
+      const lane=[2,6].includes(beat)?1:0;
+      if(keyboard)g.instance.key('down',lane?'KeyL':'KeyA');else g.instance.pointer('down',lane?250:90,412);
+    }
+    const before=g.hud.at(-1)[1];
+    if(keyboard)g.instance.key('down','KeyQ');else g.instance.pointer('down',410,416);
+    assert.ok(g.hud.at(-1)[1]>before+90);
+    const tempered=g.hud.at(-1)[1];g.tick(.6);g.instance.key('down','KeyQ');assert.equal(g.hud.at(-1)[1],tempered);
+  }
+});
+
+test('the courier must rewind the clockwork moth before sending another decoy',()=>{
+  for(const keyboard of [false,true]){
+    const g=run(harbor);
+    const launch=()=>keyboard?g.instance.key('down','KeyM'):g.instance.pointer('down',402,463);
+    launch(); launch();
+    assert.equal(g.sound.filter(s=>s==='whoosh').length,1);
+  }
+});
+
+test('both mirror-image arrangements of every fork light all receivers, and turning its gold lens changes delivery',()=>{
+  for(const route of routes) for(const flip of [false,true]){
+    const layout=variant(route,flip), slots=layout.rails.map(r=>r[6]);
+    const rays=trace(layout,slots);
+    assert.ok(rays.every(ray=>ray.delivered),route.name);
+    if(!route.forks)continue;
+    assert.ok(rays.some(ray=>ray.strands.length>1),route.name);
+    assert.ok(trace(layout,slots,layout.rails.map(r=>Boolean(r[7]))).some(ray=>!ray.delivered),route.name);
+  }
+});
+
+test('the active gold lens turns from either control scheme in the first forked dispatch',()=>{
+  for(const keyboard of [false,true]){
+    const g=run(courier);
+    for(let i=0;i<30 && g.hud.at(-1)[1]!=='3/10';i++)g.tick(.25,true);
+    assert.equal(g.hud.at(-1)[1],'3/10');
+    const before=g.hud.at(-1)[3];
+    if(keyboard)g.instance.key('down','KeyR');else g.instance.pointer('down',410,450);
+    assert.equal(g.hud.at(-1)[3],before+1);assert.equal(g.sound.at(-1),'power');
+  }
+});
+
+test('both orbital rudders spend a measured amount of propellant when held during flight',()=>{
+  for(const keyboard of [false,true]){
+    const g=run(tether);
+    for(let shot=0;shot<8 && !g.end.length;shot++){
+      g.tick(1.85);g.instance.key('down','Space');
+      if(keyboard)g.instance.key('down','ArrowDown');else g.instance.pointer('down',360,310);
+      g.tick(.7);
+      if(keyboard)g.instance.key('up','ArrowDown');else g.instance.pointer('up',360,310);
+      g.tick(2);
+    }
+    assert.ok(Object.fromEntries(g.end[0][1])['Thruster seconds']>=1);
+  }
+});
+
+test('rising water closes dry landing squares and changes a rook stopping point; the solver tracks the chick',()=>{
+  const low=legalMoves([], [5,24,0,0],0,{pools:[7],egg:12});
+  const high=legalMoves([], [5,24,1,0],0,{pools:[7],egg:12});
+  assert.ok(low.includes(9));assert.ok(high.includes(6));assert.ok(!high.includes(9));
+  const states=[...flights([6,12,18],[20,4,0,0],wetlands[2]).values()];
+  assert.ok(states.some(n=>n.state[3]===1));
+  assert.ok(states.some(n=>n.state[3]===0 && n.state[2]===1));
+});
+
 for(const [game,label,expected] of [[forge,'Commissions','5 / 5'],[harbor,'Mail bags delivered',5],
-  [courier,'Dispatches',7],[rookery,'Habitats',6],[tether,'Transfers','16 / 16']]){
+  [courier,'Dispatches',10],[rookery,'Habitats',6],[tether,'Transfers','16 / 16']]){
   test(`${game.title} can finish through its normal game loop and reports one result`,()=>{
     for(const seed of [1,7,212]){
       const g=run(game,seed);g.tick(95,true);
@@ -110,6 +179,11 @@ for(const [game,label,expected] of [[forge,'Commissions','5 / 5'],[harbor,'Mail 
       const [score,summary]=g.end[0];
       assert.ok(Number.isSafeInteger(score) && score>0);
       assert.deepEqual(summary[0],[label,expected]);
+      const stats=Object.fromEntries(summary);
+      if(game===forge){assert.ok(stats['Drawn notes']>=4);assert.ok(stats['True tempers']>=5);}
+      if(game===harbor)assert.ok(stats['Moths released']>=1);
+      if(game===rookery)assert.equal(stats['Chicks rescued'],4);
+      if(game===tether)assert.equal(stats['Pilots rescued'],6);
     }
   });
 }

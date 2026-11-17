@@ -1,5 +1,6 @@
-import { TAU, clamp, ellipse, line, shape, rect, label, sky } from '../kit/garden-art.js';
+import { TAU, clamp, ellipse, line, shape, rect, label, sky, artwork, paintArtwork } from '../kit/garden-art.js';
 
+const skyline=artwork(new URL('./scene.webp',import.meta.url));
 const food = ['Egg','Bao','Noodles'];
 const cooks = [3.1,5.5,4.2];
 const recipes = [
@@ -34,6 +35,18 @@ function ingredient(ctx,k,x,y,s=1){
   }
   ctx.restore();
 }
+function diner(ctx,x,y,id,t,happy){
+  ctx.save();ctx.translate(x,y+Math.sin(t*2+id)*2);
+  const colors=['#af9bd2','#eead88','#9ab9be','#c5bc78'];
+  const coat=colors[id%4];
+  ellipse(ctx,1,13,19,6,'rgba(55,49,55,.25)');
+  ellipse(ctx,0,0,17,17,coat);ellipse(ctx,4,2,11,10,'#fff1d7');
+  ellipse(ctx,-10,4,7,10,coat,.3);ellipse(ctx,6,-4,1.6,happy?1:2,'#35353d');
+  shape(ctx,[[13,-1],[22,1],[13,4]],'#ebaa58');
+  line(ctx,[[-9,-15],[-5,-23],[0,-15]],coat,3);
+  line(ctx,[[-6,17],[-6,20],[-10,20]],'#735745',1.6);line(ctx,[[5,16],[5,20],[2,20]],'#735745',1.6);
+  ctx.restore();
+}
 function steam(ctx,x,y,t,heat){
   for(let i=0;i<3;i++){
     const phase=(t*.48+i/3)%1;
@@ -48,20 +61,30 @@ export default {
  instructions:[
    ['Read the tickets','Each ticket shows the ingredients it still needs. Egg, bao, and noodles cook at different speeds.'],
    ['Work the burners','Tap a station to cook. Tap again in the green SERVE window to send its food to the earliest matching ticket.'],
-   ['Keep the line moving','Complete tickets before their timers run out. Finish several in a row for a service bonus.'],
+   ['Work the flame','Tap a flame tab, or use Q, W, E. That pan cooks twice as fast and scorches sooner. Serve in its gold window to sear the food.'],
+   ['Choose who eats','Tap a ticket or press A to cycle. A matching ingredient goes there first. Finish two dishes within five seconds for table service. Gold star guests give a sear bonus.'],
  ],
- keys:[['1 / 2 / 3','Start or serve egg, bao, or noodles']],touch:[['Tap a burner','Start cooking or serve']],
+ keys:[['1 / 2 / 3','Start or serve a pan'],['Q / W / E','Route high flame'],['A','Prioritize next ticket']],touch:[['Tap a pan','Cook or serve'],['Tap a flame tab','Route high flame'],['Tap a ticket','Prioritize its guest']],
  create(api){
    const pans=[-1,-1,-1], orders=[], effects=[];
    let t=0,score=0,served=0,burnt=0,missed=0,chain=0,ended=false,cooldown=0,aiWait=.15,ticket=0,note='Start the ingredients on the tickets';
+   let flame=-1,prioritized=0,seared=0,tables=0,lastServed=-20,serviceFlash=0;
+   function route(k){
+     if(ended)return;
+     flame=flame===k?-1:k;
+     note=flame<0?'All burners steady':food[k]+' on high flame';
+     cooldown=1.2;api.sound('select');
+   }
    function order(first=false){
      const index=first ? (ticket===0?0:2) : Math.floor(api.rng()*recipes.length);
      const r=recipes[index], total=(t<18?24:21)+(r.needs.length-2)*3;
-     orders.push({name:r.name, needs:[...r.needs], done:r.needs.map(()=>false), life:total, total, id:++ticket});
+     orders.push({name:r.name, needs:[...r.needs], done:r.needs.map(()=>false), life:total, total, id:++ticket, gold:ticket%4===0, sears:0});
    }
    order(true);order(true);
    function wanted(k){
-     return [...orders].sort((a,b)=>a.life-b.life).find(o=>o.needs.some((n,i)=>n===k&&!o.done[i]));
+     const match=o=>o && o.needs.some((n,i)=>n===k&&!o.done[i]);
+     const favorite=orders.find(o=>o.id===prioritized);
+     return match(favorite)?favorite:[...orders].sort((a,b)=>a.life-b.life).find(match);
    }
    function station(k){
      if(ended)return;
@@ -73,6 +96,8 @@ export default {
      if(elapsed>cooks[k]+2.45) return;
      const o=wanted(k);
      if(!o){note='No ticket needs '+food[k].toLowerCase()+' yet';cooldown=1.5;return;}
+     const browned=flame===k && elapsed-cooks[k]>=.5 && elapsed-cooks[k]<=1.65;
+     if(browned){o.sears++;seared++;score+=35;}
      const index=o.needs.findIndex((n,i)=>n===k&&!o.done[i]);
      const dest=orders.indexOf(o);
      o.done[index]=true;pans[k]=-1;
@@ -81,16 +106,19 @@ export default {
      score+=20;
      if(o.done.every(Boolean)){
        chain++;served++;
-       const gain=75+Math.round(o.life*2)+Math.min(chain,6)*8;
-       score+=gain;note=o.name+' served  +'+gain;cooldown=2.2;
-       api.sound('combo');orders.splice(dest,1);order();
-     }else{note=food[k]+' plated';cooldown=1.1;}
+       const pair=t-lastServed<5;
+       if(pair)tables++;
+       lastServed=t;serviceFlash=1;
+       const gain=75+Math.round(o.life*2)+Math.min(chain,6)*8+(pair?65:0)+(o.gold?o.sears*55:0);
+       score+=gain;note=(pair?'Table service':o.name+' served')+'  +'+gain;cooldown=2.2;
+       api.sound('combo');orders.splice(dest,1);if(prioritized===o.id)prioritized=0;order();
+     }else{note=food[k]+(browned?' · golden sear +35':' plated');cooldown=1.1;}
    }
    function update(dt){
-     if(ended)return;t+=dt;cooldown-=dt;
+     if(ended)return;t+=dt;cooldown-=dt;serviceFlash=Math.max(0,serviceFlash-dt);
      for(let i=0;i<3;i++){
        if(pans[i]===-1)continue;
-       pans[i]+=dt;
+       pans[i]+=dt*(flame===i?1.95:1);
        if(pans[i]>cooks[i]+3.5){pans[i]=-1;burnt++;chain=0;api.sound('drop');note=food[i]+' scorched';cooldown=1.5;}
      }
      if(t>17&&orders.length<3) order();
@@ -102,24 +130,30 @@ export default {
        effects[i].age+=dt;if(effects[i].age>.48)effects.splice(i,1);
      }
      api.hud('Served',served,'Shift',Math.ceil(Math.max(0,65-t))+'s');
-     if(t>=65){ended=true;api.end(score,[['Tickets served',served],['Scorched pans',burnt],['Expired tickets',missed]],'last bowl’s for the cook.');}
+     if(t>=65){ended=true;api.end(score,[['Tickets served',served],['Scorched pans',burnt],['Expired tickets',missed],['Golden sears',seared],['Table service pairs',tables]],'last bowl’s for the cook.');}
    }
    function draw(ctx){
-     sky(ctx,'#a9c8bf','#f3dfba',283);
-     for(let i=0;i<15;i++){
+     const illustrated=paintArtwork(ctx,skyline,0,0,480,327);
+     if(!illustrated)sky(ctx,'#a9c8bf','#f3dfba',283);
+     for(let i=0;i<(illustrated?0:15);i++){
        const x=(i*91)%535-30,y=172+(i%3)*17;
        ellipse(ctx,x,y,36,13,'rgba(250,243,213,.36)');
        ellipse(ctx,x+12,y-8,23,16,'rgba(250,243,213,.36)');
      }
-     rect(ctx,0,0,480,35,0,'#395b58');
+     if(t>38){ctx.fillStyle='rgba(68,38,91,'+Math.min(.28,(t-38)*.012)+')';ctx.fillRect(0,0,480,248);}
+     rect(ctx,0,0,480,35,0,'rgba(50,55,60,.94)');
      label(ctx,'CLOUD KITCHEN',15,18,17,'#fff4d8','left','Georgia');
-     label(ctx,'LUNCH SERVICE',465,18,15,'#e9f1d3','right');
+     label(ctx,t<17?'FIRST SITTING':t<42?'LUNCH RUSH':'LAST CALL',465,18,15,'#e9f1d3','right');
      line(ctx,[[0,54],[480,54]],'#446760',5);
      const width=orders.length===2?216:145, space=orders.length===2?232:158;
      orders.forEach((o,i)=>{
        const x=10+i*space;
        rect(ctx,x+3,62,width,100,3,'rgba(59,78,67,.18)');
-       rect(ctx,x,59,width,100,3,'#fff4d8');
+       const chosen=o.id===prioritized,gold=o.gold;
+       rect(ctx,x,59,width,100,3,chosen?'#fff0c2':gold?'#f9dfac':'#fff4d8');
+       if(chosen){ctx.strokeStyle='#693f35';ctx.lineWidth=3;ctx.stroke();}
+       diner(ctx,x+width/2,206,o.id,t,serviceFlash>.4);
+       if(gold)label(ctx,'★',x+15,72,17,'#aa641f','center');
        for(let j=0;j<Math.floor(width/12);j++)shape(ctx,[[x+j*12,158],[x+j*12+6,164],[x+j*12+12,158]],'#fff4d8');
        rect(ctx,x+width/2-5,47,10,19,3,'#bd7f64');
        label(ctx,o.name,x+width/2,82,orders.length===2?19:16,'#334746','center','Georgia');
@@ -164,11 +198,13 @@ export default {
        }else ingredient(ctx,k,x,252,.62);
        label(ctx,food[k],x,347,21,'#413f36','center','Georgia');
        if(active){
-         rect(ctx,x-47,361,94,6,3,'#8c8067');
-         rect(ctx,x-47,361,Math.max(2,94*clamp(v/cooks[k],0,1)),6,3,ready?'#416d50':'#f8e4a1');
+         rect(ctx,x-47,352,94,4,2,'#8c8067');
+         rect(ctx,x-47,352,Math.max(2,94*clamp(v/cooks[k],0,1)),6,3,ready?'#416d50':'#f8e4a1');
        }
+       rect(ctx,x-64,358,128,24,8,flame===k?'#ffbf66':'#716454');
+       label(ctx,['Q','W','E'][k]+'  '+(flame===k?'HIGH FLAME':'High flame'),x,370,13,flame===k?'#53392d':'#fff3d8','center');
        rect(ctx,x-68,415,136,48,12,ready?'#d7ecae':scorch?'#8d675b':'#f2dfb3');
-       const text=scorch?'Scorched':ready?'SERVE':active?'Cooking…':'Cook';
+       const text=scorch?'Scorched':ready?(flame===k&&v-cooks[k]>=.5&&v-cooks[k]<=1.65?'SEAR!':'SERVE'):active?'Cooking…':'Cook';
        label(ctx,(k+1)+'  '+text,x,440,18,scorch?'#fff2db':'#385449','center');
      });
      label(ctx,cooldown>0?note:'Match the tickets before the timer runs out',240,392,16,'#f5e7c5','center');
@@ -178,12 +214,29 @@ export default {
      });
    }
    return {update,draw,
-     key(type,code){if(type==='down'&&/^Digit[123]$/.test(code))station(Number(code.slice(-1))-1);},
-     pointer(type,x,y){if(type==='down'&&y>=227&&y<=468)station(clamp(Math.floor(x/160),0,2));},
+     key(type,code){
+       if(type!=='down'||ended)return;
+       if(/^Digit[123]$/.test(code))station(Number(code.slice(-1))-1);
+       const k=['KeyQ','KeyW','KeyE'].indexOf(code);if(k>=0)route(k);
+       if(code==='KeyA'){prioritized=orders[(orders.findIndex(o=>o.id===prioritized)+1)%orders.length].id;api.sound('select');}
+     },
+     pointer(type,x,y){
+       if(type!=='down'||ended)return;
+       const k=clamp(Math.floor(x/160),0,2);
+       if(y>=352&&y<383){route(k);return;}
+       if(y>=58&&y<=163){
+         const ticket=orders[Math.min(orders.length-1,Math.floor(x/(orders.length===2?232:158)))];
+         prioritized=ticket.id;api.sound('select');return;
+       }
+       if(y>=227&&y<=468)station(k);
+     },
      demo(dt){
        aiWait-=dt;if(aiWait>0||ended)return;
+       const priority=[...orders].sort((a,b)=>a.life-b.life)[0];prioritized=priority.id;
+       const needed=priority.needs.find((_,i)=>!priority.done[i]);
+       if(flame!==needed&&pans[needed]>=0){route(needed);aiWait=.1;}
        for(let i=0;i<3;i++){
-         if(wanted(i)&&(pans[i]<0||(pans[i]>=cooks[i]+.15&&pans[i]<cooks[i]+2.4))){station(i);aiWait=.38;return;}
+         if(wanted(i)&&(pans[i]<0||(pans[i]>=cooks[i]+(flame===i?.6:.15)&&pans[i]<cooks[i]+2.4))){station(i);aiWait=.38;return;}
        }
      },
    };

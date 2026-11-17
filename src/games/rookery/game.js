@@ -1,3 +1,4 @@
+import { folio, soil, fledgling } from './marsh.js';
 import { TAU } from '../kit/fx.js';
 
 const N=5, OX=65, OY=70, CELL=70;
@@ -8,13 +9,24 @@ const fields=[
 ];
 const ORTHO=[[1,0],[-1,0],[0,1],[0,-1]];
 const JUMPS=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[-1,2],[1,-2],[-1,-2]];
-const pack = ([rook,owl]) => rook*25+owl;
+export const wetlands=[
+  {pools:[],egg:-1}, {pools:[7,13,22],egg:-1}, {pools:[4,10,14],egg:7},
+  {pools:[6,12,16],egg:8}, {pools:[2,11,22],egg:7}, {pools:[3,10,12,21],egg:17},
+];
+const pack = ([rook,owl,tide=0,egg=0]) => (rook*25+owl)*4+tide*2+egg;
+function landed(state,bird,cell,wetland){
+  const next=[...state];next[bird]=cell;
+  if(wetland?.pools.length)next[2]=1-(state[2]||0);
+  if(wetland?.egg>=0)next[3]=Number(state[3]===1 || cell===wetland.egg);
+  return next;
+}
+const matches=(a,b,habitat)=>a[0]===b[0] && a[1]===b[1] && (habitat.egg<0 || a[3]===1);
 const pos = i => [i%5,Math.floor(i/5)];
 const onscreen = i => {const [x,y]=pos(i); return [OX+(x+.5)*CELL,OY+(y+.5)*CELL];};
 const inside=(x,y)=>x>=0 && y>=0 && x<N && y<N;
-export function legalMoves(field,state,bird) {
+export function legalMoves(field,state,bird,wetland) {
   const [x,y]=pos(state[bird]), occupied=state[1-bird];
-  const free=(a,b)=>inside(a,b) && !field.includes(a+b*N) && a+b*N!==occupied;
+  const free=(a,b)=>inside(a,b) && !field.includes(a+b*N) && a+b*N!==occupied && !(state[2]===1 && wetland?.pools.includes(a+b*N));
   if(bird===1) return JUMPS.map(([a,b])=>[a+x,b+y]).filter(([a,b])=>free(a,b)).map(([a,b])=>a+b*N);
   const moves=[];
   for(const [dx,dy] of ORTHO) {
@@ -24,13 +36,13 @@ export function legalMoves(field,state,bird) {
   return moves;
 }
 // At most 600 ordered pairs on a five-by-five board. The tree supplies both the puzzle's par and real hints.
-export function flights(field,start) {
+export function flights(field,start,wetland) {
   const first={state:start,depth:0,first:null};
   const nodes=[first], visited=new Map([[pack(start),first]]);
   for(let i=0;i<nodes.length;i++) {
     const parent=nodes[i];
-    for(let bird=0;bird<2;bird++)for(const cell of legalMoves(field,parent.state,bird)){
-      const state=[...parent.state];state[bird]=cell;
+    for(let bird=0;bird<2;bird++)for(const cell of legalMoves(field,parent.state,bird,wetland)){
+      const state=landed(parent.state,bird,cell,wetland);
       if(visited.has(pack(state)))continue;
       const node={state,depth:parent.depth+1,first:parent.first || [bird,cell]};
       visited.set(pack(state),node); nodes.push(node);
@@ -69,37 +81,43 @@ function birdIcon(c,bird,x,y,size){
   c.restore();
 }
 export default {
-  title:'ROOKERY', tagline:'Land a rook and an owl in their nests. Sometimes your best perch is the other bird.',
+  title:'ROOKERY', tagline:'Walk the tides, lift a lost chick, and bring your two birds home.',
   instructions:[['Choose a bird','Tap the rook or owl. Dots show its possible landings. Tap a dot to fly.'],
     ['Use their moves','The rook slides straight until the edge, reeds, or the owl stops it. The owl jumps two squares then one sideways.'],
-    ['Find both nests','Settle each bird in its matching nest at the same time. Undo and hints are always available.']],
+    ['Find both nests','Blue tide pools flood or drain after each move. Flooded tiles block flight. When a chick appears, land on it before nesting both birds.']],
   keys:[['Arrow keys','Move cursor'],['Space / Enter','Select bird or landing'],['B','Switch bird'],['U / H','Undo / hint']],
   touch:[['Tap bird, then dot','Make a flight'],['Tap Undo or Hint','Rewind or reveal a move']],
   create(api){
     let stage=0, state, target, par, field, selected=0, cursor, history, hints, totalMoves=0, score=0;
+    let wetland, rescued=0;
     let delay=0, hop=null, age=0, auto=0, ended=false, hintCell=null, notice='', noticeTime=0;
     function open(){
-      const entry=fields[stage]; field=entry[1];state=entry[2].slice();history=[];hints=0;hintCell=null;noticeTime=0;
+      const entry=fields[stage];wetland=wetlands[stage];field=entry[1];state=[...entry[2],0,0];history=[];hints=0;hintCell=null;noticeTime=0;
       selected=0;cursor=state[0];hop=null;
-      const tree=[...flights(field,state).values()];
-      const depth=Math.min(stage+3,8), candidates=tree.filter(n=>n.depth===depth && n.state.every((c,i)=>c!==state[i]) && n.state.every(c=>!state.includes(c)));
-      const chosen=candidates.length?candidates[Math.floor(api.rng()*candidates.length)]:tree.at(-1);
+      const tree=[...flights(field,state,wetland).values()];
+      const unique=new Map();
+      for(const node of tree){const [a,b]=node.state;if((wetland.egg>=0 && node.state[3]!==1)||a===state[0]||b===state[1])continue;
+        const key=a*25+b;if(!unique.has(key))unique.set(key,node);}
+      const depth=Math.min(stage+3,8), eligible=[...unique.values()], candidates=eligible.filter(n=>n.depth===depth);
+      const chosen=candidates.length?candidates[Math.floor(api.rng()*candidates.length)]:eligible.at(-1);
       target=chosen.state;par=chosen.depth;
       api.hud('Habitat',`${stage+1}/${fields.length}`,'Flights',0);
     }
     function move(bird,cell){
-      if(ended || delay || !legalMoves(field,state,bird).includes(cell))return;
+      if(ended || delay || !legalMoves(field,state,bird,wetland).includes(cell))return;
       history.push(state.slice()); selected=bird; hop={bird,from:state[bird],to:cell,t:0};
-      state[bird]=cell;cursor=cell;hintCell=null;noticeTime=0;api.sound(bird?'pop':'whoosh');api.haptic(8);
+      const carried=state[3];state=landed(state,bird,cell,wetland);cursor=cell;hintCell=null;noticeTime=0;
+      if(!carried && state[3]){notice='Chick tucked in';noticeTime=1.3;api.sound('power');}api.sound(bird?'pop':'whoosh');api.haptic(8);
       api.hud('Habitat',`${stage+1}/${fields.length}`,'Flights',history.length);
-      if(pack(state)===pack(target)){
+      if(matches(state,target,wetland)){
+        if(wetland.egg>=0)rescued++;
         delay=1.1;totalMoves+=history.length;score+=Math.max(180,1000-60*(history.length-par)-hints*40);api.sound('clear');
       }
     }
     function select(cell){
       if(delay || ended)return;
       cursor=cell;
-      const which=state.indexOf(cell);
+      const which=state.slice(0,2).indexOf(cell);
       if(which!==-1){selected=which;hintCell=null;api.sound('tap');return;}
       move(selected,cell);
     }
@@ -109,7 +127,7 @@ export default {
       api.hud('Habitat',`${stage+1}/${fields.length}`,'Flights',history.length);api.sound('back');
     }
     function hint(act){
-      const solution=flights(field,state).get(pack(target));
+      const solution=[...flights(field,state,wetland).values()].find(n=>matches(n.state,target,wetland));
       if(!solution?.first){
         if(act)undo();else{notice='Try undoing a flight';noticeTime=2;}return;
       }
@@ -118,17 +136,16 @@ export default {
       else{selected=bird;hintCell=cell;cursor=cell;hints++;api.sound('tick');}
     }
     function draw(c){
-      c.fillStyle='#e8e5cd';c.fillRect(0,0,480,480);
-      // Thin crop marks and printed flecks around the naturalist's plate.
-      for(let i=0;i<220;i++){const x=(i*131+19)%480,y=(i*87+Math.floor(i/5)*13)%480;c.fillStyle=i%3?'#d9dac0':'#f6f0d7';c.fillRect(x,y,2+i%4,1);}
+      folio(c,stage,age);
       label(c,fields[stage][0].toUpperCase(),18,25,19,'#263e36');
       label(c,`PAR ${par}`,462,25,17,'#476458','right');
-      label(c,delay?'Both birds are home':selected===0?'Rook  ·  slides to the last clear square':'Owl  ·  jumps in an L shape',18,52,16,'#445e50');
+      if(wetland.pools.length){c.fillStyle=state[2]?'#426c7c':'#678575';c.fillRect(346,36,117,23);label(c,state[2]?'HIGH TIDE':'LOW TIDE',405,53,15,'#fff1cf','center');}
+      label(c,delay?'Both birds are home':selected===0?'Rook · slides to the last perch':'Owl · jumps in an L shape',18,52,16,'#445e50');
       c.fillStyle='#526659';c.fillRect(OX-4,OY-4,CELL*N+8,CELL*N+8);
-      const legal=legalMoves(field,state,selected);
+      const legal=legalMoves(field,state,selected,wetland);
       for(let i=0;i<25;i++){
         const [x,y]=onscreen(i),[a,b]=pos(i),lo=x-CELL/2,top=y-CELL/2;
-        c.fillStyle=(a+b)%2?'#c1c9a6':'#d8dabb';c.fillRect(lo,top,CELL,CELL);
+        soil(c,x,y,CELL,i,stage,age,wetland.pools.includes(i),state[2]===1);
         if(field.includes(i)){
           ellipse(c,x,y+5,26,14,'#93af9a');
           for(let k=0;k<7;k++){
@@ -139,7 +156,8 @@ export default {
         }else{
           for(let k=0;k<4;k++){c.fillStyle='#9fae8a';c.fillRect(lo+8+(i*19+k*31)%54,top+8+(i*11+k*17)%54,3,1);}
         }
-        const nest=target.indexOf(i);
+        if(i===wetland.egg && !state[3])fledgling(c,x,y,age);
+        const nest=target.slice(0,2).indexOf(i);
         if(nest>=0){
           const col=nest?'#ae6447':'#365f5b';
           ellipse(c,x,y+6,26,15,col);
@@ -148,7 +166,7 @@ export default {
             c.strokeStyle=nest?'#d89969':'#769c85';c.lineWidth=1.7;c.beginPath();
             c.ellipse(x+(k%2)*2,y+6+(k%3),23-k%4,11-k%3,k*.21-.6,k*.7,k*.7+2.3);c.stroke();
           }
-          if(!state.includes(i)){birdIcon(c,nest,x,y, .47);}
+          if(!state.slice(0,2).includes(i)){birdIcon(c,nest,x,y, .47);}
         }
         if(legal.includes(i) && !delay){
           const color=selected?'#a16043':'#426d62';
@@ -158,12 +176,14 @@ export default {
         }
         if(cursor===i){c.strokeStyle='#f9f1c7';c.lineWidth=3;c.strokeRect(lo+3,top+3,CELL-6,CELL-6);}
       }
-      state.forEach((cell,i)=>{
+      state.slice(0,2).forEach((cell,i)=>{
         let [x,y]=onscreen(cell), lift=0;
         if(hop?.bird===i && hop.t<1){const [fx,fy]=onscreen(hop.from);x=fx+(x-fx)*hop.t;y=fy+(y-fy)*hop.t;lift=Math.sin(hop.t*Math.PI)*17;}
         ellipse(c,x,y+16,18,5,'#879b81');
         if(i===selected){c.strokeStyle='#f4ecc8';c.lineWidth=2;c.beginPath();c.ellipse(x,y+14,22,7,0,0,TAU);c.stroke();}
+        if(hop?.bird===i && hop.t<1){const [fx,fy]=onscreen(hop.from);c.save();c.setLineDash([3,7]);c.beginPath();c.moveTo(fx,fy);c.quadraticCurveTo((fx+x)/2,(fy+y)/2-22,x,y-lift);c.strokeStyle='#e9e3b6';c.lineWidth=3;c.stroke();c.restore();}
         birdIcon(c,i,x,y-lift+.8*Math.sin(age*2+i),.94);
+        if(state[3] && i===1){c.save();c.translate(x+15,y+10-lift);c.scale(.66,.66);fledgling(c,0,0,age);c.restore();}
       });
       for(const [x,txt] of [[65,'↶  Undo'],[251,'?  Hint']]){
         c.fillStyle='#34564c';c.fillRect(x,432,164,38);
@@ -177,7 +197,7 @@ export default {
       if(ended || delay<=0)return;
       delay-=dt;if(delay>0)return;
       if(++stage<fields.length){delay=0;open();}
-      else{ended=true;stage=fields.length-1;api.end(score,[['Habitats',fields.length],['Flights taken',totalMoves]],'both birds made it home. i saved you a perch. 💜');}
+      else{ended=true;stage=fields.length-1;api.end(score,[['Habitats',fields.length],['Flights taken',totalMoves],['Chicks rescued',rescued]],'both birds made it home. i saved you a perch. 💜');}
     },
     pointer(type,x,y){
       if(type!=='down' || delay || ended)return;

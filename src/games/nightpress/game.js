@@ -1,11 +1,13 @@
-import { TAU, ellipse, rect, line, shape, label } from '../kit/garden-art.js';
+import { TAU, ellipse, rect, line, shape, label, clamp, artwork } from '../kit/garden-art.js';
 
+const films=[artwork(new URL('./teal.webp',import.meta.url)),artwork(new URL('./vermilion.webp',import.meta.url))];
 const orders=[
   {name:'Lunar transit',series:'ORBITAL / 01',inks:['#39a9b6','#ff6c63']},
   {name:'After the rain',series:'BOTANICA / 02',inks:['#499c93','#eb6978']},
   {name:'Open water',series:'PELAGIC / 03',inks:['#51a8ca','#ed8855']},
   {name:'Daybreak',series:'ALMANAC / 04',inks:['#e2a62c','#e85e70']},
-  {name:'Night flight',series:'NOCTURNE / 05',inks:['#7878bb','#ed738a']},
+  {name:'Night flight',series:'NOCTURNE / 05',inks:['#17657a','#ed6339']},
+  {name:'Last light',series:'BEACON / 06',inks:['#17657a','#ed6339']},
 ];
 function cross(ctx,x,y,col,scale=1){
   line(ctx,[[x-8*scale,y],[x+8*scale,y]],col,1.5);
@@ -88,111 +90,183 @@ function plate(ctx,edition,layer,c){
     }
   }
 }
-const marks=[[-109,-73],[109,-73],[-109,73],[109,73]];
+const marks=[[-112,-90],[112,-90],[-112,91],[112,91]];
+const inkColors=['#186779','#e86138'];
+
+function impression(ctx,edition,layer,offset,opacity=1){
+  ctx.save();
+  ctx.translate(offset[0],offset[1]);
+  ctx.globalAlpha=opacity;
+  const film=films[layer];
+  if(film?.naturalWidth){
+    const w=film.naturalWidth/3,h=film.naturalHeight/2;
+    ctx.drawImage(film,edition%3*w,Math.floor(edition/3)*h,w,h,-100,-100,200,200);
+  }else plate(ctx,edition%5,layer,inkColors[layer]);
+  ctx.restore();
+}
+
+export function scorePull(distance, pressure, target, fine) {
+  const pressureError=Math.abs(pressure-target);
+  const clean=distance< (fine?5.5:11) && pressureError<(fine?.095:.18);
+  const base=Math.max(15,Math.round(160-distance*3.1-pressureError*143));
+  return { clean, score:fine?(clean?base+125:Math.round(base*.55)):base, pressureError };
+}
+
 export default {
- title:'NIGHT PRESS',tagline:'Pull two ink passes into register on five little art prints.',
- instructions:[
-   ['Watch the moving plate','Line up the colored crosses with the black targets. The active axis moves automatically.'],
-   ['Lock one axis at a time','Tap once to lock the sideways motion, then again to stamp the vertical position.'],
-   ['Finish the edition','Print two ink colors for each of five designs. Centered pulls earn a precision bonus.'],
- ],
- keys:[['Space / Enter','Lock the moving axis']],touch:[['Tap anywhere','Lock the moving axis']],
- create(api){
-   let edition=0,layer=0,axis=0,t=0,phase=0,dx=0,dy=0,score=0,perfect=0,ended=false;
-   let impression=0,quality='',latestError=0,locked=[],age=0,aiDelay=0;
-   function prepare(){
-     axis=0;age=0;phase=(api.rng()<.5?1:-1)*(.8+api.rng()*.6);
-     dx=Math.sin(phase)*24;dy=14;impression=0;
-     api.hud('Edition',(edition+1)+'/5','Ink',(layer+1)+'/2');
-   }
-   prepare();
-   function pull(){
-     if(ended||impression>0)return;
-     if(axis===0){
-       axis=1;age=0;
-       phase=(api.rng()<.5?1:-1)*(.9+api.rng()*.5);
-       dy=Math.sin(phase)*23;
-       api.sound('click');api.haptic(8);
-     }else{
-       latestError=Math.hypot(dx,dy);
-       const points=Math.max(15,Math.round(180-latestError*4.6));
-       quality=latestError<5?'IN REGISTER':latestError<13?'CLEAN PULL':'OFFSET PULL';
-       if(latestError<5) perfect++;
-       score+=points;
-       locked.push([dx,dy]);
-       impression=1;
-       api.sound(latestError<5?'clear':'drop');api.haptic(21);
-     }
-   }
-   function update(dt){
-     if(ended)return;t+=dt;
-     if(impression>0){
-       impression-=dt;
-       if(impression<=0){
-         layer++;
-         if(layer===2){layer=0;edition++;locked=[];}
-         if(edition===orders.length){
-           ended=true;api.end(score,[['Editions pulled',5],['Precision passes',perfect+' / 10']], 'i’m keeping a copy of that last one.');return;
-         }
-         prepare();
-       }return;
-     }
-     age+=dt;
-     const offset=Math.sin(phase+age*(1.35+edition*.21+layer*.08))*(24+edition*2);
-     if(axis===0)dx=offset;else dy=offset;
-   }
-   function draw(ctx){
-     const o=orders[Math.min(edition,orders.length-1)];
-     rect(ctx,0,0,480,480,0,'#263c3d');
-     for(let i=0;i<16;i++){
-       line(ctx,[[4,i*29+10],[476,i*29+10]],'#354d4a',1);
-       line(ctx,[[i*33,2],[i*33,377]],'#354d4a',1);
-     }
-     rect(ctx,14,14,452,54,7,'#e8dbc0');
-     label(ctx,'NIGHT PRESS',28,32,19,'#293e3d','left','Georgia');
-     label(ctx,'JOB 0'+Math.min(edition+1,5)+' / 05',28,54,15,'#4b6259');
-     label(ctx,o.name,451,41,22,'#293d3c','right','Georgia');
-     rect(ctx,66,83,349,273,3,'#182f32');
-     rect(ctx,61,78,349,273,3,'#ede7cf');
-     rect(ctx,66,83,339,263,2,'#fbf4dc');
-     ctx.save();ctx.translate(236,208);
-     marks.forEach(([x,y])=>cross(ctx,x,y,'#4d524b',1.2));
-     ctx.save();
-     ctx.globalCompositeOperation='multiply';
-     for(let i=0;i<2;i++){
-       ctx.save();
-       if(i<locked.length) ctx.translate(...locked[i]);
-       else if(i===layer) ctx.translate(dx,dy);
-       else {ctx.globalAlpha=.15;}
-       plate(ctx,Math.min(edition,4),i,i===layer||i<locked.length?o.inks[i]:'#828279');
-       if(i===layer && !ended)marks.forEach(([x,y])=>cross(ctx,x,y,o.inks[i]));
-       ctx.restore();
-     }
-     ctx.restore();ctx.restore();
-     label(ctx,o.series,81,102,15,'#4b5248','left','monospace');
-     line(ctx,[[82,298],[389,298]],'#8a8b78',1);
-     label(ctx,o.name.toUpperCase(),82,319,16,'#354840');
-     label(ctx,'ED. 01',389,319,15,'#536153','right','monospace');
-     // Leather feed rollers sit outside the sheet and make the active carriage easy to read.
-     for(const x of [39,430]){
-       rect(ctx,x,100,12,231,6,'#162d30');
-       for(let y=108;y<328;y+=13)line(ctx,[[x+2,y],[x+9,y]],'#758177',2);
-     }
-     rect(ctx,0,370,480,110,0,'#f0deba');
-     const ink=o.inks[Math.min(layer,1)];
-     ellipse(ctx,31,393,9,9,ink);
-     label(ctx,'INK '+Math.min(2,layer+1)+' / 2',48,394,16,'#35433d');
-     label(ctx,impression>0?'PRESS PROOF':axis===0?'HORIZONTAL':'VERTICAL',458,394,17,'#35433d','right');
-     rect(ctx,15,414,450,50,9,impression>0?'#486952':'#293f40');
-     label(ctx,impression>0?quality+'   ·   '+Math.round(latestError)+' px off':axis===0?'↔   Lock horizontal':'↕   Stamp vertical',240,440,21,'#fff3d7','center');
-   }
-   return {update,draw,
-     pointer(type){if(type==='down')pull();},
-     key(type,code){if(type==='down'&&(code==='Space'||code==='Enter'))pull();},
-     demo(dt){
-       aiDelay=Math.max(0,aiDelay-dt);
-       if(!ended&&impression<=0&&aiDelay===0&&age>.2&&Math.abs(axis===0?dx:dy)<2.8){pull();aiDelay=.3;}
-     },
-   };
- },
+  title:'NIGHT PRESS',tagline:'Register two real ink films, then pull the squeegee by hand. Can you deliver the collector edition?',
+  instructions:[
+    ['Register the screen','Tap when the colored crosses overlap the fixed guides. Lock horizontal, then vertical.'],
+    ['Pull the print','Hold the large press control to build pressure. Release in the brass band. Each paper stock takes a different pressure.'],
+    ['Choose an edition','Switch to Fine before registering a pass for a tighter target and a larger clean-print bonus. Three proof sheets let you reset a bad alignment before printing.'],
+  ],
+  keys:[['Space / Enter','Lock an axis, then hold and release to print'],['F','Switch studio or fine edition'],['Z','Spend a proof to realign']],
+  touch:[['Tap, then hold the press','Register and ink the plate'],['Edition or Proof','Change the edition or reset a pull']],
+  create(api){
+    let edition=0,layer=0,axis=0,age=0,phase=0,dx=0,dy=0,t=0,pressure=0,target=.64;
+    let pressing=false,fine=false,proofs=3,used=0,points=0,cleanPasses=0,collectors=0;
+    let last='',endHold=0,ended=false,locked=[],finished=[],seen=0,delay=.25;
+    const sequence=[0,1,2,3,4,5];
+    for(let i=5;i>1;i--){const j=1+Math.floor(api.rng()*i);[sequence[i],sequence[j]]=[sequence[j],sequence[i]];}
+    function prepare(){
+      axis=0;age=0;phase=(api.rng()<.5?1:-1)*(.8+api.rng()*.6);
+      dx=Math.sin(phase)*22;dy=14;pressure=0;pressing=false;last='';endHold=0;
+      target=.43+.37*api.rng();
+      api.hud('Edition',(edition+1)+'/6','Ink',(layer+1)+'/2');
+    }
+    function selectFine(){
+      if(ended||axis!==0||endHold>0)return;
+      fine=!fine;api.sound('select');
+    }
+    function reset(){
+      if(ended||proofs===0||axis===0||endHold>0)return;
+      proofs--;used++;prepare();last='Fresh proof';api.sound('back');
+    }
+    function press(){
+      if(ended||endHold>0)return;
+      if(axis===0){
+        axis=1;age=0;phase=(api.rng()<.5?1:-1)*(.9+api.rng()*.5);
+        dy=Math.sin(phase)*22;api.sound('click');return;
+      }
+      if(axis===1){axis=2;age=0;api.sound('select');return;}
+      pressing=true;
+    }
+    function print(){
+      if(!pressing||ended||endHold>0)return;
+      pressing=false;
+      if(pressure<.065){pressure=0;return;}
+      const result=scorePull(Math.hypot(dx,dy),pressure,target,fine);
+      points+=result.score;
+      if(result.clean)cleanPasses++;
+      if(result.clean&&fine)collectors++;
+      last=(result.clean?(fine?'Collector pull':'In register'):result.pressureError>.18?'Uneven ink':'Offset impression')+'  +'+result.score;
+      locked.push([dx,dy]);endHold=layer===1?1.85:1;
+      api.sound(result.clean?'clear':'drop');api.haptic(result.clean?20:8);
+    }
+    function update(dt){
+      if(ended)return;
+      t+=dt;
+      if(endHold>0){
+        endHold=Math.max(0,endHold-dt);
+        if(endHold===0){
+          layer++;
+          if(layer===2){finished.push(sequence[edition]);layer=0;edition++;locked=[];fine=false;}
+          if(edition===6){
+            ended=true;api.end(points,[['Posters printed',6],['Clean pulls',cleanPasses+' / 12'],['Collector pulls',collectors],['Proof sheets used',used]],'your art deserves a wall of its own.');return;
+          }
+          prepare();
+        }
+        return;
+      }
+      age+=dt;
+      if(axis<2){
+        const offset=Math.sin(phase+age*(1.28+edition*.15+layer*.09+(fine?.3:0)))*(22+edition*1.75);
+        if(axis===0)dx=offset;else dy=offset;
+      }else if(pressing){
+        pressure=clamp(pressure+dt*(.58+edition*.035),0,1);
+        if(pressure===1)print();
+      }
+    }
+    function draw(c){
+      const id=sequence[Math.min(edition,5)],order=orders[id];
+      rect(c,0,0,480,480,0,'#232d30');
+      for(let j=0;j<14;j++){line(c,[[0,65+j*22],[480,65+j*22]],'#374144',1);}
+      rect(c,12,10,456,47,7,'#dbc6a4');
+      label(c,'NIGHT PRESS',25,27,19,'#2a3434','left','Georgia');
+      label(c,'EDITION 0'+Math.min(6,edition+1)+' / 06',25,46,12,'#58605b','left','monospace');
+      label(c,order.name,453,32,22,'#2a3434','right','Georgia');
+      rect(c,68,62,345,276,10,'#141d21');rect(c,76,66,327,266,4,'#485051');
+      rect(c,88,72,302,249,2,'#e6cfa8');rect(c,92,75,295,241,2,'#fff4d5');
+      c.save();c.translate(240,192);c.globalCompositeOperation='multiply';
+      for(let i=0;i<2;i++){
+        const offset=i<locked.length?locked[i]:i===layer?[dx,dy]:[0,0];
+        const opacity=i<locked.length?1:i===layer?(.74+pressure*.21):.11;
+        impression(c,id,i,offset,opacity);
+      }
+      c.restore();
+      if(endHold<=0){
+        c.save();c.translate(240,192);
+        for(const [x,y] of marks){
+          cross(c,x,y,'#444442',.9);cross(c,x+dx,y+dy,inkColors[layer],.75);
+        }
+        c.restore();
+      }
+      for(const x of [36,432]){
+        rect(c,x,78,14,241,6,'#121a20');rect(c,x+2,80,3,236,2,'#8c8c82');
+        for(let i=0;i<15;i++)line(c,[[x+6,84+15*i],[x+12,84+15*i]],'#697775',1.4);
+        rect(c,x-6,87+(axis<2?Math.sin(t*2)*4:pressure*197),27,16,4,'#cda264');
+      }
+      if(axis===2&&pressing){
+        const rollerY=85+pressure*207;
+        rect(c,61,rollerY,358,14,5,'#263034');rect(c,65,rollerY+2,350,5,3,'#90958b');
+      }
+      rect(c,0,336,480,144,0,'#ead9b8');
+      label(c,layer===0?'TEAL / 01':'VERMILION / 02',16,352,14,'#273e40');
+      label(c,endHold>0?last:axis===2?'Squeegee pressure':fine?'Collector stock':'Studio stock',463,353,16,'#3d413b','right');
+      if(axis===2&&endHold<=0){
+        rect(c,18,372,444,16,7,'#4a5654');
+        const width=fine?.095:.18;
+        rect(c,18+444*(target-width),372,444*width*2,16,3,'#ceb070');
+        line(c,[[18+444*target,371],[18+444*target,389]],'#fff4d7',2);
+        const needle=18+pressure*444;
+        shape(c,[[needle-6,365],[needle+6,365],[needle,374]],'#352f2e');
+      }else{
+        for(let i=0;i<6;i++){
+          const x=20+i*33;
+          rect(c,x,366,27,28,2,finished.includes(i)?'#f9edcd':'#d4c7a9');
+          if(finished.includes(i)){c.save();c.translate(x+13,380);c.scale(.12,.12);c.globalCompositeOperation='multiply';impression(c,i,0,[0,0]);impression(c,i,1,[0,0]);c.restore();}
+        }
+        label(c,endHold>0?'On the drying rack':'Registration ±'+(fine?'5':'11')+' px',461,380,14,'#595e55','right');
+      }
+      rect(c,12,406,100,59,9,fine?'#cb9e60':'#cbbda3');
+      label(c,fine?'FINE ★':'STUDIO',62,429,16,'#343934','center');
+      label(c,'F · Edition',62,451,13,'#535744','center');
+      rect(c,120,406,245,59,9,endHold>0?'#426a57':'#234953');
+      const action=endHold>0?'Drying…':axis===0?'↔ Lock horizontal':axis===1?'↕ Lock vertical':pressing?'Release on brass':'Hold to ink';
+      label(c,action,242,436,20,'#fff4d8','center');
+      rect(c,372,406,95,59,9,'#cbbda3');label(c,'Proof ×'+proofs,419,429,16,'#343934','center');
+      label(c,'Z · Reset',419,451,13,'#535744','center');
+    }
+    prepare();
+    return {update,draw,
+      cancelInput(){pressing=false;pressure=0;},
+      key(type,code){
+        if(type==='down'&&code==='KeyF'){selectFine();return;}
+        if(type==='down'&&code==='KeyZ'){reset();return;}
+        if(code==='Space'||code==='Enter'){if(type==='down')press();else print();}
+      },
+      pointer(type,x,y){
+        if(type==='cancel'){pressing=false;pressure=0;return;}
+        if(type==='up'){print();return;}
+        if(type!=='down')return;
+        if(y>=402&&x<116)selectFine();else if(y>=402&&x>370)reset();else press();
+      },
+      demo(dt){
+        if(ended||endHold>0)return;
+        if(seen!==edition*2+layer){seen=edition*2+layer;if(seen%3===1&&!fine)selectFine();}
+        delay=Math.max(0,delay-dt);
+        if(axis<2&&delay===0&&age>.19&&Math.abs(axis===0?dx:dy)<2.8){press();delay=.19;}
+        else if(axis===2&&delay===0){if(!pressing)press();else if(pressure>=target-.02)print();}
+      },
+    };
+  },
 };

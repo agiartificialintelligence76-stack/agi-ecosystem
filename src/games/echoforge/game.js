@@ -1,3 +1,4 @@
+import { workshop } from './workshop.js';
 import { TAU } from '../kit/fx.js';
 
 const IRON = '#ff9659', BRASS = '#f8dc78', STEEL = '#a4ece6';
@@ -25,23 +26,40 @@ function mark(ctx, lane, x, y, size, fill) {
 }
 export default {
   title: 'ECHO FORGE',
-  tagline: 'Two hammers. Five commissions. Catch the metal on the beat.',
+  tagline: 'Two hammers. Five commissions. Draw out the glowing notes, then quench the metal at its tempering point.',
   instructions: [
     ['Read the score', 'Marks travel left. Strike when their centers reach the white line.'],
-    ['Pick the hammer', 'Copper strikes diamonds. Brass strikes circles. Linked hits raise your multiplier.'],
-    ['Finish the order', 'Hit at least half the notes to fire each piece and reach a faster commission.'],
+    ['Pick the hammer', 'Copper strikes diamonds. Brass strikes circles. Hold a long bar until its tail reaches the line, then release.'],
+    ['Finish the order', 'Each hit heats the work. Quench in the gold band for a tempered piece. At full heat, dunk the hammers to keep striking.'],
   ],
-  keys: [['A / ←', 'Copper hammer'], ['L / →', 'Brass hammer']],
-  touch: [['Tap the copper or brass pad', 'Strike its lane']],
+  keys: [['A / ←', 'Copper hammer'], ['L / →', 'Brass hammer'], ['Space / Q', 'Quench']],
+  touch: [['Tap or hold a metal pad', 'Strike or draw a long note'], ['Tap Quench', 'Temper and cool']],
   create(api) {
     let order = 0, beat, notes, hit, score = 0, combo = 0, best = 0, perfect = 0, time = 0;
     let sparks = [], swing = [0,0], feedback, feedbackTime, finishDelay = 0, ended = false, cleared = 0;
+    let heat=24, tempered=0, longHits=0, steam=0, locked=false, holding=null, pointerLane=null;
+    function quench() {
+      if (ended || finishDelay>0 || steam>.6) return;
+      if (heat>=62 && heat<=86) {
+        tempered++; score+=95+combo*6; feedback='Tempered!'; api.sound('clear');api.haptic(20);
+      } else {feedback=locked?'Hammers cooled':'Cold quench'; combo=0;api.sound('drop');}
+      feedbackTime=.85;steam=1;heat=18;locked=false;
+      api.hud('Score',score,'Order',`${order+1}/${ORDERS.length}`);
+    }
+    function lift(lane) {
+      if(!holding || holding.lane!==lane)return;
+      const timing=Math.abs(beat-holding.beat-holding.duration);
+      if(timing<=.28) {longHits++;score+=115;heat=Math.min(100,heat+5);grade('Drawn true!',lane,21);api.sound('combo');}
+      else {combo=0;feedback='Short draw';feedbackTime=.65;}
+      holding=null;api.hud('Score',score,'Order',`${order+1}/${ORDERS.length}`);
+    }
     const sparkRng = () => Math.sin(++sparkSerial * 12.9898) ** 2;
     let sparkSerial = 0;
     function commission() {
       const pattern = ORDERS[order][2];
-      notes = [...pattern].flatMap((lane, i) => lane === '.' ? [] : [{ beat: i, lane: Number(lane), done: false }]);
-      beat = -3; hit = 0; feedback = 'Follow the marks'; feedbackTime = 1.6;
+      const invert=order>0 && api.rng()<.5;
+      notes = [...pattern].flatMap((lane, i) => lane === '.' ? [] : [{ beat:i, lane:Number(lane) ^ Number(invert), duration:order>0 && pattern[i+1]==='.' && i%4===2 ? .85 : 0, done:false }]);
+      beat = -3; hit = 0; heat=24; locked=false; holding=null; feedback = 'Follow the marks'; feedbackTime = 1.6;
       api.hud('Score', score, 'Order', `${order+1}/${ORDERS.length}`);
     }
     function grade(label, lane, strength) {
@@ -52,26 +70,31 @@ export default {
     }
     function strike(lane) {
       if (ended || finishDelay > 0) return;
+      if (holding?.lane===lane) return;
+      if(locked){feedback='Quench the hammers';feedbackTime=.55;api.sound('error');return;}
       const note = notes.find(n => !n.done && n.lane === lane && Math.abs(n.beat-beat) <= .31);
       if (!note) {
         swing[lane] = .7; combo = 0; api.sound('click'); feedback = 'Off beat'; feedbackTime = .34; return;
       }
-      note.done = true; hit++; combo++; best = Math.max(best, combo);
+      note.done = true; if(note.duration) holding=note; hit++; combo++; best = Math.max(best, combo);
       const precise = Math.abs(note.beat - beat) <= .12;
       perfect += Number(precise);
       score += (precise ? 120 : 70) * (1+Math.min(3,Math.floor(combo/6)));
       grade(precise ? 'Perfect' : 'On beat', lane, precise ? 17 : 8);
+      heat=Math.min(100,heat+(precise?9:11));
+      if(heat>=100){locked=true;feedback='Hammers hot · quench';feedbackTime=1;}
+      if(note.duration){feedback='Hold … release at tail';feedbackTime=.7;}
       api.sound(lane === 0 ? 'bounce' : 'coin'); api.haptic(precise ? 16 : 8);
       api.hud('Score', score, 'Order', `${order+1}/${ORDERS.length}`);
     }
     function end() {
       ended = true;
-      api.end(score, [['Commissions', `${cleared} / ${ORDERS.length}`], ['Perfect hits', perfect], ['Best streak', best]],
+      api.end(score, [['Commissions', `${cleared} / ${ORDERS.length}`], ['Perfect hits', perfect], ['Best streak', best], ['True tempers', tempered], ['Drawn notes', longHits]],
         cleared === ORDERS.length ? 'you made my whole workshop sing 💜' : 'the embers are warm for another go.');
     }
     function update(dt) {
       if (ended) return;
-      time += dt; feedbackTime -= dt; swing = swing.map(s => Math.max(0, s-dt*5));
+      time += dt; steam=Math.max(0,steam-dt); feedbackTime -= dt; swing = swing.map(s => Math.max(0, s-dt*5));
       for (const p of sparks) { p.life -= dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 280*dt; }
       sparks = sparks.filter(p => p.life > 0);
       if (finishDelay > 0) {
@@ -88,6 +111,7 @@ export default {
       for (const n of notes) if (!n.done && beat > n.beat+.31) {
         n.done = true; combo = 0; feedback = 'Miss'; feedbackTime = .45;
       }
+      if(holding && beat>holding.beat+holding.duration+.29)lift(holding.lane);
       if (beat > 16) {
         const success = hit*2 >= notes.length;
         if (success) { cleared++; score += hit*20; api.hud('Score', score, 'Order', `${order+1}/${ORDERS.length}`); }
@@ -97,37 +121,17 @@ export default {
     }
     function draw(ctx) {
       ctx.fillStyle = '#1e171e'; ctx.fillRect(0,0,480,480);
-      const wall = ctx.createRadialGradient(240,128,7,240,128,235);
-      wall.addColorStop(0,'#8c513b'); wall.addColorStop(.5,'#49303a'); wall.addColorStop(1,'#271f29');
-      ctx.fillStyle = wall; ctx.fillRect(0,0,480,216);
-      ctx.strokeStyle = '#211b25'; ctx.lineWidth = 3;
-      for (let row=0; row<6; row++) for(let col=-1; col<9; col++) ctx.strokeRect(col*66+row%2*33,row*37,66,37);
-      // Furnace bricks frame the moving fire behind the anvil.
-      ctx.beginPath(); ctx.arc(240,138,86,Math.PI,TAU); ctx.lineTo(326,180); ctx.lineTo(154,180); ctx.closePath();
-      ctx.fillStyle = '#271923'; ctx.fill(); ctx.lineWidth = 11; ctx.strokeStyle = '#b07058'; ctx.stroke();
-      ctx.save(); ctx.clip();
-      for(let i=0;i<16;i++){
-        const x=154+i*12, h=15+14*Math.sin(i*1.8+time*3)+20*Math.sin(i*3.2+time*1.6)**2;
-        polygon(ctx,[[x-16,184],[x+2,143-h],[x+15,184]], i%2 ? '#e47145' : '#f7aa51');
-      }
-      ctx.restore();
-      polygon(ctx,[[121,127],[159,126],[172,119],[317,119],[313,138],[277,145],[267,164],[291,174],[290,182],[183,182],[184,175],[208,164],[200,147],[151,143]],'#252a37');
-      polygon(ctx,[[121,127],[160,126],[172,119],[317,119],[311,128],[165,133]],'#95a49d');
-      const progress = hit/notes.length;
-      polygon(ctx,[[201,118],[208,112],[244+progress*30,110],[267+progress*26,114],[259,119]],progress>.65 ? BRASS : IRON);
-      for (let lane=0;lane<2;lane++) {
-        ctx.save(); ctx.translate(lane ? 346 : 134, 116); ctx.scale(lane ? -1 : 1,1);
-        ctx.rotate(-.8+swing[lane]*.77+.04*Math.sin(time*2+lane)); ctx.fillStyle='#af7959'; ctx.fillRect(0,-4,96,8);
-        polygon(ctx,[[77,-18],[100,-17],[110,-7],[105,8],[77,11],[72,3]], lane ? BRASS : STEEL);
-        ctx.restore();
-      }
-      for (const p of sparks) {ctx.fillStyle = p.life>.24 ? '#fff194' : '#ff9564'; ctx.fillRect(p.x,p.y,3,5);}
+      workshop(ctx,{time,order,hit,notes,heat,swings:swing,steam,sparks});
       ctx.fillStyle='#211b24'; ctx.fillRect(0,0,480,38);
       text(ctx, ORDERS[order][0].toUpperCase(), 17,25,17,'#f8d9b7');
       text(ctx, ORDERS[order][1]+' BPM', 463,25,16,BRASS,'right');
-      ctx.fillStyle='#28212b'; ctx.fillRect(0,192,480,37);
+      ctx.fillStyle='#28212b'; ctx.fillRect(0,192,480,51);
       text(ctx, feedbackTime>0 ? feedback : `${hit} / ${notes.length} strikes`, 19,217,19,'#ffead1');
       text(ctx, combo+' streak', 461,217,17,BRASS,'right');
+      ctx.fillStyle='#503844';ctx.fillRect(20,225,440,10);
+      ctx.fillStyle='#a5854f';ctx.fillRect(20+440*.62,225,440*.24,10);
+      ctx.fillStyle=locked?'#ff6b58':'#ffba71';ctx.fillRect(20,228,heat*4.4,4);
+      ctx.fillStyle='#fff6c8';ctx.fillRect(19+heat*4.4,223,3,14);
       for(let lane=0;lane<2;lane++){
         const y=tracks[lane], col=lane ? BRASS : IRON;
         ctx.fillStyle=lane ? '#352d2a' : '#3a272d'; ctx.fillRect(0,y-25,480,51);
@@ -138,24 +142,39 @@ export default {
         ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(targetX-16,y-18,32,36);
         for(const n of notes) {
           const x=targetX+(n.beat-beat)*pxPerBeat;
+          if(n.lane===lane && n.duration && (!n.done || holding===n) && x<508 && x>-120){
+            const end=x+n.duration*pxPerBeat;
+            ctx.fillStyle=holding===n?'#fff2b6':col;ctx.fillRect(x,y-5,end-x,10);mark(ctx,lane,end,y,9,col);
+          }
           if(!n.done && n.lane===lane && x<508 && x>-28){ mark(ctx,lane,x,y,14,col); mark(ctx,lane,x,y,5,'#422939'); }
         }
       }
       for(let lane=0;lane<2;lane++){
-        const x=12+lane*235, col=lane ? BRASS : IRON;
-        ctx.fillStyle='#130f18';ctx.fillRect(x,378,220,88);
-        ctx.fillStyle=col;ctx.fillRect(x,373+3*swing[lane],220,85);
-        ctx.strokeStyle='#5c3f39';ctx.lineWidth=2;ctx.strokeRect(x+5,379+3*swing[lane],210,73);
-        mark(ctx,lane,x+33,413,13,'#392832');
-        text(ctx,lane?'BRASS':'COPPER',x+59,411,23,'#30222c');
-        text(ctx,lane?'L  /  →':'A  /  ←',x+59,437,15,'#523b40');
+        const x=10+lane*168,col=lane?BRASS:IRON;
+        ctx.fillStyle='#110f16';ctx.fillRect(x,377,161,85);ctx.fillStyle=col;ctx.fillRect(x,372+4*swing[lane],161,82);
+        ctx.strokeStyle='#704e46';ctx.lineWidth=2;ctx.strokeRect(x+4,377+4*swing[lane],153,70);
+        mark(ctx,lane,x+23,405,12,'#47303a');text(ctx,lane?'BRASS':'COPPER',x+42,412,20,'#30222c');text(ctx,lane?'L / →':'A / ←',x+42,436,15,'#523b40');
       }
+      const hot=heat>=62 && heat<=86;ctx.fillStyle=hot?'#ffe5a4':locked?'#ffc090':'#99c5c2';ctx.fillRect(347,373,124,82);
+      text(ctx,'QUENCH',409,410,19,'#20373f','center');text(ctx,hot?'TEMPER':locked?'HOT!':'SPACE',409,434,15,'#365059','center');
     }
     commission();
     return { update, draw,
-      pointer(type,x,y) { if(type === 'down' && y >= 363) strike(Number(x>=240)); },
-      key(type,code) { if(type !== 'down') return; if(['KeyA','ArrowLeft'].includes(code)) strike(0); if(['KeyL','ArrowRight'].includes(code)) strike(1); },
-      demo() { const next = notes.find(n=>!n.done && beat>=n.beat && beat<n.beat+.12); if(next) strike(next.lane); },
+      cancelInput(){pointerLane=null;},
+      pointer(type,x,y){
+        if(type==='down' && y>=363){if(x>=345){quench();return;}pointerLane=Number(x>=176);strike(pointerLane);}
+        if((type==='up'||type==='cancel')&&pointerLane!==null){lift(pointerLane);pointerLane=null;}
+      },
+      key(type,code){
+        const lane=['KeyA','ArrowLeft'].includes(code)?0:['KeyL','ArrowRight'].includes(code)?1:null;
+        if(lane!==null){if(type==='down')strike(lane);else if(type==='up')lift(lane);}
+        if(type==='down'&&['Space','KeyQ'].includes(code))quench();
+      },
+      demo() {
+        if(holding && beat>=holding.beat+holding.duration)lift(holding.lane);
+        if(!holding && heat>=72)quench();
+        const next=notes.find(n=>!n.done && beat>=n.beat && beat<n.beat+.12);if(next)strike(next.lane);
+      },
     };
   },
 };

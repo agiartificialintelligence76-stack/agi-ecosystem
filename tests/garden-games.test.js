@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import mothlight from '../src/games/mothlight/game.js';
-import tidepool, { thriving } from '../src/games/tidepool/game.js';
-import nightpress from '../src/games/nightpress/game.js';
+import tidepool, { thriving, reefLinks } from '../src/games/tidepool/game.js';
+import nightpress, { scorePull } from '../src/games/nightpress/game.js';
 import cloudkitchen from '../src/games/cloudkitchen/game.js';
 import pocketgrove from '../src/games/pocketgrove/game.js';
 
@@ -55,13 +55,19 @@ test('tidepool ignores occupied pockets and lets touch and keyboard finish tides
   a.tap(94,160);assert.equal(a.hud[1],'2/12');
   a.key('Digit2');a.key('Space');assert.equal(a.hud[1],'3/12');
 });
-test('night press requires two locks on each ink, then changes edition after both inks',()=>{
+test('night press registers two axes, inks both physical plates, and can retry a collector proof',()=>{
   const a=start(nightpress);
-  assert.equal(a.hud[3],'1/2');
-  a.key('Space');a.tick(.4);assert.equal(a.hud[3],'1/2');
-  a.tap(200,200);a.tick(1.1);assert.equal(a.hud[3],'2/2');
-  a.tap(200,200);a.key('Enter');a.tick(1.1);
-  assert.equal(a.hud[1],'2/5');assert.equal(a.hud[3],'1/2');
+  a.key('KeyF');a.key('Space');a.key('KeyZ');
+  for(let pass=0;pass<2;pass++){
+    a.key('Space');a.tick(.4);a.tap(200,200);
+    a.tick(1);assert.equal(a.hud[3],(pass+1)+'/2','a registered plate waits for pressure');
+    a.model.pointer('down',233,431);a.tick(.9);a.model.pointer('up',233,431);a.tick(2);
+  }
+  assert.equal(a.hud[1],'2/6');assert.equal(a.hud[3],'1/2');
+  a.tick(130,true);assert.equal(a.result.stats['Proof sheets used'],1);
+  assert.equal(a.result.stats['Posters printed'],6);
+  assert.ok(scorePull(1,.65,.66,true).score>scorePull(1,.65,.66,false).score);
+  assert.ok(scorePull(7,.87,.65,true).score<scorePull(7,.87,.65,false).score);
 });
 test('cloud kitchen completes a two-ingredient ticket and early taps keep cooking',()=>{
   const a=start(cloudkitchen);
@@ -76,4 +82,33 @@ test('orchard baskets use picked inventory and invalid grafts preserve the day',
   a.key('KeyE');a.key('Digit1');a.tap(322,170);a.key('Digit3');
   assert.equal(a.hud[1],1);
   assert.equal(a.hud[3],'4/20');
+});
+
+test('moth photography spends one frame per perched visitor and completes a cover commission',()=>{
+  const a=start(mothlight);
+  a.tick(5.55);a.key('KeyQ');a.key('KeyQ');a.tick(60);
+  assert.equal(a.result.stats['Cover shots'],1);
+  assert.match(a.result.stats['Sharp photos'],/ \/ 1$/);
+});
+test('a sheltered resident survives its forecast surge and an intact reef needs three trophic levels',()=>{
+  const a=start(tidepool), board=Array(16).fill(null);
+  board[0]=0;board[1]=1;board[2]=2;
+  assert.equal(reefLinks(board),1);board[0]=null;assert.equal(reefLinks(board),0);
+  a.tap(319,124);a.key('KeyR');a.tap(319,124);
+  assert.equal(a.hud[1],'2/12','sheltering is a free preparation for the tide');
+  a.tick(130,true);assert.ok(a.result.stats['Sheltered through surges']>=1);
+});
+test('routing high flame changes cooking speed and awards a manually timed golden sear',()=>{
+  const a=start(cloudkitchen);
+  a.tap(70,370);a.key('Digit1');a.tick(2.12);a.tap(70,432);a.tick(67);
+  assert.equal(a.result.stats['Golden sears'],1);
+});
+test('canals require two distinct trees, irrigate connected roots, and support a honey crop',()=>{
+  const a=start(pocketgrove);
+  a.key('KeyR');a.key('Digit1');a.key('Digit1');
+  assert.equal(a.hud[3],'1/20');
+  a.key('Digit1');a.key('Digit2');assert.equal(a.hud[3],'2/20');
+  a.key('KeyQ');a.key('Digit1');a.tick(130,true);
+  assert.ok(a.result.stats.Canals>=1);assert.ok(a.result.stats['Honey jars']>0);
+  assert.ok(a.result.stats['Roots irrigated']>=2);
 });

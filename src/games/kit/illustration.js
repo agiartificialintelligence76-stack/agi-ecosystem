@@ -31,3 +31,14 @@ export function type(c, text, x, y, size = 18, color = '#fff4e3', align = 'cente
 export function panel(c, x,y,w,h, fill, radius = 8) {
   c.beginPath(); c.roundRect(x,y,w,h,radius); c.fillStyle = fill; c.fill();
 }
+
+// Load the painting once per page; the playfield remains usable while it decodes.
+export function painting(url) {
+  const img = typeof Image === 'undefined' ? null : new Image();
+  if (img) { img.decoding = 'async'; img.src = url; }
+  return (ctx, ...bounds) => {
+    if (!img?.complete || !img.naturalWidth) return false;
+    ctx.drawImage(img, ...bounds);
+    return true;
+  };
+}

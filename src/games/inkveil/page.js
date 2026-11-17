@@ -3,4 +3,4 @@ import { createShell } from '../kit/shell.js';
 import { mountCartridge } from '../kit/cartridge.js';
 import game from './game.js';
 
-mountCartridge('inkveil', game, (options) => createShell({ game: 'inkveil', ...options }));
+mountCartridge('inkveil', game, (options) => createShell({ game: 'inkveil', ...options }), new URL('./night-harbor.webp', import.meta.url).href);
