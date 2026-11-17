@@ -1,3 +1,4 @@
+import { COLLECTION } from '../../src/games/collection.js';
 // AGI games' gameplay previews (2026-11-08, the owner: "there should ba a preview of gameplay on every game"): each game's
 // tile on agi1.app/games plays a short muted loop of the game playing itself, with a still from it. This records them.
 //
@@ -28,6 +29,7 @@ const only = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWi
 
 const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } = {}) => ({ url: `/games/${id}?demo&seed=${seed}`, warm, dur, poster, shotTimeout: 180000, ...more });
 export const RECIPES = {
+  ...Object.fromEntries(COLLECTION.map(({ id }) => [id, kit(id)])),
   mergeagi: kit('mergeagi'), blockchain: kit('blockchain'), heartbeat: kit('heartbeat'), scamslayer: kit('scamslayer'),
   // (its pixel art is small on a wide field: drawn twice as fine and cropped around her, so the bots read on a small tile)
   lastmodel: kit('lastmodel', 7, { dpr: 2, crop: [110, 80, 260, 260] }), singularity: kit('singularity'), jailbreak: kit('jailbreak'), stacked: kit('stacked'),

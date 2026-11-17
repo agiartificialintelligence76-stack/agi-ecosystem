@@ -1,0 +1,48 @@
+.cartridge .ak-stage {
+  display: grid; align-content: center; justify-items: center;
+  padding: calc(62px + var(--ak-safe-t)) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l);
+  background: radial-gradient(ellipse at 50% 43%, var(--ak-bg), color-mix(in srgb, var(--ak-bg) 32%, #070c13));
+}
+.cartridge-field {
+  position: relative; width: min(100%, calc(100dvh - 74px - var(--ak-safe-t) - var(--ak-safe-b)), 850px); aspect-ratio: 1;
+  overflow: hidden; box-shadow: 0 0 0 1px #ffffff28, 0 16px 65px #0004;
+}
+.cartridge-hint {
+  position: absolute; bottom: max(4%, var(--ak-safe-b)); left: 5%; right: 5%; margin: 0;
+  text-align: center; text-wrap: balance; font: 500 13px/1.6 var(--ak-sans); color: #f4efe2bb;
+}
+@media (min-aspect-ratio: 4/5), (max-height: 620px) { .cartridge-hint { display: none; } }
+.cartridge[data-ak-demo] .ak-stage { padding: 0; }
+.cartridge[data-ak-demo] .cartridge-field { width: min(100vw, 100dvh); }
+.cartridge[data-ak-demo] .cartridge-hint { display: none; }
+.cartridge .ak-title { background: linear-gradient(130deg, var(--ak-bg), color-mix(in srgb, var(--ak-bg) 30%, #070c13)); isolation: isolate; }
+.cartridge .ak-title .ak-screen-scrim { display: none; }
+.cartridge .ak-title-art { inset: 12% 51% 9% 6%; display: grid; place-items: center; }
+.cartridge .ak-title-art > img {
+  position: relative; width: min(100%, 63vh); height: auto; aspect-ratio: 1; object-fit: cover;
+  border: 4px solid var(--ak-accent); border-radius: 3px; transform: rotate(-3deg);
+  box-shadow: 12px 15px 0 #07081470, 0 20px 50px #0005;
+}
+.cartridge .ak-title-body { margin-left: 48%; width: min(44%, 590px); }
+.cartridge .ak-logo-line { font-size: clamp(32px, 5.8vw, 82px); }
+.cartridge .ak-chip-label, .cartridge .ak-chip-value { overflow: hidden; text-overflow: ellipsis; }
+@media (max-width: 730px) and (orientation: portrait) {
+  .cartridge .ak-title { display: flex; flex-direction: column; justify-content: safe center; gap: 20px; }
+  .cartridge .ak-title-art { position: relative; z-index: 0; inset: auto; width: min(73%, 28dvh); flex: none; }
+  .cartridge .ak-title-art > img { width: 100%; }
+  .cartridge .ak-title-body { margin-left: 0; width: 100%; gap: 9px; }
+  .cartridge .ak-logo-line { font-size: clamp(37px, 9.5vw, 65px); }
+  .cartridge .ak-logo { display: flex; flex-wrap: wrap; justify-content: center; column-gap: .14em; }
+}
+@media (max-height: 490px) and (orientation: landscape) {
+  .cartridge .ak-title-body { gap: 5px; }
+  .cartridge .ak-title-art { inset-block: 16% 6%; }
+  .cartridge .ak-title-art > img { width: min(100%, 65vh); }
+  .cartridge .ak-title .ak-logo-line { font-size: clamp(28px, 6.8vh, 46px); }
+  .cartridge .ak-title .ak-fine, .cartridge .ak-keys-hint { display: none; }
+}
+@media (max-width: 440px) {
+  .cartridge .ak-chip { flex-direction: column; justify-content: center; height: 39px; gap: 0; }
+  .cartridge .ak-chip-value { max-width: 100%; font-size: 13px; }
+  .cartridge .ak-chip-label { font-size: 8px; }
+}

@@ -1,3 +1,4 @@
+import { COLLECTION } from '../games/collection.js';
 // Canonical site paths shared by the command page and the public content runtime.
 export const BUILTIN_PAGES = Object.freeze([
   { path: '/', title: 'Home' },
@@ -44,6 +45,7 @@ export const BUILTIN_PAGES = Object.freeze([
   { path: '/games/overthinking', title: "OVERTHINKING" },
   { path: '/games/growthstock', title: "GROWTH STOCK" },
   { path: '/games/goinglive', title: "GOING LIVE" },
+  ...COLLECTION.map(({ id, name }) => ({ path: `/games/${id}`, title: name })),
   { path: '/cloakmesh', title: 'CloakMesh' },
   { path: '/studio', title: 'AGI Studio' },
   { path: '/studio/explore', title: 'Studio · Explore' },
@@ -86,6 +88,7 @@ const ALIASES = Object.freeze({
   '/overthinking': '/games/overthinking',
   '/growthstock': '/games/growthstock',
   '/goinglive': '/games/goinglive',
+  ...Object.fromEntries(COLLECTION.map(({ id }) => [`/${id}`, `/games/${id}`])),
 });
 
 export function normalizePath(value = '/') {

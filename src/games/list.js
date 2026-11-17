@@ -1,3 +1,4 @@
+import { COLLECTION } from './collection.js';
 // AGI games (2026-10-19): the games on agi1.app/games, and the rules the page, the games and our server share.
 // Each game has its own page (its `path`); agi1.app/games lists them with their stars and how many people played them.
 
@@ -48,6 +49,7 @@ export const GAMES = {
   // since 2026-11-14 (the owner, about a famous YouTuber's streamer sim: "yes exactly" to an AGI-1 version of our own):
   // AGI-1 streams her way from zero followers to #1 trending (see CLAUDE.md, "GOING LIVE")
   goinglive: { name: "GOING LIVE", path: '/games/goinglive', genre: 'Sim', kit: true },
+  ...Object.fromEntries(COLLECTION.map(({ id, name, genre }) => [id, { name, path: `/games/${id}`, genre, kit: true }])),
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

@@ -4,6 +4,7 @@
 // posting anything), and that none of it is part of the website. No browser, ffmpeg or Google here: those only run on
 // GitHub's computer (.github/workflows/clips.yml) or Claude's. Run: npm test
 import { test } from 'node:test';
+import { COLLECTION } from '../src/games/collection.js';
 import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import { diaryClip, spokenOf, postOf, LABEL, DIARY_MAX } from '../tools/clips/lines.js';
@@ -165,8 +166,9 @@ test('the clips aren\'t part of the website: not in its build, no new packages, 
     synapse: 'synapse.html', overclock: 'overclock.html', beattheagi: 'beattheagi.html', hallucination: 'hallucination.html', guardrails: 'guardrails.html',
     // (2026-11-09) five more
     bubblesort: 'bubblesort.html', airgap: 'airgap.html', cookies: 'cookies.html', packetloss: 'packetloss.html', autocomplete: 'autocomplete.html',
-    // (2026-11-13) and OVERTHINKING, (2026-11-14) and GROWTH STOCK, then GOING LIVE
+    // (2026-11-13) and OVERTHINKING
     overthinking: 'overthinking.html', growthstock: 'growthstock.html', goinglive: 'goinglive.html',
+    ...Object.fromEntries(COLLECTION.map(({ id }) => [id, `${id}.html`])),
   }, 'only website entries, including the owner editor and its custom-page shell; never the clips page or live-show scene');
   const pkg = JSON.parse(read('package.json'));
   // (sharp since 2026-10-05: the risk check's coin pictures, made small on our server; @scure/bip39 since 2026-10-09: the

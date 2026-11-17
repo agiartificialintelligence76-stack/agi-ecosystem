@@ -1,3 +1,4 @@
+import { GAMES } from '../src/games/list.js';
 // Runs after `vite build` (part of `npm run build`). Phase 5 share links:
 // 1. writes dist/share/level-<name>.html: tiny pages that exist so X (and other apps) show the right picture under a
 //    shared link. People who open one are sent on to the Playground by /share/go.js (crawlers don't run scripts, so they
@@ -68,7 +69,8 @@ export function allSharePages(site) {
 export const neededCards = () => [...LEVELS.map((l) => `level-${l.name.toLowerCase()}.png`), 'diary.png', 'home.jpg', 'roadmap.jpg',
   'games.jpg', 'trenchingsimulator.jpg', 'games-all.jpg'];
 // (2026-11-08) the arcade kit's ten games: each its own link preview, cards/games/<id>.jpg (tools/games/covers.mjs)
-const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive'];
+const KIT_GAMES = Object.keys(GAMES).filter((id) => GAMES[id].kit);
+export const gameSharePages = () => KIT_GAMES.map((id) => `dist/${id}.html`);
 export const neededGameArt = () => ['images/vladrunner2049/keyart.webp', 'images/skybreak/keyart.webp', ...KIT_GAMES.map((id) => `cards/games/${id}.jpg`)];
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
@@ -86,7 +88,7 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   }
   for (const [name, html] of Object.entries(allSharePages(site))) writeFileSync(`dist/share/${name}.html`, html);
   for (const page of ['dist/index.html', 'dist/diary.html', 'dist/live.html', 'dist/studio.html', 'dist/roadmap.html', 'dist/stake.html',
-    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', 'dist/mergeagi.html', 'dist/blockchain.html', 'dist/heartbeat.html', 'dist/scamslayer.html', 'dist/lastmodel.html', 'dist/singularity.html', 'dist/jailbreak.html', 'dist/stacked.html', 'dist/jaywalk.html', 'dist/robotaxi.html', 'dist/realorai.html', 'dist/notarobot.html', 'dist/alignment.html', 'dist/gradient.html', 'dist/epochs.html', 'dist/synapse.html', 'dist/overclock.html', 'dist/beattheagi.html', 'dist/hallucination.html', 'dist/guardrails.html', 'dist/bubblesort.html', 'dist/airgap.html', 'dist/cookies.html', 'dist/packetloss.html', 'dist/autocomplete.html', 'dist/overthinking.html', 'dist/growthstock.html', 'dist/goinglive.html',
+    'dist/games.html', 'dist/giveaway.html', 'dist/rideemagi.html', 'dist/trenchingsimulator.html', 'dist/vladrunner2049.html', 'dist/skybreak.html', ...gameSharePages(),
     'dist/memes.html',
     'dist/pfp.html', 'dist/vote.html', 'dist/verify.html']) {
     if (existsSync(page)) writeFileSync(page, readFileSync(page, 'utf8').replaceAll('__SITE__', site));
