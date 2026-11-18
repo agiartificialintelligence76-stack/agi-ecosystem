@@ -182,3 +182,75 @@ expert · solved 504/504 · season median 20.9 min · scene P50/P90 30/46 s · s
 Grid release verification used a clean Node 24 build in UTC. The full suite passed 2,337 tests with six existing skips. On the built pages all five games started, accepted input and reached scored results on phone and desktop. Pause, resume and replay worked. The sideways phone, foldable and large desktop checks found no layout or CSP violations across the five games. The linked contact sheets show the actual title, play and result screens.
 
 Vercel published the grid batch at revision b920cfe. Each hosted preview accepted its opening solution or stage program. All five public pages subsequently matched the clean build and returned their new playable field, tile clip, poster and share card. A separate 20-minute real-time browser run completed 29 distinct Catnap puzzles and entered number 30 at 19:22.
+
+## Physics and action
+
+Each game uses its own physical rules. The browser checks used an actual leap, bank shot, orbit capture, tape steal and archive exit. Times below are simulated run medians, except where a campaign estimate is explicitly labeled. The visual checks used desktop Chrome at five viewport sizes. A physical device and listening review were unavailable.
+
+| Game | JS bytes before → after (files) | Content and modes | Modeled times, beginner / steady / expert | Lines | Dedicated tests | Screens |
+|---|---:|---|---|---:|---:|---|
+| WINGWALK EXPRESS | 11,930 → 36,025 (10) | 8 leaps → 18 named round trips with 397 handoffs across 6 districts, Red-eye nonstop and Daily Airbill. | 59 / 178 / 468 s nonstop. Post Run modeled at 59 / 30 / 23 min. | 34 | 14 | [Phone](remaster-evidence/cloudfoil-phone.jpg) · [Desktop](remaster-evidence/cloudfoil-desktop.jpg) |
+| MOONSHOT BILLIARDS | 11,522 → 66,999 (10) | 5 single shots → 36 trick tables, 18 conditions on the AI ladder, daily three-rack match and House Run. | 73 / 162 / 570 s in House Run. | 34 | 13 | [Phone](remaster-evidence/moonfreight-phone.jpg) · [Desktop](remaster-evidence/moonfreight-desktop.jpg) |
+| SLINGSHOT GIRL | 14,242 → 51,318 (8) | 6 circuits → 36 tour flags, 144 certified variations, Daily Nine, Comet Carry and personal flight ghosts. | 85 / 227 / 329 s in Comet Carry. Tour modeled at 41 / 22.5 / 12 min. | 34 | 13 | [Phone](remaster-evidence/tetherturn-phone.jpg) · [Desktop](remaster-evidence/tetherturn-desktop.jpg) |
+| CASSETTE BANDIT | 12,982 → 62,733 (12) | 1 race → 12 championship matches against 6 driving personalities, Radio Check, Marathon, Daily Rival and Local Duet. | 87 / 210 / 455 s in Marathon Radio. | 68 | 22 | [Phone](remaster-evidence/driftglass-phone.jpg) · [Desktop](remaster-evidence/driftglass-desktop.jpg) |
+| AGI'S ALIBI | 12,979 → 93,983 (14) | 5 tape loops → 36 authored archives with quiet and unrestricted par, Daily and three-alert Noir. 256 variants solver-checked. | 110 / 226 / 312 s in Noir. Campaign modeled at 70.3 / 24.8 / 20.3 min. | 34 | 14 | [Phone](remaster-evidence/inkveil-phone.jpg) · [Desktop](remaster-evidence/inkveil-desktop.jpg) |
+
+| Game | Previous named shared effects | Sound after | Measured peak |
+|---|---:|---|---:|
+| WINGWALK EXPRESS | 3 | 18 event motifs and an engine that follows takeoff charge. | −16.42 dBFS |
+| MOONSHOT BILLIARDS | 2 | 10 original cues including collision-speed clacks, cushions, scratch, pocket, roll and gravity wells. | -10.69 dBFS |
+| SLINGSHOT GIRL | 5 | 12 capsule-radio voices for burns, gravity changes, rings, captures and scorecards. | -14.67 dBFS |
+| CASSETTE BANDIT | 6 | 22 cues from cassette gates and broadcast jingles to the two-car contest for possession. | −8.53 dBFS |
+| AGI'S ALIBI | 5 | 15 tape, floor and patrol sounds and an adaptive tension bed. | −17.16 dBFS |
+
+### Balance tool output
+
+#### WINGWALK EXPRESS
+
+```text
+18 individually scored round trips, 397 outbound and return handoffs, six districts.
+newbie · 64 red-eye runs · median 59s · handoffs 8 · score P10/50/90 376/956/1491 · chute openings {"long":85,"lane":57,"short":50}
+  campaign pace 59.4 min extrapolated at measured seconds per handoff · clean single-flight cards 0/18
+steady · 64 red-eye runs · median 178s · handoffs 38 · score P10/50/90 3743/5692/7537 · chute openings {"long":119,"short":58,"lane":13,"late":2}
+  campaign pace 30.0 min extrapolated at measured seconds per handoff · clean single-flight cards 14/18
+expert · 64 red-eye runs · median 468s · handoffs 135 · score P10/50/90 16609/45303/86670 · chute openings {"long":120,"short":57,"lane":15}
+  campaign pace 23.0 min extrapolated at measured seconds per handoff · clean single-flight cards 18/18
+```
+
+#### MOONSHOT BILLIARDS
+
+```text
+newbie · seconds p10/50/90 59.8/71.8/88.4 · score p25/50/75 153/177/225 · first contact 67% · legal pots/stroke 0.17 · scratches/rack 0.45 · empty innings 5 · average leave 221 felt units · scored banks 0
+steady · seconds p10/50/90 73.2/158.4/344.4 · score p25/50/75 378/1213/2058 · first contact 92% · legal pots/stroke 0.36 · scratches/rack 0.19 · empty innings 8 · average leave 198 felt units · scored banks 13
+expert · seconds p10/50/90 117.7/552.4/1491.0 · score p25/50/75 1189/13497/18033 · first contact 92% · legal pots/stroke 0.60 · scratches/rack 0.07 · empty innings 20 · average leave 191 felt units · scored banks 140
+```
+
+#### SLINGSHOT GIRL
+
+```text
+newbie · seconds p10/50/90 71.9/84.8/109.0 · score p25/50/75 684/999/1389 · flags 3 · strokes 7 · rings 3 · recoveries 4 · fast/field/rim events 18/14/0 · full-tour median 41.0min
+steady · seconds p10/50/90 139.3/227.0/314.0 · score p25/50/75 2002/3149/3918 · flags 8 · strokes 12 · rings 14 · recoveries 2 · fast/field/rim events 14/12/0 · full-tour median 22.5min
+expert · seconds p10/50/90 187.9/329.1/498.8 · score p25/50/75 4565/7306/11236 · flags 17 · strokes 22 · rings 39 · recoveries 1 · fast/field/rim events 11/5/0 · full-tour median 12.1min
+```
+
+#### CASSETTE BANDIT
+
+```text
+novice · marathon 64/87/103s (P10/M/P90) · score 288/395/600 (Q1/M/Q3) · 16% airtime · steals 2/15, jams 0/0, 1 boosts, 3 crashes · 30s/round · ladder wins 0/64–0/64 · roadworks/BRIDGE 31
+steady · marathon 119/210/301s (P10/M/P90) · score 1906/2838/3674 (Q1/M/Q3) · 59% airtime · steals 7/33, jams 8/9, 2 boosts, 9 crashes · 37s/round · ladder wins 44/64–30/64 · roadworks/ANTENNA 13
+expert · marathon 307/455/572s (P10/M/P90) · score 6288/7660/8714 (Q1/M/Q3) · 82% airtime · steals 18/41, jams 17/19, 2 boosts, 12 crashes · 33s/round · ladder wins 64/64–64/64 · roadworks/ANTENNA 19
+```
+
+#### AGI'S ALIBI
+
+```text
+36 exhibits, 256 contracts. Both clean pars (5–16) and the unrestricted shortest exits are proved. Model times include inspection, committed footwork, aiming and recovery.
+newcomer campaign · 392/432 exits · whole archive P50 70.3 min · median beats over clean par 4 · first/finale unassisted quiet 12/12, 0/12 · hints 65
+newcomer Noir · time P10/50/90 43/110/187 s · median cases/turns 1/33 · score P10/50/90 0/1232/3759 · throws/diversions 88/87 · sightings patrol/camera 108/0 · footsteps heard/hood beats 38/0 · budget exhausted 36/36
+regular campaign · 432/432 exits · whole archive P50 24.8 min · median beats over clean par 0 · first/finale unassisted quiet 12/12, 1/12 · hints 2
+regular Noir · time P10/50/90 104/226/306 s · median cases/turns 6/73 · score P10/50/90 2264/5992/9555 · throws/diversions 265/257 · sightings patrol/camera 91/17 · footsteps heard/hood beats 44/2 · budget exhausted 36/36
+expert campaign · 432/432 exits · whole archive P50 20.3 min · median beats over clean par 0 · first/finale unassisted quiet 12/12, 8/12 · hints 1
+expert Noir · time P10/50/90 211/312/491 s · median cases/turns 10/120 · score P10/50/90 7957/10084/15982 · throws/diversions 543/518 · sightings patrol/camera 90/18 · footsteps heard/hood beats 34/19 · budget exhausted 36/36
+```
+
+The clean Node 24 UTC release passed 2,401 tests with six existing skips. All five titles reached nonzero scored endings on both a phone and a desktop and replayed. All 25 viewport checks passed the production CSP and the touch-control size checks. Cassette Bandit’s separate Radio Check was also won 18–2 by touch. The final championship rival changed possession 14 times in the median steady match, above the seven-change design target.

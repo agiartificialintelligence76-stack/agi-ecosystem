@@ -1,5 +1,10 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Physics and action · 2026-11-18
+
+The action remasters keep all five IDs and use the responsive remaster frame. Wingwalk’s postal round trips use swept contacts on moving wings. Moonshot adjudicates real cue-ball turns, calls and fouls. Slingshot uses the player’s in-flight burns and stored ghosts. Cassette Bandit scores tape possession and supports two drivers. Alibi’s patrols follow observations and thrown sounds. Each title has a dedicated test suite and a tools/games/<id>/balance.mjs. See tools/games/REMASTER-REPORT.md for balance, sound peaks and paired screenshots.
+
+
 ## Grid puzzles · 2026-11-18
 
 HANDLE WITH CARE rolls a physical parcel through 42 depots. LAST TRAIN TO NOODLES shunts ordered ingredients through 36 rail yards. SPLIT PERSONALITY gives one command to two performers across 40 mirror chambers. KEYBOARD CATNAP offers 45 naps on five physical keyboard types. CURTAIN CALL runs a cue program on a live stage across 42 productions. Each game has its own solver, certified par, saved stars, daily challenge, dedicated tests, sound design and balance tool. See `tools/games/REMASTER-REPORT.md` for simulations, measured peaks and phone and desktop captures.

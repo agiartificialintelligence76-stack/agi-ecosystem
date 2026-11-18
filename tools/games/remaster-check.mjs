@@ -45,7 +45,7 @@ async function check(id,label) {
     else if(id==='moonfreight'||id==='tetherturn'){await page.keyboard.press('Space');}
     else if(!openingPuzzles.has(id)){await first.click();await page.keyboard.press(id==='returnaddress'?'ArrowUp':'ArrowRight');}
     else if(id==='prismcourier')await page.keyboard.press('KeyH');
-    const until=phase.startsWith('layout')?250:phase.includes('dev')?1600:7500;
+    const until=phase.startsWith('layout')?250:phase.includes('dev')?1600:({cloudfoil:480,moonfreight:420,tetherturn:770,inkveil:850}[id]??7500);
     await delay(until);
     const size=await page.evaluate(()=>{
       const box=n=>{const r=n.getBoundingClientRect();return [Math.round(r.x),Math.round(r.y),Math.round(r.width),Math.round(r.height)];};
@@ -56,6 +56,7 @@ async function check(id,label) {
     if(size.canvas[2]<width*.53 || size.canvas[3]<height*.39)failures.push('undersized canvas '+size.canvas);
     if(full)await shot('run');
     if(phase==='full'&&full){
+      if(id==='cloudfoil')await page.locator('[data-action="file"]').waitFor();
       await page.getByRole('button',{name:'Pause',exact:true}).click();
       await page.getByRole('button',{name:'Resume',exact:true}).click();
       if(id==='returnaddress'){await page.locator('[data-action="backspin"]').click();await page.locator('[data-action="jump"]').click();}
