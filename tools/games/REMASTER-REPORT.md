@@ -102,3 +102,7 @@ newbie  time p10/50/90=75.6/147.1/171.6s  score p25/50/75=1408/2496/2955  fixes=
 steady  time p10/50/90=249.6/276.6/302.3s  score p25/50/75=6468/6819/7436  fixes=18  pings=39  misses=2  exact=7
 expert  time p10/50/90=321.6/352.6/365.3s  score p25/50/75=12698/13233/13662  fixes=32  pings=67  misses=0  exact=24
 ```
+
+### Clean release verification
+
+Node 24.21.0, UTC, fresh checkout and locked dependencies. The production command finished with 2,274 passing tests, six existing skips and zero failures. All five routes passed the production CSP in the local build. All 25 game and viewport combinations passed the control-size and layout checks, and all ten full phone and desktop runs reached results, paused, resumed and replayed successfully.
