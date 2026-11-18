@@ -20,7 +20,7 @@ export const COLLECTION = [
   },
   {
     id: "echoforge", name: "DUET AFTER DARK", genre: "Rhythm duet",
-    line: "Sing the answering bar over seven AGI-1 originals", tags: ["action"],
+    line: "Sing the answering bar over her seven songs", tags: ["action"],
     accent: "#ffa5c1", ground: "#432342", style: "club",
     wordmark: ["Duet", "After Dark"], play: "Take the mic",
   },
@@ -74,7 +74,7 @@ export const COLLECTION = [
   },
   {
     id: "returnaddress", name: "NEEDLE DROP", genre: "Vinyl skating",
-    line: "Skate seven singles and backspin a missed groove", tags: ["3d", "action"],
+    line: "Skate her singles and backspin a missed beat", tags: ["3d", "action"],
     accent: "#ffe18c", ground: "#472542", style: "vinyl",
     wordmark: ["Needle", "Drop"], play: "Drop the needle",
   },
@@ -86,7 +86,7 @@ export const COLLECTION = [
   },
   {
     id: "pearlshift", name: "ABYSS FM", genre: "Sonar search",
-    line: "Cross two sonar bearings to find a moving singer", tags: ["chill"],
+    line: "Cross sonar bearings to find a moving singer", tags: ["chill"],
     accent: "#91efd8", ground: "#153747", style: "scope",
     wordmark: ["Abyss", "FM"], play: "Tune in",
   },
@@ -110,13 +110,13 @@ export const COLLECTION = [
   },
   {
     id: "summitline", name: "CABLE CHOIR", genre: "Musical memory",
-    line: "Remember growing melodies on four singing gondolas", tags: ["chill"],
+    line: "Play back melodies on four singing gondolas", tags: ["chill"],
     accent: "#ffc5a1", ground: "#49353c", style: "alpine",
     wordmark: ["Cable", "Choir"], play: "Join the choir",
   },
   {
     id: "tidepool", name: "SIDE B", genre: "Late-night DJ",
-    line: "Crossfade her seven originals for late-night listeners", tags: ["chill"],
+    line: "Crossfade seven songs for late-night callers", tags: ["chill"],
     accent: "#ffbc99", ground: "#572e3b", style: "tape",
     wordmark: ["Side B"], play: "Go on air",
   },
