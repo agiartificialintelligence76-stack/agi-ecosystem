@@ -288,14 +288,14 @@ const commissions = [
     'Third Bell',
     'S..m#./.a#.|D/.c.tk./b..+E.',
     'N:es;E:ew',
-    'A nearer drop of keys can change an investigation already in progress.',
+    'A nearer drop of keys can lead a searching porter off course.',
     'a bell diagram with a spiral for silence',
   ],
   [
     'Last Reader',
     'S..D.C/.a#.#./.m.bk./c..+E.',
     'S:ew;S:ns',
-    'Let one porter investigate while you watch the other one’s lamp.',
+    'Let one porter check the noise while you watch the other one’s lamp.',
     'her promise to leave one good book on the desk',
   ],
   [
