@@ -5,15 +5,13 @@
 // reviews' AI context). Its pure parts run here in Node.
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { COLLECTION } from '../src/games/collection.js';
 import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const exists = (p) => existsSync(new URL(`../${p}`, import.meta.url));
-const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive',
-  ...COLLECTION.map(({ id }) => id)];
+const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive'];
 
-test('the kit games are in the games list, after the first four, with their names and addresses', async () => {
+test('the kit games (twenty-eight since 2026-11-14) are in the games list, after the first four, with their names and addresses', async () => {
   const { GAMES, isGame } = await import('../src/games/list.js');
   assert.deepEqual(Object.keys(GAMES).slice(4), KIT_IDS);
   for (const id of KIT_IDS) {
@@ -51,7 +49,8 @@ test('each kit game is wired into the site: its address, its build entry, the ow
   const { default: config } = await import('../vite.config.js');
   const { BUILTIN_PAGES, normalizePath } = await import('../src/owner/catalog.js');
   const { LOOK_GAMES, lookSystem } = await import('../server/arcade.js');
-  const { neededGameArt, gameSharePages } = await import('../scripts/share-pages.js');
+  const share = read('scripts/share-pages.js');
+  const { neededGameArt } = await import('../scripts/share-pages.js');
   const pkg = JSON.parse(read('package.json'));
   for (const id of KIT_IDS) {
     for (const path of [`/games/${id}`, `/games/${id}/`]) assert.ok(vercel.rewrites.some((r) => r.source === path && r.destination === `/${id}`), `${id}: ${path}`);
@@ -67,17 +66,14 @@ test('each kit game is wired into the site: its address, its build entry, the ow
     }
     assert.ok(BUILTIN_PAGES.some((p) => p.path === `/games/${id}`), `${id}: the owner's catalog`);
     assert.equal(normalizePath(`/${id}`), `/games/${id}`);
-    assert.ok(gameSharePages().includes(`dist/${id}.html`), `${id}: its link preview gets the site's address`);
+    assert.ok(share.includes(`'dist/${id}.html'`), `${id}: its link preview gets the site's address`);
     assert.ok(neededGameArt().includes(`cards/games/${id}.jpg`), `${id}: the build checks its picture is there`);
     assert.ok(Object.hasOwn(LOOK_GAMES, id), `${id}: its reviews judged as reviews of this game`);
     assert.ok(lookSystem(id).includes(`"${(await import('../src/games/list.js')).GAMES[id].name}"`));
-    const file = `tests/${id}.test.js`;
-    assert.ok(exists(file), `${id}: its gameplay tests`);
-    assert.ok(pkg.scripts.test.split(' ').includes(file), `${id}: npm test runs them`);
+    assert.ok(exists(`tests/${id}.test.js`), `${id}: its own tests`);
+    assert.ok(pkg.scripts.test.includes(`tests/${id}.test.js`), `${id}: npm test runs them`);
   }
-  for (const file of ['tests/arcade-kit.test.js', 'tests/collection.test.js']) {
-    assert.ok(pkg.scripts.test.split(' ').includes(file), `npm test runs ${file}`);
-  }
+  assert.ok(pkg.scripts.test.includes('tests/arcade-kit.test.js'), 'npm test runs this file');
 });
 
 test('each kit game\'s link preview: a 1200 × 630 JPEG, small enough for X', () => {

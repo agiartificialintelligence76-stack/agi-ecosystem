@@ -1,4 +1,3 @@
-import { COLLECTION } from './collection.js';
 // AGI games' picker on agi1.app/games (2026-11-08, the owner: "on the /games page can you compact all the games so its easy to
 // pick like they have to scroll down a lot if theres so many games … and there should be a preview of gameplay on every
 // game"): every game as a compact tile with a looping gameplay preview, in the order the page shows them ("Featured"),
@@ -25,11 +24,15 @@ export const SORTS = Object.freeze([
   { id: 'rated', label: 'Top rated' },
 ]);
 
-// Featured keeps the trading simulator first, followed by the newest collection and previous releases.
+// "Featured": the order of the tiles when the page opens. New: GOING LIVE (2026-11-14, the owner: "yes exactly" to an
+// AGI-1 streamer sim of our own), right after TRENCHING SIMULATOR, then GROWTH STOCK (earlier the same day, the owner:
+// "can u add/create a game like these just 1", a farming sim where the crops are stocks; New until GOING LIVE, `added`
+// without an hour so Newest puts it after), then OVERTHINKING (2026-11-13, New until then); the five of 2026-11-09 (the owner: "create 5 more new games"), every other tile after them,
+// were New before that, and before them the second night's ten (2026-11-08, `added` with its hour so Newest puts them
+// before the first night's ten)
 export const SHELF = Object.freeze([
   { id: 'trenchingsimulator', genre: 'Trading sim', line: 'Six trading terminals, play money only', tags: ['chill'], added: '2026-10-20', badge: 'Play money' },
-  ...COLLECTION.map((g) => ({ ...g, added: '2026-11-18', tags: ['new', ...g.tags] })),
-  { id: 'goinglive', genre: 'Streamer sim', line: 'Stream as AGI-1, from zero to #1', tags: ['chill'], added: '2026-11-14T12:30' },
+  { id: 'goinglive', genre: 'Streamer sim', line: 'Stream as AGI-1, from zero to #1', tags: ['new', 'chill'], added: '2026-11-14T12:30' },
   { id: 'growthstock', genre: 'Stock farm', line: 'Grow stocks as candle charts, sell high', tags: ['chill'], added: '2026-11-14' },
   { id: 'overthinking', genre: 'Lasso arcade', line: 'Draw loops round her 3 a.m. thoughts', tags: ['arcade', 'puzzle'], added: '2026-11-13' },
   { id: 'bubblesort', genre: 'Bubble shooter', line: 'Match three, drop the rest', tags: ['puzzle', 'arcade'], added: '2026-11-09' },

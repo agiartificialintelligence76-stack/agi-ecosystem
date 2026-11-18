@@ -1,7 +1,0 @@
-.bandit-radio .rm-dock:has([data-action^="rose-"]) {display:grid;grid-template-columns:repeat(6,minmax(44px,130px));justify-content:center}
-.bandit-radio .rm-pad[data-action^="rose-"] {background:#fac7d7}
-.bandit-radio .rm-pad[data-action^="mint-"] {background:#d2efdc}
-.bandit-radio .rm-pad[data-action$="-radio"] {background:#ffe293}
-.bandit-radio .rm-dock .rm-pad {min-height:44px}
-.bandit-radio .rm-choices {justify-content:center}
-@media (max-height:430px) and (orientation:landscape){.bandit-radio .rm-dock {align-content:safe center}}

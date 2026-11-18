@@ -7,7 +7,6 @@
 // Chain are fakes: no keys, no cost. Run: npm test
 import { test, beforeEach, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { COLLECTION } from '../src/games/collection.js';
 import { readFileSync, readdirSync } from 'node:fs';
 import { GAMES, isGame, PLAYER, PLAYER_KEY, PLAYS, REVIEW, STARS } from '../src/games/list.js';
 import {
@@ -195,8 +194,8 @@ test("the games' rules: its games and their ids, a player's id, plays a report, 
     'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails',
     // (2026-11-09) five more on the kit
     'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete',
-    // (2026-11-13) and OVERTHINKING
-    'overthinking', 'growthstock', 'goinglive', ...COLLECTION.map(({ id }) => id)]);
+    // (2026-11-13) and OVERTHINKING, (2026-11-14) and GROWTH STOCK, then GOING LIVE
+    'overthinking', 'growthstock', 'goinglive']);
   assert.equal(GAMES.vladrunner2049.name, 'VLAD RUNNER 2049');
   assert.equal(GAMES.vladrunner2049.path, '/games/vladrunner2049');
   assert.equal(GAMES.skybreak.name, 'SKYBREAK');
@@ -455,7 +454,7 @@ test("the AI's look: one request with its rules, the review and the name in quot
   assert.equal(called('generativelanguage')[2].body.contents[0].parts[0].text, 'Stars: 5 of 5.\nName to show: (none)\nReview: “sold the top before the rug lol”');
   assert.equal(lookSystem('rideemagi'), LOOK_SYSTEM, 'Ride \'Em, AGI!\'s as it was');
   for (const g of [undefined, null, '', 'nope', '__proto__', 'toString', 'constructor']) assert.equal(lookSystem(g), LOOK_SYSTEM, String(g));
-  assert.deepEqual(Object.keys(LOOK_GAMES).sort(), Object.keys(GAMES).sort(), 'words for every game');
+  assert.deepEqual(Object.keys(LOOK_GAMES), Object.keys(GAMES), 'words for every game');
 });
 
 test("the AI's answers: ok, a no with its reason (an odd one is 'other'), its own filters ('unsafe'); anything else fails closed (nothing kept)", async () => {
@@ -908,14 +907,13 @@ test("TRENCHING SIMULATOR's part (src/games/trenchingsimulator/site.js): the sam
 test('the games live in /api/wallet (Vercel\'s 12 functions are all used) and load light: the AI and her live rules only for a review', () => {
   assert.equal(readdirSync(new URL('../api/', import.meta.url)).filter((f) => f.endsWith('.js')).length, 12);
   const imports = (f) => [...read(f).matchAll(/^import .* from '([^']+)';$/gm)].map((m) => m[1]);
-  assert.deepEqual(imports('server/arcade.js'), ['../src/games/collection.js', 'node:crypto', './limits.js', './session.js', '../src/games/list.js']);
+  assert.deepEqual(imports('server/arcade.js'), ['node:crypto', './limits.js', './session.js', '../src/games/list.js']);
   const src = read('server/arcade.js');
   for (const m of ['./live.js', './gemini.js', './chain.js', './burn.js']) assert.ok(src.includes(`await import('${m}')`), m);
   const wallet = imports('api/wallet.js');
   assert.ok(wallet.includes('../server/arcade.js') && wallet.includes('../src/games/list.js'));
   assert.ok(!wallet.includes('../server/live.js') && !wallet.includes('../server/gemini.js'), 'never loaded for a play');
-  assert.deepEqual(imports('src/games/list.js'), ['./collection.js']);
-  assert.deepEqual(imports('src/games/collection.js'), [], 'game metadata never loads the games themselves');
+  assert.deepEqual(imports('src/games/list.js'), []);
   assert.deepEqual(imports('src/games/rideemagi/site.js'), ['../list.js']);
   assert.deepEqual(imports('src/games/trenchingsimulator/site.js'), ['../list.js']);
   const pkg = JSON.parse(read('package.json'));

@@ -1,4 +1,3 @@
-import { COLLECTION } from '../src/games/collection.js';
 // The AGI GAMES intro (2026-10-20, the owner: "can you add a short loading screen for every game like an intro "AGI GAMES"
 // its gonna an 8bit version of AGI and the loading is like her smashing up the word AGI GAMES and its gonna go bigger"):
 // its plan (what's on the screen at any moment: src/games/intro-plan.js), her 8-bit frames (src/games/intro-sprite.js,
@@ -997,7 +996,6 @@ test('its styles: every rule a gi- class, over the game from the first paint, go
   const z = Number(gi['z-index']);
   for (const id of Object.keys(GAMES)) {
     const files = cssOf(`src/games/${id}`);
-    if (COLLECTION.some(game => game.id === id)) files.push('src/games/kit/marquee.css', 'src/games/kit/kit.css');
     assert.ok(files.length >= 1, `${id}: its styles`);
     for (const f of files) {
       for (const m of read(f).matchAll(/z-index:\s*(-?\d+)/g)) assert.ok(z > Number(m[1]), `over ${f}'s z-index ${m[1]}`);

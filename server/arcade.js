@@ -1,4 +1,3 @@
-import { COLLECTION } from '../src/games/collection.js';
 // AGI games (agi1.app/games, 2026-10-19, the owner: "theres also a rating stars and how many people have played it, dont
 // need sign in a wallet to play it its optional", then "if they want to rate it and review and put a comment they need to
 // sign in wallet signature only not transaction. but on how many times played it will still be recorded no need sign in on
@@ -121,11 +120,6 @@ export const LOOK_WHY = ['none', 'sexual', 'hate', 'harassment', 'personal', 'pr
 // money and made-up coins, so its reviews talk about its pretend trades; advice about real coins or real money still isn't
 // shown, nor a real coin, app or trading terminal promoted). A game without its own words gets the first game's.
 export const LOOK_GAMES = Object.freeze({
-  ...Object.fromEntries(COLLECTION.map(({ id, name, genre, line }) => [id, {
-    what: `"${name}", a ${genre.toLowerCase()} game. Its objective is to ${line.charAt(0).toLowerCase() + line.slice(1)}`,
-    promo: 'other games, coins, tokens, channels, groups, services',
-    advice: 'financial advice or price talk',
-  }])),
   rideemagi: Object.freeze({
     what: '"Ride \'Em, AGI!", a cute runner game with a cat and an anime girl',
     promo: 'other games, coins, tokens, channels, groups, services',

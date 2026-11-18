@@ -1,4 +1,3 @@
-import { GAMES } from './src/games/list.js';
 import { defineConfig } from 'vite';
 
 // agi1.app/talk (2026-10-02, full-screen talk) is the home page at another address: Vercel serves it with a rewrite
@@ -9,7 +8,7 @@ import { defineConfig } from 'vite';
 // AGI games (2026-10-19): agi1.app/games/rideemagi is the game's own page (rideemagi.html), like Vercel's rewrite, and
 // (2026-10-20) agi1.app/games/trenchingsimulator is TRENCHING SIMULATOR's (trenchingsimulator.html)
 // (2026-11-08) the ten games built on the arcade kit (src/games/kit/): agi1.app/games/<id> is <id>.html
-const KIT_GAMES = Object.keys(GAMES).filter((id) => GAMES[id].kit);
+const KIT_GAMES = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive'];
 const KIT_GAME = new RegExp(`^/games/(${KIT_GAMES.join('|')})/?$`);
 const STUDIO_HOST = /^studio\./i;
 const STUDIO_VIEW = /^\/(?!api\/|@|src\/|node_modules\/)(?:[^.]*)$/;

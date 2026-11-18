@@ -1,26 +1,8 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
-## Sims and stories · 2026-11-18
+## Twenty games withdrawn from the arcade
 
-The final shelf completes all twenty live remasters and retires kit/cartridge.js. Candid Camera grades an editable contact sheet across eight locations. Off The Record spans eighteen handwritten mysteries over seven nights; pressing a caller changes their testimony. Sticker Club checks 36 editorial briefs and saves editable local prints. Boba Break supports simultaneous pours, recipe days and an escalating rush. Window Seat runs five municipal timetables, tests genuine last trains, transfer walks and view sides, and saves stamped prints and city seals. Each title has its own rules suite, sounds, dialogue, balance tool, gameplay clip, cover and scored phone/desktop evidence in tools/games/REMASTER-REPORT.md.
-
-
-## Physics and action · 2026-11-18
-
-The action remasters keep all five IDs and use the responsive remaster frame. Wingwalk’s postal round trips use swept contacts on moving wings. Moonshot adjudicates real cue-ball turns, calls and fouls. Slingshot uses the player’s in-flight burns and stored ghosts. Cassette Bandit scores tape possession and supports two drivers. Alibi’s patrols follow observations and thrown sounds. Each title has a dedicated test suite and a tools/games/<id>/balance.mjs. See tools/games/REMASTER-REPORT.md for balance, sound peaks and paired screenshots.
-
-
-## Grid puzzles · 2026-11-18
-
-HANDLE WITH CARE rolls a physical parcel through 42 depots. LAST TRAIN TO NOODLES shunts ordered ingredients through 36 rail yards. SPLIT PERSONALITY gives one command to two performers across 40 mirror chambers. KEYBOARD CATNAP offers 45 naps on five physical keyboard types. CURTAIN CALL runs a cue program on a live stage across 42 productions. Each game has its own solver, certified par, saved stars, daily challenge, dedicated tests, sound design and balance tool. See `tools/games/REMASTER-REPORT.md` for simulations, measured peaks and phone and desktop captures.
-
-
-## Five remastered music games · 2026-11-18
-
-DUET AFTER DARK sings a call over an original recording, then hands the microphone to the player. NEEDLE DROP turns the same recordings into spatial skating with an audible backspin. SIDE B mixes two complete recordings with beat-timed crossfades. CABLE CHOIR has four synthesized cabin voices and a 24-song memory book. ABYSS FM uses stereo whale calls, moving singers and intersecting bearings through 32 watches.
-
-All five retain their public IDs, gallery categories, local arcade settings and silent seeded previews. Their pages use the responsive kit in `src/games/kit/remaster.js`. `tools/games/REMASTER-BRIEFS.md` describes all 20 games. `tools/games/REMASTER-REPORT.md` records the baseline, balance distributions, mix peaks and phone and desktop screens. Run `node tools/games/<id>/balance.mjs` to replay the skill profiles. The five dedicated suites run in `npm test`.
-
+The owner requested removal of the twenty November 18 games. The public arcade returns to the 32 games in commit 359856a, including its catalog, game URLs, ratings list, gameplay previews and gallery share image. The complete twenty-game release is recoverable at commit 3d8f9d7. Historical player records are retained.
 
 > **HEARTBEAT's songs sound like the originals again (2026-11-16):** the owner: "can u also fix the heart beat game when
 > i play it the songs are scuffed", then "in game the songs became scuffed", and all four of Claude's choices: worse than

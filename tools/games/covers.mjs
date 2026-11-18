@@ -1,4 +1,3 @@
-import { COLLECTION } from '../../src/games/collection.js';
 // AGI games' link previews for the arcade kit's ten games (2026-11-08): public/cards/games/<id>.jpg, 1200 × 630, what X and
 // others show when someone shares agi1.app/games/<id>. Each one is the game's own still (public/images/games/<id>.webp, a
 // frame of it playing itself: tools/games/capture-previews.mjs) in a sticker frame, its name in the arcade's wide letters,
@@ -19,8 +18,6 @@ const url = (p) => pathToFileURL(join(ROOT, p)).href;
 
 // each game: its name's lines (the wide letters), its colors (the background, the frame's shadow), its line
 export const COVERS = {
-  ...Object.fromEntries(COLLECTION.map(({ id, wordmark, genre, line, ground, accent }) =>
-    [id, { lines: wordmark.map(part => part.toUpperCase()), tag: genre, line, bg: ground, bg2: ground, accent }])),
   mergeagi: { lines: ['MERGE', 'TO AGI'], bg: '#1a0b3b', bg2: '#3a1b86', accent: '#ffc933', line: 'Drop it. Match it. Merge your way up to her.', tag: 'Merge puzzle' },
   blockchain: { lines: ['BLOCK', 'CHAIN'], bg: '#10142e', bg2: '#22306e', accent: '#3ff0c3', line: 'Place blocks. Clear lines. Keep the chain alive.', tag: 'Block puzzle' },
   heartbeat: { lines: ['HEART', 'BEAT'], bg: '#16051f', bg2: '#5a0f4a', accent: '#ff4da6', line: 'Her songs. Your fingers. Stay on the beat.', tag: 'Rhythm' },
