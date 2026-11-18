@@ -28,3 +28,77 @@ Production commit `84edf7b7a6efd0c3922e25aaedacb4173155b8ba` was the clean sourc
 | SIDE B | tidepool | 8089 | 2 | 6 | 1 | 13.25, 13.25, 13.25 | 0 | 360 | 900 |
 
 The baseline is a deterministic demonstration, not an estimate of human play time. Real-device performance and subjective listening need separate observation. The Desktop checkout had unrelated edits and a zero-byte Git index lock. The release uses a separate branch from current GitHub main. The existing switchyard URL and ID are retained.
+
+## Music and listening
+
+Source sizes exclude the shared kit, chart data, recordings and artwork. The test column counts named cases in each game's new dedicated suite. All five began with one mode and zero dedicated tests.
+
+| Game | JS bytes before → after (files) | Content before → after | Modes after | Median seconds, beginner / steady / expert | AGI-1 lines | Dedicated tests | Screens |
+|---|---:|---|---|---:|---:|---:|---|
+| DUET AFTER DARK | 9,252 → 49,149 (11) | 5 short phrases → 7 originals, 380 call/answer pairs, 3 arrangements and 3 vocal parts | Setlist, chorus rehearsal, daily | 193 / 193 / 193 | 32 | 14 | [Phone](remaster-evidence/echoforge-phone.jpg) · [Desktop](remaster-evidence/echoforge-desktop.jpg) |
+| NEEDLE DROP | 8,036 → 24,990 (8) | 4 short sides → 7 full sides, 3 cuts and 21 graded sleeves | Tour, practice, daily | 59 / 236 / 1,380 | 32 | 10 | [Phone](remaster-evidence/returnaddress-phone.jpg) · [Desktop](remaster-evidence/returnaddress-desktop.jpg) |
+| CABLE CHOIR | 9,697 → 36,619 (10) | 6 concerts → 24 authored songs, 7 growing phrases per song, 8 stations and chords | Concert book, endless climb, daily | 64 / 147 / 266 | 32 | 12 | [Phone](remaster-evidence/summitline-phone.jpg) · [Desktop](remaster-evidence/summitline-desktop.jpg) |
+| SIDE B | 8,089 → 55,723 (13) | 6 picks → 7 originals, 8 hosted broadcasts, 2 live decks, unlockable edits | Hosted series, endless late shift, daily | 157 / 296 / 450 | 43 | 20 | [Phone](remaster-evidence/tidepool-phone.jpg) · [Desktop](remaster-evidence/tidepool-desktop.jpg) |
+| ABYSS FM | 9,518 → 44,568 (11) | 5 whales → 32 watches with moving pods, depth layers, stereo calls and a recording log | Calm survey, night shift, daily | 147 / 277 / 353 | 32 | 11 | [Phone](remaster-evidence/pearlshift-phone.jpg) · [Desktop](remaster-evidence/pearlshift-desktop.jpg) |
+
+DUET AFTER DARK plays each chosen recording to its end. Median accuracy was 44%, 82% and 99%. NEEDLE DROP measures a full tour. The other three measure escalating modes. An expert completed a 24m14s concert book and a 22m27s calm survey. The eight hosted broadcasts took a representative steady DJ 21.8 minutes. The seven complete recordings in NEEDLE DROP and DUET AFTER DARK total 22m59s. These are simulations of the rules.
+
+| Game | Originally named shared presets | Sound after | Peak or conservative upper bound, dBFS |
+|---|---:|---|---:|
+| DUET AFTER DARK | 5 | Full recordings, two voices, harmony, held notes, pitch audition, applause and stage cues | −0.37 |
+| NEEDLE DROP | 3 | Full recordings, 10 wheel, pickup, scratch, rewind and finishing sounds | −0.45 |
+| CABLE CHOIR | 3 | 4 cabin voices, bass accompaniment, baton tick and 5 performance cues | −13.43 |
+| SIDE B | 0 | 2 record decks, headphone cues, fader automation, booth and crowd sounds | −4.61 |
+| ABYSS FM | 3 | Stereo whale voices, ambient bed, sonar echoes, tuning and reporting cues | −12.70 |
+
+The original-recording checks use decoded PCM with allowances for overlapping effects. The two synthesizers use browser OfflineAudioContext measurements. In a separate live browser check, NEEDLE DROP restarted its 199.56-second source at 4.008 seconds after a backspin and resumed at the same position after pausing. SIDE B completed touch and keyboard broadcasts, archived scores and stopped every source at sign-off. All five reached genuine result cards. The local built pages were exercised under the website's production Content Security Policy at 360×640, 740×360, 884×1104, 1440×900 and 2560×1440. Physical phones, sustained 60 fps on mid-range handset hardware and listening by ear remain unverified.
+
+### Balance tool output
+
+#### DUET AFTER DARK
+
+```text
+newcomer n=63 · song seconds P10/P50/P90 150/193/240 · accuracy P10/P50/P90 30/44/55% · score P10/P50/P90 5761/7693/10464 · breaks headliner miss (2012), studio miss (1305)
+regular  n=63 · song seconds P10/P50/P90 150/193/240 · accuracy P10/P50/P90 64/82/87% · score P10/P50/P90 12499/16378/20426 · breaks headliner miss (714), headliner wrong (197)
+expert   n=63 · song seconds P10/P50/P90 150/193/240 · accuracy P10/P50/P90 96/99/100% · score P10/P50/P90 22543/31696/41709 · breaks headliner wrong (20), soundcheck wrong (13)
+A song lasts for its recording. Skill changes accuracy, streaks and grade. Seven full recordings total 22.99 minutes.
+```
+
+#### NEEDLE DROP
+
+```text
+newbie | 80 tours | median 59.4 s | p10–90 50.2–74.1 s | score p10–90 2475–4500 | miss · SI (It's Better) (11), miss · Send It (10)
+steady | 80 tours | median 235.6 s | p10–90 131.2–711.3 s | score p10–90 15275–98125 | miss · Send It (18), miss · After AGI (15)
+expert | 80 tours | median 1379.5 s | p10–90 1379.5–1379.5 s | score p10–90 356150–411175 | tour clear (80)
+```
+
+#### CABLE CHOIR
+
+```text
+newbie  time p10/50/90=47.6/63.5/80.0s  score p25/50/75=1277/1596/1889  longest p50=6  phrases p50=5  errors p50=3
+steady  time p10/50/90=121.0/146.9/169.8s  score p25/50/75=4444/5143/5861  longest p50=12  phrases p50=11  errors p50=3
+expert  time p10/50/90=239.8/266.2/290.2s  score p25/50/75=12444/13313/13983  longest p50=19  phrases p50=18  errors p50=3
+```
+
+#### SIDE B
+
+```text
+hosted  | newcomer  | median 81.5s | score 113..432 | mixes 4 | missed 2 | offbeat 2 | energy 2 | curve 0
+hosted  | steady    | median 70.7s | score 260..985 | mixes 6 | missed 0 | offbeat 2 | energy 1 | curve 0
+hosted  | expert    | median 70.0s | score 573..1082 | mixes 6 | missed 0 | offbeat 0 | energy 0 | curve 0
+late    | newcomer  | median 157.2s | score 0..735 | mixes 5 | missed 2 | offbeat 3 | energy 2 | curve 2
+late    | steady    | median 296.0s | score 601..3076 | mixes 14 | missed 1 | offbeat 6 | energy 3 | curve 2
+late    | expert    | median 449.8s | score 3113..8229 | mixes 24 | missed 0 | offbeat 0 | energy 0 | curve 0
+daily   | newcomer  | median 161.8s | score 140..560 | mixes 6 | missed 2 | offbeat 4 | energy 2 | curve 2
+daily   | steady    | median 150.9s | score 406..1503 | mixes 7 | missed 1 | offbeat 3 | energy 1 | curve 1
+daily   | expert    | median 147.5s | score 665..1640 | mixes 8 | missed 0 | offbeat 0 | energy 0 | curve 0
+Hosted series, representative steady broadcasts: 77s, 115s, 147s, 164s, 176s, 196s, 219s, 212s; 21.8 minutes.
+```
+
+#### ABYSS FM
+
+```text
+newbie  time p10/50/90=75.6/147.1/171.6s  score p25/50/75=1408/2496/2955  fixes=7  pings=18  misses=5  exact=1
+steady  time p10/50/90=249.6/276.6/302.3s  score p25/50/75=6468/6819/7436  fixes=18  pings=39  misses=2  exact=7
+expert  time p10/50/90=321.6/352.6/365.3s  score p25/50/75=12698/13233/13662  fixes=32  pings=67  misses=0  exact=24
+```

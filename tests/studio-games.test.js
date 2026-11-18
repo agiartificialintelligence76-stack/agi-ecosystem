@@ -5,8 +5,6 @@ import { CASES } from '../src/games/lanternlake/cases.js';
 import { mountCorners } from '../src/games/lanternlake/exhibit.js';
 import parcel from '../src/games/waxworks/game.js';
 import { DEPOTS, startDepot, roll, route, delivered } from '../src/games/waxworks/parcel.js';
-import vinyl from '../src/games/returnaddress/game.js';
-import { pressRecord, judge, restoreTape } from '../src/games/returnaddress/record.js';
 import theatre from '../src/games/starlingrelay/game.js';
 import { SCENES, rehearsal, perform, solve, complete } from '../src/games/starlingrelay/blocking.js';
 import { rng } from '../src/games/kit/fx.js';
@@ -46,14 +44,7 @@ test('cue strips are executable, rose collection precedes the bow, and the turnt
  assert.equal(complete(SCENES[0],{...rehearsal(SCENES[0]),x:3}),false);
  const game=run(theatre);game.model.key('down','ArrowUp');game.model.key('down','Backspace');assert.match(game.hud[3],/^0\//);
 });
-test('vinyl scratches require a jump, pickups require the right groove, and backspins restore the earlier score exactly once',()=>{
- const record=pressRecord(rng(93).next);assert.equal(record.length,48);assert.ok(record.every((n,i)=>!i||record[i-1].time<n.time));
- assert.equal(judge({seam:true},2,false),'scratch');assert.equal(judge({seam:true},0,true),'clear');
- assert.equal(judge({lane:1},1,false),'groove');assert.equal(judge({lane:1},1,true),'miss');
- const before={score:60,streak:2,faults:0,rewinds:2};
- assert.deepEqual(restoreTape({...before,score:160,rewinds:1},[before],2),{...before,rewinds:0,at:0});assert.equal(restoreTape({rewinds:0},[before],1),null);
-});
-for(const [game,expected,label] of [[detective,'4 / 4','Cases closed'],[parcel,6,'Depots cleared'],[vinyl,null,'Stars caught'],[theatre,6,'Curtain calls']]){
+for(const [game,expected,label] of [[detective,'4 / 4','Cases closed'],[parcel,6,'Depots cleared'],[theatre,6,'Curtain calls']]){
  test(game.title+' completes its authored campaign through its own game actions',()=>{
    for(const seed of [1,7,23,91]){const g=run(game,seed);g.step(210,true);assert.ok(g.result&&g.result[0]>0);
      assert.equal(g.result[1][0][0],label);if(expected!==null)assert.equal(g.result[1][0][1],expected);else assert.ok(g.result[1][0][1]>30);}

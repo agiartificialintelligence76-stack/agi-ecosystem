@@ -1,5 +1,12 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+## Five remastered music games · 2026-11-18
+
+DUET AFTER DARK sings a call over an original recording, then hands the microphone to the player. NEEDLE DROP turns the same recordings into spatial skating with an audible backspin. SIDE B mixes two complete recordings with beat-timed crossfades. CABLE CHOIR has four synthesized cabin voices and a 24-song memory book. ABYSS FM uses stereo whale calls, moving singers and intersecting bearings through 32 watches.
+
+All five retain their public IDs, gallery categories, local arcade settings and silent seeded previews. Their pages use the responsive kit in `src/games/kit/remaster.js`. `tools/games/REMASTER-BRIEFS.md` describes all 20 games. `tools/games/REMASTER-REPORT.md` records the baseline, balance distributions, mix peaks and phone and desktop screens. Run `node tools/games/<id>/balance.mjs` to replay the skill profiles. The five dedicated suites run in `npm test`.
+
+
 > **HEARTBEAT's songs sound like the originals again (2026-11-16):** the owner: "can u also fix the heart beat game when
 > i play it the songs are scuffed", then "in game the songs became scuffed", and all four of Claude's choices: worse than
 > the original, clicky noise on top, muffled / underwater, crackles / stutters, on a phone and a computer. Recorded in a

@@ -1,69 +1,120 @@
-import { SIDES, laneNames, pressRecord, judge, restoreTape } from './record.js';
-import { painting, oval, type, line, panel, polygon, clip, TAU } from '../kit/illustration.js';
-const sleeve=painting(new URL('./disco.webp',import.meta.url));
-const sprite=painting(new URL('./skater.webp',import.meta.url));
-const palette=['#ffe377','#ff87bf','#77ecdf'];
-const spin=1.73;
-const rad=lane=>92+lane*48;
-const point=(lane,angle)=>[238+Math.cos(angle)*rad(lane),225+Math.sin(angle)*rad(lane)*.57];
-export default{
- title:'NEEDLE DROP',tagline:'Skate AGI-1 around a spinning record. Switch grooves for the stars, jump the scratches, and pull the vinyl back for a second chance.',
- instructions:[['Read the pressing','AGI-1 skates at the white timing line. Move inward or outward so an approaching star meets her on the same groove. The large cue at the top names the next groove.'],
- ['Hop the scratches','A coral scratch crosses all three grooves. Jump just before it reaches her. Missing stars breaks the combo. Three collisions lift the needle.'],
- ['Use the backspin','Twice per show you can rewind two beats to undo a mistake. Four sides get quicker. Keep a perfect streak to build the groove multiplier.']],
- keys:[['↑ / ↓','Inside / outside groove'],['Space','Jump'],['R','Backspin two beats']],
- touch:[['In / Out','Change groove'],['Jump / ↶','Hop or rewind']],
- create(api){
-   const beats=pressRecord(api.rng),marks=[];let i=0,lane=1,target=1,time=0,jump=0,rewindFx=0,t=0,done=false,last='get me on the yellow star.',flash=0;
-   let state={score:0,streak:0,best:0,hits:0,faults:0,rewinds:2};const keysAt=[0,1,2];
-   const hud=()=>api.hud('Side',Math.min(4,1+(beats[i]?.side??3))+'/4','Groove',state.score);
-   function shift(d){target=clip(target+d,0,2);api.sound('tap',{pitch:.88+target*.14});}
-   function leap(){if(!jump){jump=.61;api.sound('whoosh');}}
-   function backspin(){const restored=restoreTape(state,marks,i);if(!restored)return;
-     const {at,...values}=restored;state=values;i=at;time=Math.max(0,beats[at].time-1.12);jump=0;rewindFx=.55;
-     marks.length=at;flash=.7;last='take it back, dj.';api.sound('back');hud();}
-   function finish(){done=true;api.end(state.score,[['Stars caught',state.hits],['Longest groove',state.best],['Sides played',Math.min(4,(beats[Math.min(i,beats.length-1)].side+1))]],i===beats.length?'that was our encore. somebody keep the record spinning.':'okay, we scratched the vinyl. it has character now.');}
-   function cross(){
-     const beat=beats[i];marks[i]={...state};const result=judge(beat,lane,jump>.045&&jump<.59);
-     if(result==='groove'||result==='clear'){state.streak++;state.best=Math.max(state.best,state.streak);state.score+=(result==='clear'?40:30)*Math.min(4,1+Math.floor(state.streak/6));state.hits+=Number(result==='groove');
-       api.tone?.({freq:[330,392,494][beat.lane]*(1+beat.side*.06),type:'triangle',dur:.13,vol:.19});api.sound(result==='clear'?'bounce':'coin',{pitch:.92+beat.lane*.13});last=result==='clear'?'clean jump!':'right in the groove.';}
-     else{state.streak=0;state.faults+=Number(result==='scratch');api.sound(result==='scratch'?'hurt':'tick');last=result==='scratch'?'ow. jump the coral scratch.':'missed it. rewind if you want it back.';}
-     i++;flash=.5;hud();if(i===beats.length||state.faults>=3)finish();
-   }
-   hud();return{
-     update(dt){if(done)return;t+=dt;time+=dt;flash=Math.max(0,flash-dt);jump=Math.max(0,jump-dt);rewindFx=Math.max(0,rewindFx-dt);lane+=(target-lane)*(1-Math.exp(-17*dt));
-       if(i<beats.length&&time>=beats[i].time)cross();},
-     key(k,code){if(k!=='down'||done)return;if(code==='ArrowUp'||code==='KeyW')shift(-1);if(code==='ArrowDown'||code==='KeyS')shift(1);if(code==='Space')leap();if(code==='KeyR')backspin();},
-     pointer(k,x,y){if(k!=='down'||done)return;if(y>=401){if(x<102)shift(-1);else if(x<202)shift(1);else if(x<358)leap();else backspin();}
-       else if(y>=210&&y<390){let l=0;for(const n of keysAt){if(Math.abs(point(n,Math.PI/2)[1]-y)<Math.abs(point(l,Math.PI/2)[1]-y))l=n;}target=l;}},
-     demo(){if(done||!beats[i])return;const b=beats[i];if(!b.seam)target=b.lane;else if(b.time-time<.22&&b.time>time&&!jump)leap();},
-     draw(c){
-       c.fillStyle='#311c37';c.fillRect(0,0,480,480);sleeve(c,0,-30,480,480);
-       c.fillStyle='#29162966';c.fillRect(0,82,480,315);
-       const side=beats[Math.min(i,beats.length-1)].side;
-       panel(c,11,12,458,54,'#27172de8',5);type(c,'SIDE '+String.fromCharCode(65+side)+'   /   '+SIDES[side].toUpperCase(),23,27,13,'#f8c694','left','monospace');
-       const b=beats[i];type(c,b?(b.seam?'JUMP THE SCRATCH':laneNames[b.lane].toUpperCase()+' GROOVE'):'ENCORE',23,48,20,b&&!b.seam?palette[b.lane]:'#ff977e','left');
-       type(c,'×'+Math.min(4,1+Math.floor(state.streak/6)),446,41,26,'#fff2c9','right','Georgia');
-       oval(c,238,235,222,128,'#221322','#ffb7a1',3);oval(c,238,225,222,128,'#282134','#72446f',4);
-       for(let rr=68;rr<214;rr+=5)oval(c,238,225,rr,rr*.57,null,rr%2?'#4b354c':'#382e43',1);
-       for(const n of keysAt){const r=rad(n);oval(c,238,225,r,r*.57,null,palette[n]+'a6',2);}
-       c.save();c.translate(238,225);c.scale(1,.57);c.rotate((time+(rewindFx?rewindFx*4:0))*.8);
-       c.beginPath();c.arc(0,0,50,0,TAU);c.clip();sleeve(c,-50,-50,100,100);c.restore();
-       oval(c,238,225,5,3,'#fff7d4');
-       for(let k=Math.min(i+3,beats.length-1);k>=i;k--){const ev=beats[k],ahead=ev.time-time;if(ahead>3.22)continue;
-         const ang=Math.PI/2-ahead*spin;const [x,y]=point(ev.lane,ang);
-         if(ev.seam){const a=point(-.22,ang),z=point(2.2,ang);line(c,[a,z],'#5d2437',9);line(c,[a,z],'#ff8a77',4);type(c,'!',...point(1,ang),17,'#fff8ce');}
-         else{const star=[];for(let j=0;j<10;j++){const a=j*Math.PI/5-Math.PI/2;const r=j%2?4.7:11;star.push([x+Math.cos(a)*r,y+Math.sin(a)*r*.85]);}polygon(c,star,palette[ev.lane],'#fff6cc',1);}
-       }
-       line(c,[point(-.3,Math.PI/2),point(2.21,Math.PI/2)],'#fff4d3',2);
-       const [px,py]=point(lane,Math.PI/2),up=jump?Math.sin(Math.PI*jump/.61)*52:0;
-       oval(c,px,py,18,5,'#100e218a');const frame=Math.floor(t*6)%4;
-       sprite(c,frame*112,0,112,136,px-25,py-64-up,50,64);for(let w=-1;w<=1;w++)oval(c,px+w*7,py-up+1,2.8,2.8,'#ffa4c6');
-       panel(c,0,354,480,126,'#251629',0);type(c,'AGI-1   /   '+last,18,372,13,'#ffddce','left','Georgia');
-       type(c,'NEEDLE  '+('♥'.repeat(3-state.faults)||'—'),18,391,11,'#f2a1be','left','monospace');type(c,'STREAK '+state.streak,461,391,11,'#b6eddb','right','monospace');
-       const buttons=[[9,88,'IN ↑'],[103,90,'OUT ↓'],[201,146,'JUMP'],[355,117,'↶ '+state.rewinds]];
-       buttons.forEach(([x,w,s],j)=>{panel(c,x,407,w,57,j===2?'#ffd88c':'#523348',4);type(c,s,x+w/2,435,18,j===2?'#432a40':'#ffe8cf','center','monospace');});
-     },
-   };
- }
+import { records, setlist, createSide, grade } from './record.js';
+import { drawStage } from './stage.js';
+import { lines } from './lines.js';
+import { recordPlayer, playCue } from './sound.js';
+
+export const modes = [{id:'tour',label:'Seven-side tour'},{id:'practice',label:'Practice a side'},{id:'daily',label:'Daily pressing'}];
+const controls = [{id:'in',label:'Inside',key:'↑'},{id:'out',label:'Outside',key:'↓'},{id:'jump',label:'Jump',key:'Space'},{id:'backspin',label:'Backspin',key:'R'}];
+const buttons = { ArrowUp:'in',ArrowLeft:'in',ArrowDown:'out',ArrowRight:'out',Space:'jump',KeyR:'backspin' };
+
+export default {
+  title:'NEEDLE DROP',tagline:'Skate her seven singles. Catch stars, ollie the scratches and spin back the actual record for a second take.',
+  modes, controls,
+  options:[{id:'cut',label:'Pressing',values:[{id:'club',label:'Club cut'},{id:'mellow',label:'Mellow cut'},{id:'dub',label:'Dub cut'}]},
+    {id:'song',label:'Opening side',values:[{id:'shuffle',label:'Surprise me'},...records.map(r => ({id:r.id,label:r.title}))]}],
+  instructions:[['Catch a groove','Stars travel toward AGI-1’s wheels. Change to the matching colored ring before they reach her.'],
+    ['Clear the crack','A red scratch crosses all three rings. Jump just before it hits. The first 28 seconds are soundcheck. After that, 22 clean marks repair one point of needle wear.'],
+    ['Save a side','Backspin to the previous bar twice per side. Practice lets you finish with any wear. Each completed pressing gets its own sleeve grade.']],
+  keys:[['↑ / ↓ or ← / →','Change groove'],['Space','Jump'],['R','Backspin one bar']],
+  touch:[['Inside / Outside','Move one groove'],['Jump / Backspin','Clear a scratch or rewind the record']],
+  progress(save) {
+    const count=Object.keys(save.vinylSleeves || {}).length;
+    if (!count) return '';
+    const perfect=Object.values(save.vinylSleeves).filter(v=>v.grade==='FULL COMBO').length;
+    return count+' / 21 sleeves stamped · '+perfect+' full combos';
+  },
+  create(api) {
+    const mode=api.mode || 'tour', cut=api.options?.cut || 'club', seed=api.seed ?? Math.floor(api.rng()*4294967296);
+    const playlist=setlist(seed,api.options?.song,mode);
+    let index=0, board, total=0, ended=false, paused=false, sideHits=0, hudKey='', lastVoice=-100, learnedLane=false;
+    let pointerX, pointerY;
+    const sound=recordPlayer(api,()=>api.say?.('record is offline. the groove lights still keep time.'));
+    const voice=(tag,force=false)=>{
+      if (!force && board.state.time-lastVoice < 3) return;
+      const options=lines[tag], line=options[(Math.floor(api.rng()*options.length))];
+      lastVoice=board.state.time;
+      api.say?.(line);
+      return line;
+    };
+    function hud(){
+      const s=board.state, next=total+s.ledger.score, health=Math.max(0,10-s.ledger.damage);
+      if (hudKey===next+'/'+health) return;
+      hudKey=next+'/'+health; api.hud('Groove',next,'Needle',health+'/10');
+    }
+    function open(){
+      board=createSide(playlist[index],cut,seed + index*104729,mode==='practice');
+      lastVoice=-100; learnedLane=false; hudKey=''; hud(); voice('opening',true);
+      sound.load(playlist[index].id,()=>board.state.time);
+    }
+    function finish(){
+      const s=board.state,l=s.ledger, stamp=grade(l);
+      total+=l.score; sideHits+=l.hits;
+      if(!s.failed && !api.demo) api.store?.update(save=>{
+        save.vinylSleeves ||= {};
+        const key=s.record.id+'/'+cut, before=save.vinylSleeves[key];
+        const ranks=['D','C','B','A','FULL COMBO'];
+        save.vinylSleeves[key]={
+          score:Math.max(l.score,before?.score||0),
+          grade:ranks.indexOf(before?.grade)>ranks.indexOf(stamp)?before.grade:stamp,
+        };
+      });
+      if(!s.failed && index+1<playlist.length){ api.effect?.('clear','SIDE STAMPED'); index++; open();return; }
+      ended=true;sound.dispose();playCue(api,'close');
+      api.end(total,[['Stars & clean jumps',sideHits],['Pressing',s.record.title],['Side grade',s.failed?'Needle lifted':stamp],['Longest chain',l.bestChain],['Sides cleared',s.failed?index:index+1]],voice('closing',true));
+    }
+    function event(kind,e){
+      const s=board.state;
+      if(kind==='scratch'||kind==='miss'){
+        playCue(api,kind); api.effect?.('fault',kind==='scratch'?'SCRAPE':''); api.haptic?.(kind==='scratch'?28:10); voice('mistake');
+      } else if(s.ledger.chain%12===0){
+        playCue(api,'chorus');api.effect?.('combo',s.ledger.chain+' IN A ROW');voice('streak');
+      } else if(e.chorus){
+        playCue(api,'chorus');api.effect?.('chorus','CHORUS');voice('chorus');
+      } else if(kind==='clear'){
+        playCue(api,'landing'); api.effect?.('jump');voice('jump');
+      } else { playCue(api,'star',1+Math.min(12,s.ledger.chain)*.018); }
+    }
+    function update(dt,stamp){
+      if(ended || paused)return;
+      const s=board.state, heard=sound.clock(stamp);
+      board.advance(heard==null ? s.time+dt : Math.max(s.time,heard),event);
+      hud(); if(s.finished) finish();
+    }
+    function action(id,phase,value,stamp){
+      if(ended||paused||phase!=='down') return;
+      // Judge the elapsed music up to the hardware input timestamp, then apply the input.
+      if(stamp!=null) update(0,stamp);
+      if(ended) return;
+      const s=board.state;
+      if(id==='in'||id==='out'){
+        board.shift(id==='in'?-1:1);playCue(api,'wheels');
+        if(!learnedLane){voice('change');learnedLane=true;}
+      }else if(id==='jump'){
+        if(board.jump()){playCue(api,'jump'); api.haptic?.(8);}
+      }else if(id==='backspin'&&board.rewind()){
+        sound.cue(s.time);playCue(api,'backspin');api.effect?.('backspin','↶  BACKSPIN');api.haptic?.(18);voice('backspin',true);hud();
+      }
+    }
+    open();
+    return {
+      update,action,
+      key(type,code,stamp){const id=buttons[code];if(id)action(id,type,undefined,stamp);},
+      pointer(type,x,y,w,h,stamp){
+        if(type==='down'){pointerX=x;pointerY=y;}
+        if(type==='up'&&pointerX!=null){
+          const delta=y-pointerY;
+          action(Math.abs(delta)>24?(delta<0?'in':'out'):'jump','down',undefined,stamp);pointerX=undefined;
+        } else if(type==='cancel')pointerX=undefined;
+      },
+      cancelInput(){pointerX=undefined;},
+      pause(){paused=true;sound.pause();}, resume(){paused=false;sound.resume(board.state.time);}, dispose(){ended=true;sound.dispose();},
+      demo(){
+        const s=board.state, e=s.events[s.index]; if(!e)return;
+        const lead=e.time-s.time;
+        if(!e.scratch && lead<.77 && s.lane!==e.lane) action(s.lane>e.lane?'in':'out','down');
+        if(e.scratch && lead<.19 && lead>.16 && s.time-s.lift>.6)action('jump','down');
+      },
+      draw(ctx,w,h){drawStage(ctx,w,h,board.state,{cut,side:index+1,total:playlist.length,reduced:api.reducedMotion});},
+    };
+  },
 };

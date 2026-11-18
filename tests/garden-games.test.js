@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import candids from '../src/games/mothlight/game.js';
 import { project, focusQuality, blockedBy } from '../src/games/mothlight/camera.js';
-import mixtape, { gradeTrack } from '../src/games/tidepool/game.js';
 import sticker, { proofGrade } from '../src/games/nightpress/game.js';
 import boba, { taste } from '../src/games/cloudkitchen/game.js';
 import railway, { departures, quickest } from '../src/games/pocketgrove/game.js';
@@ -20,7 +19,7 @@ function play(game, seed=17){
   tap(x,y){model.pointer('down',x,y);model.pointer('up',x,y);},
  };
 }
-for(const game of [candids,mixtape,sticker,boba,railway]){
+for(const game of [candids,sticker,boba,railway]){
  test(game.title+' can finish a repeatable full run from the real inputs used by its demo',()=>{
   const a=play(game),b=play(game);a.wait(130,true);b.wait(130,true);
   assert.equal(a.ends,1);assert.ok(a.result.score>0);assert.deepEqual(a.result,b.result);
@@ -45,12 +44,6 @@ test('Candid Camera touch and keyboard focus dials change shutter scores indepen
  softTouch.tap(220,435);softKeys.key('KeyE');
  for(const run of [inFocus,softTouch,softKeys])run.tap(379,433);
  assert.ok(inFocus.hud[3]>softTouch.hud[3]);assert.equal(softTouch.hud[3],softKeys.hud[3]);
-});
-test('Side B scores individual edits, adjacent tempos and repeated sleeves independently',()=>{
- const tr={heat:3,bpm:128};assert.equal(gradeTrack(tr,2,4,{bpm:129},false).points,90);
- assert.ok(gradeTrack(tr,0,4,{bpm:150},true).points<gradeTrack(tr,2,4,{bpm:129},false).points);
- const p=play(mixtape);p.tap(235,330);p.tap(250,432);p.tap(374,438);p.key('Digit3');p.key('KeyQ');p.key('Space');p.key('Space');
- assert.equal(p.hud[1],'Side B');for(let i=0;i<3;i++)p.tap(376,440);assert.equal(p.ends,1);assert.ok(p.result.score>0);
 });
 test('Sticker Club grades placement, angle and layer order separately and refuses incomplete covers',()=>{
  const targets=[[100,160,-1],[265,215,1],[315,167,0]],pieces=targets.map(([x,y,rot])=>({x,y,rot}));

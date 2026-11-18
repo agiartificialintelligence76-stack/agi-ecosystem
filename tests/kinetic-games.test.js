@@ -1,6 +1,5 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import duet,{ songs,answerPitch } from '../src/games/echoforge/game.js';
 import alibi from '../src/games/inkveil/game.js';
 import { rooms,indexRoom,record,advance,solve,cleared } from '../src/games/inkveil/tape.js';
 import split from '../src/games/prismcourier/game.js';
@@ -17,28 +16,6 @@ function run(game,seed=7){
   const tick=(seconds,demo=false)=>{for(let i=0;i<Math.round(seconds*120);i++){if(demo)g.demo(1/120);g.update(1/120);}};
   return {g,hud,sound,tone,end,tick,press:k=>g.key('down',k),tap:(x,y)=>g.pointer('down',x,y)};
 }
-
-test('the sung calls, visible score and harmony all use the same pitch mapping',()=>{
-  assert.deepEqual([0,1,2].map(k=>answerPitch(k,true)),[1,2,0]);
-  const {notes,bpm,beats}=songs[0];
-  for(const useTouch of [false,true])for(const harmony of [false,true]){
-    const game=run(duet);
-    if(harmony){if(useTouch)game.tap(60,456);else game.press('Space');}
-    game.tick((beats+2)*60/bpm+.01);
-    let previous=0;
-    for(const [time,pitch] of notes){
-      game.tick((time-previous)*60/bpm);previous=time;const p=answerPitch(pitch,harmony);
-      if(useTouch)game.tap([80,240,370][p],391);else game.press(['KeyA','KeyS','KeyD'][p]);
-    }
-    assert.equal(game.hud.at(-1)[3],harmony?450:315);
-    assert.ok(game.tone.some(t=>t.type==='sawtooth'));assert.ok(game.tone.some(t=>t.type==='triangle'));
-  }
-});
-
-test('a failed take automatically rehearses without awarding applause',()=>{
-  const g=run(duet);g.tick(18);
-  assert.equal(g.end.length,0);assert.equal(g.hud.at(-1)[1],'1 / 5');assert.equal(g.hud.at(-1)[3],0);
-});
 
 test('each archive has a working looping decoy and rejects a tape that never visits a required camera',()=>{
   for(const raw of rooms){
@@ -124,7 +101,7 @@ test('a pulled sling launches, cancel releases the drag and the keyboard can rec
   g.press('KeyR');g.press('ArrowUp');g.g.key('up','ArrowUp');g.press('Space');assert.equal(g.hud.at(-1)[3],2);
 });
 
-for(const [game,stat,expected] of [[duet,'Tracks cut',5],[alibi,'Cases recovered',5],[split,'Mirrors reunited',6],[cat,'Catnaps',6],[space,'Circuits docked',6]]){
+for(const [game,stat,expected] of [[alibi,'Cases recovered',5],[split,'Mirrors reunited',6],[cat,'Catnaps',6],[space,'Circuits docked',6]]){
  test(game.title+' plays a complete normal demo across fresh seeds and reports one result',()=>{
    for(const seed of [1,7,303]){
      const g=run(game,seed);g.tick(140,true);assert.equal(g.end.length,1,game.title);

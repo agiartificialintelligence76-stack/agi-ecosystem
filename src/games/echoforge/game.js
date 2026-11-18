@@ -1,109 +1,211 @@
-import { painting, oval, panel, type, line } from '../kit/illustration.js';
+import { arrange, chooseTake, phraseAt, songs, voicePitch } from './setlist.js';
+import { Performance } from './performance.js';
+import { excerpt, player } from './player.js';
+import { soundtrack } from './sound.js';
+import { readBook, keepTake, takeKey } from './progress.js';
+import { say } from './lines.js';
+import { layout } from './layout.js';
+import { scoreSheet } from './notation.js';
+import { stage } from './stage.js';
+import { rng } from '../kit/fx.js';
 
-const singer=painting(new URL('./nightclub.webp',import.meta.url).href);
-export const songs=[
-  {name:'Velvet Hello',bpm:86,beats:4,notes:[[0,0],[1,1],[2,2]],lyric:['Stay','with','me'],root:261.63},
-  {name:'Lavender Radio',bpm:94,beats:4,notes:[[0,1],[.75,2],[1.5,1],[3,0]],lyric:['On','the','air','now'],root:246.94},
-  {name:'After the Rain',bpm:94,beats:5,notes:[[0,2],[1,1],[2.5,0],[3.25,1],[4,2]],lyric:['Can','you','hear','me','now'],root:293.66},
-  {name:'Borrowed Starlight',bpm:102,beats:5,notes:[[0,0],[.5,0],[1.5,2],[2,1],[3,0],[4,2]],lyric:['Take','my','hand','and','stay','close'],root:261.63},
-  {name:'One More Chorus',bpm:106,beats:6,notes:[[0,2],[.75,1],[1.5,0],[2.25,1],[3,2],[4,0],[5,1]],lyric:['Meet','me','where','the','lights','go','low'],root:293.66},
+const ids=['low','middle','high'];
+const keys=['KeyA','KeyS','KeyD'];
+const offsets=[-100,-50,0,50,100];
+const controls=[
+  {id:'low',label:'●  Low',key:'A'}, {id:'middle',label:'◆  Mid',key:'S'}, {id:'high',label:'▲  High',key:'D'},
 ];
-const hues=['#ff9798','#ffdb7a','#b8a9ff'], labels=['LOW','MID','HIGH'];
-const padX=[21,169,317], keyLabels=['A','S','D'];
-export function answerPitch(note,harmony){return (note+Number(harmony))%3;}
-const pitchRatio=[1,1.259921,1.498307];
+const pct = value => Math.round(value*100)+'%';
+const capital = value => value[0].toUpperCase()+value.slice(1);
+const values = names => names.map(id=>({id,label:capital(id)}));
+function respond(note,kind,delta) {
+  if(kind==='wrong')return 'Pitch · try '+['low','mid','high'][note.lane];
+  if(kind==='short')return 'Hold the note to the tail';
+  if(kind==='miss')return 'Miss · catch the next beat';
+  if(kind==='perfect')return 'Perfect · in the pocket';
+  return (delta<0?'Early':'Late')+' · '+Math.abs(Math.round(delta*1000))+' ms';
+}
 export default {
   title:'DUET AFTER DARK',
-  tagline:'Step up to AGI-1’s microphone. Listen to her phrase, sing it back, or take the harmony part.',
-  instructions:[['Let her sing','AGI-1 sings a short line. Watch the three pitches and read the syllables on her score.'],['Answer on your cue','When the record turns to YOU, strike the same pads in time. The moving light follows the beat.'],['Take the harmony','Shift each note one pad right, wrapping High back to Low. On this part she sings along with you, and the reply sheet shows just the rhythm.']],
-  keys:[['A / S / D','Low / Mid / High'],['Space','Echo or harmony'],['R','Hear this line again']],
-  touch:[['Tap the three keys','Play your part'],['Tap Echo / Harmony or Replay','Change part or rehearse']],
-  create(api){
-    let song=0,s,beat,called=0,graded,part=false,hits=0,points=0,clear=0,duets=0,perfect=0,attemptPoints=0;
-    let clock=0,lastTick=-1,spot=[0,0,0],word='',message='',after=0,passed=false,ended=false,portraitPulse=0,trackBest=0;
-    function begin(){s=songs[song];beat=-1;called=0;graded=s.notes.map(()=>null);hits=0;attemptPoints=0;lastTick=-1;trackBest=api.personalBest?.('take-'+song)??0;
-      message='Listen to my line.';word='';after=0;passed=false;api.hud('Record',String(song+1)+' / '+songs.length,'Applause',points);}
-    function phase(){return beat<s.beats?'CALL':beat<s.beats+1?'CUE':'REPLY';}
-    function voice(lane,source){
-      const f=s.root*pitchRatio[lane],vocal=source==='her';
-      if(api.tone){
-        api.tone({freq:f,type:vocal?'sawtooth':'triangle',dur:vocal?.37:.31,filter:vocal?1080:2000,attack:.027,vol:vocal?.07:.15});
-        api.tone({freq:f*2,type:'sine',dur:.26,vol:.045,attack:.037});
-      }else api.sound('tap',{pitch:f/660,spread:0});
-      spot[lane]=1;portraitPulse=1;
+  tagline:'Her songs. Two microphones. Answer AGI-1 on the beat, then come back to sing the harmony.',
+  instructions:[
+    ['Listen to her bar','AGI-1 sings a short call over one of her seven recordings. The note shapes show the pitch. The spaces show when to sing.'],
+    ['Answer in time','When the light passes to your microphone, play the shown pitches on the next bar. Keep a long note down until the end of its tail.'],
+    ['Choose your part','Lead echoes her line. Upper and lower harmony shift the notes by one pad and combine the two voices. The score shows your own part on your turn.'],
+  ],
+  keys:[['A / S / D','Play or hold low / mid / high'],['← / ↓ / →','Alternate pitch keys']],
+  touch:[['Low / Mid / High','Play or hold your note'],['Tap a note on her score','Audition that pitch during her call']],
+  modes:[{id:'setlist',label:'Setlist'},{id:'rehearse',label:'Chorus rehearsal'},{id:'daily',label:'Daily duet'}],
+  options:[
+    {id:'song',label:'Recording',values:[{id:'rotate',label:'Pick a record for me'},...songs.map(s=>({id:s.id,label:s.title}))]},
+    {id:'difficulty',label:'Arrangement',values:values(['soundcheck','studio','headliner'])},
+    {id:'part',label:'Voice',values:[{id:'lead',label:'Echo the lead'},{id:'upper',label:'Upper harmony'},{id:'lower',label:'Lower harmony'}]},
+    {id:'sync',label:'Input delay',values:[{id:'0',label:'0 ms'},...offsets.filter(ms=>ms!==0).map(ms=>({id:String(ms),label:(ms>0?'+':'')+ms+' ms'}))]},
+  ],
+  controls,
+  scoreGroup({mode,options,seed}) {
+    if (mode==='daily') return 'daily/'+seed;
+    const {tune,difficulty,part}=chooseTake(seed,mode,options);
+    return [mode,tune.id,difficulty,part].join('/');
+  },
+  progress(save) {
+    const entries=Object.values(readBook({read:()=>save}).records);
+    if (!entries.length) return '';
+    const best=new Map();
+    for (const entry of entries) {
+      if (entry && Number.isFinite(entry.accuracy) && (!best.has(entry.song) || best.get(entry.song).accuracy<entry.accuracy)) best.set(entry.song,entry);
     }
-    function toggle(){if(ended||after>0||graded.some(Boolean))return;part=!part;message=part?'Harmony is one pad to the right.':'Echo my notes exactly.';api.sound('select');}
-    function strike(lane){
-      if(ended||after>0)return;
-      voice(lane,'you');
-      if(phase()!=='REPLY'){message='My turn. Your cue comes next.';return;}
-      const b=beat-(s.beats+1);
-      const target=s.notes.findIndex(([time],i)=>!graded[i] && Math.abs(b-time)<(song<2?.44:.37));
-      if(target<0){message='Between notes. Watch the light.';return;}
-      const [time,note]=s.notes[target];
-      if(lane!==answerPitch(note,part)){message='Try '+labels[answerPitch(note,part)].toLowerCase()+'.';return;}
-      const exact=Math.abs(time-b)<.17;
-      graded[target]=exact?'perfect':'good';hits++;attemptPoints+=(exact?105:65)+(part?45:0);
-      message=exact?(part?'That chord!':'Right in tune.'):'We caught it.';word=s.lyric[target];api.haptic(exact?12:7);
-      if(part)voice(note,'her');
-      api.hud('Record',String(song+1)+' / 5','Applause',points+attemptPoints);
-    }
-    function replay(){if(ended||after>0)return;begin();api.sound('back');}
-    function settle(){
-      passed=hits>=Math.ceil(s.notes.length*.65);
-      if(passed){clear++;points+=attemptPoints;perfect+=graded.filter(x=>x==='perfect').length;if(part)duets++;
-        message=trackBest&&attemptPoints>trackBest?'New best take!':hits===s.notes.length?'That is the take.':'Keep that take.';
-        api.rememberBest?.('take-'+song,attemptPoints);api.sound('clear');}
-      else{message='One more take. Follow my pitches.';api.sound('back');}
-      word=passed?'Thank you!':'Again?';after=1.1;
-    }
-    begin();
-    return {
-      key(t,k){if(t!=='down')return;const a=['KeyA','KeyS','KeyD'].indexOf(k),b=['ArrowLeft','ArrowDown','ArrowRight'].indexOf(k);if(a>=0||b>=0)strike(Math.max(a,b));else if(k==='Space')toggle();else if(k==='KeyR')replay();},
-      pointer(t,x,y){if(t!=='down')return;if(y>=357&&y<=437){const a=padX.findIndex(left=>x>=left&&x<=left+140);if(a>=0)strike(a);}else if(y>=440){if(x<292)toggle();else replay();}},
-      update(dt){
-        if(ended)return;clock+=dt;portraitPulse=Math.max(0,portraitPulse-dt*2.3);spot=spot.map(s=>Math.max(0,s-dt*3));
-        if(after>0){after-=dt;if(after<=0){if(passed && ++song===songs.length){ended=true;api.end(points,[['Tracks cut',clear],['Harmony takes',duets],['Perfect notes',perfect]],'Your part is on the record. So is my smile.');}else begin();}return;}
-        beat+=dt*s.bpm/60;const whole=Math.floor(beat);
-        if(beat>=0 && whole!==lastTick){lastTick=whole;if(api.tone)api.tone({freq:s.root*(whole%2?.75:.5),dur:.12,type:'triangle',vol:.075,attack:.01,bus:'music'});else api.sound('tick',{pitch:.62,spread:0});}
-        while(called<s.notes.length&&beat>=s.notes[called][0]){voice(s.notes[called][1],'her');word=s.lyric[called++];}
-        if(phase()==='CUE'){word='Your turn';message=part?'Sing one pad higher.':'Echo me.';}
-        const reply=beat-s.beats-1;
-        s.notes.forEach(([time],i)=>{if(!graded[i]&&reply>time+(song<2?.44:.37))graded[i]='miss';});
-        if(reply>=s.beats)settle();
-      },
-      demo(){if(ended||after>0)return;if(beat<0 && part!==(song%2===1))toggle();if(phase()!=='REPLY')return;const b=beat-s.beats-1;s.notes.forEach(([at,note],i)=>{if(!graded[i]&&b>=at)strike(answerPitch(note,part));});},
-      draw(c){
-        c.fillStyle='#1e102d';c.fillRect(0,0,480,480);
-        c.save();c.beginPath();c.rect(0,0,480,246);c.clip();
-        const zoom=api.reducedMotion?0:portraitPulse*3;
-        singer(c,0,42,512,340,-zoom,-zoom,480+zoom*2,277+zoom*2);
-        c.restore();
-        const grad=c.createLinearGradient(0,135,0,247);grad.addColorStop(0,'#160a2300');grad.addColorStop(1,'#21102b');c.fillStyle=grad;c.fillRect(0,135,480,112);
-        panel(c,12,12,114,23,'#21102bdf',12);type(c,'●  SIDE A  /  0'+(Math.min(song,4)+1),69,24,11,'#ffc9a1','center','monospace');
-        for(let i=0;i<9;i++){const h=6+18*spot[i%3]+(api.reducedMotion?0:3*Math.sin(clock*9+i));panel(c,435+i*3.5,40-h,2,h,hues[i%3],1);}
-        if(word){panel(c,309,126,146,33,'#26132ad9',17);type(c,word,382,142,19,'#fff2cc','center','Georgia');}
-        type(c,s.name,19,216,31,'#fff0d1','left','Georgia');
-        type(c,Math.round(s.bpm)+' BPM',459,218,12,'#f5b9c9','right','monospace');
-        const label=after>0?(passed?'TAKE SAVED':'REHEARSE'):phase()==='CALL'?'AGI-1 SINGS':phase()==='CUE'?'GET READY':'YOUR VOICE';
-        panel(c,18,240,134,24,phase()==='REPLY'?'#ffe6a4':'#793958',12);
-        type(c,label,85,252,12,phase()==='REPLY'?'#331c39':'#fff0dd','center','monospace');
-        type(c,message,462,252,13,'#f8d9c4','right');
-        const start=41,span=394,base=328;
-        for(let i=0;i<3;i++)line(c,[[22,base-i*17],[458,base-i*17]],'#5f3b5c',1);
-        const reply=phase()==='REPLY',pos=reply?beat-s.beats-1:beat;
-        s.notes.forEach(([t,n],i)=>{const x=start+t*span/(s.beats-.5),lane=reply?answerPitch(n,part):n,y=base-lane*17;
-          if(reply&&part&&!graded[i]){
-            oval(c,x,base-17,5,5,null,'#dcc8df',1.5);type(c,s.lyric[i],x,346,11,'#edd7cc');return;
-          }
-          const missed=reply && graded[i]==='miss',color=missed?'#6e526c':hues[lane];
-          oval(c,x,y,8,5,color);line(c,[[x+7,y],[x+7,y-13]],color,2);
-          type(c,s.lyric[i],x,346,11,missed?'#9f819c':'#edd7cc');if(reply && ['good','perfect'].includes(graded[i]))type(c,'✓',x,276,12,'#a3f2c4');});
-        if(phase()!=='CUE'&&after<=0){const x=start+Math.max(0,Math.min(s.beats-.5,pos))*span/(s.beats-.5);line(c,[[x,277],[x,334]],'#fffbec',2);}
-        padX.forEach((x,i)=>{panel(c,x,363,140,72,'#0f0b1d',11);panel(c,x,359+spot[i]*3,140,68,spot[i]>.3?'#fff4e0':hues[i],11);
-          type(c,keyLabels[i],x+22,379,12,'#51354e','left','monospace');type(c,labels[i],x+70,399,22,'#392137','center','Georgia');});
-        type(c,part?'◉  HARMONY  +1':'◉  ECHO PART',118,458,13,'#ffd4aa','center','monospace');type(c,'↶  HEAR AGAIN',367,458,13,'#d7b9dc','center','monospace');
-      }
+    return 'Songbook · '+best.size+' of 7 recorded · '+[...best.values()].map(entry=>entry.song+' '+entry.grade).join(' / ');
+  },
+  create(api) {
+    const seed=api.seed ?? Math.floor((api.rng?.() ?? .5)*0xffffffff);
+    const mode=api.mode || 'setlist';
+    const options=api.options || {};
+    const selection=chooseTake(seed,mode,options);
+    const full=arrange(selection);
+    const rehearsal=mode==='rehearse';
+    const chart=api.demo||rehearsal ? excerpt(full,Math.ceil(full.phrases.length*.30),api.demo?7:12) : full;
+    const dice=rng(seed ^ 0x37b42c);
+    const auto=player(chart,'preview',seed);
+    const song=soundtrack(api,chart,chart.start || 0);
+    const delay=offsets.includes(Number(options.sync))?Number(options.sync)/1000:0;
+    let time=chart.start || 0;
+    let phrase=chart.phrases[0];
+    let wasReply=false, finished=false,paused=false,cheer=0,lastSpeech=-100,streakPhrases=0,showRetry=false;
+    let feedback={text:'',ttl:0};
+    const releaseQueue=new Map();
+    const speak=(kind,force=false)=>{
+      if(!force && time-lastSpeech<2.1)return;
+      api.say?.(say(kind,dice.next));
+      lastSpeech=time;
     };
-  }
+    function setFeedback(text,ttl=1.0){feedback={text,ttl};}
+    function hud(){
+      api.hud?.('Applause',run.points,'Take',run.judged ? pct(run.accuracy):'—');
+    }
+    function onEvent(event){
+      if(event.type==='judge'){
+        setFeedback(respond(event.note,event.kind,event.delta));
+        if(event.kind==='perfect'){
+          api.haptic?.(7);
+          if(run.combo>0 && run.combo%16===0)api.effect?.('streak',run.combo+'×');
+        }
+        if(event.kind==='short')song.feedback('short');
+        if(['wrong','miss','short'].includes(event.kind)&&event.note.index%6===0)speak('miss');
+        hud();
+      }else if(event.type==='hold'){
+        setFeedback('Hold · follow the tail');
+      }else if(event.type==='phrase'){
+        streakPhrases=event.accuracy>=.8?streakPhrases+1:0;
+        if(event.accuracy>=.965){
+          cheer=.65;
+          api.effect?.('clear','Clean phrase');
+        }
+        if(streakPhrases>0 && streakPhrases%3===0){
+          cheer=1.4; speak('streak'); song.feedback('streak');
+        }
+      }else if(event.type==='stray'){
+        setFeedback('Rest · leave a little silence',.55);
+      }
+    }
+    const run=new Performance(chart,onEvent);
+    const old=readBook(api.store).records[takeKey(chart)];
+    setFeedback(old?'Your best take · '+old.grade+' / '+Math.round(old.accuracy/10)+'%':'Listen · then sing it back',2.2);
+    hud();speak(chart.part==='lead'?'opening':'harmony',true);
+
+    function input(down,lane,when){
+      if(finished||paused)return;
+      if(!down){song.endVowel(lane);run.release(lane,when);return;}
+      if(releaseQueue.has(lane)){
+        song.endVowel(lane);run.release(lane,releaseQueue.get(lane));releaseQueue.delete(lane);
+      }
+      if(run.held.has(lane))return;
+      const active=phraseAt(chart,when);
+      const target=run.press(lane,when);
+      const lead=(lane+(chart.part==='upper'?2:chart.part==='lower'?1:0))%3;
+      const pitch=voicePitch(active.chord,lane,chart.part,lead);
+      if(target&&lane===target.lane){
+        const duration=Math.max(.13,Math.min(.75,target.until-target.at));
+        if(target.until>target.at)song.beginVowel(lane,pitch,duration);
+        else song.vocal(pitch,duration,0,'you');
+        if(chart.part!=='lead')song.vocal(target.leadMidi,duration*.9,0,'her');
+      }else{
+        song.vocal(pitch,.11,0,'you');
+      }
+    }
+    function physical(down,lane,stamp) {
+      if(lane<0||lane>2||finished||paused)return;
+      const when=song.eventTime(stamp)-delay;
+      // The shell releases all controls before announcing a pause. Defer the
+      // release for one simulation tick so that pause never cuts a held vowel.
+      if(!down)releaseQueue.set(lane,when);
+      else input(true,lane,when);
+    }
+    function finish(){
+      if(finished)return;
+      finished=true;
+      const result=run.report();
+      const saved=!api.demo&&!rehearsal ? keepTake(api.store,chart,result,mode==='daily'?String(seed):null):null;
+      song.feedback('final');
+      song.dispose();
+      const summary=[['Grade',result.grade],['Accuracy',pct(result.accuracy)],['Perfect notes',result.counts.perfect],
+        ['Best streak',result.bestCombo],['Recording',chart.title],['Voice',capital(chart.part)]];
+      api.end(result.score,summary,saved?.better?'a new take for the shelf 💜':say('finish',dice.next));
+    }
+    return {
+      action(id,type,_value,stamp){
+        if(id==='retry-audio' && type==='down' && song.failed){song.retry();return;}
+        const lane=ids.indexOf(id);if(lane>=0)physical(type==='down',lane,stamp);
+      },
+      key(type,code,stamp){
+        let lane=keys.indexOf(code);
+        if(lane<0)lane=['ArrowLeft','ArrowDown','ArrowRight'].indexOf(code);
+        if(lane>=0)physical(type==='down',lane,stamp);
+      },
+      pointer(type,x,y,w,h){
+        if(type!=='down'||!w||!h||time>=phrase.reply||paused||finished)return;
+        const {sheet}=layout(w,h);
+        if(x<sheet.x||x>sheet.x+sheet.w||y<sheet.y+sheet.h*.23||y>sheet.y+sheet.h*.74)return;
+        const gutter=Math.max(9,Math.min(25,sheet.w*.055));
+        const offset=(x-sheet.x-gutter-6)/(sheet.w-2*gutter-16)*4;
+        const note=phrase.notes.find(n=>Math.abs(n.offset-offset)<.27);
+        if(note){song.vocal(note.leadMidi,.16,0,'you');setFeedback('Audition · '+['low','mid','high'][note.lead],.7);}
+      },
+      pause(){paused=true;releaseQueue.clear();run.releaseInputs();song.pause();},
+      resume(){if(!finished){paused=false;song.resume();}},
+      cancelInput(){releaseQueue.clear();run.releaseInputs();},
+      dispose(){finished=true;releaseQueue.clear();song.dispose();},
+      demo(){if(!finished&&!paused)auto(time,input);},
+      update(dt){
+        if(finished||paused)return;
+        for(const [lane,when] of releaseQueue){song.endVowel(lane);run.release(lane,when);}
+        releaseQueue.clear();
+        time=song.update(dt);
+        if(song.failed!==showRetry) {
+          showRetry=song.failed;
+          api.controls?.(showRetry?[...controls,{id:'retry-audio',label:'Retry recording'}]:controls);
+          if(showRetry)api.say?.('my backing track missed its cue. you can retry it while we sing.');
+        }
+        cheer=Math.max(0,cheer-dt);feedback.ttl=Math.max(0,feedback.ttl-dt);
+        run.advance(time-delay);
+        const current=phraseAt(chart,time);
+        if(current.index!==phrase.index){
+          if(current.section!==phrase.section){
+            cheer=1.25;api.effect?.('chorus',current.label);song.feedback('chorus');speak('chorus',true);
+          }else if(current.index%6===0)speak('call');
+          phrase=current;
+        }
+        const reply=time>=phrase.reply;
+        if(reply&&!wasReply&&phrase.index<2)speak('answer',true);
+        wasReply=reply;
+        if(time>=chart.duration)finish();
+      },
+      draw(ctx,w=480,h=480){
+        const board=layout(w,h);
+        ctx.fillStyle='#302038';ctx.fillRect(0,0,w,h);
+        const v={chart,time,phrase,run,cheer,feedback,reduced:Boolean(api.reducedMotion)};
+        stage(ctx,board.stage,v);scoreSheet(ctx,board.sheet,v,board.small);
+      },
+    };
+  },
 };

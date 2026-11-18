@@ -1,5 +1,12 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Five remastered music games · 2026-11-18
+
+DUET AFTER DARK sings a call over an original recording, then hands the microphone to the player. NEEDLE DROP turns the same recordings into spatial skating with an audible backspin. SIDE B mixes two complete recordings with beat-timed crossfades. CABLE CHOIR has four synthesized cabin voices and a 24-song memory book. ABYSS FM uses stereo whale calls, moving singers and intersecting bearings through 32 watches.
+
+All five retain their public IDs, gallery categories, local arcade settings and silent seeded previews. Their pages use the responsive kit in `src/games/kit/remaster.js`. `tools/games/REMASTER-BRIEFS.md` describes all 20 games. `tools/games/REMASTER-REPORT.md` records the baseline, balance distributions, mix peaks and phone and desktop screens. Run `node tools/games/<id>/balance.mjs` to replay the skill profiles. The five dedicated suites run in `npm test`.
+
+
 ## HEARTBEAT's songs sound like the originals again — 2026-11-16
 
 The owner heard the songs "scuffed" in game (all four of: worse than the original, clicky noise on top, muffled, crackles

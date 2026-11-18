@@ -2,9 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import wingwalk from '../src/games/cloudfoil/game.js';
 import railway from '../src/games/switchyard/game.js';
-import radio from '../src/games/pearlshift/game.js';
 import billiards from '../src/games/moonfreight/game.js';
-import choir from '../src/games/summitline/game.js';
 import bandit from '../src/games/driftglass/game.js';
 
 function play(game, random) {
@@ -35,8 +33,7 @@ function seeded(seed) {
 }
 const objectives = [
   [wingwalk, 'Letters delivered', '8/8'], [railway, 'Suppers delivered', '5/5'],
-  [radio, 'Songs archived', '5/5'], [billiards, 'Tables cleared', '5/5'],
-  [choir, 'Concerts played', '6/6'], [bandit, 'Broadcast', 'Your station'],
+  [billiards, 'Tables cleared', '5/5'], [bandit, 'Broadcast', 'Your station'],
 ];
 for (const [game, key, result] of objectives) {
   test(game.title + ' completes on different seeds, repeats the same run, and rewards play', () => {
@@ -55,7 +52,7 @@ for (const [game, key, result] of objectives) {
 }
 
 for (const input of ['touch', 'keyboard']) {
-  test(input + ' directly delivers mail, shunts supper, broadcasts, shoots, echoes and steals', () => {
+  test(input + ' directly delivers mail, shunts supper, shoots and steals', () => {
     const make = game => play(game, () => .5);
     const operate = (run, key, x, y) => input === 'touch' ? run.tap(x, y) : run.press(key);
 
@@ -84,27 +81,11 @@ for (const input of ['touch', 'keyboard']) {
     train.wait(1.2);
     assert.equal(train.hud[1], 530, 'undo and three coupled pushes achieve the chef’s par');
 
-    const ocean = make(radio);
-    operate(ocean, 'KeyE', 100, 438);
-    operate(ocean, 'Space', 325, 438);
-    ocean.wait(2);
-    assert.equal(ocean.hud[3], '1/5', 'the signal near the crosshair is archived');
-    assert.ok(ocean.sounds.some(([name]) => name === 'bounce'), 'the hydrophone returned its ping');
-
     const pool = make(billiards);
     operate(pool, 'Space', 322, 429);
     pool.wait(.2);
     assert.equal(pool.hud[3], 11, 'one launch spends one piece of chalk');
     assert.ok(pool.sounds.some(([name]) => name === 'slice'));
-
-    const concert = make(choir);
-    concert.wait(2.8);
-    operate(concert, 'KeyE', 91, 315);
-    concert.wait(2.85);
-    for (const [key, x] of [['Digit1', 58], ['Digit3', 281], ['Digit1', 58]]) operate(concert, key, x, 429);
-    concert.wait(1.25);
-    assert.equal(concert.hud[3], '2/6', 'the first melody can be rehearsed and echoed');
-    assert.ok(concert.hud[1] >= 280);
 
     const chase = make(bandit);
     if (input === 'touch') chase.tap(201, 217);
@@ -116,14 +97,10 @@ for (const input of ['touch', 'keyboard']) {
   });
 }
 
-test('an interrupted hold cancels the jump and cue, and a rehearsal plays four distinct pitched notes', () => {
+test('an interrupted hold cancels the jump and cue', () => {
   for (const game of [wingwalk, billiards]) {
     const run = play(game, () => .5);
     run.model.key('down', 'Space'); run.wait(.4); run.model.cancelInput(); run.model.key('up', 'Space');
     assert.ok(run.sounds.every(([name]) => name !== 'whoosh' && name !== 'slice'));
   }
-  const orchestra = play(choir, seeded(913));
-  orchestra.wait(119, true);
-  const tones = new Set(orchestra.sounds.filter(([n]) => n === 'tap').map(([, o]) => o.pitch));
-  assert.equal(tones.size, 4);
 });

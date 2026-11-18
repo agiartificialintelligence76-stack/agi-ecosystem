@@ -1,6 +1,8 @@
 import '../intro.js';
 import { createShell } from '../kit/shell.js';
-import { mountCartridge } from '../kit/cartridge.js';
+import { mountRemaster } from '../kit/remaster.js';
 import game from './game.js';
-
-mountCartridge('pearlshift', game, (options) => createShell({ game: 'pearlshift', ...options }), new URL('./marquee.webp', import.meta.url).href);
+mountRemaster('pearlshift', game, options => createShell({
+  game: 'pearlshift',
+  ...options
+}), new URL('./marquee.webp', import.meta.url).href);

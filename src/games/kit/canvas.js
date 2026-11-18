@@ -14,7 +14,7 @@ export function fitCanvas(canvas, { maxDpr = 2, alpha = true, onResize = null, c
     resize() {
       const box = canvas.getBoundingClientRect();
       const w = Math.max(1, Math.round(box.width)), h = Math.max(1, Math.round(box.height));
-      const dpr = Math.min(maxDpr, Math.max(1, window.devicePixelRatio || 1));
+      const dpr = Math.min(typeof maxDpr === 'function' ? maxDpr() : maxDpr, Math.max(1, window.devicePixelRatio || 1));
       if (w === view.w && h === view.h && dpr === view.dpr && canvas.width === Math.round(w * dpr)) return false;
       view.w = w; view.h = h; view.dpr = dpr;
       canvas.width = Math.round(w * dpr);

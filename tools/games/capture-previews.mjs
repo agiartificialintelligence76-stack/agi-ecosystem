@@ -31,7 +31,6 @@ const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } =
 // Sample each playable scene where its main decision is visible, including some second-stage mechanics.
 const moments = {
   lanternlake: { warm: 100, poster: .03 }, starlingrelay: { warm: 150, poster: .24 },
-  echoforge: { warm: 1900 }, returnaddress: { warm: 1800, poster: .48 },
   driftglass: { warm: 2400 }, waxworks: { warm: 200, poster: .23 },
   moonfreight: { warm: 1450 }, tetherturn: { warm: 1500 }, pocketgrove: { warm: 450 },
 };
