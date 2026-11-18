@@ -44,6 +44,7 @@ export function mountRemaster(id, game, makeShell, cover) {
   const storage = DEMO ? isolatedStore : shell.store;
   function release() {
     const stamp = performance.now();
+    model?.cancelInput?.();
     for (const code of held) model?.key?.('up', code, stamp);
     held.clear();
     dock.release(stamp);
@@ -53,7 +54,6 @@ export function mountRemaster(id, game, makeShell, cover) {
       model?.pointer?.('cancel',lastPoint.x,lastPoint.y,view.w,view.h,stamp);
       if (canvas.hasPointerCapture(id)) canvas.releasePointerCapture(id);
     }
-    model?.cancelInput?.();
   }
   function dispose() { release(); runGeneration++; model?.dispose?.(); model = null; stopPreview(); }
   function start(seed) {

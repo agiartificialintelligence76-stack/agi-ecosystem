@@ -1,8 +1,8 @@
 // The public routes keep existing bookmarks valid across arcade editions.
 export const COLLECTION = [
   {
-    id: "cloudfoil", name: "WINGWALK EXPRESS", genre: "Stunt hopping",
-    line: "Leap between moving gliders as AGI-1", tags: ["3d", "action"],
+    id: "cloudfoil", name: "WINGWALK EXPRESS", genre: "Wingwalking",
+    line: "Carry the post from wingtip to wingtip", tags: ["3d", "action"],
     accent: "#ffc673", ground: "#173b4a", style: "sports",
     wordmark: ["Wingwalk", "Express"], play: "Board the wing",
   },
@@ -37,10 +37,10 @@ export const COLLECTION = [
     wordmark: ["Off the", "Record"], play: "Take the call",
   },
   {
-    id: "inkveil", name: "AGI'S ALIBI", genre: "Echo heist",
-    line: "Rehearse a decoy, then lift her diary", tags: ["action"],
+    id: "inkveil", name: "AGI'S ALIBI", genre: "Decoy stealth",
+    line: "Lure the patrol with a tape and slip past", tags: ["action"],
     accent: "#c7e6ab", ground: "#1e2e3d", style: "crt",
-    wordmark: ["AGI's", "Alibi"], play: "Start rehearsal",
+    wordmark: ["AGI's", "Alibi"], play: "Enter the archive",
   },
   {
     id: "nightpress", name: "STICKER CLUB", genre: "Collage studio",
@@ -50,7 +50,7 @@ export const COLLECTION = [
   },
   {
     id: "moonfreight", name: "MOONSHOT BILLIARDS", genre: "Gravity pool",
-    line: "Bank comets into orbit pockets on her table", tags: ["3d", "chill"],
+    line: "Bank a comet and call the last pocket", tags: ["3d", "chill"],
     accent: "#e1c782", ground: "#282341", style: "felt",
     wordmark: ["Moonshot", "Billiards"], play: "Rack the comets",
   },
@@ -61,8 +61,8 @@ export const COLLECTION = [
     wordmark: ["Split", "Personality"], play: "Enter the mirror",
   },
   {
-    id: "driftglass", name: "CASSETTE BANDIT", genre: "Highway tag",
-    line: "Steal AGI-1’s mixtape and hold the lead", tags: ["3d", "action"],
+    id: "driftglass", name: "CASSETTE BANDIT", genre: "Radio duel",
+    line: "Steal the live tape at your rival’s door", tags: ["3d", "action"],
     accent: "#ff90b7", ground: "#302447", style: "speed",
     wordmark: ["Cassette", "Bandit"], play: "Start the chase",
   },
@@ -97,8 +97,8 @@ export const COLLECTION = [
     wordmark: ["Window", "Seat"], play: "Punch the ticket",
   },
   {
-    id: "tetherturn", name: "SLINGSHOT GIRL", genre: "Gravity sport",
-    line: "Sling her pod past moons and bend gravity", tags: ["arcade", "action"],
+    id: "tetherturn", name: "SLINGSHOT GIRL", genre: "Space golf",
+    line: "Fly the shot and brake into orbit", tags: ["arcade", "action"],
     accent: "#a7f6e2", ground: "#24294e", style: "orbit",
     wordmark: ["Slingshot", "Girl"], play: "Launch the pod",
   },

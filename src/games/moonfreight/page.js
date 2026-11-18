@@ -1,6 +1,5 @@
 import '../intro.js';
 import { createShell } from '../kit/shell.js';
-import { mountCartridge } from '../kit/cartridge.js';
+import { mountRemaster } from '../kit/remaster.js';
 import game from './game.js';
-
-mountCartridge('moonfreight', game, (options) => createShell({ game: 'moonfreight', ...options }), new URL('./marquee.webp', import.meta.url).href);
+mountRemaster('moonfreight', game, options=>createShell({ game: 'moonfreight', ...options }), new URL('./marquee.webp',import.meta.url).href);

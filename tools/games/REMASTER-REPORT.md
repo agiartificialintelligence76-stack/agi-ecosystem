@@ -180,3 +180,5 @@ expert · solved 504/504 · season median 20.9 min · scene P50/P90 30/46 s · s
 ```
 
 Grid release verification used a clean Node 24 build in UTC. The full suite passed 2,337 tests with six existing skips. On the built pages all five games started, accepted input and reached scored results on phone and desktop. Pause, resume and replay worked. The sideways phone, foldable and large desktop checks found no layout or CSP violations across the five games. The linked contact sheets show the actual title, play and result screens.
+
+Vercel published the grid batch at revision b920cfe. Each hosted preview accepted its opening solution or stage program. All five public pages subsequently matched the clean build and returned their new playable field, tile clip, poster and share card. A separate 20-minute real-time browser run completed 29 distinct Catnap puzzles and entered number 30 at 19:22.

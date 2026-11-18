@@ -33,12 +33,17 @@ async function check(id,label) {
     const full=['phone','desktop'].includes(label);
     if(phase==='full'&&id==='echoforge'){await page.locator('select[name=mode]').selectOption('rehearse');const song=page.locator('select').filter({has:page.locator('option[value="agi"]')});if(await song.count())await song.first().selectOption('agi');}
     if(phase==='full'&&id==='prismcourier')await page.locator('select[name=room]').selectOption('6');
+    if(id==='driftglass'&&full)await page.locator('select[name=mode]').selectOption('check');
     if(full)await shot('title');
     await page.locator('.ak-title .ak-btn-play').click();
     await page.waitForSelector('[data-ak-state="play"] .rm-field canvas');
     const first=page.locator('.rm-pad:not([disabled])').first();
     const openingPuzzles = new Set(['switchyard','waxworks','starlingrelay','prismcourier','rookery']);
-    if(!openingPuzzles.has(id)){await first.click();await page.keyboard.press(id==='returnaddress'?'ArrowUp':'ArrowRight');}
+    if(id==='cloudfoil'){await page.keyboard.down('Space');await delay(600);await page.keyboard.up('Space');}
+    else if(id==='inkveil'){await page.keyboard.press('Space');}
+    else if(id==='driftglass'){await delay(3180);await page.keyboard.press('Space');}
+    else if(id==='moonfreight'||id==='tetherturn'){await page.keyboard.press('Space');}
+    else if(!openingPuzzles.has(id)){await first.click();await page.keyboard.press(id==='returnaddress'?'ArrowUp':'ArrowRight');}
     else if(id==='prismcourier')await page.keyboard.press('KeyH');
     const until=phase.startsWith('layout')?250:phase.includes('dev')?1600:7500;
     await delay(until);
@@ -69,10 +74,13 @@ async function check(id,label) {
         }
       }
       const puzzleInputs={
+        cloudfoil:['KeyF'],inkveil:['KeyT','Enter','ArrowRight','ArrowRight','ArrowDown','ArrowRight','ArrowDown','KeyF'],
+        moonfreight:['KeyX'],tetherturn:['KeyX'],
         prismcourier:[...[...chamber(6).witness].map(k=>['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space','KeyX'][Number(k)]),'KeyB'],switchyard:['ArrowRight','Space','ArrowRight','KeyX'],
         starlingrelay:['KeyB','KeyG','KeyF'],waxworks:['ArrowRight','ArrowRight','KeyF'],rookery:['ArrowRight'],
       };
       for(const key of puzzleInputs[id]||[]){
+        if(['moonfreight','tetherturn'].includes(id)&&key==='KeyX')await page.locator('[data-action="file"]').waitFor({timeout:15000});
         if(id==='starlingrelay'&&key==='KeyF')await page.locator('[data-action="file"]').waitFor();
         await page.keyboard.press(key);await delay(key==='KeyG'?2200:650);
       }

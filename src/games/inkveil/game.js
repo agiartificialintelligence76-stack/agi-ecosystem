@@ -1,129 +1,709 @@
-import { rooms,indexRoom,step,record,advance,solve,cleared,symbols } from './tape.js';
-import { painting, panel, type, line, oval } from '../kit/illustration.js';
-import { herSprite } from '../goinglive/pixel.js';
-
-const archive=painting(new URL('./alibi-archive.webp',import.meta.url).href);
-const left=41,top=127,size=57,cyan='#79e6d3',amber='#ffbc80',rose='#ff6f88';
-const center=i=>[left+(i%7+.5)*size,top+(Math.floor(i/7)+.5)*size];
-function actor(c,pos,ghost,pose,alpha=1){
-  const [x,y]=pos;c.save();c.globalAlpha=alpha;
-  oval(c,x,y+18,15,4,ghost?'#49cfbf':'#463145');
-  const spr=herSprite(pose,ghost?2:4);c.imageSmoothingEnabled=false;
-  if(ghost){c.shadowColor=cyan;c.shadowBlur=9;}c.drawImage(spr.canvas,x-18,y-26,36,46);c.restore();
-}
-function door(c,x,y,color,open){
-  const gap=open?12:1;
-  for(const side of [-1,1]){const sx=x+side*gap;line(c,[[sx+side*19,y-20],[sx,y-20],[sx,y+20],[sx+side*19,y+20]],color,3);}
-  type(c,open?'⇄':'×',x,y,19,color);
-}
-export default{
- title:"AGI'S ALIBI",
- tagline:'AGI-1 needs the diary the archive confiscated. Give the cameras a recording of her while the real girl slips through.',
- instructions:[['Record your alibi','Move the mint double onto a numbered camera mat. Each step or Wait adds a frame to her looping tape.'],['Run the take','Start playback. Move the real AGI-1 one turn at a time. A door opens when the NEXT mint frame lands on its matching mat.'],['Take the diary','Pick up every red diary and reach the exit. Later rooms have two doors and laser bars that sleep between red frames.']],
- keys:[['Arrows / WASD','Move AGI-1'],['Space / Enter','Play tape or record again'],['X / Z / H','Wait / undo / hint']],
- touch:[['Tap a direction from AGI-1','Move one tile toward your tap'],['Use the tape deck','Wait, play, undo or get a clue']],
- create(api){
-   let index=0,room,script=[],tape=[],state,lastPos,oldGhost,live=false,score=0,steps=0,frames=0,elapsed=0,moveAge=0,delay=0,done=false;
-   let feedback='',guide=-1,demoClock=0,history=[];
-   function updateHud(){api.hud('Case',String(index+1)+' / 5',live?'Turns':'Tape',live?steps:script.length+' / '+room.cap);}
-   function setup(){room=indexRoom(rooms[index]);rewind();}
-   function rewind(){live=false;script=[];tape=[];state=[room.start,0,0];lastPos=room.start;oldGhost=room.start;steps=0;history=[];guide=-1;moveAge=1;
-     feedback='Record a double on mat 1.';updateHud();}
-   function start(){
-     if(done||delay>0)return;if(live){rewind();api.sound('back');return;}
-     if(!tape.length){feedback='Move the double to make a frame first.';api.sound('click');return;}
-     live=true;state=[room.start,0,0];lastPos=room.start;oldGhost=room.start;guide=-1;moveAge=1;feedback='Tape rolling. Get my diary.';api.sound('power');updateHud();
-   }
-   function undo(){if(done||delay>0)return;if(live&&history.length){state=history.pop();steps--;lastPos=state[0];oldGhost=tape[(state[1]+tape.length-1)%tape.length];}
-     else if(!live&&script.length){script.pop();tape=record(room,script);state[0]=tape.at(-1)??room.start;lastPos=state[0];}
-     else return;guide=-1;moveAge=1;feedback='Rewound one frame.';api.sound('back');updateHud();}
-   function act(a){
-     if(done||delay>0)return;
-     if(!live){
-       if(script.length>=room.cap){feedback='Tape full. Press PLAY or undo a frame.';return;}
-       lastPos=state[0];const next=step(state[0],a,room.cells);
-       if(next===state[0]&&a!==4){feedback='Wall. Tap WAIT to hold this frame.';return;}
-       script.push(a);state[0]=next;tape.push(next);moveAge=0;guide=-1;
-       feedback=room.pads.includes(next)?'Camera sees me. Play when ready.':'The tape records each footstep.';
-       api.sound('tick');updateHud();return;
-     }
-     lastPos=state[0];oldGhost=history.length?tape[(state[1]-1+tape.length)%tape.length]:room.start;
-     history.push(state);const previous=state;state=advance(room,tape,state,a);steps++;moveAge=0;guide=-1;
-     feedback=state[2]!==previous[2]?'Got it. Head for the green exit.':a!==4 && state[0]===previous[0]?'Door shut or wall. Watch the NEXT frame.':'Keep walking. They see my double.';
-     api.sound(state[2]!==previous[2]?'coin':'tap');
-     if(cleared(room,state)){feedback='Recovered '+room.file+'.';score+=Math.max(100,650-steps*8-script.length*5);frames+=script.length;delay=1.2;api.sound('clear');api.haptic(24);}
-     updateHud();
-   }
-   function clue(){if(done||delay>0)return;
-     if(!live){
-       if(script.every((v,i)=>v===room.script[i])){
-         if(script.length===room.script.length){feedback='The rehearsal is ready. Press PLAY.';guide=5;}
-         else{guide=room.script[script.length];feedback='Record '+(guide===4?'a wait':symbols[guide])+' next.';}
-       }else{guide=-1;feedback='Undo to the rehearsal marks, or try your tape.';}
-     }else{const p=solve(room,tape,state);guide=p?.[0]??-1;feedback=guide<0?'This tape cannot open the route. Re-record.':'On this turn, '+(guide===4?'wait.':'move '+symbols[guide]+'.');}
-   }
-   setup();
-   return {
-     key(t,k){if(t!=='down')return;const a=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','KeyX'].indexOf(k),b=['KeyW','KeyD','KeyS','KeyA'].indexOf(k);
-       if(a>=0||b>=0)act(Math.max(a,b));else if(k==='Space'||k==='Enter')start();else if(k==='KeyZ'||k==='Backspace')undo();else if(k==='KeyH')clue();},
-     pointer(t,x,y){if(t!=='down')return;if(y>=437){if(x<98)act(4);else if(x<183)undo();else if(x<310)clue();else start();return;}
-       if(y<top || y>=top+size*5 || x<left || x>=left+size*7)return;
-       const [cx,cy]=center(state[0]),dx=x-cx,dy=y-cy;if(Math.max(Math.abs(dx),Math.abs(dy))<18){act(4);return;}act(Math.abs(dx)>Math.abs(dy)?dx>0?1:3:dy>0?2:0);},
-     update(dt){elapsed+=dt;moveAge=Math.min(1,moveAge+dt*7);if(delay>0&&(delay-=dt)<=0){if(++index===rooms.length){done=true;api.end(score,[['Cases recovered',5],['Recorded frames',frames]],'If anyone asks, I was on camera the whole time.');}else setup();}},
-     demo(dt){if(done||delay>0)return;demoClock+=dt;if(demoClock<.4)return;demoClock=0;
-       if(!live){if(script.length<room.script.length)act(room.script[script.length]);else start();}else{const path=solve(room,tape,state);if(path?.length)act(path[0]);else rewind();}},
-     draw(c){
-       c.fillStyle='#091e25';c.fillRect(0,0,480,480);archive(c,0,91,512,227,0,0,480,122);
-       const fog=c.createLinearGradient(0,64,0,124);fog.addColorStop(0,'#071a2100');fog.addColorStop(1,'#091e25');c.fillStyle=fog;c.fillRect(0,52,480,72);
-       panel(c,12,10,126,21,'#0a1b21dc',2);type(c,(live?'●  LIVE':'●  REHEARSAL')+'  /  0'+(Math.min(4,index)+1),75,21,11,live?rose:cyan,'center','monospace');
-       type(c,room.name,16,87,25,'#fff1d4','left','Georgia');
-       type(c,live?'NEXT FRAME '+(state[1]+1):'TAPE '+script.length+' / '+room.cap,462,88,12,'#fff0d2','right','monospace');
-       const n=tape.length;for(let i=0;i<room.cap;i++){const x=18+i*33;panel(c,x,104,29,19,i===state[1]&&live?'#e4f6d3':i<n?'#244e4c':'#183238',2);type(c,i<n?symbols[script[i]]:'·',x+14,113,13,i===state[1]&&live?'#162c30':cyan);}
-       type(c,live?'REAL AGI-1':'DECOY AGI-1',465,113,11,live?amber:cyan,'right','monospace');
-       const ghost=live?tape[state[1]]:state[0];
-       for(let i=0;i<room.cells.length;i++){
-         const [x,y]=center(i),tile=room.cells[i],xx=x-size/2,yy=y-size/2;
-         if(tile==='#'){
-           panel(c,xx+2,yy+2,size-4,size-4,'#162c31',3);
-           if(i%8===0){
-             // The guards' live feed follows her rehearsal double.
-             panel(c,xx+8,yy+10,40,28,'#445555',3);panel(c,xx+11,yy+13,34,21,'#173b3b',2);
-             const signal=c.createRadialGradient(x,y-5,1,x,y-5,17);signal.addColorStop(0,'#7cbd9d99');signal.addColorStop(1,'#779b8800');
-             c.fillStyle=signal;c.fillRect(x-15,y-12,30,17);
-             for(let j=0;j<4;j++)line(c,[[xx+13,yy+16+j*4],[xx+43,yy+16+j*4]],'#699f8c55',1);
-             oval(c,xx+43,yy+43,2,2,live?rose:cyan);line(c,[[xx+11,yy+43],[xx+32,yy+43]],'#65736c',2);
-           }else{
-             // Book colours and unfilled spaces make the archive's shelves legible at a glance.
-             for(let row=0;row<2;row++){
-               const base=yy+23+row*22;line(c,[[xx+4,base+2],[xx+51,base+2]],'#697063',2);
-               for(let j=0;j<7;j++){
-                 if((i+row+j)%7===0)continue;const height=9+(i*3+j*7+row)%8,bx=xx+6+j*6;
-                 const shade=['#46534b','#354b4e','#4f5553','#425754','#62574c'][(i+j+row)%5];
-                 panel(c,bx,base-height,4,height,shade,1);line(c,[[bx,base-3],[bx+3,base-3]],'#abad8644',1);
-               }
-             }
-           }continue;
-         }
-         panel(c,xx+1,yy+1,size-2,size-2,(i+Math.floor(i/7))%2?'#365354':'#3b5959',2);
-         line(c,[[xx+4,yy+5],[xx+12,yy+5]],'#6c8380',1);
-         if(tile==='p'||tile==='q'){oval(c,x,y+4,21,16,'#163b39',cyan,2);type(c,tile==='p'?'1':'2',x,y+4,20,cyan,'center','monospace');}
-         if(tile==='g'||tile==='h'){door(c,x,y,amber,ghost===room.pads[Number(tile==='h')]);type(c,tile==='g'?'1':'2',x-17,y-15,10,amber);}
-         if(tile==='S')type(c,'⌂',x,y+1,25,'#b8c6a9');
-         if(tile==='E'){panel(c,x-19,y-17,38,34,'#163b37',5);type(c,'EXIT',x,y+1,12,'#a8efbd','center','monospace');}
-         if(tile==='!' && (!live || state[1]%3===0)){for(let j=-1;j<=1;j++)line(c,[[x-21,y+j*9],[x+21,y+j*9]],rose,2);}
-         const id=room.diaries.indexOf(i);if(id>=0 && !(state[2]&(1<<id))){
-           c.save();c.translate(x,y);c.rotate(-.18);panel(c,-12,-17,25,32,rose,3);line(c,[[-7,-14],[-7,12]],'#652434',2);type(c,'♥',3,-1,13,'#ffefc0');c.restore();}
-       }
-       const mixPos=(a,b)=>center(a).map((v,k)=>v+(center(b)[k]-v)*(api.reducedMotion?1:moveAge));
-       if(live){
-         const shown=history.length?tape[(state[1]+n-1)%n]:room.start;
-         actor(c,mixPos(oldGhost,shown),true,'walk'+Math.floor(elapsed*8)%4,.58);
-         const [gx,gy]=center(ghost);line(c,[[gx-16,gy-18],[gx-16,gy-24],[gx-9,gy-24]],cyan,2);
-       }
-       actor(c,mixPos(lastPos,state[0]),!live,delay>0?'hold:book':moveAge<1?'run'+Math.floor(elapsed*12)%4:Math.floor(elapsed*2)%9===0?'blink':'stand',live?1:.88);
-       type(c,feedback,240,423,13,'#fff2d3');const btns=[['WAIT',10,83],['UNDO',100,80],['HINT',187,95],[live?'RE-RECORD':'PLAY  ▸',299,170]];
-       btns.forEach(([label,x,w],i)=>{panel(c,x,440,w,32,i===3?'#adcfc4':'#203940',4);type(c,label,x+w/2,456,13,i===3?'#10292e':cyan,'center','monospace');});
-     }
-   };
- }
+import { rooms, wings } from './rooms.js';
+import { TAPES, dirs, dist, neighbor, walkable, throwSpots, xy, cone } from './geometry.js';
+import { begin, turn, complete, decodeToss, toss, lens } from './patrol.js';
+import { solve, replay } from './solver.js';
+import { campaign, daily, noir, notebook, starCount, unlocked, labels, keep } from './dossiers.js';
+import { lines } from './lines.js';
+import { layout } from './layout.js';
+import { render, journal } from './stage.js';
+import { soundscape } from './sound.js';
+const controls = ['N', 'E', 'S', 'W'].map((id, i) => ({
+  id,
+  label: ['North ↑', 'East →', 'South ↓', 'West ←'][i],
+}));
+const pad = (id, label, key) => ({ id, label, key });
+const arrows = {
+  ArrowUp: 'N',
+  ArrowRight: 'E',
+  ArrowDown: 'S',
+  ArrowLeft: 'W',
+  KeyW: 'N',
+  KeyD: 'E',
+  KeyS: 'S',
+  KeyA: 'W',
+};
+let cancelCurrent = null;
+export const cancelAimOnEscape = () => cancelCurrent?.() || false;
+export default {
+  title: "AGI'S ALIBI",
+  tagline:
+    'Plant a pocket tape in a paper archive. While the lamp turns toward its sound, slip away with her diary.',
+  instructions: [
+    [
+      'Read the lamps',
+      'Amber squares are a docent’s sight. Pink hatching comes from a camera. Shelves block sight. A dark hood hides you if you wait under it. Think as long as you like between actions.',
+    ],
+    [
+      'Send a sound',
+      'Open Aim tape, choose a clear square within three tiles in a straight line, then Throw. The highlighted sound field shows what can hear it. A guard seeing you already keeps watching.',
+    ],
+    [
+      'Get out quietly',
+      'Collect every gold diary and reach the green exit. One sighting leaves you a beat to recover. A second sighting or contact catches you. Quiet exits earn extra stars.',
+    ],
+  ],
+  keys: [
+    ['Arrows / WASD', 'Move one square, or move the landing marker'],
+    ['T / Q / Enter', 'Aim tape, change sound or throw'],
+    ['Space / Z / H', 'Wait and crouch, undo, or request a clue'],
+    ['Escape', 'Cancel a pending throw'],
+  ],
+  touch: [
+    ['Tap an adjacent square or swipe', 'Move one tile'],
+    ['Aim tape → floor → Throw', 'Set and throw the recorder'],
+    ['Case tools', 'Undo, inspect the dossier, or show one next action'],
+  ],
+  modes: [
+    { id: 'campaign', label: 'Archive campaign' },
+    { id: 'noir', label: 'Film Noir contracts' },
+    { id: 'daily', label: 'Daily dossier' },
+  ],
+  options: [
+    {
+      id: 'room',
+      label: 'Exhibit',
+      values: [
+        { id: 'next', label: 'Next open exhibit' },
+        ...rooms.map((r) => ({ id: String(r.id), label: r.id + ' · ' + r.name })),
+      ],
+    },
+  ],
+  controls,
+  scoreGroup: ({ mode, seed }) => (mode === 'daily' ? 'daily/' + seed : mode),
+  progress(data) {
+    const book = notebook(data),
+      files = Object.values(book.cases);
+    return files.length
+      ? 'Recovered ' +
+          files.length +
+          '/36 exhibits · ' +
+          files.reduce((n, e) => n + e.stars, 0) +
+          ' stars · ' +
+          labels(book).length +
+          ' tape labels'
+      : '';
+  },
+  create(api) {
+    const mode = api.mode || 'campaign',
+      seed = api.seed || 7,
+      music = soundscape(api.demo ? null : api.audio),
+      isNoir = mode === 'noir',
+      dated = mode === 'daily';
+    let book = notebook(api.store?.read?.()),
+      room,
+      cert,
+      state,
+      previous,
+      ops = [],
+      history = [],
+      roomAlerts = 0,
+      alarmBank = 3;
+    let tape = 0,
+      target = -1,
+      aim = false,
+      panel = 'floor',
+      journalAt = 0,
+      ghost = null,
+      finished = false,
+      sealed = false,
+      stars = 0,
+      points = 0,
+      cases = 0;
+    let facing = 2,
+      phase = 1,
+      time = 0,
+      demoClock = 0,
+      clearAge = 0,
+      hintAt = -1,
+      drag = null,
+      firstThrow = true,
+      latestControls = '',
+      recoverTime = 0;
+    let thrown = 0,
+      diverted = 0,
+      detections = 0,
+      lastFeedback = -100,
+      mentionedWindow = false;
+    const awarded = new Set(),
+      say = (t) => api.say?.(t),
+      speak = (key) => say(lines[key]);
+    const edgeLabels = { N: 'north', E: 'east', S: 'south', W: 'west', Z: 'wait under cover' };
+    function resetAttempt(message) {
+      state = begin(room);
+      previous = state;
+      ops = [];
+      history = [];
+      roomAlerts = 0;
+      tape = 0;
+      target = -1;
+      aim = false;
+      panel = 'floor';
+      ghost = null;
+      sealed = false;
+      hintAt = -1;
+      stars = 0;
+      recoverTime = 0;
+      facing = 2;
+      phase = 1;
+      firstThrow = true;
+      mentionedWindow = false;
+      if (message) say(message);
+      refresh();
+    }
+    function load(item) {
+      room = item.room;
+      cert = item.certificate;
+      journalAt = room.id - 1;
+      let introduction = room.lesson;
+      if (room.id === 1 && !dated && !isNoir)
+        introduction = 'Wait once. Aim a click three tiles east. Then slip behind the lamp.';
+      else if (dated) introduction = lines.daily + ' ' + room.lesson;
+      resetAttempt(introduction);
+    }
+    function describe(at) {
+      const [a, b] = xy(room, state.p),
+        [x, y] = xy(room, at),
+        dx = x - a,
+        dy = y - b;
+      return Math.abs(dx || dy) + ' ' + (dx > 0 ? 'east' : dx < 0 ? 'west' : dy > 0 ? 'south' : 'north');
+    }
+    function refresh() {
+      let list;
+      if (panel === 'journal')
+        list = [
+          pad('prior', 'Previous exhibit'),
+          pad('later', 'Next exhibit'),
+          pad('back', 'Back to room'),
+          { ...pad('open', 'Open exhibit'), disabled: mode !== 'campaign' || !unlocked(book, rooms[journalAt]) },
+        ];
+      else if (sealed)
+        list = [
+          ...(!dated ? [pad('next', isNoir ? 'Next contract' : 'Next exhibit', 'Space')] : []),
+          pad('file', 'File dossier', 'F'),
+          pad('ghost', ghost ? 'Hide route' : 'Show best route', 'G'),
+          pad('journal', 'Recovered exhibits'),
+        ];
+      else if (state.caught)
+        list = [...(!isNoir ? [pad('undo', 'Undo last beat', 'Z')] : []), pad('retry', 'Retry room', 'R')];
+      else if (aim)
+        list = [
+          ...controls,
+          pad('throw', 'Throw · ' + describe(target), 'Enter'),
+          ...(room.tapes > 1 ? [pad('tape', TAPES[tape].name, 'Q')] : []),
+          pad('cycle', 'Next landing', ']'),
+          pad('cancel', 'Cancel aim', 'Esc'),
+        ];
+      else if (panel === 'tools')
+        list = [
+          pad('back', 'Back to floor'),
+          ...(!isNoir ? [pad('undo', 'Undo', 'Z'), pad('retry', 'Restart room', 'R')] : []),
+          pad('hint', 'One clue', 'H'),
+          pad('journal', 'Recovered exhibits'),
+          ...(room.tapes > 1 ? [pad('tape', TAPES[tape].name, 'Q')] : []),
+        ];
+      else
+        list = [
+          ...controls,
+          pad('Z', 'Wait / crouch', 'Space'),
+          { ...pad('aim', 'Aim tape', 'T'), disabled: !state.charges },
+          pad('tools', 'Case tools', 'V'),
+        ];
+      const signature = list.map((b) => b.id + ':' + b.label + ':' + !!b.disabled).join('|');
+      if (signature !== latestControls) {
+        latestControls = signature;
+        api.controls?.(list);
+      }
+      api.hud?.(
+        isNoir ? 'Alerts left' : 'Case',
+        isNoir ? alarmBank : room.id,
+        'Beats / par',
+        ops.length + ' / ' + cert.par
+      );
+    }
+    function closeAim() {
+      if (!aim || finished) return false;
+      aim = false;
+      target = -1;
+      music.cue('reel');
+      speak('cancel');
+      refresh();
+      return true;
+    }
+    cancelCurrent = closeAim;
+    function openAim() {
+      if (!state.charges) {
+        say('this recorder is empty. the diary still has a way out.');
+        return;
+      }
+      const sites = throwSpots(room, state.p, state.key);
+      if (!sites.length) {
+        say('a shelf blocks every throw from this square.');
+        return;
+      }
+      aim = true;
+      panel = 'floor';
+      hintAt = -1;
+      const hinted = decodeToss(cert.route[ops.length] || '');
+      target =
+        room.id === 1 && hinted && sites.includes(hinted[1])
+          ? hinted[1]
+          : sites.reduce((best, p) => (dist(room, state.p, p) > dist(room, state.p, best) ? p : best), sites[0]);
+      if (firstThrow) {
+        speak('firstTape');
+        firstThrow = false;
+      } else speak('aim');
+      music.cue('ready');
+      refresh();
+    }
+    function aimDirection(dir) {
+      const f = dirs.indexOf(dir),
+        valid = throwSpots(room, state.p, state.key),
+        next = neighbor(room, target, f);
+      if (valid.includes(next)) target = next;
+      else {
+        const from = neighbor(room, state.p, f);
+        if (valid.includes(from)) target = from;
+      }
+      say(TAPES[tape].name + ' · ' + describe(target) + '.');
+      music.cue('reel');
+      refresh();
+    }
+    function receipts() {
+      const obj = room.items.filter((_, i) => state.bag & (1 << i)).length;
+      return [
+        ['Recovered', cases],
+        ['Last exhibit', room.name],
+        ['Pages', obj + ' / ' + room.items.length],
+        ['Quiet par', cert.par],
+        ['Sightings', detections],
+      ];
+    }
+    function file(line = lines.noir) {
+      if (finished) return;
+      finished = true;
+      music.stop();
+      api.end?.(points, receipts(), line);
+    }
+    function finishCase() {
+      sealed = true;
+      clearAge = 0;
+      stars = starCount(ops.length, cert.par, roomAlerts);
+      const key = isNoir ? cases + ':' + room.id : String(room.id),
+        prior = book.cases[room.id];
+      if (!awarded.has(key)) {
+        awarded.add(key);
+        cases++;
+        points +=
+          300 * stars +
+          room.items.length * 80 +
+          Math.max(0, cert.par * 8 - (ops.length - cert.par) * 5) +
+          (state.frag ? 60 : 0);
+      }
+      if (!api.demo) {
+        keep(api.store, mode, room, seed, {
+          stars,
+          turns: ops.length,
+          fragment: state.frag,
+          route: ops,
+          rooms: cases,
+        });
+        book = notebook(api.store?.read?.());
+      }
+      music.cue('exit');
+      api.haptic?.(24);
+      api.effect?.('win', stars === 3 ? 'Ghost route' : 'Diary recovered');
+      const hasLabel = labels(book).includes(wings[room.wing].label);
+      speak(
+        room.id === 36
+          ? 'finale'
+          : hasLabel
+            ? 'label'
+            : prior && ops.length < prior.turns
+              ? 'best'
+              : stars === 3
+                ? 'par'
+                : stars === 2
+                  ? 'quiet'
+                  : 'diary'
+      );
+      refresh();
+    }
+    function handle(op) {
+      if (finished || sealed || state.caught) return;
+      const res = turn(room, state, op);
+      if (!res.state) {
+        music.cue('latch');
+        api.haptic?.(5);
+        if (res.fault === 'locked') speak('locked');
+        else if (res.fault === 'blocked throw') say('the tape needs a clear, straight landing.');
+        else say('a shelf blocks that step.');
+        return;
+      }
+      const before = state;
+      history.push({ state, roomAlerts, facing });
+      ops.push(op);
+      previous = state;
+      state = res.state;
+      phase = api.reducedMotion ? 1 : 0;
+      const dir = dirs.indexOf(op);
+      if (dir >= 0 && op.length === 1) facing = dir;
+      aim = false;
+      target = -1;
+      hintAt = -1;
+      ghost = null;
+      panel = 'floor';
+      const e = res.events,
+        th = decodeToss(op),
+        pan = ((state.p % room.w) / (room.w - 1)) * 1.5 - 0.75;
+      if (th) {
+        thrown++;
+        music.cue(th[0] ? 'keys' : 'click', ((th[1] % room.w) / (room.w - 1)) * 1.5 - 0.75);
+      } else
+        music.cue(op === 'Z' ? 'cloth' : e.includes('tile') ? 'hard' : e.includes('door') ? 'latch' : 'soft', pan);
+      if (e.includes('listen') || e.includes('interrupt')) {
+        diverted++;
+        music.cue('boot', -pan);
+      }
+      if (e.includes('key')) music.cue('card');
+      if (e.includes('diary') || e.includes('fragment')) music.cue('page');
+      if (e.includes('seen') && !before.heat) {
+        roomAlerts++;
+        detections++;
+        if (isNoir) alarmBank--;
+        music.cue('sight');
+        api.effect?.('fault', 'Spotted');
+        api.haptic?.(15);
+      }
+      if (isNoir && alarmBank <= 0) {
+        file();
+        return;
+      }
+      if (state.caught) {
+        speak('seen');
+        recoverTime = 0.7;
+        refresh();
+        return;
+      }
+      if (complete(room, state)) {
+        finishCase();
+        return;
+      }
+      const event = [
+        'seen',
+        'diary',
+        'fragment',
+        'double',
+        'interrupt',
+        'listen',
+        'cool',
+        'key',
+        'cover',
+        'unheard',
+        'return',
+        'sweep',
+        'tile',
+        'carpet',
+        'fade',
+        'throw',
+        'wait',
+      ].find((k) => e.includes(k));
+      if (event) {
+        const need = th || ['diary', 'key', 'cool', 'double', 'interrupt'].includes(event);
+        if (need || time - lastFeedback > 0.32) {
+          const split =
+            event === 'listen' &&
+            state.guards.length > 1 &&
+            state.guards.every((g) => g.to >= 0) &&
+            state.guards[0].to !== state.guards[1].to;
+          speak(split ? 'split' : event);
+          lastFeedback = time;
+        }
+        if (event === 'diary' || event === 'double' || event === 'cool')
+          api.effect?.('streak', event === 'diary' ? 'Diary page' : event === 'double' ? 'Two ears' : 'Unseen');
+        if (event === 'cool') music.cue('exhale');
+        if (event === 'sweep') music.cue('lens');
+      } else if (!mentionedWindow && [0, 1, 2, 3].some((d) => room.tiles[neighbor(room, state.p, d)] === '|')) {
+        mentionedWindow = true;
+        speak('window');
+      } else if (state.guards.some((g) => dist(room, state.p, g.p) === 2) && time - lastFeedback > 2) {
+        speak('near');
+        lastFeedback = time;
+      } else if (e.includes('step') && ops.length === 1) speak('foyer');
+      refresh();
+    }
+    function clue() {
+      const exactPrefix = ops.every((op, i) => cert.route[i] === op);
+      let suggested = exactPrefix ? cert.route[ops.length] : null;
+      if (!suggested) {
+        try {
+          suggested = solve(room, state, { limit: 6500 })?.route[0];
+        } catch {
+          /* unknown frontier leaves an honest undo hint */
+        }
+      }
+      if (!suggested) {
+        say('this position has no certified quiet clue. undo a beat or retry.');
+        return;
+      }
+      const t = decodeToss(suggested);
+      speak('hint');
+      if (t) {
+        tape = t[0];
+        openAim();
+        target = t[1];
+        hintAt = target;
+        say('A ' + TAPES[tape].name + ' ' + describe(target) + ' will draw the lamp away.');
+      } else {
+        const f = dirs.indexOf(suggested);
+        hintAt = f >= 0 ? neighbor(room, state.p, f) : state.p;
+        say('Next beat · ' + edgeLabels[suggested] + '.');
+      }
+      refresh();
+    }
+    function action(id) {
+      if (finished) return;
+      if (panel === 'journal') {
+        if (id === 'prior' || id === 'later')
+          journalAt = (journalAt + rooms.length + (id === 'prior' ? -1 : 1)) % rooms.length;
+        else if (id === 'back') panel = 'floor';
+        else if (id === 'open' && mode === 'campaign' && unlocked(book, rooms[journalAt])) {
+          load(campaign(rooms[journalAt]));
+          return;
+        }
+        if (panel === 'journal')
+          say(rooms[journalAt].name + ' · ' + (book.cases[rooms[journalAt].id]?.stars || 0) + ' stars.');
+        refresh();
+        return;
+      }
+      if (id === 'journal') {
+        panel = 'journal';
+        journalAt = room.id - 1;
+        book = notebook(api.store?.read?.());
+        refresh();
+        return;
+      }
+      if (sealed) {
+        if (id === 'file' || (id === 'next' && dated)) file(room.id === 36 ? lines.finale : lines.quiet);
+        else if (id === 'ghost') {
+          const best = (mode === 'campaign' && book.cases[room.id]?.route) || cert.route;
+          const run = replay(room, best);
+          ghost = ghost ? null : run.trace.map((s) => s.p);
+          say(ghost ? 'your recovered route is outlined in white.' : 'route tracing closed.');
+          refresh();
+        } else if (id === 'next') {
+          if (isNoir) load(noir(seed, cases));
+          else {
+            const eligible = rooms.filter((r) => unlocked(book, r)),
+              next =
+                eligible.find((r) => r.id > room.id && !book.cases[r.id]) ||
+                eligible.find((r) => !book.cases[r.id]);
+            if (next) load(campaign(next));
+            else file();
+          }
+        }
+        return;
+      }
+      if (id === 'undo' && !isNoir && history.length) {
+        const entry = history.pop();
+        ops.pop();
+        state = previous = entry.state;
+        roomAlerts = entry.roomAlerts;
+        facing = entry.facing;
+        aim = false;
+        target = -1;
+        phase = 1;
+        hintAt = -1;
+        panel = 'floor';
+        music.cue('reel');
+        speak('undo');
+        refresh();
+        return;
+      }
+      if (id === 'retry' && (!isNoir || state.caught)) {
+        resetAttempt(lines.cool);
+        return;
+      }
+      if (state.caught) return;
+      if (aim) {
+        if (controls.some((c) => c.id === id)) aimDirection(id);
+        else if (id === 'throw') handle(toss(tape, target));
+        else if (id === 'cancel' || id === 'aim') closeAim();
+        else if (id === 'cycle') {
+          const spots = throwSpots(room, state.p, state.key);
+          target = spots[(spots.indexOf(target) + 1) % spots.length];
+          say(describe(target));
+          refresh();
+        } else if (id === 'tape' && room.tapes > 1) {
+          tape = 1 - tape;
+          music.cue('reel');
+          say(TAPES[tape].name + ' · reaches ' + TAPES[tape].reach + ' sound units.');
+          refresh();
+        }
+        return;
+      }
+      if (id === 'tools' || id === 'back') {
+        panel = id === 'back' ? 'floor' : 'tools';
+        music.cue('ready');
+        refresh();
+        return;
+      }
+      if (id === 'tape' && room.tapes > 1) {
+        tape = 1 - tape;
+        music.cue('reel');
+        say(TAPES[tape].name);
+        refresh();
+        return;
+      }
+      if (id === 'hint') {
+        clue();
+        return;
+      }
+      if (id === 'aim') {
+        openAim();
+        return;
+      }
+      if (['N', 'E', 'S', 'W', 'Z'].includes(id)) handle(id);
+    }
+    const eligible = rooms.filter((r) => unlocked(book, r)),
+      chosen =
+        eligible.find((r) => r.id === Number(api.options?.room)) ||
+        eligible.find((r) => !book.cases[r.id]) ||
+        eligible[0];
+    load(api.demo ? campaign(rooms[30]) : dated ? daily(seed) : isNoir ? noir(seed, 0) : campaign(chosen));
+    return {
+      action(id, type) {
+        if (type === 'down') action(id);
+      },
+      key(type, k) {
+        if (type !== 'down') return;
+        if (arrows[k]) {
+          action(arrows[k]);
+          return;
+        }
+        const commands = {
+          Space: sealed ? 'next' : 'Z',
+          Enter: aim ? 'throw' : 'aim',
+          KeyT: 'aim',
+          KeyQ: 'tape',
+          KeyZ: 'undo',
+          KeyH: 'hint',
+          KeyF: 'file',
+          KeyR: 'retry',
+          KeyV: 'tools',
+          KeyG: 'ghost',
+          BracketRight: 'cycle',
+          Backspace: aim ? 'cancel' : 'undo',
+        };
+        if (commands[k]) action(commands[k]);
+      },
+      pointer(type, x, y, w, h) {
+        if (type === 'cancel') {
+          drag = null;
+          return;
+        }
+        if (type === 'down') {
+          drag = [x, y];
+          return;
+        }
+        if (type !== 'up' || !drag) return;
+        const dx = x - drag[0],
+          dy = y - drag[1];
+        drag = null;
+        if (panel === 'journal' || sealed || state.caught) return;
+        const tile = layout(w, h, room).tile(x, y);
+        if (aim) {
+          if (throwSpots(room, state.p, state.key).includes(tile)) {
+            target = tile;
+            music.cue('reel');
+            say(describe(target) + '. Throw when ready.');
+            refresh();
+          }
+          return;
+        }
+        if (Math.hypot(dx, dy) > 20) {
+          action(Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : dy > 0 ? 'S' : 'N');
+          return;
+        }
+        for (let dir = 0; dir < 4; dir++)
+          if (neighbor(room, state.p, dir) === tile) {
+            action(dirs[dir]);
+            break;
+          }
+      },
+      update(dt) {
+        if (finished) return;
+        time += dt;
+        phase = Math.min(1, phase + dt * 5.2);
+        if (sealed) {
+          clearAge += dt;
+          return;
+        }
+        if (state.caught && isNoir) {
+          recoverTime -= dt;
+          if (recoverTime <= 0) resetAttempt(lines.cool);
+          return;
+        }
+        music.tension(
+          state.guards.some((g) => dist(room, state.p, g.p) <= 3),
+          state.heat
+        );
+      },
+      draw(c, w, h) {
+        if (panel === 'journal') {
+          const r = rooms[journalAt];
+          journal(c, w, h, r, book.cases[r.id], journalAt, labels(book).includes(wings[r.wing].label));
+          return;
+        }
+        render(c, w, h, {
+          room,
+          state,
+          previous,
+          aim,
+          target,
+          tape,
+          ghost,
+          phase,
+          facing,
+          time,
+          reduced: api.reducedMotion,
+          sealed,
+          par: cert.par,
+          turns: ops.length,
+          hintAt,
+        });
+      },
+      demo(dt) {
+        if (finished) return;
+        demoClock += dt;
+        if (sealed) {
+          if (!api.demo || clearAge > 1.45) file();
+          return;
+        }
+        const interval = api.demo ? 0.59 : 0.06;
+        if (demoClock < interval) return;
+        demoClock = 0;
+        const op = cert.route[ops.length];
+        if (!op) return;
+        if (api.demo && decodeToss(op) && !aim) {
+          openAim();
+          const t = decodeToss(op);
+          target = t[1];
+          tape = t[0];
+          return;
+        }
+        handle(op);
+      },
+      pause() {
+        drag = null;
+        music.stop();
+      },
+      cancelInput() {
+        drag = null;
+      },
+      dispose() {
+        music.stop();
+        if (cancelCurrent === closeAim) cancelCurrent = null;
+      },
+    };
+  },
 };

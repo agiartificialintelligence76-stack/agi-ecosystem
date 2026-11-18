@@ -79,7 +79,7 @@ test('each kit game is wired into the site: its address, its build entry, the ow
     assert.ok(neededGameArt().includes(`cards/games/${id}.jpg`), `${id}: the build checks its picture is there`);
     assert.ok(Object.hasOwn(LOOK_GAMES, id), `${id}: its reviews judged as reviews of this game`);
     assert.ok(lookSystem(id).includes(`"${(await import('../src/games/list.js')).GAMES[id].name}"`));
-    const suite = Object.keys(groupedTests).find((name) => groupedTests[name].includes(id)) || id;
+    const suite = exists('tests/'+id+'.test.js') ? id : Object.keys(groupedTests).find(name => groupedTests[name].includes(id)) || id;
     const file = `tests/${suite}.test.js`;
     assert.ok(exists(file), `${id}: its gameplay tests`);
     assert.ok(pkg.scripts.test.split(' ').includes(file), `${id}: npm test runs them`);

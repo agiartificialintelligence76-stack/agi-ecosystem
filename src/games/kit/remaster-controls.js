@@ -57,7 +57,12 @@ export function createDock(send) {
       begin(e.pointerId,e.timeStamp);
     });
     for (const name of ['pointerup','pointercancel','lostpointercapture']) {
-      input.addEventListener(name,e=>end(entry,e.pointerId,e.timeStamp));
+      input.addEventListener(name,e=>{
+        if (name!=='pointerup' && entry.owners.has(e.pointerId) && entry.owners.size===1) {
+          send(entry.id,'cancel',undefined,e.timeStamp);
+        }
+        end(entry,e.pointerId,e.timeStamp);
+      });
     }
     input.addEventListener('keydown',e=>{
       if (!activationKeys.has(e.code)) return;

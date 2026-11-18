@@ -1,6 +1,8 @@
 import '../intro.js';
 import { createShell } from '../kit/shell.js';
-import { mountCartridge } from '../kit/cartridge.js';
+import { mountRemaster } from '../kit/remaster.js';
 import game from './game.js';
+import './style.css';
 
-mountCartridge('driftglass', game, (options) => createShell({ game: 'driftglass', ...options }), new URL('./marquee.webp', import.meta.url).href);
+document.getElementById('ak-root').classList.add('bandit-radio');
+mountRemaster('driftglass', game, (options) => createShell({ game: 'driftglass', ...options }), new URL('./marquee.webp', import.meta.url).href);

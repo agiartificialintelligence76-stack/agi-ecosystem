@@ -1,135 +1,111 @@
-import { presets, course, integrate, launch, reverse, passage, wreck, closePass, STEP } from './orbit.js';
-import { painting, type, line, oval, panel, polygon, gradient, clip } from '../kit/illustration.js';
-const cover=painting(new URL('./pilot.webp',import.meta.url).href),face=painting('/images/agi1-portrait-2d.webp');
-const spaceSky=painting(new URL('./cup-sky.webp',import.meta.url).href);
-const ink='#182640',mint='#8cf1cf',orange='#ffb785';
-const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
-const skies=[
- ['#182c49','#423653'],['#3d2440','#824d56'],['#152f48','#255767'],
- ['#231f47','#634a67'],['#38293f','#805947'],['#191e46','#384369'],
-];
-function pilot(c,x,y,heading,thrust,polarity){
-  c.save();c.translate(x,y);c.rotate(heading);
-  if(thrust){polygon(c,[[-12,-4],[-20-thrust*6,0],[-12,4]],orange);polygon(c,[[-11,-2],[-19,0],[-11,2]],'#fff1ae');}
-  polygon(c,[[-13,0],[-21,-10],[-4,-7],[12,-3],[18,1],[4,7],[-14,8]],'#f4dac1',ink,2);
-  line(c,[[-13,4],[8,3]],'#af6d82',2);c.restore();
-  c.save();c.beginPath();c.arc(x,y-3,11,0,Math.PI*2);c.clip();c.fillStyle='#6e91b4';c.fillRect(x-12,y-15,24,24);face(c,x-11,y-14,22,24);c.restore();
-  oval(c,x,y-3,11.8,11.8,null,polarity<0?'#dbb8ff':'#d7fcf2',1.8);
-  line(c,[[x-7,y-9],[x-4,y-11],[x-1,y-12]],'#fffef4',1.5);
-}
-function planet(c,[x,y,r],i){
-  const palettes=[['#f1b094','#c47c87','#804e71'],['#a0d4c9','#6f9cae','#585375']];
-  const colors=palettes[i%2];
-  if(i===0){c.save();c.translate(x,y);c.rotate(-.28);oval(c,0,0,r*1.65,r*.31,null,'#f7c6a7aa',3);c.restore();}
-  c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.clip();
-  const g=c.createLinearGradient(x-r,y-r,x+r,y+r);colors.forEach((k,i)=>g.addColorStop(i/2,k));c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
-  for(let j=0;j<7;j++){
-    const yy=y-r+j*r*.31;c.beginPath();c.moveTo(x-r-6,yy);c.bezierCurveTo(x-r*.4,yy+9,x+r*.3,yy-10,x+r+5,yy+1);c.strokeStyle=j%2?'#563f6b55':'#ffe6b76b';c.lineWidth=j%2?4:2;c.stroke();
-  }c.restore();oval(c,x,y,r,r,null,'#f3c9b982',1.3);
-}
-function gate(c,x,y,r,col,star=false){
-  c.save();c.translate(x,y);if(star){polygon(c,[[0,-r],[r*.7,0],[0,r],[-r*.7,0]],null,col,2.8);polygon(c,[[0,-5],[4,0],[0,5],[-4,0]],col);}
-  else{oval(c,0,0,r,r,null,col,2.6);oval(c,0,0,r-5,r-5,null,col+'88',1);for(let i=0;i<4;i++){c.rotate(Math.PI/2);line(c,[[0,r-1],[0,r+5]],col,2);}}c.restore();
-}
-export default {
- title:'SLINGSHOT GIRL',
- tagline:'AGI-1 strapped a cockpit to a space-golf ball. Pull back to launch her, skim the moons and flip gravity in flight.',
- instructions:[['Pull back and release','Drag backward on the course to set angle and speed, then release. You can also tap a direction and use the launch button.'],['Skim the moons','Fly through the diamond buoy and the finish ring. A close pass earns 75 extra points if you dock. Touching a moon ends the shot.'],['Flip a moonshot','On violet circuits, switch polarity once in flight. Try flipping after the buoy when the flight timer reaches its gold mark.']],
- keys:[['← / →','Aim'],['↑ / ↓','Power'],['Space / R','Launch or flip / recall']],
- touch:[['Pull back and release','Aim and launch, or tap a direction'],['− / + / Launch / Recall','Adjust power, fly or rewind']],
+import {hole,HOLES,systems,dailyNine} from './courses.js';
+import {DT,launch,control,advance,clamp,quantAngle,quantPower,gap} from './flight.js';
+import {ghostPath,recordFlight,rankFlight} from './ghost.js';
+import {chart,draw} from './render.js';
+import {radio} from './sound.js';
+import {lines} from './lines.js';
+const button=(id,label,key,extra={})=>({id,label,key,...extra});
+const slider=(power)=>({id:'power',label:'Sling power %',type:'range',min:8,max:100,step:1,value:Math.round(power*100)});
+const start=[button('launch','Launch capsule','Space')];
+const words={port:'Port',starboard:'Starboard',flip:'Flip',brake:'Brake'};
+export default {title:'SLINGSHOT GIRL',tagline:'Launch AGI-1 into a pocket solar system. Fly the bend, flip her field and brake into orbit.',
+ modes:[{id:'course',label:'Constellation tour'},{id:'daily',label:'Daily nine'},{id:'endless',label:'Comet Carry'}],
+ options:[{id:'flag',label:'Tour starting hole',values:HOLES.map(h=>({id:String(h.id),label:(h.id+1)+' · '+h.name}))},{id:'ghost',label:'Best flight ghost',values:[{id:'off',label:'Hidden'},{id:'on',label:'Show my best'}]}],controls:start,
+ instructions:[['Stretch the sling','Drag back from the capsule for angle and power. Release to fly, or tap a point to aim and press Launch.'],
+ ['Fly the shot','Port and starboard turn the flight path. Brake sheds speed. You can invert gravity once during each launch.'],
+ ['Catch the cup','Enter the open arc at capture speed and stay through the orbit. Pink flags need inverted gravity. Pulse zones need a thrust or brake inside the dashed circle.'],
+ ['Keep a postcard','Play 36 flags across six systems, the daily nine or a reserve-limited run. Pair two all-ring par flags for an extra reserve. Your best input flight can become a ghost.']],
+ keys:[['← / →, ↑ / ↓','Aim and power at the tee'],['Space','Launch'],['A / D, S, F','Port, starboard, brake and flip in flight'],['N, G, X','Flight notes, show ghost, file the completed card']],
+ touch:[['Tee','Tap an aim point or pull back from the ship and release. The Launch button also takes off.'],['Flight','The labeled thrusters, brake and polarity control work in flight. A purple pulse zone must receive an impulse.']],
+ progress(data){const n=Object.keys(data?.orbitPost?.flags||{}).length;return n?n+' of 36 flags in your postcard album.':'';},
  create(api){
-   let index=0,arena,angle,power,body=null,clock=0,ready=0,wait=0,won=false,done=false,marked=false,drag=null;
-   let trail=[],message='',shot=0,strokes=0,points=0,flips=0,acc=0,held=new Set(),repeat=0,flare=0,previousPath=[];
-   let close=new Set(),totalSkims=0;
-   function hud(){api.hud('Circuit',String(index+1)+' / 6','Shots',shot);}
-   function setup(){arena=course(presets[index],(api.rng()-.5)*4);angle=arena.solution+(index===0?3:10)*(index%2?-1:1);
-     power=index===0?arena.power:arena.power-13;body=null;drag=null;marked=!arena.beacon;trail=[];previousPath=[];shot=0;ready=0;wait=0;won=false;acc=0;held.clear();
-     message=index===0?'Pull back and launch me into the ring.':arena.flip?'Catch the buoy, then flip gravity.':'Fly through the diamond, then dock.';hud();}
-   function fire(){if(done||body||wait>0)return;body=launch(arena,angle,power);marked=!arena.beacon;trail=[];close.clear();shot++;strokes++;acc=0;held.clear();
-     message=arena.beacon?'First the diamond. Then the ring.':'That is our finish ring!';api.sound('whoosh');api.haptic(12);hud();}
-   function flip(){if(!body||wait>0||!arena.flip)return;if(reverse(body)){flips++;flare=1;message='Polarity reversed. Ride it out.';api.sound('power');api.haptic(20);}}
-   function reset(){if(done||wait>0)return;if(!body)return;previousPath=[...trail];body=null;trail=[];marked=!arena.beacon;message='Recalled. Try a different arc.';api.sound('back');}
-   function finish(finished){won=finished;wait=finished?1.02:.82;flare=1;previousPath=[...trail];api.sound(finished?'clear':'hit');api.haptic(finished?24:12);message=finished?'Docked! That is going on my trophy shelf.':'Missed the ring. The dotted trail is yours.';
-     if(finished){totalSkims+=close.size;points+=Math.max(130,850-70*(shot-1))+75*close.size;}}
-   function adjust(k,amount=1){if(body||wait>0||done)return;
-     if(k===keys[0]||k===keys[1])angle+=(k===keys[0]?-1:1)*2*amount;
-     else power=clip(power+(k===keys[2]?1:-1)*5*amount,75,235);}
-   function flightTick(){
-     integrate(body,arena.moons);const through=passage(arena,body,marked);
-     arena.moons.forEach((moon,i)=>{
-       if(!close.has(i)&&closePass(body,moon)){
-         close.add(i);flare=.65;message='Moon skim! Dock to bank +75.';api.sound('select',{pitch:1.35,spread:0});
-       }
-     });
-     if(through.marked&&!marked){message=arena.flip?'Buoy tagged. Flip at the gold tick.':'Buoy tagged. Head for the ring.';api.sound('coin');flare=.5;}
-     marked=through.marked;if(!trail.length||Math.hypot(trail.at(-1)[0]-body.x,trail.at(-1)[1]-body.y)>4)trail.push([body.x,body.y]);
-     if(through.finish)finish(true);else if(wreck(body,arena.moons))finish(false);
-   }
-   setup();
-   return {
-     key(t,k){if(t==='up'){held.delete(k);return;}if(t!=='down')return;if(keys.includes(k)&&!body){adjust(k);held.add(k);repeat=.3;}else if(k==='Space'||k==='Enter'){if(body)flip();else fire();}else if(k==='KeyR')reset();},
-     pointer(t,x,y){
-       if(done||wait>0)return;if(t==='cancel'){drag=null;return;}
-       if(t==='down'){
-         if(y>=430){drag=null;if(x<80)adjust(keys[3]);else if(x<163)adjust(keys[2]);else if(x<295)reset();else if(body)flip();else fire();return;}
-         if(y<97)return;if(body){flip();return;}drag={x,y,moved:false};
-       }
-       if((t==='move'||t==='up')&&drag){
-         const dx=drag.x-x,dy=drag.y-y,d=Math.hypot(dx,dy);
-         if(d>9){drag.moved=true;angle=Math.atan2(dy,dx)*180/Math.PI;power=clip(65+d*1.45,75,235);}
-         if(t==='up'){const moved=drag.moved;drag=null;if(moved)fire();else{angle=Math.atan2(y-arena.start[1],x-arena.start[0])*180/Math.PI;message='Aim set. Launch when ready.';}}
-       }
-     },cancelInput(){drag=null;held.clear();},
-     update(dt){
-       if(done)return;clock+=dt;flare=Math.max(0,flare-dt*1.9);
-       if(wait>0){wait-=dt;if(wait<=0){if(won){if(++index===presets.length){done=true;api.end(points,[['Circuits docked',6],['Launches',strokes],['Moon skims',totalSkims],['Polarity flips',flips]],'Six rings, zero parking tickets. Best commute ever.');}else setup();}
-         else{body=null;trail=[];marked=!arena.beacon;}}return;}
-       if(!body){ready+=dt;if(held.size&&(repeat-=dt)<=0){repeat=.09;for(const key of held)adjust(key);}}
-       else{acc+=dt;while(acc>=STEP-1e-8&&wait<=0){acc-=STEP;flightTick();}}
-     },
-     demo(){if(done||wait>0)return;if(!body&&ready>.7){angle=arena.solution;power=arena.power;fire();}
-       else if(body&&arena.flip&&body.age>=arena.flip)flip();},
-     draw(c){
-       const palette=skies[Math.min(index,5)];gradient(c,0,0,480,480,palette);
-       cover(c,0,120,512,177,0,0,480,99);
-       const fade=c.createLinearGradient(0,58,0,100);fade.addColorStop(0,'#14213b00');fade.addColorStop(1,'#14213b');c.fillStyle=fade;c.fillRect(0,54,480,49);
-       panel(c,10,9,127,22,'#19253de6',10);type(c,'ORBIT CUP  /  0'+(Math.min(index,5)+1),74,20,11,'#ffdeaf','center','monospace');
-       type(c,arena.name,14,79,24,'#fff5d8','left','Georgia');type(c,arena.flip?'±  POLARITY':'●  GRAVITY',465,81,12,'#e3e2ff','right','monospace');
-       c.save();c.beginPath();c.rect(0,98,480,305);c.clip();
-       c.save();
-       if(index%2){c.translate(480,0);c.scale(-1,1);}
-       const skyLoaded=spaceSky(c,0,97,480,307);c.restore();
-       if(skyLoaded && index){c.save();c.globalAlpha=.18;c.fillStyle=palette[1];c.fillRect(0,98,480,305);c.restore();}
-       for(let i=0;i<(skyLoaded?16:98);i++){const x=(i*137+17)%479,y=99+((i*i*13+i*17)%300),s=i%12===0?2:1;c.fillStyle=i%4?'#fddfc899':'#c1eee8cc';c.fillRect(x,y,s,s);if(s>1){c.fillRect(x-2,y+.5,6,1);c.fillRect(x+.5,y-2,1,6);}}
-       const [sx,sy]=arena.start;oval(c,sx,sy+10,23,8,'#18263d99',orange,2);arena.moons.forEach((m,i)=>planet(c,m,i));
-       if(arena.beacon)gate(c,...arena.beacon,marked?10:15,marked?'#92c8b4':orange,true);
-       gate(c,...arena.ring,19,arena.flip&&!body?.flipped?'#dbc2fc':mint);
-       if(wait>0 && won && !api.reducedMotion){
-         const radius=22+(1.02-wait)*44;for(let i=0;i<12;i++){
-           const a=i*Math.PI/6,ux=Math.cos(a),uy=Math.sin(a),[gx,gy]=arena.ring;
-           line(c,[[gx+ux*(radius-4),gy+uy*(radius-4)],[gx+ux*radius,gy+uy*radius]],i%2?mint:orange,2);
-         }
-       }
-       if(previousPath.length>1){c.setLineDash([2,5]);line(c,previousPath,'#dac1ce6b',1.3);c.setLineDash([]);}
-       if(!body){
-         const p=launch(arena,angle,power);const dots=[];for(let i=0;i<215;i++){integrate(p,arena.moons);if(wreck(p,arena.moons))break;if(i%10===0)dots.push([p.x,p.y]);}
-         dots.forEach(([x,y],i)=>oval(c,x,y,i<10?2:1.3,i<10?2:1.3,i<10?mint:'#c4dad099'));
-         if(drag?.moved){line(c,[[sx,sy],[sx-Math.cos(angle*Math.PI/180)*43,sy-Math.sin(angle*Math.PI/180)*43]],orange,2);}
-         pilot(c,sx,sy,angle*Math.PI/180,0,1);
-       }else{
-         if(trail.length>1){line(c,trail,body.flipped?'#d6afff88':'#91efd28a',3);line(c,trail.slice(-12),'#ffebc8',1.3);}
-         pilot(c,body.x,body.y,Math.atan2(body.vy,body.vx),.5+Math.sin(clock*22)*.4,body.polarity);
-         if(flare>.1&&!api.reducedMotion)oval(c,body.x,body.y,16+(1-flare)*23,16+(1-flare)*23,null,body.flipped?'#c9b7ff88':'#ffcf9577',1.5);
-       }c.restore();
-       panel(c,0,403,480,77,'#18263e',0);
-       type(c,message,240,415,13,'#fff0d6');const bx=15,by=428,bw=450;
-       line(c,[[bx,by],[bx+bw,by]],'#44536c',2);
-       if(arena.flip)line(c,[[bx+bw*arena.flip/3,by-3],[bx+bw*arena.flip/3,by+3]],orange,3);
-       if(body)line(c,[[bx,by],[bx+bw*Math.min(1,body.age/3),by]],mint,2);
-       const btns=[['−',13,65],['+',83,65],['RECALL',164,119],[body?(body.flipped?'FLIPPED':arena.flip?'FLIP ±':'IN FLIGHT'):'LAUNCH ▸',298,169]];
-       btns.forEach(([text,x,w],i)=>{panel(c,x,438,w,32,i===3?body&&arena.flip?'#c0a7dd':mint:'#31425b',13);type(c,text,x+w/2,455,i<2?21:13,i===3?ink:'#eee4dc','center','monospace');});
-       panel(c,8,103,127,21,'#16233bd9',10);type(c,Math.round((angle%360+360)%360)+'°   '+Math.round(power)+' m/s',71,114,11,'#efefdc','center','monospace');
-     }
-   };
+ const seed=api.seed??Math.floor((api.rng?.()??.5)*0xffffffff),mode=api.mode||'course',daily=dailyNine(seed),audio=radio(api.audio);
+ const first=api.demo?26:clamp(Number(api.options?.flag)||0,0,35),saved=()=>api.store?.read?.().orbitPost||{};
+ let course,leg,legId=0,phase='aim',f=null,angle=0,power=.5,strokes=0,spent=0,rings=0,score=0,totalStrokes=0,flags=0,failures=0,reserve=7,cleanChain=0,stars=0,run=0,clock=0,acc=0,blast=0,notice='',drag=null,aimHeld=null,tape=null,tapes=[],ghost=null,showGhost=api.options?.ghost==='on',ended=false,paused=false,notes=false,delay=0,demoDelay=.82,demoStep=0,autoDemo=!!api.demo;
+ const heldKeys=new Set(),heldPads=new Set();
+ const say=k=>api.say?.(lines[k]||k);
+ function hud(){api.hud?.(mode==='endless'?'Reserve':'Strokes',mode==='endless'?reserve:strokes+' / '+course.par,'Flags',flags);}
+ function dock(){
+  if(phase==='card'){api.controls?.([button('next',mode==='daily'&&run===8?'File daily nine':'Next flag','Enter'),button('file','File postcard','X'),...(mode==='endless'?[]:[button('replay','Refly this hole','R')])]);return;}
+  if(phase==='relay'||phase==='lost'){api.controls?.([button('ready',phase==='relay'?'Launch from relay':'Return to recovery tee','Enter'),button('note','Flight notes','N')]);return;}
+  if(phase==='aim'){api.controls?.([button('launch','Launch capsule','Space'),slider(power),button('left','Aim left','←'),button('right','Aim right','→'),button('note','Flight notes','N'),button('ghost',showGhost?'Hide ghost':'Best ghost','G')]);return;}
+  const lock=phase!=='flight';api.controls?.([button('port','Port thrust','A',{disabled:lock||f.fuel<=0}),button('starboard','Starboard thrust','D',{disabled:lock||f.fuel<=0}),button('brake','Brake','S',{disabled:lock||f.fuel<=0}),button('flip',f.flip?'Invert gravity':'Polarity flipped','F',{disabled:lock||!f.flip})]);
  }
-};
+ function tee(){
+  leg=course.legs[legId];phase='aim';f=null;tape=null;acc=0;drag=aimHeld=null;notes=false;demoStep=0;
+  angle=quantAngle(leg.input.angle+(course.id&&!autoDemo?(course.id%2?.055:-.07):0));power=course.id&&!autoDemo?quantPower(leg.input.power-.025):leg.input.power;
+  ghost=showGhost?ghostPath(course,legId,saved().bests?.[course.id+'/'+course.variant]):null;
+  notice=course.id===0?'Launch through the golden ring into the mint cup.':leg.beacon?'Pulse inside the dashed zone, then enter the cup’s open arc.':leg.phaseRequired?'An amber flag needs inverted gravity. Watch your speed.':'Line up the open cup and save a puff to brake.';
+  if(legId)say('Recovery tee');else if(mode==='daily')say('Daily');else if(course.system===5)say('Moving cup');else if(course.system===2)say('Binary well');else say('First tee');
+  hud();dock();
+ }
+ function load(id,variant=0){course=hole(id,variant);legId=0;strokes=spent=rings=0;tapes=[];stars=0;tee();}
+ function fire(){if(phase!=='aim'||ended)return;if(mode==='endless'&&reserve<=0){finish();return;}if(mode==='endless')reserve--;
+  f=launch(leg.tee,angle,power,leg.fuel);tape={angle:quantAngle(angle),power:quantPower(power),controls:[]};strokes++;totalStrokes++;phase='flight';drag=aimHeld=null;acc=0;demoStep=0;blast=1;audio.play('launch');api.haptic?.(10);say('Release');notice=leg.beacon?'Watch the purple pulse zone.':leg.phaseRequired?'Invert before entering the pink cup.':'Port / starboard to bend. Brake to settle.';hud();dock();}
+ function burn(id){if(phase!=='flight')return;
+  if(!control(f,id,leg)){say(id==='flip'?'Flip ready':'No fuel');return;}tape.controls.push({tick:f.tick,id});if(id!=='flip')spent++;blast=1;audio.play(id,f.fuel);api.haptic?.(id==='flip'?17:7);
+  if(id==='flip'){say(f.near<65?'Perfect periapsis':'Inversion');notice='Field inverted. Your capsule now repels the wells.';}
+  else if(f.charged&&leg.beacon&&gap(f,leg.beacon)<leg.beacon.radius){say('Perfect periapsis');notice='Relay charged · find the open cup.';}
+  else if(id==='brake'){say('Brake');notice='Braking · relative speed decreased.';}else{say(f.burns===1?'First nudge':f.fuel===1?'Saved burn':f.tick<46?'Early burn':'Late burn');notice=f.fuel+' thrust charge'+(f.fuel===1?'':'s')+' left.';}dock();
+ }
+ function finish(){if(ended)return;ended=true;audio.stop();api.end?.(score,[['Flags captured',flags],['Strokes',totalStrokes],['Recoveries',failures],['Latest postcard',course.name],['Latest stars','★'.repeat(stars)||'—']],lines[flags?'One stroke':'Reserve empty']);}
+ function capture(){
+  rings+=f.rings;tapes[legId]=tape;blast=0;audio.play('sink');api.haptic?.(27);
+  if(legId<course.legs.length-1){phase='relay';notice='Relay secured · one more sling toward the final cup.';say('Recovery tee');dock();return;}
+  phase='card';flags++;stars=1+Number(strokes<=course.par)+Number(rings>=course.legs.reduce((a,l)=>a+l.rings.length,0));
+  const prior=saved().bests?.[course.id+'/'+course.variant];const value=recordFlight(api.store,course,strokes,spent,rings,tapes);score+=value;
+  const flagSet=saved().flags||{},pin=Array.from({length:6},(_,i)=>!!flagSet[course.system*6+i]).every(Boolean);
+  if(mode==='endless'){if(strokes===course.par&&stars===3){cleanChain++;if(cleanChain===2){reserve++;cleanChain=0;}}else cleanChain=0;}
+  if(mode==='endless'&&flags%6===0){reserve+=flags===12?5:3;say('Reserve refill');}else say(pin?'Pin earned':prior&&value>prior.score?'Beat ghost':strokes===1?'One stroke':strokes===course.par?'Par':'Sink');
+  notice='Postcard sealed · '+('★'.repeat(stars))+' · '+rings+' ring'+(rings===1?'':'s')+' collected.';api.effect?.('clear');audio.play('stamp');hud();dock();
+ }
+ function lose(){phase='lost';failures++;audio.play('miss');say(f.fast?'Too fast':f.gateMiss?'Gate misses':f.energyMiss?'Flip ring':'Recovery tee');notice=f.fast?'Too fast. Save a brake for the cup.':f.energyMiss?'The cup needs its phase or relay charge.':'Your capsule drifted clear. The tee is ready.';
+  if(mode==='endless'&&reserve<=0){finish();return;}dock();}
+ function act(id,ev='down',value){
+  if(ended||paused)return;if(ev==='input'&&id==='power'&&phase==='aim'){power=quantPower(value/100);return;}if(ev!=='down')return;
+  if(id==='file'&&phase==='card'){finish();return;}
+  if(id==='note'){notes=!notes;notice=notes?'Pilot notes · '+Math.round(leg.input.power*100)+'%  '+(leg.input.controls.map(v=>words[v.id]+' '+(v.tick*DT).toFixed(1)+'s').join(' / ')||'clean launch, no burns'):'Fly the open arc at capture speed.';return;}
+  if(phase==='card'){
+   if(id==='replay'&&mode!=='endless'){load(course.id,course.variant);return;}
+   if(id!=='next')return;run++;
+   if(mode==='daily'){if(run>=9){finish();return;}load(daily[run].id,daily[run].variant);}
+   else if(mode==='endless'){if(reserve<=0){finish();return;}const item=dailyNine(seed+run*829)[run%9];load(item.id,item.variant);}
+   else load((course.id+1)%36);return;
+  }
+  if((phase==='lost'||phase==='relay')&&id==='ready'){if(phase==='relay')legId++;tee();return;}
+  if(phase==='aim'){if(id==='launch')fire();else if(id==='left'||id==='right')angle=quantAngle(angle+(id==='left'?-1:1)*Math.PI/90);
+   else if(id==='ghost'){showGhost=!showGhost;ghost=showGhost?ghostPath(course,legId,saved().bests?.[course.id+'/'+course.variant]):null;notice=ghost?'Best flight is traced in violet.':showGhost?'Complete this flag to record its ghost.':'Ghost hidden.';if(ghost)say('Ghost ahead');dock();}return;}
+  if(['brake','port','starboard','flip'].includes(id))burn(id);
+ }
+ const firstCourse=mode==='daily'?daily[0]:mode==='endless'?{id:0,variant:0}:{id:first,variant:0};load(firstCourse.id,firstCourse.variant);
+ return {action(id,ev,value){if(ev==='up'){heldPads.delete(id);return;}if(ev==='down'){if(heldPads.has(id))return;heldPads.add(id);}act(id,ev,value);},key(ev,code){if(ev==='up'){heldKeys.delete(code);if(aimHeld?.code===code)aimHeld=null;return;}if(ended||paused||heldKeys.has(code))return;heldKeys.add(code);
+  const map={Space:'launch',KeyA:'port',KeyD:'starboard',KeyS:'brake',KeyF:'flip',KeyX:'file',KeyG:'ghost',KeyN:'note',KeyR:'replay',Enter:phase==='card'?'next':'ready'};
+  if(phase==='aim'&&['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(code)){
+   if(code==='ArrowLeft'||code==='ArrowRight'){const sign=code==='ArrowLeft'?-1:1;angle=quantAngle(angle+sign*Math.PI/360);aimHeld={code,sign,t:0};}
+   else{power=quantPower(power+(code==='ArrowUp'?.025:-.025));dock();}return;}if(map[code])act(map[code]);},
+ pointer(ev,x,y,w,h){if(ended||paused||phase!=='aim')return;if(ev==='cancel'){if(drag){angle=drag.oldAngle;power=drag.oldPower;}drag=null;return;}const g=chart(leg,w,h),[xx,yy]=g.flight(x,y),[tx,ty]=g.world(leg.tee.x,leg.tee.y);
+  if(ev==='down'){drag={x,y,tee:Math.hypot(x-tx,y-ty)<Math.max(25,g.s*32),oldAngle:angle,oldPower:power};if(drag.tee){audio.play('wind');say('Pull back');}return;}
+  if(!drag)return;const far=Math.hypot(x-drag.x,y-drag.y)>10;
+  if(far&&drag.tee){angle=quantAngle(Math.atan2(leg.tee.y-yy,leg.tee.x-xx));power=quantPower(Math.hypot(x-drag.x,y-drag.y)/Math.min(118,w*.29));dock();}
+  if(ev==='up'){const shoot=drag.tee&&far;if(!far&&!drag.tee)angle=quantAngle(Math.atan2(yy-leg.tee.y,xx-leg.tee.x));drag=null;if(shoot)fire();}},
+ update(dt){if(ended||paused)return;clock+=dt;blast=Math.max(0,blast-dt*3.7);if(aimHeld){aimHeld.t+=dt;if(aimHeld.t>.22)angle+=aimHeld.sign*dt*.85;}
+  if(phase!=='flight'&&phase!=='capture')return;acc+=Math.min(dt,.1);
+  while(acc+1e-9>=DT&&(phase==='flight'||phase==='capture')){acc-=DT;
+   if(autoDemo)while(leg.input.controls[demoStep]?.tick===f.tick){burn(leg.input.controls[demoStep++].id);}
+   const events=advance(f,leg);for(const e of events){
+    if(e==='ring'){audio.play('ring');say(f.rings>1?'Ring procession':'First ring');}
+    else if(e==='satellite'){audio.play('stamp');say('Reserve refill');notice='Satellite mail · one spare thrust charge.';dock();}
+    else if(e==='close'){audio.play('close');say('Close pass');}
+    else if(e==='fast'){say('Too fast');notice='Fly-by · relative speed exceeds the cup limit.';}
+    else if(e==='field'){say('Flip ring');notice='Field mismatch · the cup could not catch you.';}
+    else if(e==='rim'){say('Gate misses');notice='Rim contact · approach through the open arc.';}
+    else if(e==='capture'){phase='capture';audio.play('capture');say('Capture begins');notice='Orbit capture · hold through the gold arc.';dock();}
+    else if(e==='sink')capture();else if(e==='lost')lose();}
+  }},
+ demo(dt){if(ended||paused)return;autoDemo=true;if(phase==='flight'||phase==='capture')return;demoDelay-=dt;if(demoDelay>0)return;
+  if(phase==='aim'){angle=leg.input.angle;power=leg.input.power;fire();demoDelay=.8;}
+  else if(phase==='card'){load((course.id+1)%36);demoDelay=1.25;}else{act('ready');demoDelay=.50;}},
+ draw(c,w,h){draw(c,w,h,{course,leg,f,phase,time:clock,angle,power,notice,blast,ghost,reduced:api.reducedMotion});},
+ pause(){paused=true;heldKeys.clear();heldPads.clear();drag=aimHeld=null;audio.stop();},resume(){paused=false;},cancelInput(){heldKeys.clear();heldPads.clear();if(drag){angle=drag.oldAngle;power=drag.oldPower;}drag=aimHeld=null;},dispose(){ended=true;audio.stop();},
+ inspect(){return {phase,id:course.id,legId,angle,power,score,strokes,flags,reserve,stars,f,notice,tape,showGhost};}};
+ }};

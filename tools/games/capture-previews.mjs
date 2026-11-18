@@ -31,8 +31,7 @@ const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } =
 // Sample each playable scene where its main decision is visible, including some second-stage mechanics.
 const moments = {
   lanternlake: { warm: 100, poster: .03 },
-  driftglass: { warm: 2400 },
-  moonfreight: { warm: 1450 }, tetherturn: { warm: 1500 }, pocketgrove: { warm: 450 },
+  pocketgrove: { warm: 450 },
 };
 export const RECIPES = {
   ...Object.fromEntries(COLLECTION.map(({ id }) => [id, kit(id, 7, moments[id])])),

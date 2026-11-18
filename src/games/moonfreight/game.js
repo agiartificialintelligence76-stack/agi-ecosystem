@@ -1,348 +1,138 @@
-import { caption, clamp, line, meter, oval, panel, scenery, sprite, TAU } from '../kit/field-art.js';
-const world = scenery(new URL('./playfield.webp', import.meta.url));
-const actor = sprite(new URL('./agi.webp', import.meta.url));
-const prop = sprite(new URL('./prop.webp', import.meta.url));
-const tables = [{
-  name: 'SELENE',
-  tee: [92, 258],
-  cup: [382, 187],
-  planet: [236, 132],
-  banks: 0
-}, {
-  name: 'IO',
-  tee: [94, 275],
-  cup: [388, 270],
-  planet: [229, 235],
-  banks: 0
-}, {
-  name: 'MIRANDA',
-  tee: [91, 242],
-  cup: [328, 235],
-  planet: [196, 186],
-  banks: 1
-}, {
-  name: 'EUROPA',
-  tee: [105, 181],
-  cup: [376, 260],
-  planet: [248, 223],
-  banks: 0
-}, {
-  name: 'TITAN',
-  tee: [93, 211],
-  cup: [335, 177],
-  planet: [213, 258],
-  banks: 1
-}];
-const bounds = [29, 451, 94, 335],
-  ballR = 6,
-  beat = 1 / 120;
-function advance(s, dt, table) {
-  const [px, py] = table.planet,
-    dx = px - s.x,
-    dy = py - s.y,
-    dist = Math.max(1, Math.hypot(dx, dy)),
-    gravity = Math.min(94, 145000 / (dist * dist + 820));
-  s.vx += dx / dist * gravity * dt;
-  s.vy += dy / dist * gravity * dt;
-  s.x += s.vx * dt;
-  s.y += s.vy * dt;
-  for (const [p, v, low, high] of [['x', 'vx', bounds[0] + ballR, bounds[1] - ballR], ['y', 'vy', bounds[2] + ballR, bounds[3] - ballR]]) {
-    if (s[p] < low || s[p] > high) {
-      s[p] = clamp(s[p], low, high);
-      s[v] *= -.94;
-      s.banks++;
-    }
+import {ATLAS,rivals,chapters,rack,dailySet} from './tables.js';
+import {certificates,leaves} from './atlas-book.js';
+import {copyBalls,strike,tick,DT,journal,moving,clamp,openSpot,respot,dist} from './physics.js';
+import {targets,ruling,featMet} from './rules.js';
+import {choose,seeded,placement} from './ai.js';
+import {tableSound} from './sound.js';
+import {paint,layout,pocketNames} from './render.js';
+import {lines} from './lines.js';
+const btn=(id,label,key,other={})=>({id,label,key,...other});
+const range=(id,label,value,min,max,step)=>({id,label,type:'range',value,min,max,step});
+const starter=[btn('strike','Strike cue','Space')];
+export const scoreTrick=(moves,par,feat)=>220+Math.min(3,1+Number(moves<=par)+Number(feat))*110+Math.max(0,70-10*Math.max(0,moves-par));
+export default {title:'MOONSHOT BILLIARDS',tagline:'Line up a comet, work the cushions and leave AGI-1 a difficult next shot.',
+ modes:[{id:'atlas',label:'Trick Atlas'},{id:'ladder',label:'House Ladder vs AGI-1'},{id:'daily',label:'Daily three-rack match'},{id:'house',label:'House Run'}],
+ options:[{id:'card',label:'Trick Atlas table',values:ATLAS.map((c,i)=>({id:String(i),label:String(i+1).padStart(2,'0')+' · '+c.name}))}],controls:starter,
+ instructions:[['Take aim','Tap the felt to aim toward a point, or drag back from the white cue comet. Adjust your power and press Strike.'],
+ ['Use the leave','The short chalk line stops at first contact. Follow carries the cue forward. Draw pulls it back. The glowing wells bend moving balls.'],
+ ['Play the rack','In a match you play suns. AGI-1 plays striped comets. Hit your own ball first, then pot a ball or reach a cushion. A foul awards ball in hand.'],
+ ['Call the moon','Clear your suit, call one of six pockets, then sink the final moon. In the atlas, pot the ringed object at the called pocket and clear each listed extra.']],
+ keys:[['← / →, A / D','Fine / coarse aim'],['↑ / ↓, Q / E','Power up/down, draw/follow'],['Space, C','Strike, call next pocket'],['B, R, X','Review stroke, rerack atlas, file scorecard']],
+ touch:[['Felt','Tap to aim or pull back on the cue for angle and power. Release the drag, then strike.'],['Ball in hand','Tap an empty part of the felt to place the cue. Confirm your placement with the dock.']],
+ progress(d){const p=d?.moonSalon;return p?Object.keys(p.tricks||{}).length+' / 36 trick cards · '+(p.patches?.length||0)+' / 6 felt patches · '+(p.wins||0)+' house wins':'';},
+ create(api){
+ const mode=api.mode||'atlas',seed=api.seed??Math.floor((api.rng?.()??.5)*0xffffffff),random=seeded(seed),sound=tableSound(api.audio),daily=dailySet(seed),save=api.store?.read?.().moonSalon||{};
+ let patches=save.patches||[];let card,table,balls,wells,phase,seat,angle,power,spin,called,aimHand=false,historyTrail=[],lastHistory='',log,before,input,clock=0,acc=0,stroke=0,shots=0,turns=0,playerPots=0,scratches=0,score=0,stars=0,ends=0,opWait=0,queueShot=null;
+ let index=api.demo?21:clamp(Number(api.options?.card)||0,0,35),racks=0,ladder=Math.min(17,save.ladder||0),innings=5,chalk=0,won=0,everScored=false,done=false,paused=false,drag=null,notice='',primaryMet=false,feature=false,sparks=[],demoWait=.85,demoFirst=true,compact=false,settingsOpen=false,readHistory=false,aimHeld=null;
+ const speak=k=>api.say?.(lines[k]||k);
+ const remember=fn=>api.store?.update?.(d=>({...d,moonSalon:fn({...d.moonSalon})}));
+ const activeAtlas=()=>mode==='atlas'||api.demo;
+ function hud(){api.hud?.('Score',score,activeAtlas()?'Shots':mode==='house'?'Innings':'Turn',activeAtlas()?stroke+' / '+card.par:mode==='house'?innings:seat?'AGI-1':'Yours');}
+ function controls(){
+  if(phase==='card'){api.controls?.([btn('next',activeAtlas()?'Next table':'Next rack','Enter'),btn('file','File scorecard','X'),...(activeAtlas()?[btn('reset','Try this table','R')]:[])]);return;}
+  if(phase==='rolling'){api.controls?.([btn('history','Stroke log','B')]);return;}
+  if(seat===1){api.controls?.([btn('skip','Play her shot now','Enter'),btn('history','Stroke log','B')]);return;}
+  if(aimHand){api.controls?.([btn('place','Confirm cue position','Enter'),btn('moveL','Left','←'),btn('moveR','Right','→'),btn('moveU','Up','↑'),btn('moveD','Down','↓')]);return;}
+  if(compact&&!settingsOpen){api.controls?.([btn('strike','Strike cue','Space'),btn('settings','Cue setup'),btn('call','Call pocket','C'),btn('history','Stroke log','B'),...(everScored&&!activeAtlas()?[btn('file','File run','X')]:[])]);return;}
+  const pads=[btn('strike','Strike cue','Space'),range('power','Power %',Math.round(power*100),10,100,1),range('spin','Draw / follow',Math.round(spin*10),-10,10,1),btn('call','Call '+pocketNames[called],'C'),btn('history','Stroke log','B')];
+  if(activeAtlas())pads.push(btn('reset','Rerack','R'));if(everScored&&!activeAtlas())pads.push(btn('file','File run','X'));
+  if(compact)pads.push(btn('settings','Close setup'));api.controls?.(pads);
+ }
+ function prep(){
+  phase='aim';acc=0;opWait=seat?1.6:0;queueShot=null;aimHeld=null;drag=null;
+  if(seat){queueShot=choose(balls,wells,1,table.level,random,table.condition);angle=queueShot.angle;power=queueShot.power;spin=queueShot.spin;called=queueShot.called;speak('Opponent turn');}
+  controls();hud();
+ }
+ function load(){
+  phase='aim';seat=0;stroke=0;turns=0;stars=0;primaryMet=feature=false;aimHand=false;sparks=[];historyTrail=[];lastHistory='';readHistory=false;settingsOpen=false;
+  if(activeAtlas()){card=ATLAS[index];wells=card.wells;balls=copyBalls(card.balls);const cert=certificates[index][0];angle=cert.angle+(index&&!api.demo?(index%2?1:-1)*(.065+(index%4)*.025):0);power=index===0||api.demo?cert.power:.48;spin=0;called=card.pocket;
+   notice=card.feat==='bank'?'Bank the ringed comet into '+pocketNames[called]+'.':card.feat==='combo'?'Send comet 1 into comet 2, then into '+pocketNames[called]+'.':card.feat==='draw'||card.feat==='follow'?'Use '+card.feat+' and leave the cue in the chalk circle.':'Pot the ringed comet at '+pocketNames[called]+'.';}
+  else{const spec=mode==='daily'?daily[racks%3]:mode==='house'?{level:Math.min(5,racks),condition:racks%3,seed:seed+racks}:{level:Math.floor(ladder/3),condition:ladder%3,seed};table=rack(spec.level,spec.condition,spec.seed);
+   balls=copyBalls(table.balls);wells=table.wells;const hint=choose(balls,wells,0,3,()=>.5,table.condition);angle=hint.angle;power=hint.power;spin=0;called=hint.called;
+   notice='Your suns ('+targets(balls,0).join(', ')+'). '+(table.condition===1?'Bank the last moon.':table.condition===2?'Call the moon at a middle pocket.':'Call a pocket for the last moon.');}
+  prep();if(wells.length)sound.play('well');speak(mode==='daily'?'Daily replay':wells.length?'Well drift':'Opening');
+ }
+ function finish(){if(done)return;done=true;sound.stop();api.end?.(Math.round(score),[['Player pots',playerPots],['Shots played',shots],['Racks won',won],['Scratches',scratches],['Trick stars',stars?('★'.repeat(stars)):'—']],lines[won?'New chalk patch':activeAtlas()?'Trick par':'Leave']);}
+ function deal(){
+  if(phase!=='aim'||aimHand)return;input={angle,power,spin,called};before=copyBalls(balls);if(!strike(balls,angle,power,spin))return;
+  stroke++;if(!seat)shots++;log=journal();phase='rolling';acc=0;historyTrail=[];readHistory=false;drag=null;aimHeld=null;
+  sound.play('tip');sound.play('roll');if(spin>.35)speak('Follow');else if(spin<-.35)speak('Draw');else if(power>.8)speak('Full power');else if(power<.4)speak('Half power');
+  controls();hud();
+ }
+ function winAtlas(){stars=1+Number(stroke<=card.par)+Number(feature);score+=scoreTrick(stroke,card.par,feature);everScored=true;phase='card';racks++;sound.play('moon');speak(stroke<=card.par?'Trick par':'Personal best');api.effect?.('clear');api.haptic?.(35);
+  remember(old=>({...old,tricks:{...old.tricks,[index]:Math.max(stars,old.tricks?.[index]||0)}}));notice='Signed trick card · '+('★'.repeat(stars));controls();hud();}
+ function matchEnd(winner){
+  phase='card';racks++;won+=Number(winner===0);if(!winner){score+=400+table.level*115;everScored=true;api.effect?.('clear');sound.play('moon');}
+  if(mode==='ladder'&&!winner){patches=[...new Set([...patches,table.level])];ladder=Math.min(17,ladder+1);remember(o=>({...o,ladder:Math.max(o.ladder||0,ladder),wins:(o.wins||0)+1,patches:[...new Set([...(o.patches||[]),table.level])]}));}
+  if(mode==='house'){innings=Math.min(6,innings+2);remember(o=>({...o,houseBest:Math.max(o.houseBest||0,racks)}));}
+  speak(winner?'Opponent clearance':ladder===17?'Ladder ending':'Called moon success');notice=winner?'AGI-1 wins the rack.':'Rack cleared · signed house patch.';
+  if(mode==='daily'&&racks>=3){finish();return;}controls();hud();
+ }
+ function settle(){
+  const firstObject=before.find(b=>b.id===log.first),cue=before[0],thin=firstObject&&Math.abs((firstObject.x-cue.x)*Math.sin(input.angle)-(firstObject.y-cue.y)*Math.cos(input.angle))>7;
+  const pots=log.pots.filter(p=>p.id>0),scratch=log.pots.some(p=>p.id===0),moment=log.contacts.some(([a,b])=>a&&b)?'Combination':pots.length>1?'Double pot':log.rails.length>=2?'Double bank':log.rails.length?'First bank':pots.length?(thin?'Thin cut':'Straight pot'):'Miss';
+  lastHistory=(log.first===null?'No object':'First #'+log.first)+' · '+log.rails.length+' rail'+(log.rails.length===1?'':'s')+' · '+(log.pots.map(p=>(p.id?'#'+p.id:'cue')+' → '+pocketNames[p.pocket]).join(', ')||'no pot');notice=lastHistory;
+  if(activeAtlas()){
+   if(scratch){scratches++;respot(balls,0);speak('Scratch');}
+   const targetPot=pots.find(p=>p.id===card.target);
+   if(targetPot&&(!primaryMet)&&(scratch||targetPot.pocket!==card.pocket||card.feat==='called'&&input.called!==card.pocket)){const orig=card.balls.find(b=>b.id===card.target);respot(balls,card.target,orig.x,orig.y);notice='Wrong pocket or scratch. The marked comet returns.';speak('Overcut');}
+   else if(targetPot&&!scratch){primaryMet=true;feature=featMet(card,input,log)&&(!['draw','follow'].includes(card.feat)||dist(balls[0].x,balls[0].y,...leaves[index])<=31);}
+   if(!scratch){playerPots+=pots.length;speak(moment);}
+   if(primaryMet&&card.extra.every(id=>balls.find(b=>b.id===id).potted)){winAtlas();return;}
+   if(primaryMet)notice='Clear remaining '+card.extra.filter(id=>!balls.find(b=>b.id===id).potted).map(n=>'#'+n).join(' + ')+'.';
+   if(card.feat==='combo'&&!primaryMet&&balls.find(b=>b.id===1).potted){const b=card.balls[1];respot(balls,1,b.x,b.y);}
+   prep();return;
   }
-  if (dist < 22) {
-    const nx = -dx / dist,
-      ny = -dy / dist,
-      dot = s.vx * nx + s.vy * ny;
-    if (dot < 0) {
-      s.vx -= 2 * dot * nx;
-      s.vy -= 2 * dot * ny;
-    }
-    s.x = px + 23 * nx;
-    s.y = py + 23 * ny;
-  }
-  s.age += dt;
-  return s.banks >= table.banks && Math.hypot(s.x - table.cup[0], s.y - table.cup[1]) < 16;
-}
-function shot(table, aim, power) {
-  const v = 202 + power * 101;
-  return {
-    x: table.tee[0],
-    y: table.tee[1],
-    vx: v * Math.cos(aim),
-    vy: v * Math.sin(aim),
-    banks: 0,
-    age: 0
-  };
-}
-function findLine(table) {
-  let best = null;
-  for (let j = 0; j < 160; j++) {
-    const a = j * TAU / 160;
-    const s = shot(table, a, .55);
-    for (let i = 0; i < 450; i++) {
-      if (advance(s, beat, table)) {
-        if (!best || s.age < best.age) best = {
-          a,
-          age: s.age
-        };
-        break;
-      }
-    }
-  }
-  return best?.a ?? 0;
-}
-export default {
-  title: 'MOONSHOT BILLIARDS',
-  tagline: 'AGI-1 chalked the cue. Gravity gets the next turn.',
-  instructions: [['Line up the comet', 'Tap the felt to point AGI-1’s cue. Left and right rotate the aim. The pearl dots predict the start of your shot.'], ['Shoot and bend', 'Tap Shoot or Space for a medium stroke. Hold and release to change power. The planet bends passing shots and rebounds direct hits.'], ['Read the house rules', 'Sink the comet in the gold pocket. On bank tables it must hit a cushion first. Five tables, twelve pieces of chalk. Earn a bonus for your first shot.']],
-  keys: [['← / →', 'Rotate cue'], ['Space', 'Shoot / hold for power']],
-  touch: [['Tap or drag felt', 'Aim'], ['Shoot', 'Tap or hold for power']],
-  create(api) {
-    const flip = tables.map(() => api.rng() > .5);
-    const layouts = tables.map((tb, i) => ({
-      ...tb,
-      tee: tb.tee.map((v, k) => k && flip[i] ? 429 - v : v),
-      cup: tb.cup.map((v, k) => k && flip[i] ? 429 - v : v),
-      planet: tb.planet.map((v, k) => k && flip[i] ? 429 - v : v)
-    }));
-    let stage = 0,
-      score = 0,
-      chalk = 12,
-      firsts = 0,
-      tableShots = 0,
-      banks = 0,
-      aim = 0,
-      power = .55,
-      chargeT = 0,
-      charging = false,
-      active = null,
-      trail = [],
-      trailTick = 0,
-      t = 0,
-      clock = 106,
-      wait = 0,
-      potted = false,
-      ended = false,
-      notice = 'AIM AT THE GOLD POCKET',
-      flash = 2.3,
-      auto = 0,
-      drag = false;
-    const held = new Set();
-    const table = () => layouts[stage];
-    function resetAim() {
-      const q = table();
-      aim = Math.atan2(q.cup[1] - q.tee[1], q.cup[0] - q.tee[0]);
-    }
-    resetAim();
-    function finish() {
-      if (ended) return;
-      ended = true;
-      api.end(score, [['Tables cleared', stage + '/5'], ['First-shot pots', firsts], ['Cushion contacts', banks]], stage === 5 ? 'the moon owes us a rematch.' : 'chalk up. i saved us a table.');
-    }
-    function begin() {
-      if (ended || active || wait > 0) return;
-      charging = true;
-      chargeT = 0;
-    }
-    function release() {
-      if (!charging || ended || active || wait > 0) return;
-      charging = false;
-      chalk--;
-      tableShots++;
-      active = shot(table(), aim, power);
-      trail = [];
-      trailTick = 0;
-      api.sound('slice');
-    }
-    function point(x, y) {
-      if (!active && wait <= 0) {
-        const [a, b] = table().tee,
-          ux = x + 9,
-          uy = y - 36,
-          det = .94 * .86 + .045 * .095;
-        const tx = (.86 * ux - .095 * uy) / det,
-          ty = (.045 * ux + .94 * uy) / det;
-        aim = Math.atan2(ty - b, tx - a);
-      }
-    }
-    function result(ok) {
-      banks += active.banks;
-      potted = ok;
-      wait = ok ? .95 : .55;
-      notice = ok ? active.banks ? 'BANK SHOT!' : 'CLEAN POT!' : 'CHALK UP • TRY ANOTHER LINE';
-      flash = 1.7;
-      if (ok) {
-        firsts += Number(tableShots === 1);
-        score += 360 + active.banks * 55 + (tableShots === 1 ? 175 : 0);
-        api.haptic(19);
-      }
-      api.sound(ok ? 'clear' : 'back');
-      active = null;
-    }
-    return {
-      key(type, k) {
-        if (type === 'down') {
-          held.add(k);
-          if (k === 'Space') begin();
-        } else {
-          held.delete(k);
-          if (k === 'Space') release();
-        }
-      },
-      pointer(type, x, y) {
-        if (type === 'down') {
-          if (y > 398 && x > 187) begin();else if (y >= 84 && y < 349) {
-            drag = true;
-            point(x, y);
-          }
-        } else if (type === 'move' && drag) point(x, y);else if (type === 'up') {
-          release();
-          drag = false;
-        } else if (type === 'cancel') {
-          charging = false;
-          drag = false;
-        }
-      },
-      cancelInput() {
-        held.clear();
-        charging = false;
-        drag = false;
-      },
-      demo(dt) {
-        if (active || wait > 0) return;
-        auto += dt;
-        if (auto > .85) {
-          aim = findLine(table());
-          begin();
-          power = .55;
-          release();
-          auto = 0;
-        }
-      },
-      update(dt) {
-        if (ended) return;
-        t += dt;
-        clock -= dt;
-        flash -= dt;
-        if (clock <= 0) {
-          finish();
-          return;
-        }
-        if (wait > 0) {
-          wait -= dt;
-          if (wait <= 0) {
-            if (potted) {
-              stage++;
-              if (stage === 5) {
-                finish();
-                return;
-              }
-              tableShots = 0;
-              resetAim();
-            }
-            if (!chalk) {
-              finish();
-              return;
-            }
-            potted = false;
-            power = .55;
-          }
-          return;
-        }
-        if (charging) {
-          chargeT += dt;
-          power = chargeT < .18 ? .55 : .22 + .78 * (1 - Math.abs(1 - (chargeT - .18) * 1.15 % 2));
-        } else if (!active) power = .55;
-        if (!active) {
-          aim += dt * 1.42 * (Number(held.has('ArrowRight') || held.has('KeyD')) - Number(held.has('ArrowLeft') || held.has('KeyA')));
-        } else {
-          let remain = dt;
-          while (remain > 0 && active) {
-            const step = Math.min(beat, remain);
-            const prev = active.banks;
-            if (advance(active, step, table())) result(true);else if (active.age >= 3.65) result(false);else if (active.banks !== prev) api.sound('bounce', {
-              pitch: 1.25
-            });
-            remain -= step;
-          }
-          if (active) {
-            trailTick += dt;
-            if (trailTick > .034) {
-              trailTick = 0;
-              trail.push([active.x, active.y]);
-              if (trail.length > 18) trail.shift();
-            }
-          }
-        }
-        api.hud('House points', score, 'Chalk', chalk);
-      },
-      draw(c) {
-        world(c);
-        if (ended) return;
-        const q = table();
-        c.save();
-        c.transform(.94, -.045, .095, .86, -9, 36);
-        panel(c, 15, 73, 450, 297, '#412847', 18);
-        panel(c, 15, 69, 450, 294, '#895e4a', 18);
-        panel(c, 15, 62, 450, 295, '#764f3b', 18);
-        panel(c, 20, 67, 440, 285, '#cc9b5b', 15);
-        panel(c, 27, 82, 426, 261, '#25565a', 13);
-        panel(c, 31, 93, 418, 241, '#1c3f49', 9);
-        for (let k = 0; k < 40; k++) {
-          let x = 40 + k * 67 % 400,
-            y = 108 + k * 51 % 207;
-          oval(c, x, y, k % 4 === 0 ? 1.6 : .8, k % 4 === 0 ? 1.6 : .8, '#c3daca82');
-        }
-        for (let i = 0; i < 8; i++) {
-          oval(c, 48 + i * 56, 75, 2, 2, '#f9e4b2');
-          oval(c, 48 + i * 56, 348, 2, 2, '#efd6a1');
-        }
-        const [a, b] = q.planet;
-        oval(c, a + 3, b + 9, 28, 10, '#102b39aa');
-        if (!prop(c, a - 34, b - 30, 68, 58)) {
-          oval(c, a, b, 37, 11, null, '#b4afe181', 2);
-          oval(c, a, b, 17, 17, '#9b81ac', '#e2baca', 2);
-          line(c, [[a - 29, b + 5], [a - 15, b + 9], [a + 8, b + 7], [a + 29, b - 4]], '#e1bbc9', 3);
-        }
-        const [gx, gy] = q.cup;
-        oval(c, gx, gy, 20 + Math.sin(t * 3) * 2, 20 + Math.sin(t * 3) * 2, null, '#efc77788', 2);
-        oval(c, gx, gy, 15, 15, '#111e2d', '#ffdd89', 3);
-        caption(c, '✦', gx, gy, '#f2c76e', 15);
-        if (!active && wait <= 0) {
-          const s = shot(q, aim, power);
-          for (let i = 0; i < 102; i++) {
-            advance(s, beat, q);
-            if (i % 6 === 0) oval(c, s.x, s.y, 1.6, 1.6, '#fff1cb');
-          }
-          const [x, y] = q.tee;
-          const dx = Math.cos(aim),
-            dy = Math.sin(aim),
-            back = charging ? 13 + power * 8 : 13;
-          line(c, [[x - dx * back, y - dy * back], [x - dx * (back + 51), y - dy * (back + 51)]], '#d9ab62', 5);
-          line(c, [[x - dx * back, y - dy * back], [x - dx * (back + 7), y - dy * (back + 7)]], '#c0e2d5', 4);
-        }
-        if (trail.length > 1 && active) line(c, trail, '#ade8de88', 4);
-        const bx = active?.x ?? q.tee[0],
-          by = active?.y ?? q.tee[1];
-        if (!potted) {
-          oval(c, bx, by, 7, 7, '#f7e9c0', '#17303c', 1.4);
-          oval(c, bx - 2, by - 2, 2, 2, '#fffce8');
-        }
-        c.restore();
-        panel(c, 12, 12, 456, 42, '#281f3c', 4);
-        caption(c, '✦  ' + q.name, 25, 34, '#ffe2a4', 20, 'left');
-        caption(c, q.banks ? 'HOUSE RULE • 1 BANK' : 'OPEN TABLE', 452, 34, '#cde2e1', 14, 'right');
-        panel(c, 13, 359, 455, 105, '#261e37e9', 8);
-        actor(c, 10, 345, 152, 133);
-        caption(c, flash > 0 ? notice : active ? 'COMET IN MOTION' : 'TAP FELT TO AIM', 316, 382, '#ffe2ae', 13);
-        panel(c, 184, 399, 267, 53, '#ccaa70', 6);
-        caption(c, charging ? 'RELEASE CUE' : 'SHOOT', 317, 421, '#31263b', 19);
-        meter(c, 210, 437, 211, power, '#74618d', '#e7d2a8');
-      }
-    };
-  }
-};
+  const rule=ruling(before,log,seat,called,table.condition);if(rule.returnMoon){const moon=balls.find(b=>b.suit==='moon');respot(balls,moon.id,530,200);}
+  if(!seat&&!rule.foul){playerPots+=rule.own;score+=105*rule.own+(mode==='house'?24:0);if(mode==='house'&&rule.own){chalk+=rule.own;if(chalk>=2){innings=Math.min(8,innings+1);chalk-=2;}}if(rule.own){everScored=true;api.effect?.('pot');}}
+  if(scratch){scratches+=Number(!seat);respot(balls,0);}
+  if(rule.win){matchEnd(seat);return;}
+  if(stroke===1&&power<.25&&rule.foul)speak('Soft break');else if(stroke===1&&log.contacts.length>=3)speak('Clean break');
+  if(!rule.keep){sound.play('turn');turns++;if(mode==='house'){innings--;if(innings<=0){finish();return;}}else seat=1-seat;}
+  if(rule.ballInHand){if(seat){const [x,y]=placement(balls,1,table.level,random);respot(balls,0,x,y);}else aimHand=true;}
+  const calledRule=rule.foul?('Foul · '+rule.foul+'. '+(seat?'AGI-1':'You')+' may place the cue.'):rule.keep?'Legal pot · shoot again.':'Legal safety · turn passes.';
+  notice=calledRule;speak(rule.foul?scratch?(seat?'Scratch':'Rival scratch'):rule.foul==='wrong'?'Wrong first contact':'Ball in hand':rule.keep?moment:'Safety');
+  if(turns>=42&&mode!=='house'){const left=n=>balls.filter(b=>!b.potted&&b.suit===(n?'stripe':'sun')).length;matchEnd(left(0)<=left(1)?0:1);return;}prep();
+ }
+ function fireDemo(){if(phase==='card'){index=demoFirst?12:(index+1)%36;demoFirst=false;load();demoWait=.72;return;}if(phase!=='aim')return;
+  const cert=certificates[index][Math.min(stroke,certificates[index].length-1)];({angle,power,spin,called}=cert);deal();}
+ function act(id,phaseIn,value){
+  if(done||paused)return;
+  if(phaseIn==='input'&&phase==='aim'&&!seat){if(id==='power')power=clamp(value/100,.1,1);if(id==='spin')spin=clamp(value/10,-1,1);return;}
+  if(phaseIn!=='down')return;
+  if(id==='file'&&(phase==='card'||everScored)){finish();return;}
+  if(id==='settings'){settingsOpen=!settingsOpen;controls();return;}
+  if(id==='history'){speak('Chalk');readHistory=!readHistory;notice=readHistory?(lastHistory||'No stroke on the chalkboard yet.'):'Aim with the short chalk guide.';sound.play('chalk');return;}
+  if(id==='reset'&&activeAtlas()){load();return;}
+  if(phase==='card'){if(id==='next'){if(activeAtlas())index=(index+1)%36;load();}return;}
+  if(phase!=='aim')return;
+  if(seat){if(id==='skip')opWait=0;return;}
+  if(aimHand){if(id==='place'){aimHand=false;controls();speak('Aim');return;}const dirs={moveL:[-18,0],moveR:[18,0],moveU:[0,-18],moveD:[0,18]};if(dirs[id]){const [dx,dy]=dirs[id],b=balls[0];if(openSpot(balls,b.x+dx,b.y+dy))respot(balls,0,b.x+dx,b.y+dy);}return;}
+  if(id==='strike')deal();else if(id==='call'){called=(called+1)%6;notice='Called pocket · '+pocketNames[called];speak('Called pocket');controls();}
+ }
+ load();
+ return {action:act,key(edge,code){if(done||paused)return;if(edge==='up'){if(aimHeld?.code===code)aimHeld=null;return;}
+  const keys={Space:'strike',KeyC:'call',KeyX:'file',KeyB:'history',KeyR:'reset',Enter:phase==='card'?'next':seat?'skip':'place'};
+  if(aimHand&&code.startsWith('Arrow')){act({ArrowLeft:'moveL',ArrowRight:'moveR',ArrowUp:'moveU',ArrowDown:'moveD'}[code],'down');return;}
+  if(keys[code]){act(keys[code],'down');return;}if(phase!=='aim'||seat)return;
+  if(['ArrowLeft','ArrowRight','KeyA','KeyD'].includes(code)){const sign=code==='ArrowRight'||code==='KeyD'?1:-1,coarse=code.startsWith('Key');angle+=sign*(coarse?.085:.010);aimHeld={code,sign,coarse,age:0};speak('Aim');}
+  if(code==='ArrowUp'||code==='ArrowDown'){power=clamp(power+(code==='ArrowUp'?.04:-.04),.1,1);speak(power>.78?'Full power':'Half power');}
+  if(code==='KeyQ'||code==='KeyE'){spin=clamp(spin+(code==='KeyQ'?-.25:.25),-1,1);speak(spin<0?'Draw':'Follow');}controls();},
+ pointer(type,x,y,w,h){if(done||paused||phase!=='aim'||seat)return;if(type==='cancel'){drag=null;return;}const g=layout(w,h),[xx,yy]=g.felt(x,y);
+  if(type==='down'){if(xx<0||xx>800||yy<0||yy>400)return;drag={x:xx,y:yy,px:x,py:y,onCue:dist(xx,yy,balls[0].x,balls[0].y)<Math.max(32,24/g.scale)};return;}
+  if(!drag)return;const far=Math.hypot(x-drag.px,y-drag.py)>9;
+  if(aimHand){if(type==='up'){if(openSpot(balls,xx,yy)){respot(balls,0,xx,yy);speak('Ball in hand');}drag=null;}return;}
+  if(drag.onCue&&far){angle=Math.atan2(drag.y-yy,drag.x-xx);power=clamp(dist(xx,yy,drag.x,drag.y)/145,.1,1);controls();}
+  if(type==='up'){if(!far||!drag.onCue){angle=Math.atan2(yy-balls[0].y,xx-balls[0].x);speak('Aim');}drag=null;}},
+ update(dt){if(done||paused)return;clock+=dt;if(aimHeld){aimHeld.age+=dt;if(aimHeld.age>.21)angle+=aimHeld.sign*(aimHeld.coarse?1.4:.36)*dt;}
+  sparks=sparks.filter(e=>(e.t+=dt)<.56);if(phase==='aim'&&seat){opWait-=dt;if(opWait<=0)deal();return;}if(phase!=='rolling')return;
+  acc+=Math.min(dt,.1);while(acc+1e-9>=DT&&phase==='rolling'){acc-=DT;const old=log.events.length;tick(balls,wells,log);if(Math.floor(log.time/DT)%5===0){historyTrail.push([balls[0].x,balls[0].y]);if(historyTrail.length>72)historyTrail.shift();}
+   for(const ev of log.events.slice(old)){if(ev.type==='contact')sound.play('clack',ev.speed);if(ev.type==='rail')sound.play('rail',ev.speed);if(ev.type==='pot'){sound.play(ev.id?'pocket':'scratch');}if(ev.type==='rail'&&log.rails.length===1&&ev.speed>170)speak('Rail contact');if(!api.reducedMotion&&ev.type!=='pot'&&ev.speed>70)sparks.push({x:ev.x,y:ev.y,col:ev.type==='pot'?'#ffe1a5':'#adede1',t:0});}
+   if(!balls.some(moving))settle();}},
+ demo(dt){if(paused||done||phase==='rolling')return;demoWait-=dt;if(demoWait<=0){demoWait=phase==='card'?1.25:.9;fireDemo();}},
+ draw(c,w,h){if(compact!==(w<530)){compact=w<530;controls();}const active=activeAtlas(),pr=active?(primaryMet?card.extra.find(id=>!balls.find(b=>b.id===id).potted):card.target):targets(balls,seat)[0];
+ paint(c,w,h,{phase,seat,angle,power,spin,called,balls,wells,log,notice,hand:aimHand,time:clock,primary:pr,sparks,historyTrail:phase==='rolling'||readHistory?historyTrail:null,leave:active&&!primaryMet&&['draw','follow'].includes(card.feat)?leaves[index]:null,
+ chapter:active?card.chapter:table.level,head:active?card.name:table.name,sub:active?chapters[card.chapter].toUpperCase()+'  /  '+String(index+1).padStart(2,'0')+'   ·   PAR '+card.par:mode==='house'?'HOUSE RUN   ·   RACK '+(racks+1):'HOUSE MATCH   ·   '+(seat?'STRIPES':'SUNS'),patches,reduced:api.reducedMotion});},
+ pause(){paused=true;drag=aimHeld=null;sound.stop();},resume(){paused=false;},cancelInput(){drag=aimHeld=null;},dispose(){done=true;sound.stop();},
+ inspect(){return {phase,seat,angle,power,spin,called,score,stars,index,stroke,playerPots,aimHand,innings,balls,log,turns,notice,table};}};
+ }};
