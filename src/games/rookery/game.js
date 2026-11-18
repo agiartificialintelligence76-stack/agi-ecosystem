@@ -1,89 +1,184 @@
-import { desks,targets,paths,command } from './keys.js';
-import { painting, type, panel, line, oval, polygon } from '../kit/illustration.js';
-import { herSprite } from '../goinglive/pixel.js';
-const scene=painting(new URL('./catnap-desk.webp',import.meta.url).href);
-const left=27,top=153,w=85,h=50;
-const at=i=>[left+(i%5+.5)*w,top+(Math.floor(i/5)+.5)*h];
-const letters=['Esc','1','2','3','Del','Tab','Q','W','E','R','Caps','A','S','D','F','Shift','Z','X','C','V','Ctrl','Alt','Fn','⌘','End'];
-const moves=['↑','→','↓','←','pspsps'];
-function cat(c,x,y,asleep,face,t){
-  c.save();c.translate(x,y);c.scale(face<0?-1:1,1);
-  const fur='#fff0d1',ginger='#e39a62',ink='#553744';
-  oval(c,0,12,18,5,'#84674c66');
-  c.beginPath();c.moveTo(-10,7);c.quadraticCurveTo(-27,11+Math.sin(t)*2,-19,-4);c.strokeStyle=ink;c.lineWidth=6;c.stroke();
-  oval(c,-1,3,15,10,fur,ink,1.6);oval(c,-5,2,7,6,ginger);
-  polygon(c,[[3,-9],[5,-19],[12,-11],[18,-17],[20,-5]],fur,ink,1.4);oval(c,11,-5,11,9,fur,ink,1.4);
-  polygon(c,[[1,-9],[5,-17],[8,-10],[8,-3],[3,-3]],ginger);polygon(c,[[13,-10],[18,-15],[20,-5],[15,-5]],'#6a5351');
-  if(asleep){line(c,[[4,-4],[7,-3],[9,-4]],ink,1.4);line(c,[[12,-4],[15,-3],[17,-4]],ink,1.4);}
-  else{oval(c,7,-4,1.3,1.8,ink);oval(c,15,-4,1.3,1.8,ink);}
-  polygon(c,[[9,-1],[13,-1],[11,1]],'#db8891');line(c,[[16,0],[22,1]],ink,1);
-  if(!asleep){oval(c,-7,10,4,2.8,fur,ink,1);oval(c,7,10,4,2.8,fur,ink,1);}c.restore();
+import { gameStore } from '../kit/store.js';
+import { NAPS,WORLDS } from './levels.js';
+import { initial,finished,command,watched,actionName,DIRECTIONS,ARROWS,CALL,WAIT,DOT } from './rules.js';
+import { PROOFS } from './proofs.js';
+import { solve } from './solver.js';
+import { dailyNap } from './daily.js';
+import { readBook,nextNap,isOpen,grade,points,archive,posesFor,starTotal } from './progress.js';
+import { drawBoard,drawJournal,geometry,picked } from './render.js';
+import { say } from './lines.js';
+import { instrument } from './sound.js';
+
+const modes=[{id:'story',label:'Bedtime Story'},{id:'daily',label:'Daily Cat'},{id:'journal',label:'Cat Journal'}];
+const options=[{id:'nap',label:'Bedtime puzzle',values:[{id:'next',label:'Continue my book'},
+ ...NAPS.map(b=>({id:String(b.id),label:b.id+' · '+b.name}))]}];
+const button=(id,label,key,extra={})=>({id,label,key,...extra});
+const moves=DIRECTIONS.map((id,i)=>button(id,ARROWS[i]+' '+id[0].toUpperCase()+id.slice(1),['W','D','S','A'][i]));
+const standard=[...moves,button('call','Pspsps','C'),button('hint','Hint','H')];
+const mainKeys={ArrowUp:'up',KeyW:'up',ArrowRight:'right',KeyD:'right',ArrowDown:'down',KeyS:'down',ArrowLeft:'left',KeyA:'left',
+ KeyC:'call',Space:'call',KeyQ:'look-left',KeyE:'look-right',KeyT:'wait',KeyZ:'undo',Backspace:'undo',KeyH:'hint',KeyR:'reset',
+ Digit1:'dot-0',Digit2:'dot-1',Digit3:'dot-2',Digit4:'dot-3',Digit5:'dot-4',KeyF:'tools'};
+const actionId=(b,a)=>a<4?DIRECTIONS[a]:a===4?'call':a===5?'look-left':a===6?'look-right':a===7?'wait':'dot-'+(a-DOT);
+function toAction(id,b){const a=DIRECTIONS.indexOf(id);if(a>=0)return a;
+ if(id==='call')return CALL;if(id==='look-left')return 5;if(id==='look-right')return 6;if(id==='wait')return WAIT;
+ if(/^dot-[0-9]+$/.test(id)){const k=Number(id.slice(4));if(k<b.anchors.length)return DOT+k;}return -1;}
+export function chooseNap(book,seed,choice){
+ const fallback=book.last?.seed===seed?NAPS[book.last.id-1]:nextNap(book);
+ const wanted=NAPS[Number(choice)-1];return wanted&&isOpen(wanted,book)?wanted:fallback;
 }
-export default{
- title:'KEYBOARD CATNAP',
- tagline:'AGI-1’s cat will only sleep on one particular key. Climb onto her keyboard, nudge the cat or call it over.',
- instructions:[['Nudge the cat','Step into your cat to push her one key away. Get her onto the moon key for a nap.'],['Call from a distance','Stand in the same clear row or column, then call “pspsps.” She takes one step toward you.'],['Watch her paws','Mint keys with arrows are slippery. She slides until she reaches a dry cap or meets an obstacle.']],
- keys:[['Arrows / WASD','Walk or nudge'],['Space','Call your cat'],['Z / H','Undo / get a hint']],
- touch:[['Tap a key toward your destination','Walk or nudge one square'],['Tap PSPSPS / Undo / Hint','Call the cat or retrace a move']],
+export default {
+ title:'KEYBOARD CATNAP',tagline:'Walk a little keyboard. Learn one particular cat.',
+ instructions:[['Find her moon key','Walk into the cat from behind to nudge her. A clear row or column lets her hear Pspsps. Each call brings her one key closer.'],
+ ['Read her paws','Mint keys are slippery. A numbered red dot draws her one step per turn. Hover a cap or ask for a hint to see the next landing.'],
+ ['Watch your gaze','On the piano she only follows while unwatched. Turn in place or wait. On the writer’s board her landing keys must spell the ribbon word.']],
+ keys:[['Arrows / WASD','Walk or nudge'],['C / Space','Call down a row'],['Q / E / T','Look left / right / wait'],['1–5','Aim numbered dot'],['Z / H / R','Undo / two-stage hint / reset']],
+ touch:[['Tap a cap or swipe','Walk one key or nudge'],['Numbered cap','Aim its laser dot'],['Pspsps / More','Call, wait, turn or undo']],
+ modes,options,controls:standard,
+ scoreGroup:({mode,options,seed})=>mode==='daily'?'daily/'+seed:'bedtime/'+chooseNap(readBook(gameStore('rookery').read()),seed,options?.nap).id,
+ progress(raw){const book=readBook(raw);return Object.keys(book.runs).length+'/45 naps  ·  '+starTotal(book)+'/135 stars  ·  Next: '+nextNap(book).name;},
  create(api){
-   let index=0,desk,state,previous,goal,par,steps=0,history=[],clock=0,age=1,face=1,herFace=1,call=0,word='',hint=-1,delay=0,done=false,score=0,purrs=0,nudges=0,slides=0,demoClock=0;
-   function setup(){desk=desks[index];state=[...desk.start];previous=state;steps=0;history=[];age=1;hint=-1;const opts=targets(desk);
-     const chosen=opts[Math.floor(api.rng()*Math.min(3,opts.length))];goal=chosen[0];par=chosen[1].length;
-     word=index===0?'Walk into her. She wants the moon key.':index===1?'Line up, then call “pspsps.”':'Mint keys are slippery. Watch her paws.';api.hud('Bedtime',String(index+1)+' / 6','Keys',steps);}
-   function act(a){
-     if(done||delay>0)return;const next=command(desk.layout,state,a);
-     if(next.every((v,i)=>v===state[i])){word=a===4?'She needs a clear line and a little space.':'That key is blocked.';if(a===4)call=.65;api.sound('click');return;}
-     history.push({state,purrs,nudges,slides});previous=state;state=next;age=0;steps++;hint=-1;
-     if(a===1||a===3)herFace=a===1?1:-1;
-     if(state[1]!==previous[1]){face=Math.sign(state[1]%5-previous[1]%5)||face;
-       const distance=Math.abs(state[1]%5-previous[1]%5)+Math.abs(Math.floor(state[1]/5)-Math.floor(previous[1]/5));
-       if(a===4){call=1;purrs++;}else nudges++;
-       if(distance>1)slides++;
-       word=distance>1?'Whoosh! Those caps are polished.':a===4?'She heard me. Come here, sleepyhead.':'A gentle nudge.';api.sound(a===4?'merge':'bounce');api.haptic(9);
-     }else{word='A clear row lets her hear your call.';api.sound('tap',{pitch:.64,spread:.02});}
-     api.hud('Bedtime',String(index+1)+' / 6','Keys',steps);
-     if(state[1]===goal){word='There she goes. Goodnight, trouble.';score+=Math.max(80,550-(steps-par)*11);delay=1.22;api.sound('clear');}
+  const seed=api.seed??7,mode=api.mode||'story',day=mode==='daily'?new Date().toISOString().slice(0,10):'';
+  let book=readBook(api.store?.read?.()),b,proof,s,prev,history=[],actions=[],event={},clock=0,age=1;
+  let sleeping=false,closed=false,paused=false,pending=null,tools=false,hintPhase=0,hintAction=-1,preview=-1;
+  let catFace=1,herFace=1,drag=null,demoClock=0,journal=mode==='journal'&&!api.demo,poseIndex=0,pet=0;
+  let reel=null,reelPointer=0,reelClock=0,replayIndex=0,voiceCounter=seed;
+  const sound=instrument(api.audio,api.demo);
+  const sayLine=k=>api.say?.(say(k,voiceCounter++));
+  function loadBoard(board,solution){
+   b=board;proof=solution;s=initial(b);prev=s;history=[];actions=[];event={};age=1;sleeping=false;pending=null;
+   hintPhase=0;hintAction=-1;preview=-1;tools=b.anchors.length>0&&b.steps[s.agi].every(k=>k<0||['#',':'].includes(b.tiles[k]));
+   catFace=1;herFace=1;drag=null;
+  }
+  const target=api.demo?NAPS[15]:chooseNap(book,seed,api.options?.nap);
+  if(mode==='daily'&&!api.demo){const result=dailyNap(seed);loadBoard(result.board,result.proof);}
+  else loadBoard(target,PROOFS[target.id-1]);
+  function hud(){
+   if(journal&&!reel){api.hud?.('Naps',Object.keys(book.runs).length+'/45','Stars',starTotal(book));return;}
+   api.hud?.(reel?'Replay':'Moves',actions.length,'Par',proof.par);
+  }
+  function controlList(){
+   if(journal){
+    if(reel)return [button('stop-replay','Close replay','X')];
+    const saves=Object.keys(book.runs),r=NAPS[Number(saves[replayIndex%saves.length])-1];
+    return [button('pet','Scritch','Space'),button('pose','Next pose','→',{disabled:posesFor(book).length<2}),
+     ...(r?[button('entry','Next nap','N',{disabled:saves.length<2}),button('replay','Replay '+r.name,'V')]:[])];
    }
-   function undo(){if(done||delay>0||!history.length)return;const snap=history.pop();previous=state;state=snap.state;({purrs,nudges,slides}=snap);age=0;steps--;hint=-1;call=0;word='Back one pawprint.';api.sound('back');api.hud('Bedtime',String(index+1)+' / 6','Keys',steps);}
-   function clue(){if(done||delay>0)return;const p=paths(desk.layout,state,goal);hint=p?.[0]??-1;word=hint<0?'Undo until she can reach the moon.':hint===4?'Call her from this key.':'Try walking '+moves[hint]+'.';}
-   setup();
-   return{
-     key(t,k){if(t!=='down')return;const a=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space'].indexOf(k),b=['KeyW','KeyD','KeyS','KeyA'].indexOf(k);
-       if(a>=0||b>=0)act(Math.max(a,b));else if(k==='KeyZ'||k==='Backspace')undo();else if(k==='KeyH')clue();},
-     pointer(t,x,y){if(t!=='down')return;if(y>=437){if(x<130)undo();else if(x<345)act(4);else clue();return;}
-       if(x<left||x>=left+5*w||y<top||y>=top+5*h)return;
-       const col=Math.floor((x-left)/w),row=Math.floor((y-top)/h),dx=col-state[0]%5,dy=row-Math.floor(state[0]/5);
-       if(dx||dy)act(Math.abs(dx)>Math.abs(dy)?dx>0?1:3:dy>0?2:0);},
-     update(dt){clock+=dt;age=Math.min(1,age+dt*5);call=Math.max(0,call-dt*1.8);
-       if(delay>0&&(delay-=dt)<=0){if(++index===desks.length){done=true;api.end(score,[['Catnaps',6],['Successful calls',purrs],['Gentle nudges',nudges],['Slides',slides]],'I saved my work before she fell asleep. For once.');}else setup();}},
-     demo(dt){if(done||delay>0)return;demoClock+=dt;if(demoClock<.34)return;demoClock=0;const p=paths(desk.layout,state,goal);if(p?.length)act(p[0]);else undo();},
-     draw(c){
-       c.fillStyle='#6e4c4c';c.fillRect(0,0,480,480);scene(c,0,70,512,277,0,0,480,171);
-       const fade=c.createLinearGradient(0,102,0,148);fade.addColorStop(0,'#4d293300');fade.addColorStop(1,'#4d2933e0');c.fillStyle=fade;c.fillRect(0,100,480,54);
-       panel(c,12,10,114,24,'#4b3134d9',12);type(c,'BEDTIME  ·  0'+(Math.min(index,5)+1),69,22,12,'#fff4d6','center','monospace');
-       type(c,desk.name,17,129,25,'#fff2d2','left','Georgia');type(c,'PAR '+par,461,130,12,'#fff4de','right','monospace');
-       panel(c,13,145,454,272,'#483646',16);panel(c,18,148,444,261,'#ab8480',14);
-       for(let i=0;i<25;i++){
-         const [x,y]=at(i),tile=desk.layout[Math.floor(i/5)][i%5],sleep=i===goal,slip=tile==='~';
-         const xx=x-w/2+2,yy=y-h/2+2;
-         panel(c,xx,yy+2,w-4,h-4,'#634b51',8);
-         if(tile==='#'){panel(c,xx+3,yy+3,w-10,h-9,'#584a51',6);for(let j=0;j<5;j++)line(c,[[xx+14+j*10,yy+13],[xx+7+j*10,yy+31]],'#76696a',2);continue;}
-         panel(c,xx+1,yy,w-6,h-10,sleep?'#f3c268':slip?'#a9d7c5':(i%5===0?'#d7a8a8':'#eedcbc'),7);
-         line(c,[[xx+8,yy+4],[xx+w-16,yy+4]],'#fff3d5',1.6);
-         type(c,sleep?'☾':slip?'⇉':letters[i],x-w/2+13,y-9,sleep?22:slip?16:11,sleep?'#654334':slip?'#4d746c':'#7f6261','left','monospace');
-         if(sleep)type(c,'sleep',x+13,y+10,12,'#694739','center','Georgia');
-       }
-       const f=api.reducedMotion?1:age,ease=f*(2-f);
-       const pos=k=>at(previous[k]).map((v,j)=>v+(at(state[k])[j]-v)*ease);
-       const [hx,hy]=pos(0),[cx,cy]=pos(1);
-       if(call>0 && !api.reducedMotion){for(let k=0;k<3;k++)oval(c,hx,hy,10+(1-call)*30+k*6,6+(1-call)*15+k*3,null,'#fffbceaa',1.5);}
-       oval(c,hx,hy+13,13,4,'#72585d66');const s=herSprite(delay?'cheer':call>.3?'wave':age<1?'walk'+Math.floor(clock*14)%4:'stand',0);
-       c.save();c.imageSmoothingEnabled=false;c.translate(hx,hy);c.scale(herFace,1);c.drawImage(s.canvas,-18,-28,36,46);c.restore();
-       cat(c,cx,cy-3+(age<1&&!api.reducedMotion?-Math.sin(age*Math.PI)*5:0),delay>0,face,clock*4);
-       if(delay>0)type(c,'z Z',cx+17,cy-25,15,'#73587e','center','Georgia');
-       type(c,word,240,426,14,'#fff1d5');panel(c,135,441,206,32,'#dfb5ad',16);
-       type(c,'↶  UNDO',69,457,12,'#fff1d7','center','monospace');type(c,'♡  PSPSPS',238,457,15,'#503b49','center','monospace');type(c,'◇  HINT',412,457,12,'#fff1d7','center','monospace');
-     }
-   };
- }
+   const extras=b.anchors.length||b.shy;
+   if(tools&&extras)return [
+     ...b.anchors.map((k,i)=>button('dot-'+i,'Dot '+(i+1),String(i+1),{pressed:s.lure===i+1})),
+     ...(b.shy?[button('look-left','Look ↶','Q'),button('look-right','Look ↷','E')]:[]),
+     button('wait','Wait','T'),button('tools','Walk','F'),
+     button('undo','Undo','Z',{disabled:!history.length}),button('hint',hintPhase===1?'Show move':'Hint','H')];
+   return [...moves,button('call','Pspsps','C'),...(extras?[button('tools',b.shy?(b.anchors.length?'Look / dot':'Look / wait'):'Laser tools','F')]:[]),
+    button('undo','Undo','Z',{disabled:!history.length}),button('hint',hintPhase===1?'Show move':'Hint','H')];
+  }
+  function refresh(){hud();api.controls?.(controlList());}
+  function outcome(){
+   const stars=grade(actions.length,proof.par),old=book.runs[b.id],posesBefore=posesFor(book).length;
+   let line=say(stars===3?'best':'nap',voiceCounter++);
+   if(!api.demo){api.store?.update?.(raw=>{book=archive(raw,b,actions,proof.par,seed,day);return {...raw,napBook:book};});
+    if(!day&&posesFor(book).length>posesBefore)line+=' Journal pose: '+posesFor(book).at(-1).name+'.';
+    if(!day&&!old&&NAPS.some(c=>c.world===b.world+1&&isOpen(c,book))&&Object.keys(book.runs).filter(i=>NAPS[i-1].world===b.world).length===5)line+=' '+WORLDS[b.world+1].name+' is open.';}
+   closed=true;api.end?.(points(actions.length,proof.par),[['Nap',b.name],['Stars','★'.repeat(stars)+'☆'.repeat(3-stars)],['Moves / par',actions.length+' / '+proof.par],['Journal',Object.keys(book.runs).length+' / 45']],line);
+  }
+  function step(a,quiet=false){
+   if(closed||paused||sleeping||!b.actions.includes(a))return;
+   const e={action:a},next=command(b,s,a,e);
+   if(next===s){
+    if(!quiet){sound(a===CALL?'call':'bump',b.world);sayLine(a===CALL?watched(b,s)?'gaze':'blocked':a===WAIT?'wait':'bump');}
+    return;
+   }
+   history.push(s);actions.push(a);prev=s;s=next;event=e;age=0;preview=-1;hintPhase=0;
+   if(a===1||a===3)herFace=a===1?1:-1;
+   catFace=Math.sign(s.cat%b.cols-prev.cat%b.cols)||catFace;
+   if(!quiet){
+    let speech=null,effect='step';
+    if(a===CALL){speech='call';effect='call';}
+    if(a>=DOT){speech=e.kind==='laser'?'laser':s.lure?'hidden':'stop';effect='laser';}
+    if(e.kind==='push'){speech='push';effect='push';}
+    if(e.kind==='creep'){speech='away';effect='creep';}
+    if(!e.moved&&b.shy&&watched(b,s)){speech='gaze';effect='gaze';}
+    if(e.slide){speech='slide';effect='slide';}
+    if(e.letter){const wrong=s.typed<=prev.typed&&prev.typed<b.word.length;speech=wrong?'typo':s.typed===b.word.length?'word':'first';effect=wrong?'typo':s.typed===b.word.length?'word':'letter';}
+    if(speech)sayLine(speech);
+    sound(effect,b.world,s.typed*2);if(e.moved)api.haptic?.(e.slide?14:8);
+   }
+   if(finished(b,s)){
+    sleeping=true;pending=1.25;
+    if(!quiet){sayLine('nap');sound('nap',b.world);api.haptic?.([9,40,12]);}
+   }
+   refresh();
+  }
+  function undo(){
+   if(!history.length||sleeping||closed)return;
+   prev=s;s=history.pop();actions.pop();age=0;event={};hintPhase=0;preview=-1;sayLine('undo');sound('undo',b.world);refresh();
+  }
+  function hint(){
+   if(sleeping||closed)return;
+   const p=solve(b,s);
+   if(!p?.path.length){api.say?.('This position is stuck. Undo one pawprint, or press R to start over.');return;}
+   hintAction=p.path[0];const forecast=command(b,s,hintAction);
+   preview=forecast.cat!==s.cat?forecast.cat:forecast.agi;
+   hintPhase=Math.min(2,hintPhase+1);
+   const cap=String.fromCharCode(65+preview%b.cols)+(1+Math.floor(preview/b.cols));
+   api.say?.(hintPhase===1?(forecast.cat!==s.cat?'Her next paw can land on ':'Make room on ')+cap+'. Ask again for the move.':'Try '+actionName(b,hintAction)+'.');
+   refresh();
+  }
+  function beginReplay(){
+   const ids=Object.keys(book.runs);if(!ids.length)return;
+   const id=Number(ids[replayIndex%ids.length]);loadBoard(NAPS[id-1],PROOFS[id-1]);
+   reel=book.runs[id];reelPointer=0;reelClock=.38;api.say?.('Your saved '+reel.length+'-move route.');refresh();
+  }
+  function stopReplay(){reel=null;sleeping=false;pending=null;refresh();}
+  function action(id,phase){
+   if(phase!=='down'||closed||paused)return;
+   if(journal){
+    if(id==='stop-replay'){stopReplay();return;}if(reel)return;
+    if(id==='pose'){poseIndex=(poseIndex+1)%posesFor(book).length;sayLine('pet');}
+    if(id==='pet'){pet=.85;sound('pet');sayLine('pet');}
+    if(id==='entry'){replayIndex++;}if(id==='replay')beginReplay();refresh();return;
+   }
+   if(sleeping)return;
+   if(id==='tools'){tools=!tools;refresh();return;}
+   if(id==='undo'){undo();return;}if(id==='hint'){hint();return;}
+   if(id==='reset'){loadBoard(b,proof);sayLine('reset');refresh();return;}
+   step(toAction(id,b));
+  }
+  const requested=NAPS[Number(api.options?.nap)-1],lockedTip=requested&&!isOpen(requested,book)?(requested.encore?'Clear all eight '+WORLDS[requested.world].name+' naps to open its encore. ':'Clear five '+WORLDS[Math.max(0,requested.world-1)].name+' naps to open '+WORLDS[requested.world].name+'. '):'';
+  refresh();if(!api.demo)api.say?.(journal?'she kept every nap in here.':mode==='daily'?say('daily',seed)+' Today: '+b.change+'.':lockedTip+b.tip);
+  function key(type,k){
+   if(journal){const ids={KeyV:'replay',KeyN:'entry',KeyX:'stop-replay',Escape:'stop-replay',ArrowRight:'pose',Space:'pet'};if(ids[k])action(ids[k],type);return;}
+   if(mainKeys[k])action(mainKeys[k],type);
+  }
+  function pointer(type,x,y,width,height){
+   if(closed||paused||sleeping)return;
+   if(journal){if(type==='down'&&!reel)action('pet','down');return;}
+   const h=api.demo?height:Math.max(100,height-35),g=geometry(b,width,h),k=picked(b,g,x,y);
+   if(type==='cancel'){drag=null;return;}
+   if(type==='down'){drag=[x,y];return;}
+   if(type==='move'&&!drag){
+    if(hintPhase||k<0)return;const ai=b.anchors.indexOf(k);const a=ai>=0?DOT+ai:b.steps[s.agi].indexOf(k);
+    const n=a>=0?command(b,s,a):s;preview=n.cat!==s.cat?n.cat:-1;return;
+   }
+   if(type!=='up'||!drag)return;
+   const dx=x-drag[0],dy=y-drag[1];drag=null;
+   if(Math.max(Math.abs(dx),Math.abs(dy))>Math.max(16,g.cw*.25)){step(Math.abs(dx)>Math.abs(dy)?dx>0?1:3:dy>0?2:0);return;}
+   const ai=b.anchors.indexOf(k);if(ai>=0){step(DOT+ai);return;}
+   const dir=b.steps[s.agi].indexOf(k);if(k>=0&&dir>=0)step(dir);else if(k===s.cat)step(CALL);
+  }
+  return {action,key,pointer,cancelInput(){drag=null;},
+   update(dt){if(closed||paused)return;clock+=dt;age+=dt;pet=Math.max(0,pet-dt);
+    if(reel&&!sleeping){reelClock-=dt;if(reelClock<=0&&reelPointer<reel.length){reelClock=.47;step(reel[reelPointer++],true);}}
+    if(pending!==null&&(pending-=dt)<=0){pending=null;if(reel)stopReplay();else outcome();}
+   },
+   demo(dt=.016){if(paused||closed||sleeping||journal)return;demoClock+=dt;if(demoClock<.64)return;demoClock=0;
+    const a=proof.witness[actions.length];if(a!==undefined)step(a,true);},
+   draw(c,w=480,h=480){const room=api.demo?h:Math.max(100,h-35);c.fillStyle='#b98d96';c.fillRect(0,0,w,h);
+    const scene={time:clock,age,reduced:api.reducedMotion,moves:actions.length,event,preview,catFace,herFace,sleep:sleeping,pet};
+    if(journal&&!reel)drawJournal(c,w,room,book,posesFor(book)[poseIndex],poseIndex,scene);
+    else drawBoard(c,b,s,prev,proof,scene,w,room);
+   },
+   pause(){paused=true;drag=null;},resume(){paused=false;},dispose(){closed=true;drag=null;},
+  };
+ },
 };

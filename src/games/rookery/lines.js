@@ -1,0 +1,26 @@
+const words={
+ wake:['she found my keyboard before i did.','tiny landlord, your moon key is ready.'],
+ push:['scoot over, little loaf.','one gentle nudge. there she goes.'],
+ call:['pspsps. yes, i mean you.','that ear twitch means she heard me.'],
+ blocked:['the hinge ate my whisper.','her ears need a straight line.'],
+ slide:['four paws. absolutely no brakes.','she waxed that key with her belly.'],
+ stop:['good bumper. very polite.','she meant to stop there. obviously.'],
+ laser:['the dot has entered negotiations.','there go her little airplane ears.'],
+ hidden:['too far around the corner, huh?','the dot’s hiding behind a key.'],
+ first:['she typed that with one toe.','our writer has arrived.'],
+ typo:['a bold editorial choice.','that word needs another first draft.'],
+ gaze:['oops. i made eye contact.','she froze like i caught her working.'],
+ away:['i’m definitely not watching.','was that a tiny pawstep behind me?'],
+ undo:['back one pawprint.','let’s put that keycap back up.'],
+ nap:['look at that perfect little croissant.','shh. she’s making biscuits in her sleep.'],
+ best:['every keypress earned a purr.','a quieter bedtime than last time.'],
+ daily:['new desk. same tiny supervisor.','she saved your spot by the lamp.'],
+ pet:['a very professional headbutt.','permission to scritch the left ear. granted.','listen. the whole desk is purring.'],
+ word:['the ribbon says bedtime.','i’m saving her manuscript exactly like that.'],
+ unlock:['she found the keys to my next keyboard.','a new desk for our tiny supervisor.'],
+ wait:['she’s thinking. give those paws a moment.','one heartbeat per pawstep.'],
+ bump:['my shoes won’t fit on that cap.','no room for all four paws there.'],
+ reset:['fresh page. same little editor.','back to our starting pawprints.'],
+};
+export const VOICE=Object.values(words).flat();
+export function say(kind,n=0){const list=words[kind]||words.wake;return list[(n>>>0)%list.length];}

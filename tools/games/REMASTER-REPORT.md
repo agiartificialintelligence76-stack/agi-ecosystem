@@ -106,3 +106,75 @@ expert  time p10/50/90=321.6/352.6/365.3s  score p25/50/75=12698/13233/13662  fi
 ### Clean release verification
 
 Node 24.21.0, UTC, fresh checkout and locked dependencies. The production command finished with 2,274 passing tests, six existing skips and zero failures. All five routes passed the production CSP in the local build. All 25 game and viewport combinations passed the control-size and layout checks, and all ten full phone and desktop runs reached results, paused, resumed and replayed successfully.
+
+The signed-in project preview passed interactive checks for all five games, including a 122-point Cable Choir phrase and an actual Side B mix. Production commit `83ff7f1` went live. The five public pages returned HTTP 200, matched the clean build’s game entry files, rendered moving playfields and served the new poster, clip and share card. [Music release](https://github.com/agiartificialintelligence76-stack/agi-ecosystem/commit/83ff7f199c10891d0f23ed012f235a49033b3f4a)
+
+## Grid puzzles
+
+The five games contain 205 authored puzzles. Every advertised par comes from the corresponding game’s complete rules. The times below model a full book, season or shift, including the simulated player’s decision time. They are estimates, not timed human sessions. All five previously had one mode and zero dedicated suites.
+
+| Game | JS bytes before → after (files) | Content and modes | Modeled times, beginner / steady / expert | Lines | Dedicated tests | Screens |
+|---|---:|---|---|---:|---:|---|
+| HANDLE WITH CARE | 8,851 → 55,401 (9) | 6 depots → 42 authored depots in 5 worlds. Depot ledger, daily dispatch and practice shift. | 75.0 / 30.1 / 8.7 min | 36 | 13 | [Phone](remaster-evidence/waxworks-phone.jpg) · [Desktop](remaster-evidence/waxworks-desktop.jpg) |
+| LAST TRAIN TO NOODLES | 10,601 → 70,183 (12) | 5 bowls → 36 yards, ordered cars, two kitchens and 144 mirrored certificates. Station pass, daily dish and replay. | 56.8 / 36.2 / 13.2 min | 44 | 15 | [Phone](remaster-evidence/switchyard-phone.jpg) · [Desktop](remaster-evidence/switchyard-desktop.jpg) |
+| SPLIT PERSONALITY | 10,862 → 33,900 (11) | 6 mazes → 40 paired chambers, 5 rule galleries and 120 stars. Gallery, daily mirror and studio. | 62.9 / 31.9 / 14.9 min | 32 | 12 | [Phone](remaster-evidence/prismcourier-phone.jpg) · [Desktop](remaster-evidence/prismcourier-desktop.jpg) |
+| KEYBOARD CATNAP | 11,123 → 60,027 (13) | 6 desks → 45 naps, 135 stars, 6 cat poses and saved replays. Bedtime Story, Daily Cat and Cat Journal. | 70 / 43 / 13 min | 45 | 23 | [Phone](remaster-evidence/rookery-phone.jpg) · [Desktop](remaster-evidence/rookery-desktop.jpg) |
+| CURTAIN CALL | 10,704 → 66,631 (10) | 6 sets → 42 productions, 5 acts and 645 scored performance beats. Story season, daily matinée and free rehearsal. | 48.5 / 33.8 / 20.9 min | 32 | 11 | [Phone](remaster-evidence/starlingrelay-phone.jpg) · [Desktop](remaster-evidence/starlingrelay-desktop.jpg) |
+
+| Game | Previous named shared effects | Sound after | Measured peak |
+|---|---:|---|---:|
+| HANDLE WITH CARE | 4 | 14 foley families for box landings, packing surfaces, breakage, stamp, conveyor, split and delivery. | −13.80 dBFS |
+| LAST TRAIN TO NOODLES | 3 | 12 rail cues including coupling, engine, switch, turntable, serving bell, steam and station whistle. | −7.52 dBFS |
+| SPLIT PERSONALITY | 3 | 16 stereo motifs for footfalls, stopped shoes, queued steps, ice slides, relays, signatures and two-part reunions. | −17.88 dBFS |
+| KEYBOARD CATNAP | 4 | 16 measured cue combinations including five cap materials, paw steps, a purr, shut-eye, gaze, laser and paper feed. | −18.31 dBFS |
+| CURTAIN CALL | 5 | 13 stage cue families and synthesized pit accompaniment, including spotlight, curtain and applause. | −12.79 dBFS |
+
+### Balance tool output
+
+#### HANDLE WITH CARE
+
+```text
+42 authored depots · five worlds · shortest routes 2–18 rolls.
+12 seeded shifts per crew. Time includes modeled thinking, physical inputs, route checks and corrections. Every intermediate footprint uses the production reducer.
+newcomer · solved 504/504 · season median 75.0 min · depot P50/P90 96/187 s · actions 18/39 · score P10/50/90 322/394/798 · edges/undo/hints 1756/985/792 · median world min 9.9/10.6/8.0/21.7/24.8
+regular · solved 504/504 · season median 30.1 min · depot P50/P90 40/73 s · actions 12/22 · score P10/50/90 346/644/870 · edges/undo/hints 449/217/217 · median world min 4.0/4.5/3.7/8.1/9.8
+expert · solved 504/504 · season median 8.7 min · depot P50/P90 11/18 s · actions 8/15 · score P10/50/90 798/846/930 · edges/undo/hints 0/0/0 · median world min 1.2/1.4/1.2/2.1/2.7
+```
+
+#### LAST TRAIN TO NOODLES
+
+```text
+36 certified yards per simulated shift. Time includes persona decision and ticket-reading time.
+newbie · minutes p10/50/90 54.9/56.8/58.5 · score p25/50/75 17977/18145/18304 · buffer stops 72 · undone dead ends 20 · wrong-order window arrivals 17 · extra coupler changes 114 · exact yards 1/36 · most trouble Last Orders (1321 errors across 64 shifts)
+  line action p25/50/75 and median yard seconds: Steam Counter 12/15/20 (68s) · Siding Street 18/21/24 (90s) · One-way Line 16/20/24 (92s) · Roundhouse 18/22/26 (95s) · Twin Kitchens 15/21/28 (95s) · Last Orders 23/28/32 (124s)
+steady · minutes p10/50/90 35.2/36.2/37.2 · score p25/50/75 21219/21509/21659 · buffer stops 25 · undone dead ends 7 · wrong-order window arrivals 13 · extra coupler changes 36 · exact yards 9/36 · most trouble Last Orders (452 errors across 64 shifts)
+  line action p25/50/75 and median yard seconds: Steam Counter 9/12/15 (43s) · Siding Street 13/15/19 (56s) · One-way Line 12/15/17 (58s) · Roundhouse 14/16/20 (60s) · Twin Kitchens 12/15/22 (60s) · Last Orders 17/20/25 (78s)
+expert · minutes p10/50/90 12.9/13.2/13.4 · score p25/50/75 24062/24310/24652 · buffer stops 3 · undone dead ends 0 · wrong-order window arrivals 11 · extra coupler changes 6 · exact yards 30/36 · most trouble Last Orders (54 errors across 64 shifts)
+  line action p25/50/75 and median yard seconds: Steam Counter 9/10/13 (15s) · Siding Street 12/13/16 (20s) · One-way Line 12/13/15 (21s) · Roundhouse 12/14/16 (22s) · Twin Kitchens 10/13/20 (21s) · Last Orders 15/18/21 (28s)
+```
+
+#### SPLIT PERSONALITY
+
+```text
+firstVisit | 12 seeded tours | median 62.9 min | score p10–90 11691–12791 | gold 11/40 | 145 detours, 59 undos | stalls none
+steady | 12 seeded tours | median 31.9 min | score p10–90 15291–16091 | gold 27/40 | 58 detours, 42 undos | stalls none
+expert | 12 seeded tours | median 14.9 min | score p10–90 16391–16791 | gold 35/40 | 9 detours, 3 undos | stalls none
+```
+
+#### KEYBOARD CATNAP
+
+```text
+nudge · book 70 min · nap 88s / 16 decisions · score 805 [468–1537] · 135/135 solved, 14 unaided · 85 blocked calls, 68 corner pushes, 9 idle dot changes, 121 rescues
+lookahead · book 43 min · nap 45s / 12 decisions · score 883 [476–1416] · 135/135 solved, 99 unaided · 0 blocked calls, 57 corner pushes, 129 idle dot changes, 36 rescues
+shortest · book 13 min · nap 16s / 11 decisions · score 1008 [728–1792] · 135/135 solved, 135 unaided · 0 blocked calls, 51 corner pushes, 6 idle dot changes, 0 rescues
+```
+
+#### CURTAIN CALL
+
+```text
+42 authored productions · five acts · total scored beats 645 · exact printed-ink range 2–23
+All 42 scenes offered independently to each director, 12 seeds. Times model reading, composition, repairs and real beat playback.
+newcomer · solved 432/504 · season median 48.5 min · scene P50/P90 73/104 s · score P10/50/90 0/930/1020 · attempts 2 · ink above par P50/P90 0/2 · rejected timing/ink 253/424
+regular · solved 504/504 · season median 33.8 min · scene P50/P90 46/76 s · score P10/50/90 720/960/1060 · attempts 1 · ink above par P50/P90 0/1 · rejected timing/ink 73/63
+expert · solved 504/504 · season median 20.9 min · scene P50/P90 30/46 s · score P10/50/90 930/1000/1070 · attempts 1 · ink above par P50/P90 0/0 · rejected timing/ink 0/0
+```

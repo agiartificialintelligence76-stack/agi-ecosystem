@@ -1,5 +1,10 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Grid puzzles · 2026-11-18
+
+HANDLE WITH CARE rolls a physical parcel through 42 depots. LAST TRAIN TO NOODLES shunts ordered ingredients through 36 rail yards. SPLIT PERSONALITY gives one command to two performers across 40 mirror chambers. KEYBOARD CATNAP offers 45 naps on five physical keyboard types. CURTAIN CALL runs a cue program on a live stage across 42 productions. Each game has its own solver, certified par, saved stars, daily challenge, dedicated tests, sound design and balance tool. See `tools/games/REMASTER-REPORT.md` for simulations, measured peaks and phone and desktop captures.
+
+
 ## Five remastered music games · 2026-11-18
 
 DUET AFTER DARK sings a call over an original recording, then hands the microphone to the player. NEEDLE DROP turns the same recordings into spatial skating with an audible backspin. SIDE B mixes two complete recordings with beat-timed crossfades. CABLE CHOIR has four synthesized cabin voices and a 24-song memory book. ABYSS FM uses stereo whale calls, moving singers and intersecting bearings through 32 watches.

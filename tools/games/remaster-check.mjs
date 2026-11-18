@@ -2,6 +2,7 @@
 import { createRequire } from 'node:module';
 import { readFileSync,mkdirSync,writeFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { chamber } from '../../src/games/prismcourier/rehearsal.js';
 import { layout as oceanLayout,project } from '../../src/games/pearlshift/layout.js';
 import assert from 'node:assert/strict';
 const {chromium}=createRequire(import.meta.url)(process.env.PLAYWRIGHT_MODULE || 'playwright');
@@ -31,12 +32,14 @@ async function check(id,label) {
     const shot=state=>page.screenshot({path:join(out,id+'-'+label+'-'+state+'.jpg'),type:'jpeg',quality:85});
     const full=['phone','desktop'].includes(label);
     if(phase==='full'&&id==='echoforge'){await page.locator('select[name=mode]').selectOption('rehearse');const song=page.locator('select').filter({has:page.locator('option[value="agi"]')});if(await song.count())await song.first().selectOption('agi');}
+    if(phase==='full'&&id==='prismcourier')await page.locator('select[name=room]').selectOption('6');
     if(full)await shot('title');
     await page.locator('.ak-title .ak-btn-play').click();
     await page.waitForSelector('[data-ak-state="play"] .rm-field canvas');
     const first=page.locator('.rm-pad:not([disabled])').first();
-    await first.click();
-    await page.keyboard.press(id==='returnaddress'?'ArrowUp':'ArrowRight');
+    const openingPuzzles = new Set(['switchyard','waxworks','starlingrelay','prismcourier','rookery']);
+    if(!openingPuzzles.has(id)){await first.click();await page.keyboard.press(id==='returnaddress'?'ArrowUp':'ArrowRight');}
+    else if(id==='prismcourier')await page.keyboard.press('KeyH');
     const until=phase.startsWith('layout')?250:phase.includes('dev')?1600:7500;
     await delay(until);
     const size=await page.evaluate(()=>{
@@ -64,6 +67,14 @@ async function check(id,label) {
         for(let i=0;i<44 && await page.locator('[data-ak-state="play"]').count();i++){
           await page.keyboard.press('Space');await page.waitForTimeout(1800);
         }
+      }
+      const puzzleInputs={
+        prismcourier:[...[...chamber(6).witness].map(k=>['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space','KeyX'][Number(k)]),'KeyB'],switchyard:['ArrowRight','Space','ArrowRight','KeyX'],
+        starlingrelay:['KeyB','KeyG','KeyF'],waxworks:['ArrowRight','ArrowRight','KeyF'],rookery:['ArrowRight'],
+      };
+      for(const key of puzzleInputs[id]||[]){
+        if(id==='starlingrelay'&&key==='KeyF')await page.locator('[data-action="file"]').waitFor();
+        await page.keyboard.press(key);await delay(key==='KeyG'?2200:650);
       }
       await page.waitForSelector('[data-ak-state="over"]',{timeout:330000});
       await delay(700);await shot('end');

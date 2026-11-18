@@ -1,0 +1,18 @@
+export const lines = {
+  start: ['places, everyone. yes, that includes my cat.', 'your cue sheet. my extremely dramatic shoes.'],
+  insert: ['that little card is my next move.', 'slide the bow in after my entrance.'],
+  run: ['lights up. here i go.', 'from the top, with actual feelings.'],
+  step: ['freeze me right there.', 'one beat at a time. i can wait.'],
+  miss: ['beautiful bow. wrong spotlight.', 'i arrived before my dramatic lighting.'],
+  mark: ['there’s my light.', 'right beat. i felt the audience lean in.'],
+  encore: ['again? my shoes know this one.', 'same phrase, one more curtain length.'],
+  routine: ['we gave my entrance a name.', 'call that little dance when you need me.'],
+  branch: ['warm light means bow. got it.', 'the lamp just changed my mind.'],
+  cat: ['my understudy brought whiskers.', 'she has exactly one very important mark.'],
+  paw: ['somebody skipped paw rehearsal.', 'did you see her tiny bow?'],
+  fix: ['back to that cue. the rest stays.', 'one card can save the whole scene.'],
+  plots: ['same script, both lighting crews happy.', 'you wrote me room to improvise.'],
+  par: ['an entire show in that few cards 💜', 'every bit of ink earned its applause.'],
+  daily: ['the matinée has a different light plot.', 'two rehearsals today. one cue sheet.'],
+  final: ['i saved a seat for you at closing night.', 'that playbill still smells like stage dust.'],
+};

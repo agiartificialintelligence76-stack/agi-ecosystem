@@ -1,0 +1,39 @@
+.ak.post-floor .rm-dock {
+  background: #c6dfcb;
+  gap: 5px;
+  padding: 5px 7px 8px;
+}
+.ak.post-floor .rm-pad {
+  background: #fff5d9;
+  flex: 1 1 16%;
+  max-width: 148px;
+  min-height: 44px;
+  border-radius: 5px;
+}
+.ak.post-floor .rm-pad:is([data-action='N'], [data-action='E'], [data-action='S'], [data-action='W']) {
+  background: #ffcd83;
+}
+.ak.post-floor .rm-voice {
+  top: 15%;
+  bottom: auto;
+  max-width: 92%;
+  font-size: clamp(12px, 1vw, 16px);
+}
+@media (max-width: 540px) {
+  .ak.post-floor .rm-dock {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .ak.post-floor .rm-pad {
+    font-size: 12px;
+    padding: 3px;
+  }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+  .ak.post-floor .rm-dock {
+    align-content: safe center;
+  }
+  .ak.post-floor .rm-pad {
+    flex: 1 1 42%;
+  }
+}

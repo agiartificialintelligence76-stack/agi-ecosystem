@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import wingwalk from '../src/games/cloudfoil/game.js';
-import railway from '../src/games/switchyard/game.js';
 import billiards from '../src/games/moonfreight/game.js';
 import bandit from '../src/games/driftglass/game.js';
 
@@ -32,7 +31,7 @@ function seeded(seed) {
   return () => ((v = (Math.imul(v, 1664525) + 1013904223) >>> 0) / 4294967296);
 }
 const objectives = [
-  [wingwalk, 'Letters delivered', '8/8'], [railway, 'Suppers delivered', '5/5'],
+  [wingwalk, 'Letters delivered', '8/8'],
   [billiards, 'Tables cleared', '5/5'], [bandit, 'Broadcast', 'Your station'],
 ];
 for (const [game, key, result] of objectives) {
@@ -52,7 +51,7 @@ for (const [game, key, result] of objectives) {
 }
 
 for (const input of ['touch', 'keyboard']) {
-  test(input + ' directly delivers mail, shunts supper, shoots and steals', () => {
+  test(input + ' directly delivers mail, shoots and steals', () => {
     const make = game => play(game, () => .5);
     const operate = (run, key, x, y) => input === 'touch' ? run.tap(x, y) : run.press(key);
 
@@ -71,15 +70,6 @@ for (const input of ['touch', 'keyboard']) {
     operate(mail, 'ArrowUp', 267, 444);
     jump();
     assert.ok(mail.hud[1] > first, 'steering into the far lane delivers the second letter');
-
-    const train = make(railway);
-    operate(train, 'Space', 320, 436);
-    const trackTap = col => [54 + col * 47 + 2 * 21, 184 - col * 13 + 2 * 35];
-    operate(train, 'ArrowRight', ...trackTap(2));
-    operate(train, 'KeyZ', 65, 436);
-    for (const col of [2, 3, 4]) operate(train, 'ArrowRight', ...trackTap(col));
-    train.wait(1.2);
-    assert.equal(train.hud[1], 530, 'undo and three coupled pushes achieve the chef’s par');
 
     const pool = make(billiards);
     operate(pool, 'Space', 322, 429);

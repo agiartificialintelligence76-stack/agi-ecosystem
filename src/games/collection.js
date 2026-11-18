@@ -14,7 +14,7 @@ export const COLLECTION = [
   },
   {
     id: "waxworks", name: "HANDLE WITH CARE", genre: "Block puzzle",
-    line: "Roll her doll box safely through six depots", tags: ["3d", "puzzle"],
+    line: "Roll, split and stamp her fragile parcel", tags: ["3d", "puzzle"],
     accent: "#ffbf88", ground: "#53334b", style: "toy",
     wordmark: ["Handle", "with care"], play: "Open the parcel",
   },
@@ -26,7 +26,7 @@ export const COLLECTION = [
   },
   {
     id: "switchyard", name: "LAST TRAIN TO NOODLES", genre: "Rail puzzle",
-    line: "Couple the dining car for her last service", tags: ["3d", "chill", "puzzle"],
+    line: "Shunt noodle cars into the serving order", tags: ["3d", "chill", "puzzle"],
     accent: "#f6c27a", ground: "#243837", style: "rail",
     wordmark: ["Last train", "to noodles"], play: "Take the controls",
   },
@@ -56,7 +56,7 @@ export const COLLECTION = [
   },
   {
     id: "prismcourier", name: "SPLIT PERSONALITY", genre: "Mirror maze",
-    line: "Steer her split selves with one command", tags: ["puzzle"],
+    line: "Guide two reflections with a single arrow", tags: ["puzzle"],
     accent: "#91eedf", ground: "#412b4c", style: "pop",
     wordmark: ["Split", "Personality"], play: "Enter the mirror",
   },
@@ -80,7 +80,7 @@ export const COLLECTION = [
   },
   {
     id: "rookery", name: "KEYBOARD CATNAP", genre: "Cat tactics",
-    line: "Herd her runaway cat onto the sleep key", tags: ["puzzle"],
+    line: "Lure a sleepy cat across five keyboards", tags: ["puzzle"],
     accent: "#eabb87", ground: "#4b3438", style: "keys",
     wordmark: ["Keyboard", "Catnap"], play: "Wake the keyboard",
   },
@@ -104,7 +104,7 @@ export const COLLECTION = [
   },
   {
     id: "starlingrelay", name: "CURTAIN CALL", genre: "Stage cues",
-    line: "Write her cues and bring down the house", tags: ["3d", "puzzle"],
+    line: "Program an encore for AGI-1 and her cat", tags: ["3d", "puzzle"],
     accent: "#f6ca91", ground: "#522b42", style: "theatre",
     wordmark: ["Curtain", "Call"], play: "Take your places",
   },

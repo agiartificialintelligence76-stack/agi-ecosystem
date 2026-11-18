@@ -3,10 +3,6 @@ import assert from 'node:assert/strict';
 import detective, { program } from '../src/games/lanternlake/game.js';
 import { CASES } from '../src/games/lanternlake/cases.js';
 import { mountCorners } from '../src/games/lanternlake/exhibit.js';
-import parcel from '../src/games/waxworks/game.js';
-import { DEPOTS, startDepot, roll, route, delivered } from '../src/games/waxworks/parcel.js';
-import theatre from '../src/games/starlingrelay/game.js';
-import { SCENES, rehearsal, perform, solve, complete } from '../src/games/starlingrelay/blocking.js';
 import { rng } from '../src/games/kit/fx.js';
 
 function run(game,seed=7){
@@ -26,25 +22,7 @@ test('a radio show draws four different cases; each statement and physical exhib
  press('KeyF');press('Space');
  const first=program(rng(7).next)[0];assert.equal(game.hud[3],first.answer.join()==='0,0'?'●●●':'●●');
 });
-test('every parcel can be delivered upright, fragile pads reject a standing carton and a closed bridge cannot be crossed',()=>{
- for(const depot of DEPOTS){let state=startDepot(depot);const best=route(depot);assert.ok(best?.length>=4);
-   for(const dir of best){state=roll(depot,state,dir);assert.ok(state);}assert.ok(delivered(depot,state));}
- const level={rows:['A##!G']};
- assert.equal(roll(level,roll(level,startDepot(level),'E'),'E'),null);
- const gate={rows:['A##=G']},lying=roll(gate,startDepot(gate),'E');
- assert.equal(roll(gate,lying,'E'),null);assert.ok(roll(gate,{...lying,bridge:true},'E'));
- const game=run(parcel);game.model.key('down','ArrowRight');game.step(.25);assert.equal(game.hud[3],1);
- game.model.key('down','KeyZ');assert.equal(game.hud[3],0);
-});
-test('cue strips are executable, rose collection precedes the bow, and the turntable rotates her on landing',()=>{
- for(const scene of SCENES){let state=rehearsal(scene);const sheet=solve(scene);assert.ok(sheet&&sheet.length<=scene.budget);
-  for(const cue of sheet){state=perform(scene,state,cue);assert.ok(state);}assert.ok(complete(scene,state));}
- const scene=SCENES[3],s=perform(scene,rehearsal(scene),'LEAP');assert.equal(s.d,0);
- assert.equal(perform(SCENES[0],rehearsal(SCENES[0]),'LEFT').d,0);
- assert.equal(complete(SCENES[0],{...rehearsal(SCENES[0]),x:3}),false);
- const game=run(theatre);game.model.key('down','ArrowUp');game.model.key('down','Backspace');assert.match(game.hud[3],/^0\//);
-});
-for(const [game,expected,label] of [[detective,'4 / 4','Cases closed'],[parcel,6,'Depots cleared'],[theatre,6,'Curtain calls']]){
+for(const [game,expected,label] of [[detective,'4 / 4','Cases closed']]){
  test(game.title+' completes its authored campaign through its own game actions',()=>{
    for(const seed of [1,7,23,91]){const g=run(game,seed);g.step(210,true);assert.ok(g.result&&g.result[0]>0);
      assert.equal(g.result[1][0][0],label);if(expected!==null)assert.equal(g.result[1][0][1],expected);else assert.ok(g.result[1][0][1]>30);}

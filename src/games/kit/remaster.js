@@ -20,7 +20,7 @@ export function mountRemaster(id, game, makeShell, cover) {
   root.style.setProperty('--ak-accent', info.accent);
   root.style.setProperty('--ak-bg', info.ground);
   root.dataset.marquee = info.style;
-  let model, runSeed, ended, dpr = 2, stopPreview = () => {}, effectHold = 0, slow = 0;
+  let model, runSeed, ended, dpr = Math.min(2,window.devicePixelRatio || 1), stopPreview = () => {}, effectHold = 0, slow = 0;
   let runGeneration = 0, canvasPointer = null, lastPoint = null;
   const held = new Set(), shake = new Shake({ max:5 }), words = new FloatText(), sparks = new Particles(75);
   const shell = makeShell({
@@ -152,7 +152,7 @@ export function mountRemaster(id, game, makeShell, cover) {
   });
   addEventListener('keyup',e => { if (held.delete(e.code)) model?.key?.('up',e.code,e.timeStamp); });
   addEventListener('blur',release);
-  const loop = createLoop({ paused:() => shell.state !== 'play',
+  const loop = createLoop({ maxFrame:.32, paused:() => shell.state !== 'play',
     update(dt) {
       if (ended) { if (DEMO) start(runSeed); return; }
       if (DEMO) model?.demo?.(dt);
@@ -161,8 +161,8 @@ export function mountRemaster(id, game, makeShell, cover) {
     },
     render(_,dt) {
       if (!model || !live()) return;
-      slow = Math.max(0,slow + (dt > .037 ? 1 : -.3));
-      if (slow > 38 && dpr > 1) { dpr = Math.max(1,dpr - .5); slow = 0; view.resize(); }
+      slow = Math.max(0,slow + (dt > 1/42 ? 1 : -.3));
+      if (slow > 36 && dpr > .75) { dpr = Math.max(.75,dpr - .25); slow = 0; view.resize(); }
       if (effectHold > 0) { effectHold -= dt; return; }
       const ctx = view.begin(); ctx.save(); shake.apply(ctx); model.draw(ctx,view.w,view.h); ctx.restore();
       sparks.draw(ctx); words.draw(ctx);

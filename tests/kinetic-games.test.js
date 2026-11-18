@@ -2,10 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import alibi from '../src/games/inkveil/game.js';
 import { rooms,indexRoom,record,advance,solve,cleared } from '../src/games/inkveil/tape.js';
-import split from '../src/games/prismcourier/game.js';
-import { mirrors,reach,shift } from '../src/games/prismcourier/maze.js';
-import cat from '../src/games/rookery/game.js';
-import { desks,targets,command,paths } from '../src/games/rookery/keys.js';
 import space from '../src/games/tetherturn/game.js';
 import { presets,course,launch,integrate,passage,wreck,reverse,closePass,STEP } from '../src/games/tetherturn/orbit.js';
 
@@ -35,48 +31,6 @@ test('keyboard and touch record the first alibi, recover its diary and unlock th
   }
 });
 
-test('each paired maze has reachable simultaneous docks and the four advanced ones require negative polarity',()=>{
-  for(const [i,room] of mirrors.entries()){
-    const start=[...room.starts,0],all=reach(room,start);assert.ok(all.length>=5,room.name);
-    for(const {state,path} of all.slice(0,5)){
-      assert.ok(path.length>=room.depth);
-      assert.deepEqual(path.reduce((s,a)=>shift(room,s,a),start),state);
-      if(i>=2){assert.ok(path.includes(4));assert.equal(state[2],1);}
-    }
-  }
-});
-
-test('the mirror reverses only on a relay and both controls undo a simultaneous movement',()=>{
-  assert.deepEqual(shift(mirrors[2],[0,24,0],4),[0,24,0]);
-  assert.deepEqual(shift(mirrors[2],[12,24,0],4),[12,24,1]);
-  for(const touch of [true,false]){
-    const g=run(split);if(touch){g.tap(121,415);g.tap(112,459);}else{g.press('ArrowUp');g.press('KeyZ');}
-    assert.deepEqual(g.hud.map(h=>h[3]),[0,1,0]);
-  }
-});
-
-test('every chosen sleep key has a solution, later desks need the call, and polished keys carry momentum',()=>{
-  let slides=0;
-  for(const [i,desk] of desks.entries()){
-    for(const [tile,solution] of targets(desk)){
-      assert.ok(solution?.length,desk.name);
-      const end=solution.reduce((s,a)=>{const n=command(desk.layout,s,a);
-        if(Math.abs(n[1]%5-s[1]%5)+Math.abs(Math.floor(n[1]/5)-Math.floor(s[1]/5))>1)slides++;
-        return n;},desk.start);assert.equal(end[1],tile);
-      if(i>0){assert.ok(solution.includes(4));assert.equal(paths(desk.layout,desk.start,tile,false),null);}
-    }
-  }
-  assert.ok(slides>=4);
-  assert.deepEqual(command(['.....','.#...','.....','.....','.....'],[1,11],4),[1,11]);
-});
-
-test('AGI-1 can nudge her cat to the moon key on touch or keyboard',()=>{
-  for(const touch of [true,false]){
-    const g=run(cat);for(let n=0;n<2;n++){if(touch)g.tap(400,274);else g.press('ArrowRight');}
-    g.tick(1.4);assert.equal(g.hud.at(-1)[1],'2 / 6');
-  }
-});
-
 test('all safe slingshot routes pass the buoy and finish for every allowed course variation',()=>{
   for(const preset of presets)for(const jitter of [-2,-1,0,1,2]){
     const arena=course(preset,jitter),pod=launch(arena,arena.solution,arena.power);let checkpoint=false,win=false;
@@ -101,7 +55,7 @@ test('a pulled sling launches, cancel releases the drag and the keyboard can rec
   g.press('KeyR');g.press('ArrowUp');g.g.key('up','ArrowUp');g.press('Space');assert.equal(g.hud.at(-1)[3],2);
 });
 
-for(const [game,stat,expected] of [[alibi,'Cases recovered',5],[split,'Mirrors reunited',6],[cat,'Catnaps',6],[space,'Circuits docked',6]]){
+for(const [game,stat,expected] of [[alibi,'Cases recovered',5],[space,'Circuits docked',6]]){
  test(game.title+' plays a complete normal demo across fresh seeds and reports one result',()=>{
    for(const seed of [1,7,303]){
      const g=run(game,seed);g.tick(140,true);assert.equal(g.end.length,1,game.title);

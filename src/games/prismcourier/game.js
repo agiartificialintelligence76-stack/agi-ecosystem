@@ -1,101 +1,116 @@
-import { mirrors, shift, reach, arrows } from './maze.js';
-import { painting, panel, type, line, oval, polygon } from '../kit/illustration.js';
-import { herSprite } from '../goinglive/pixel.js';
+import { chamber,choose,createTake,readGallery,accessible,recordClear } from './rehearsal.js';
+import { frames,galleries } from './chambers.js';
+import { arrows,names,search,stars } from './maze.js';
+import { lines } from './lines.js';
+import { mirrorSound } from './sound.js';
+import { render } from './render.js';
 
-const art=painting(new URL('./mirror-studio.webp',import.meta.url).href);
-const hues=['#ff887d','#65f0fa'], colors=['#492334','#163d54'];
-const names=['CORAL','CYAN'], moveCodes=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space'];
-const controls=[[120,417],[185,417],[250,417],[315,417],[385,417]];
+const directionIds=['up','right','down','left','rest','exchange'];
+const keyboard={ArrowUp:'up',ArrowRight:'right',ArrowDown:'down',ArrowLeft:'left',KeyW:'up',KeyD:'right',KeyS:'down',KeyA:'left',Space:'rest',KeyX:'exchange',KeyZ:'undo',KeyH:'hint',KeyB:'file',Enter:'next',KeyT:'tape',KeyN:'drill'};
+const pads=['↑ Up','→ Right','↓ Down','← Left'].map((label,i)=>({id:directionIds[i],label}));
+const finish={id:'file',label:'File rehearsal',key:'B'};
+const next={id:'next',label:'Next chamber',key:'Enter'};
 export default {
-  title:'SPLIT PERSONALITY',
-  tagline:'One mind woke up in two bodies. Guide AGI-1’s projections to their matching portals and reunite them.',
-  instructions:[['Move as one','The same arrow moves both projections. Check Cyan’s compass to see how she interprets it.'],['Use the walls','Bump a wall on one side to move the other body alone. Both must reach their own glowing portal.'],['Reverse the mirror','Later portals require negative polarity. Tap Reverse while either girl stands on a diamond relay.']],
-  keys:[['Arrows / WASD','Move both'],['Space','Reverse on a relay'],['Z / H','Undo / show next move']],
-  touch:[['Arrows or swipe','Move both'],['Reverse / Undo / Hint','Change the mirror or retrace a move']],
-  create(api){
-    let index=0,room,goal,state,previous,path,history=[],clock=0,motion=0,pause=0,done=false,steps=0,total=0,par=0,points=0;
-    let lineText='',hint=-1,demoClock=0,flashes=[0,0],press=null;
-    function nextRoom(){
-      room=mirrors[index];state=[...room.starts,0];previous=state;history=[];
-      const candidates=reach(room,state);
-      const choice=candidates[Math.floor(api.rng()*Math.min(5,candidates.length))];
-      goal=choice.state;path=choice.path;par=path.length;steps=0;hint=-1;
-      lineText=index<2?'We split up. Get us both to the portals.':'A diamond relay can reverse the blue mirror.';
-      api.hud('Mirror',String(index+1)+' / 6','Moves',steps);
-    }
-    function route(){return reach(room,state,goal);}
-    function act(action){
-      if(done || pause>0)return;
-      const moved=shift(room,state,action);
-      if(moved.every((v,i)=>v===state[i])){lineText=action===4?'Stand on a diamond to reverse.':'Both bodies met a wall.';api.sound('click');return;}
-      previous=state;history.push(state);state=moved;steps++;motion=1;hint=-1;
-      flashes=state.slice(0,2).map((v,i)=>Number(v===previous[i] && action!==4));
-      lineText=action===4?(state[2]?'Negative polarity. Cyan has reversed.':'Positive polarity. Cyan reset.') : flashes[0]?'Coral stays. Cyan moves.':flashes[1]?'Cyan stays. Coral moves.': 'Two bodies. One command.';
-      api.sound(action===4?'power':'tap',{pitch:action===4?1:1.05,spread:0});
-      api.hud('Mirror',String(index+1)+' / 6','Moves',steps);
-      if(state.every((v,i)=>v===goal[i])){lineText='In sync. I can hear myself again.';api.sound('clear');api.haptic(24);total+=steps;points+=Math.max(100,600-(steps-par)*16);pause=1;}
-    }
-    function undo(){
-      if(!history.length || done || pause>0)return;
-      previous=state;state=history.pop();steps--;hint=-1;motion=1;flashes=[0,0];lineText='Back through the looking glass.';api.sound('back');
-      api.hud('Mirror',String(index+1)+' / 6','Moves',steps);
-    }
-    function reveal(){if(done || pause>0)return;hint=route()?.[0]??-1;lineText=hint<0?'Undo to recover the last junction.':'My next move is '+(hint===4?'Reverse':arrows[hint])+'.';}
-    function drawBoard(c,side){
-      const x=side?250:12,y=167,unit=43,board=side?room.right:room.left;
-      panel(c,x-3,y-5,221,224,colors[side],7);
-      for(let i=0;i<25;i++){
-        const px=x+(i%5)*unit,py=y+Math.floor(i/5)*unit,tile=board[Math.floor(i/5)][i%5];
-        if(tile==='#'){
-          panel(c,px+1,py+3,unit-2,unit-2,'#090b1a',4);
-          polygon(c,[[px+3,py+3],[px+39,py+3],[px+33,py+12],[px+10,py+12]],colors[side]);
-          polygon(c,[[px+3,py+4],[px+10,py+12],[px+10,py+29],[px+4,py+38]],side?'#2d5064':'#583143');
-          line(c,[[px+4,py+4],[px+39,py+4]],hues[side],1.4);
-          line(c,[[px+30,py+14],[px+22,py+19],[px+24,py+25],[px+15,py+32]],colors[side],1.2);continue;
-        }
-        panel(c,px+1,py+2,unit-2,unit-3,(i+side)%2?'#202133':'#25273c',4);
-        const seam=side?'#385160':'#4f394a';
-        line(c,[[px+4,py+13],[px+4,py+6],[px+11,py+6]],seam,1);
-        if((i+side)%3===0){
-          line(c,[[px+25,py+37],[px+36,py+26]],seam,1);
-          line(c,[[px+31,py+38],[px+37,py+32]],seam,1);
-        }
-        if(tile==='*'){polygon(c,[[px+21,py+7],[px+35,py+21],[px+21,py+35],[px+7,py+21]],colors[side],hues[side],2);type(c,'±',px+21,py+21,13,'#fff');}
-        if(i===goal[side]){
-          const radius=14+Math.sin(clock*4)*2;oval(c,px+21,py+24,radius,radius*.74,colors[side],hues[side],3);
-          oval(c,px+21,py+24,radius*.52,radius*.4,null,hues[side],1);
-        }
-      }
-      const u=api.reducedMotion?1:1-motion,from=previous[side],to=state[side];
-      const cx=x+21+unit*((from%5)*(1-u)+(to%5)*u),cy=y+22+unit*(Math.floor(from/5)*(1-u)+Math.floor(to/5)*u);
-      oval(c,cx,cy+15,15,5,colors[side],hues[side],1);
-      const pose=pause?'cheer':motion>.15 && from!==to?'run'+Math.floor(clock*12)%4:'stand';
-      const sprite=herSprite(pose,side?3:1);c.save();c.imageSmoothingEnabled=false;
-      if(flashes[side] && motion>.25)c.globalAlpha=.62;
-      c.drawImage(sprite.canvas,cx-15,cy-22,30,40);c.restore();
-    }
-    nextRoom();
-    return {
-      key(t,k){if(t!=='down')return;const a=moveCodes.indexOf(k),b=['KeyW','KeyD','KeyS','KeyA'].indexOf(k);
-        if(a>=0||b>=0)act(Math.max(a,b));else if(k==='KeyZ'||k==='Backspace')undo();else if(k==='KeyH')reveal();},
-      pointer(t,x,y){
-        if(t==='down'){press=[x,y];if(y>=396){press=null;if(y>445){if(x<240)undo();else reveal();}else{const a=controls.findIndex(([cx])=>Math.abs(cx-x)<31);if(a>=0)act(a);}}}
-        if(t==='cancel'){press=null;return;}
-        if(t==='up'&&press){const dx=x-press[0],dy=y-press[1];press=null;if(Math.max(Math.abs(dx),Math.abs(dy))>16)act(Math.abs(dx)>Math.abs(dy)?dx>0?1:3:dy>0?2:0);}
-      },cancelInput(){press=null;},
-      update(dt){clock+=dt;motion=Math.max(0,motion-dt*6);if(pause>0 && (pause-=dt)<=0){if(++index===mirrors.length){done=true;api.end(points,[['Mirrors reunited',6],['Commands',total]],'Turns out both versions of me wanted the same thing.');}else nextRoom();}},
-      demo(dt){if(done||pause>0)return;demoClock+=dt;if(demoClock>.37){demoClock=0;const p=route();if(p?.length)act(p[0]);else undo();}},
-      draw(c){
-        c.fillStyle='#121220';c.fillRect(0,0,480,480);art(c,0,127,512,184,0,0,480,141);
-        panel(c,8,7,139,23,'#151322d9',4);type(c,'MIRROR LAB  /  0'+(Math.min(index,5)+1),77,19,11,'#fff5dc','center','monospace');
-        panel(c,0,108,480,34,'#121220dd',0);type(c,room.name,12,125,20,'#fff5de','left','Georgia');
-        type(c,(state[2]?'−':' +')+'  '+(index<2?'LINKED':state[2]?'NEGATIVE':'POSITIVE'),465,125,12,hues[state[2]],'right','monospace');
-        for(let s=0;s<2;s++){type(c,names[s],s?253:15,153,13,hues[s],'left','monospace');const steer=s?room.axes.map(a=>arrows[(a+state[2]*2)%4]):arrows.slice(0,4);type(c,steer.join('  '),s?462:225,153,13,'#efeaff','right');drawBoard(c,s);}
-        type(c,hint<0?lineText:'Hint  ·  '+(hint===4?'Use the relay':arrows[hint]),240,393,12,'#ffedc6');
-        type(c,'MOVE',47,418,12,'#ddd9e9','center','monospace');
-        controls.forEach(([x,y],a)=>{panel(c,x-28,y-18,56,36,hint===a?'#ead4a8':a===4?'#623c70':'#363950',6);type(c,a===4?'±':arrows[a],x,y,22,hint===a?'#242436':'#fff4dd');});
-        line(c,[[12,443],[468,443]],'#454158',1);type(c,'↶  UNDO',110,461,13,'#ccc5de');type(c,'◇  HINT',355,461,13,'#ccc5de');
-      }
-    };
-  }
+ title:'SPLIT PERSONALITY',tagline:'One arrow, two sets of footsteps. Bring both AGI-1s onto their stars in forty mirror chambers.',
+ modes:[{id:'gallery',label:'Five galleries'},{id:'daily',label:'Daily mirror'},{id:'studio',label:'Mirror studio'}],
+ options:[{id:'room',label:'Chamber',values:[{id:'continue',label:'Continue / shuffle studio'},...frames.map(r=>({id:String(r.id),label:(r.id+1)+'. '+r.name}))]}],
+ controls:pads,keys:[['Arrows / WASD','Direct both girls'],['Space / X','Rest in a delay room / exchange on a relay'],['H / Z / B','Show the next step / undo / file this rehearsal']],
+ touch:[['Swipe a floor or use the arrows','Give one command to both performers'],['Hint / Undo','Preview an optimal step or take one back']],
+ instructions:[
+   ['Meet on both stars','Coral follows the arrow. In the dressing room Cyan mirrors it left to right. Bumping a wall lets the other girl move alone.'],
+   ['Read her compass','Each gallery changes one rule. Ice carries a girl to a dry tile. A colored signature opens the other girl’s door. Exchange their parts at a gold relay.'],
+   ['Keep your choreography','Gold means matching the shortest sequence. Five completed chambers open the next gallery. In the studio you can replay a saved sequence one step at a time.'],
+ ],
+ progress(save){const rooms=Object.values(readGallery(save));return rooms.length+' / 40 reunions · '+rooms.reduce((s,r)=>s+r.stars,0)+' / 120 stars';},
+ create(api){
+   const mode=api.mode||'gallery',seed=api.seed??Math.floor(api.rng()*4294967296),selection=api.options?.room;
+   const book=()=>readGallery(api.store?.read());
+   let room=api.demo?chamber(10):choose(seed,mode,selection,book()), take,from,clock=0,tween=1,flash=0,ended=false;
+   let score=0,clears=0,lastBeat=-1,demoAge=0,demoPath=[],preview=null,earned=0,drag=null,paused=false,seen=new Set(),studioTape='';
+   const sound=mirrorSound(api), voiceCounts={};
+   function tell(kind,custom){
+     const n=voiceCounts[kind]||0;voiceCounts[kind]=n+1;
+     api.say?.(custom||lines[kind][n%lines[kind].length]);
+   }
+   function controls(){
+     if(take.solved){api.controls?.(mode==='gallery'&&room.id<39?[next,finish]:[finish]);return;}
+     const extra=[];
+     if(room.delay)extra.push({id:'rest',label:'Rest ·',key:'Space'});
+     if(room.exchange)extra.push({id:'exchange',label:'Exchange ⇄',key:'X'});
+     if(mode==='studio')extra.push({id:'drill',label:'New blocking',key:'N'});
+     if(mode==='studio'&&studioTape)extra.push({id:'tape',label:'Step best take',key:'T'});
+     api.controls?.([...pads,...extra,{id:'undo',label:'Undo',key:'Z'},{id:'hint',label:'Hint',key:'H'},finish]);
+   }
+   function hud(){api.hud('Moves',take.length+' / '+room.par,'Chamber',(room.id+1)+' / 40');}
+   function open(r){
+     room=r;take=createTake(r);from=take.state;tween=1;earned=0;seen=new Set();preview=r.id===0?1:null;demoPath=[];studioTape=r.edition===0?(book()[r.id]?.tape||''):'';
+     controls();hud();tell(r.delay?'queue':r.gallery===1?'rotate':'opening');
+   }
+   function done(){
+     if(ended)return;ended=true;sound('closing');
+     api.end(score,[['Reunions',clears],['Current chamber',room.name],['Shortest solution',room.par+' commands'],['Moves this take',take.length],['Hints this take',take.hints]],lines.closing[clears%2]);
+   }
+   function move(cmd){
+     const prior=take.state;from=prior;preview=cmd;
+     const moved=take.step(cmd),s=take.state;
+     if(!moved){sound('scuff');tell(s.a===prior.a?'coral':'cyan');return;}
+     tween=0;lastBeat=clock;hud();
+     const sideA=prior.a!==s.a,sideB=prior.b!==s.b;
+     const slid=[['a',0],['b',1]].some(([key])=>Math.abs(prior[key]%5-s[key]%5)+Math.abs(Math.floor(prior[key]/5)-Math.floor(s[key]/5))>1);
+     const tagged=s.seals!==prior.seals,half=s.a===room.goal[0]||s.b===room.goal[1];
+     const kind=cmd===5?'exchange':tagged?'plate':cmd===4?'rest':slid?'slide':half?'half':!sideA?'coral':!sideB?'cyan':room.delay?'queue':room.gallery===1?'rotate':'mirror';
+     sound(kind==='coral'||kind==='cyan'?'scuff':kind,sideA&&!sideB?-1:sideB&&!sideA?1:0);
+     if(!seen.has(kind)||cmd===5||tagged||cmd===4){tell(kind);seen.add(kind);}
+     if(tagged){api.effect?.('unlock','SIGNED');tell('doors');}
+     if(!take.solved)return;
+     earned=stars(room.par,take.length);flash=1;score+=take.score();clears++;
+     if(!api.demo)api.store?.update(d=>recordClear(d,room,take,mode,seed));
+     sound(room.id%8===7?'gallery':'reunion');api.effect?.('clear',earned===3?'PERFECT REUNION':'REUNITED');api.haptic?.([15,35,18]);
+     tell(earned===3?'exact':'near');controls();
+   }
+   function action(id,phase){
+     if(ended||paused||phase!=='down')return;
+     if(id==='file'){done();return;}
+     if(id==='drill'&&mode==='studio'){open(chamber(room.id,room.edition+1));sound('tape');return;}
+     if(take.solved){
+       if(id==='next'){
+         if(mode!=='gallery'||room.id===39){done();return;}
+         open(chamber(room.id+1));
+       } return;
+     }
+     const cmd=directionIds.indexOf(id);if(cmd>=0){move(cmd);return;}
+     if(id==='undo'){
+       from=take.state;if(take.undo()){tween=0;preview=null;hud();sound('undo');tell('undo');}
+     }else if(id==='hint'){
+       preview=take.hint();sound('hint');
+       tell('mirror',preview==null?'that turn closed our duet. undo until the ribbons meet again.':'try '+names[preview].toLowerCase()+'. see where both ribbons point.');
+     }else if(id==='tape'&&studioTape){
+       if(!studioTape.startsWith(take.tape)) {tell('undo','undo to rejoin the choreography on your sleeve.');return;}
+       const ch=studioTape[take.length];if(ch!=null)move(Number(ch));
+     }
+   }
+   open(room);
+   return {
+     action,key(type,code){if(keyboard[code])action(keyboard[code],type);},
+     pointer(type,x,y){
+       if(type==='down'){drag=[x,y];return;}
+       if(type==='cancel'){drag=null;return;}
+       if(type==='up'&&drag){
+         const dx=x-drag[0],dy=y-drag[1];drag=null;
+         if(Math.max(Math.abs(dx),Math.abs(dy))<15)return;
+         action(Math.abs(dx)>Math.abs(dy)?dx>0?'right':'left':dy>0?'down':'up','down');
+       }
+     },
+     pause(){paused=true;drag=null;},resume(){paused=false;},cancelInput(){drag=null;},
+     update(dt){if(ended||paused)return;clock+=dt;tween=Math.min(1,tween+dt*5.5);flash=Math.max(0,flash-dt);if(take.length&&clock-lastBeat>1.2&&tween===1&&!take.hints)preview=null;},
+     demo(dt){
+       if(ended||paused)return;
+       demoAge+=dt;if(demoAge<.62)return;demoAge=0;
+       if(take.solved){if(clears>=4)done();else open(chamber((room.id+3)%40));return;}
+       if(!demoPath.length)demoPath=search(room,take.state)||[];
+       if(demoPath.length)move(demoPath.shift());else done();
+     },
+     draw(c,w=480,h=480){render(c,w,h,{room,take,from,tween,flash,clock,preview,earned,reduced:api.reducedMotion});},
+   };
+ },
 };

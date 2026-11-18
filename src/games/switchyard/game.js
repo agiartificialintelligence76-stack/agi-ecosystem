@@ -1,282 +1,567 @@
-import { caption, line, oval, panel, poly, scenery, sprite } from '../kit/field-art.js';
-const world = scenery(new URL('./playfield.webp', import.meta.url));
-const actor = sprite(new URL('./agi.webp', import.meta.url));
-const prop = sprite(new URL('./prop.webp', import.meta.url));
-const depots = [['SHOYU • PIER 1', ['.......', '..#..#.', '.EB..G.', '..#..#.', '.......']], ['MISO • OLD MILL', ['....#..', '.E.#...', '...B.#.', '.##..G.', '.......']], ['GINGER • WEST QUAY', ['..#....', '.B...#.', '.#.#..G', '.E...#.', '...#...']], ['SESAME • NIGHT FERRY', ['.E..#..', '.#.#.G.', '...B.#.', '.##....', '....#..']], ['HOUSE SPECIAL • LAST STOP', ['..G#...', '.#..B#.', '...#...', '.#..#.E', '.......']]];
-const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
-const index = (x, y) => y * 7 + x;
-const at = n => [54 + n % 7 * 47 + Math.floor(n / 7) * 21, 184 - n % 7 * 13 + Math.floor(n / 7) * 35];
-function tile(c, x, y) {
-  const top = [[x - 32, y - 11], [x + 13, y - 23], [x + 32, y + 11], [x - 13, y + 23]];
-  poly(c, [top[2], top[3], [x - 13, y + 29], [x + 32, y + 17]], '#112f32');
-  poly(c, [top[3], top[0], [x - 32, y - 5], [x - 13, y + 29]], '#27454a');
-  poly(c, top, '#355053');
-}
-function track(c, x, y, nx, ny) {
-  const dx = nx - x,
-    dy = ny - y,
-    mag = Math.hypot(dx, dy),
-    sx = -dy / mag,
-    sy = dx / mag;
-  for (let f = .15; f < 1; f += .24) {
-    line(c, [[x + dx * f - sx * 6, y + dy * f - sy * 6], [x + dx * f + sx * 6, y + dy * f + sy * 6]], '#ae8058', 3);
-  }
-  for (const s of [-3.8, 3.8]) line(c, [[x + sx * s, y + sy * s], [nx + sx * s, ny + sy * s]], '#dad1b3', 1.6);
-}
-function move(state, a, rails) {
-  const [p, b, c] = state,
-    px = p % 7,
-    py = Math.floor(p / 7),
-    bx = b % 7,
-    by = Math.floor(b / 7);
-  if (a === 4) return Math.abs(px - bx) + Math.abs(py - by) === 1 ? [p, b, !c] : null;
-  const [dx, dy] = dirs[a],
-    nx = px + dx,
-    ny = py + dy,
-    nb = index(nx, ny),
-    valid = (x, y) => x >= 0 && x < 7 && y >= 0 && y < 5 && rails.has(index(x, y));
-  if (!valid(nx, ny)) return null;
-  if (nb === b) {
-    if (!c || !valid(bx + dx, by + dy)) return null;
-    return [nb, index(bx + dx, by + dy), true];
-  }
-  return [nb, c ? p : b, c];
-}
-function route(start, goal, rails) {
-  const queue = [{
-      s: start,
-      path: []
-    }],
-    seen = new Set([start.join(',')]);
-  for (let i = 0; i < queue.length; i++) {
-    const {
-      s,
-      path
-    } = queue[i];
-    if (s[1] === goal) return path;
-    for (let a = 0; a < 5; a++) {
-      const n = move(s, a, rails);
-      if (!n || seen.has(n.join(','))) continue;
-      seen.add(n.join(','));
-      queue.push({
-        s: n,
-        path: [...path, a]
-      });
-    }
-  }
-  return [];
-}
+import { makeYard, dailyDish, names, plans, lines } from './yards.js';
+import { apply, legal, key, solved, ticketHead, GLYPH, DIRECTION, label, deviceLocked, moveRoute, mirrorAction, opposite } from './rules.js';
+import { search } from './solver.js';
+import { book } from './station-book.js';
+import { medal, mealScore, stations, openLine, accessible, nextStop, stamp } from './progress.js';
+import { geometry, nearest } from './geometry.js';
+import { paint, mapButtons } from './paint.js';
+import { dialogue } from './lines.js';
+import { createWhistle } from './sound.js';
+const button = (id, label, key, extra = {}) => ({
+  id,
+  label,
+  key,
+  ...extra
+});
+const initial = [button('go1', 'Roll east', '→')];
+const codes = ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft'];
+const modeOf = api => api.mode || 'campaign';
 export default {
   title: 'LAST TRAIN TO NOODLES',
-  tagline: 'AGI-1 has a locomotive, a dining car, and one last supper to deliver.',
-  instructions: [['Drive the little engine', 'Move one tile with the arrows, a swipe, or a tap on a neighboring track. Bring AGI-1 alongside the cream dining car.'], ['Work the coupler', 'Space or Coupler joins the two vehicles. Move toward the carriage to push. Move away or turn to pull it around corners. Tap Coupler again to leave it behind.'], ['Serve the platform', 'Leave the dining car on the red bowl. Short routes earn extra tips. Undo rewinds one move. Deliver five bowls before the night service ends.']],
-  keys: [['Arrows / WASD', 'Drive one tile'], ['Space', 'Couple / let go'], ['Z', 'Undo']],
-  touch: [['Tap a rail / swipe', 'Drive one tile'], ['Coupler / Undo', 'Operate the engine']],
+  tagline: 'AGI-1 has a tiny switch engine and two hungry kitchens. Assemble the wagons in ticket order.',
+  modes: [{
+    id: 'campaign',
+    label: 'Station pass'
+  }, {
+    id: 'daily',
+    label: 'Daily dish'
+  }, {
+    id: 'sandbox',
+    label: 'Replay your yards'
+  }],
+  controls: initial,
+  instructions: [['Work the engine', 'Couple beside a wagon. Drive into the linked end to push, or move away to pull. Tap a mint berth or use the arrows.'], ['Read the tickets', 'Deliver the pictured ingredients left to right to kitchen A or B. Only the farthest coupled car can leave the train. Drop tail to stage a wagon.'], ['Change the rails', 'Throw a point before moving onto it. A bridge rotates only when no link spans it. Striped berths admit the engine alone.'], ['Stamp a pass', 'Earn a star for serving, two within two shunts of par and three at par. Four of six yards open the next line. Clear all six for its cab pennant.']],
+  keys: [['Arrow keys / WASD', 'Roll a single berth'], ['Space / C / V', 'Couple an adjacent wagon / cycle coupling target / drop tail'], ['1 / 2 or T / O', 'Operate the first or second lever'], ['Z / H / R', 'Undo / dispatch hint / restart yard'], ['B / X', 'Station pass / file the finished shift']],
+  touch: [['Berth or ingredient', 'Tap a mint berth to roll. Tap an adjacent loose wagon to couple it.'], ['Distant berth', 'Tap to preview a route, then tap it again to run.'], ['Signal box', 'Use the dock for links, levers, undo and dispatch. Your pass contains the other yards.']],
+  progress(data) {
+    const r = stations(data),
+      n = Object.keys(r).length;
+    return n ? n + ' of 36 station tickets punched.' : '';
+  },
   create(api) {
-    const flipped = depots.map(() => api.rng() > .5);
-    let stage = 0,
-      t = 0,
-      clock = 112,
-      score = 0,
-      tips = 0,
-      ended = false,
-      delay = 0,
-      auto = 0,
-      flash = 0,
-      notice = '',
-      rails,
-      goal,
+    const seed = api.seed ?? Math.floor((api.rng?.() ?? .5) * 0xffffffff),
+      mode = modeOf(api),
+      audio = createWhistle(api.audio),
+      say = dialogue(),
+      totals = new Map();
+    let records = {
+        ...stations(api.store?.read?.())
+      },
+      yard,
       state,
-      history,
-      par,
-      moves,
-      facing = 1,
-      oldPos,
-      oldCar,
-      anim = 1,
-      startTap = null;
-    function setup() {
-      const rows = depots[stage][1].map(row => flipped[stage] ? [...row].reverse().join('') : row);
-      rails = new Set();
-      let p, b;
-      rows.forEach((r, y) => [...r].forEach((c, x) => {
-        const n = index(x, y);
-        if (c !== '#') rails.add(n);
-        if (c === 'E') p = n;
-        if (c === 'B') b = n;
-        if (c === 'G') goal = n;
+      prev,
+      age,
+      time = 0,
+      hist,
+      plan,
+      queue = [],
+      queueDelay = 0,
+      mark,
+      face = 1,
+      afford,
+      menu,
+      searching,
+      guide;
+    let touchStart = null,
+      pick = 0,
+      page = 0,
+      map = false,
+      done = false,
+      ended = false,
+      paused = false,
+      steps = 0,
+      stars = 0,
+      lineText = '',
+      demoWait = .7,
+      served = 0,
+      hints = 0,
+      selected = 0,
+      lastDemo = -1;
+    const allowed = id => accessible(records, id, mode),
+      speak = e => api.say?.(say(e));
+    function dock() {
+      if (map) {
+        const items = [button('prevline', '‹ Line', '['), button('nextline', 'Line ›', ']'), button('prevstop', '‹ Yard', '←'), button('nextstop', 'Yard ›', '→'), button('choose', 'Enter yard', 'Enter', {
+          disabled: !allowed(pick)
+        }), button('pass', 'Back to rails', 'B')];
+        if (!done) items.push(button('reset', 'Restart yard', 'R'));
+        if (totals.size) items.push(button('file', 'File shift', 'X'));
+        api.controls?.(items);
+        return;
+      }
+      if (done) {
+        const items = [button('next', mode === 'daily' ? 'File daily ticket' : 'Next yard', 'Enter'), button('again', 'Retry for par', 'R'), button('file', 'File shift', 'X')];
+        if (mode !== 'daily') items.push(button('pass', 'Station pass', 'B'));
+        api.controls?.(items);
+        return;
+      }
+      const items = menu.filter(a => a < 4).map(a => button('go' + a, 'Roll ' + DIRECTION[a], GLYPH[a]));
+      const links = menu.filter(a => a >= 4 && a < 8);
+      for (const a of links) {
+        const end = state.chain.length ? state.cars[state.chain.at(-1)] : state.e;
+        const i = state.cars.indexOf(yard.points[end].links[a - 4]);
+        items.push(button('link' + a, 'Couple ' + names[yard.dish[i]].toLowerCase(), a === links[selected % links.length] ? 'Space' : GLYPH[a - 4]));
+      }
+      if (state.chain.length) items.push(button('drop', 'Drop tail', 'V'));
+      for (const [i, d] of yard.devices.entries()) items.push(button('dev' + i, d.type === '%' ? 'Turn bridge' : 'Point ' + (i + 1), i + 1 + '', {
+        disabled: deviceLocked(yard, state, i)
       }));
-      state = [p, b, false];
-      history = [];
-      par = route(state, goal, rails).length;
-      moves = 0;
-      oldPos = p;
-      oldCar = b;
-      anim = 1;
-      notice = 'COUPLE THE DINING CAR';
-      flash = 2.3;
+      items.push(button('undo', 'Undo', 'Z', {
+        disabled: !hist.length
+      }), button('hint', 'Hint', 'H'));
+      if (mode !== 'daily') items.push(button('pass', 'Pass', 'B'));
+      api.controls?.(items);
+    }
+    function refresh() {
+      menu = legal(yard, state).map(([a]) => a);
+      afford = menu.filter(a => a < 4);
+      api.hud?.('Shunts', steps + ' / ' + book[yard.id].length, 'Yard', String(yard.id + 1).padStart(2, '0') + ' / 36');
+      dock();
+    }
+    function load(y, reason) {
+      touchStart = null;
+      yard = y;
+      state = y.start;
+      prev = state;
+      hist = [];
+      plan = mark = searching = null;
+      queue = [];
+      age = 2;
+      steps = stars = 0;
+      done = map = false;
+      face = y.mirror & 1 ? -1 : 1;
+      selected = 0;
+      guide = new Map();
+      let s = y.start;
+      const witness = [...book[y.id]].map(c => mirrorAction(parseInt(c, 16), y.mirror));
+      for (const a of witness) {
+        guide.set(key(y, s), a);
+        s = apply(y, s, a);
+        if (!s) throw Error('Invalid rail certificate for ' + y.name);
+      }
+      pick = y.id;
+      page = y.line;
+      lineText = y.tip;
+      refresh();
+      speak(reason || (mode === 'daily' ? 'daily' : y.windows.length > 1 ? 'twin' : 'start'));
     }
     function finish() {
       if (ended) return;
       ended = true;
-      api.end(score, [['Suppers delivered', stage + '/5'], ['Shortest routes', tips]], stage === 5 ? 'last train, hot noodles. we did it.' : 'keep the stove warm for me.');
+      audio.stop();
+      const score = [...totals.values()].reduce((a, b) => a + b, 0);
+      api.end?.(score, [['Tickets punched', totals.size], ['Ingredients served', served], ['Last yard', yard.name], ['Station stars', '★'.repeat(stars) || '—'], ['Dispatch hints', hints]], say(mode === 'daily' ? 'daily' : 'complete'));
     }
-    function action(a) {
-      if (ended || delay > 0) return;
-      if (a === 5) {
-        if (!history.length) return;
-        oldPos = state[0];
-        oldCar = state[1];
-        anim = 0;
-        state = history.pop();
-        moves--;
-        api.sound('back');
-        return;
-      }
-      const next = move(state, a, rails);
+    function earn() {
+      done = true;
+      stars = medal(steps, book[yard.id].length);
+      if (mode !== 'daily') records[yard.id] = Math.min(records[yard.id] ?? Infinity, steps);
+      stamp(api.store, yard, steps, book[yard.id].length, mode, seed);
+      totals.set(yard.id, Math.max(totals.get(yard.id) || 0, mealScore(steps, book[yard.id].length)));
+      const complete = Array.from({
+        length: 6
+      }, (_, i) => records[yard.line * 6 + i]).every(Boolean);
+      audio.ring('chord');
+      speak(complete ? 'line' : stars === 3 ? 'par' : 'complete');
+      api.effect?.('clear');
+      api.haptic?.(35);
+      lineText = 'Ticket punched';
+      queue = [];
+    }
+    function execute(a) {
+      if (done || map || ended) return false;
+      const next = apply(yard, state, a);
+      searching = null;
+      plan = null;
       if (!next) {
-        notice = a === 4 ? 'PULL BESIDE THE DINER' : 'TRACK BLOCKED';
-        flash = .7;
-        api.sound('tap');
+        const locked = a >= 9 && deviceLocked(yard, state, a - 9);
+        lineText = locked ? 'Clear the wheels from the lever.' : a >= 4 ? 'Move the free end beside a loose wagon.' : 'Buffer stop. Try another track or uncouple.';
+        audio.ring('buffer');
+        speak(locked ? 'occupied' : state.chain.length ? 'short' : 'buffer');
+        queue = [];
+        return false;
+      }
+      const before = state;
+      hist.push(before);
+      prev = before;
+      state = next;
+      age = 0;
+      steps++;
+      selected = 0;
+      if (a < 4) {
+        const reverse = a === opposite(before.h);
+        if (a === 1 || a === 3) face = a === 1 ? 1 : -1;
+        const isFrog = yard.points[next.e].dev >= 0;
+        audio.ring(isFrog ? 'frog' : reverse ? 'reverse' : 'roll');
+        if (reverse && steps % 3 === 0) speak('reverse');
+        const selected = state.cars.findIndex((pos, i) => pos >= 0 && yard.windows.includes(pos) && (yard.kitchen[i] !== yard.windows.indexOf(pos) || yard.dish[ticketHead(yard, state, yard.kitchen[i])] !== yard.dish[i]));
+        if (selected >= 0) {
+          lineText = names[yard.dish[selected]] + ' is waiting at the wrong window or in the wrong order.';
+          speak('wrong');
+        } else lineText = yard.tip;
+      } else if (a < 8) {
+        audio.ring('couple');
+        api.haptic?.(12);
+        speak('couple');
+        lineText = state.chain.length + ' linked. Roll toward the wagons to push or away to pull.';
+      } else if (a === 8) {
+        audio.ring('release');
+        speak('uncouple');
+        lineText = 'Tail wagon parked. The engine can run around it.';
+      } else {
+        const d = yard.devices[a - 9];
+        audio.ring(d.type === '%' ? 'bridge' : 'points');
+        speak(d.type === '%' ? 'bridge' : 'points');
+        lineText = d.type === '%' ? 'Bridge rotated a quarter turn.' : 'The mint turnout rail is lined.';
+      }
+      const id = next.cars.findIndex((v, i) => v < 0 && before.cars[i] >= 0);
+      if (id >= 0) {
+        served++;
+        mark = {
+          node: yard.windows[yard.kitchen[id]],
+          t: 1.4
+        };
+        audio.ring('bell');
+        audio.ring('pour');
+        audio.ring('route');
+        api.effect?.('serve');
+        speak('served');
+        lineText = names[yard.dish[id]] + ' delivered to kitchen ' + String.fromCharCode(65 + yard.kitchen[id]) + '.';
+      }
+      if (solved(next)) earn();
+      refresh();
+      return true;
+    }
+    function undo() {
+      queue = [];
+      plan = searching = null;
+      if (!hist.length || done) return;
+      prev = state;
+      state = hist.pop();
+      served -= state.cars.filter(p => p >= 0).length - prev.cars.filter(p => p >= 0).length;
+      steps--;
+      age = 0;
+      mark = null;
+      speak('undo');
+      audio.ring('release');
+      lineText = 'One operating action rewound.';
+      refresh();
+    }
+    function advise(a) {
+      if (a === undefined) {
+        lineText = 'No route from here. Undo a shunt or restart from your pass.';
+        speak('reset');
         return;
       }
-      oldPos = state[0];
-      oldCar = state[1];
-      anim = 0;
-      history.push(state);
-      state = next;
-      moves++;
-      if (a === 1 || a === 3) facing = a === 1 ? 1 : -1;
-      api.sound(a === 4 ? 'merge' : 'tick');
-      if (a === 4) {
-        notice = state[2] ? 'COUPLED • PUSH OR PULL' : 'COUPLER OPEN';
-        flash = 1.2;
-      }
-      if (state[1] === goal) {
-        tips += Number(moves <= par);
-        score += Math.max(150, 530 - (moves - par) * 19);
-        notice = moves <= par ? 'SERVED • CHEF’S TIP!' : 'HOT SUPPER SERVED';
-        flash = 1.3;
-        delay = 1.1;
-        api.sound('clear');
-        api.haptic(18);
-      }
+      lineText = 'Dispatch hint · ' + label(yard, state, a) + '.';
+      speak('hint');
+      audio.ring('route');
     }
-    setup();
+    function hint() {
+      hints++;
+      queue = [];
+      const a = guide.get(key(yard, state));
+      if (a !== undefined) {
+        advise(a);
+        return;
+      }
+      searching = search(yard, state, 220000);
+      lineText = 'Dispatch is tracing the sidings…';
+    }
+    function act(id) {
+      if (ended || paused) return;
+      if (id === 'file' && (done || totals.size)) {
+        finish();
+        return;
+      }
+      if (id === 'pass' && mode !== 'daily') {
+        queue = [];
+        searching = null;
+        map = !map;
+        if (map) {
+          page = yard.line;
+          pick = yard.id;
+          speak('select');
+        }
+        dock();
+        return;
+      }
+      if (map) {
+        if (id === 'prevline' || id === 'nextline') {
+          page = (page + (id === 'prevline' ? 5 : 1)) % 6;
+          pick = page * 6;
+        } else if (id === 'prevstop' || id === 'nextstop') {
+          pick = page * 6 + (pick % 6 + (id === 'prevstop' ? 5 : 1)) % 6;
+        } else if (id === 'choose' && allowed(pick)) {
+          load(makeYard(pick), 'replay');
+          return;
+        } else if (id === 'reset') {
+          load(yard, 'reset');
+          return;
+        }
+        dock();
+        return;
+      }
+      if (done) {
+        if (id === 'again' || id === 'reset') {
+          load(yard, 'replay');
+          return;
+        }
+        if (id === 'next') {
+          if (mode === 'daily') finish();else if (mode === 'sandbox') {
+            map = true;
+            dock();
+          } else load(makeYard(nextStop(records, yard.id)));
+        }
+        return;
+      }
+      queue = [];
+      if (id === 'reset') {
+        load(yard, 'reset');
+        return;
+      }
+      if (id === 'undo') {
+        undo();
+        return;
+      }
+      if (id === 'hint') {
+        hint();
+        return;
+      }
+      if (id === 'cycle') {
+        const links = menu.filter(a => a >= 4 && a < 8);
+        if (links.length) {
+          selected++;
+          lineText = 'Coupler aimed ' + DIRECTION[links[selected % links.length] - 4] + '.';
+          dock();
+        }
+        return;
+      }
+      if (id === 'couple') {
+        const links = menu.filter(a => a >= 4 && a < 8);
+        if (links.length) execute(links[selected % links.length]);else if (state.chain.length) execute(8);else execute(4);
+        return;
+      }
+      if (id === 'drop') execute(8);else if (id.startsWith('go')) execute(+id.slice(2));else if (id.startsWith('link')) execute(+id.slice(4));else if (id.startsWith('dev') && yard.devices[+id.slice(3)]) execute(9 + Number(id.slice(3)));
+    }
+    const initialId = api.demo ? 19 : mode === 'sandbox' ? 0 : nextStop(records, api.store?.read?.().noodleRail?.lastYard ?? 35);
+    load(mode === 'daily' ? dailyDish(seed) : makeYard(initialId));
+    if (mode === 'sandbox') {
+      map = true;
+      dock();
+    }
     return {
-      key(type, k) {
-        if (type !== 'down') return;
-        const a = ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Space', 'KeyZ'].indexOf(k);
-        const wasd = ['KeyW', 'KeyD', 'KeyS', 'KeyA'].indexOf(k);
-        if (a >= 0 || wasd >= 0) action(a >= 0 ? a : wasd);
+      action(id, phase) {
+        if (phase === 'down') act(id);
       },
-      pointer(type, x, y) {
+      key(phase, code) {
+        if (phase !== 'down') return;
+        const d = codes.indexOf(code);
+        const ids = {
+          KeyW: 'go0',
+          KeyD: 'go1',
+          KeyS: 'go2',
+          KeyA: 'go3',
+          Space: 'couple',
+          KeyC: 'cycle',
+          KeyV: 'drop',
+          KeyT: 'dev0',
+          KeyO: 'dev1',
+          Digit1: 'dev0',
+          Digit2: 'dev1',
+          KeyH: 'hint',
+          KeyZ: 'undo',
+          Backspace: 'undo',
+          KeyR: 'reset',
+          KeyX: 'file',
+          KeyB: 'pass',
+          BracketLeft: 'prevline',
+          BracketRight: 'nextline',
+          Enter: map ? 'choose' : 'next'
+        };
+        act(map && d >= 0 ? d === 0 ? 'prevline' : d === 2 ? 'nextline' : d === 1 ? 'nextstop' : 'prevstop' : d >= 0 ? 'go' + d : ids[code] || 'none');
+      },
+      pointer(type, x, y, w, h) {
+        if (ended || paused) return;
         if (type === 'cancel') {
-          startTap = null;
+          touchStart = null;
           return;
         }
         if (type === 'down') {
-          startTap = [x, y];
+          touchStart = {
+            x,
+            y
+          };
           return;
         }
-        if (type !== 'up' || !startTap) return;
-        let dx = x - startTap[0],
-          dy = y - startTap[1];
-        startTap = null;
-        if (y > 398 && Math.hypot(dx, dy) < 18) {
-          action(x < 140 ? 5 : 4);
+        if (!touchStart) return;
+        if (Math.hypot(x - touchStart.x, y - touchStart.y) > 14) {
+          touchStart = null;
           return;
         }
-        if (Math.hypot(dx, dy) < 18) {
-          const [px, py] = at(state[0]),
-            u = x - px,
-            v = y - py;
-          dx = (35 * u - 21 * v) / 1918;
-          dy = (13 * u + 47 * v) / 1918;
-          if (Math.max(Math.abs(dx), Math.abs(dy)) > .35) action(Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 1 : 3 : dy > 0 ? 2 : 0);
+        if (type !== 'up') return;
+        touchStart = null;
+        if (map) {
+          const i = mapButtons(w, h).findIndex(b => x >= b.x && x <= b.x + b.w && y >= b.y && y <= b.y + b.h);
+          if (i >= 0) {
+            pick = page * 6 + i;
+            if (allowed(pick)) act('choose');else {
+              lineText = 'Punch four tickets on the preceding line.';
+              api.say?.(lineText);
+              dock();
+            }
+          }
           return;
         }
-        if (Math.max(Math.abs(dx), Math.abs(dy)) > 13) action(Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 1 : 3 : dy > 0 ? 2 : 0);
-      },
-      demo(dt) {
-        auto -= dt;
-        if (auto <= 0 && delay <= 0) {
-          const steps = route(state, goal, rails);
-          if (steps.length) action(steps[0]);
-          auto = .39;
+        if (done) return;
+        const g = geometry(yard, w, h),
+          at = nearest(yard, g, x, y);
+        if (at < 0) return;
+        const tail = state.chain.length ? state.cars[state.chain.at(-1)] : state.e;
+        const link = yard.points[tail].links.indexOf(at) + 4;
+        if (link >= 4 && menu.includes(link)) {
+          act('link' + link);
+          return;
         }
+        const direct = yard.points[state.e].links.indexOf(at);
+        if (direct >= 0 && menu.includes(direct)) {
+          act('go' + direct);
+          return;
+        }
+        if (plan?.at === at) {
+          queue = [...plan.path];
+          queueDelay = 0;
+          plan = null;
+          audio.ring('route');
+          return;
+        }
+        const route = moveRoute(yard, state, at);
+        if (route?.length) {
+          plan = {
+            at,
+            path: route
+          };
+          lineText = 'Tap again to roll ' + route.length + ' berths.';
+          return;
+        }
+        if (yard.points[at].dev >= 0) act('dev' + yard.points[at].dev);
       },
       update(dt) {
-        if (ended) return;
-        t += dt;
-        clock -= dt;
-        flash -= dt;
-        anim = Math.min(1, anim + dt * 6);
-        if (delay > 0) {
-          delay -= dt;
-          if (delay <= 0) {
-            stage++;
-            if (stage === 5) {
-              finish();
-              return;
-            }
-            setup();
+        if (ended || paused) return;
+        time += dt;
+        age += dt;
+        if (mark) mark.t = Math.max(0, mark.t - dt);
+        if (searching) {
+          const r = searching.next();
+          if (r.done) {
+            searching = null;
+            if (r.value.path) {
+              let t = state;
+              for (const a of r.value.path) {
+                guide.set(key(yard, t), a);
+                t = apply(yard, t, a);
+              }
+              advise(r.value.path[0]);
+            } else if (!r.value.complete) {
+              lineText = 'Dispatch suggests winding back to a stamped shunt.';
+              speak('undo');
+            } else advise();
           }
         }
-        if (clock <= 0) finish();
-        api.hud('Tips', score, 'Service', Math.min(5, stage + 1) + '/5');
+        if (queue.length) {
+          queueDelay -= dt;
+          if (queueDelay <= 0) {
+            const a = queue.shift();
+            execute(a);
+            queueDelay = .20;
+          }
+        }
       },
-      draw(c) {
-        world(c);
-        if (ended) return;
-        const elevation = [...rails].sort((a, b) => at(a)[1] - at(b)[1]);
-        for (const n of elevation) {
-          const [x, y] = at(n);
-          tile(c, x, y);
-        }
-        for (const n of rails) {
-          const [x, y] = at(n);
-          for (const offset of [1, 7]) {
-            if (offset === 1 && n % 7 === 6 || !rails.has(n + offset)) continue;
-            track(c, x, y, ...at(n + offset));
+      demo(dt) {
+        if (ended || paused) return;
+        demoWait -= dt;
+        if (demoWait > 0) return;
+        demoWait = .60;
+        if (done) {
+          if (lastDemo !== yard.id) {
+            lastDemo = yard.id;
+            demoWait = 1.55;
+            return;
           }
+          load(makeYard((yard.id + 1) % 36));
+          return;
         }
-        for (const n of rails) {
-          const [x, y] = at(n);
-          oval(c, x, y, 2.4, 1.8, '#e8c78d');
+        if (map) {
+          map = false;
+          dock();
         }
-        const [gx, gy] = at(goal);
-        oval(c, gx, gy, 21 + 2 * Math.sin(t * 4), 18, null, '#ff9f6a', 3);
-        caption(c, '♨', gx, gy - 1, '#ffd99f', 26);
-        function lerp(a, b) {
-          const A = at(a),
-            B = at(b);
-          return [A[0] + (B[0] - A[0]) * anim, A[1] + (B[1] - A[1]) * anim];
-        }
-        const [ex, ey] = lerp(oldPos, state[0]),
-          [bx, by] = lerp(oldCar, state[1]);
-        if (state[2]) line(c, [[ex, ey], [bx, by]], '#ffe393', 5);
-        if (!prop(c, bx - 29, by - 30, 58, 42)) {
-          panel(c, bx - 24, by - 15, 48, 29, '#e5c78e', 6);
-          panel(c, bx - 23, by - 15, 46, 6, '#bf503c', 2);
-          for (const q of [-13, 0, 13]) panel(c, bx + q - 4, by - 6, 8, 9, '#4a545b', 2);
-          caption(c, '♨', bx, by + 2, '#fffbdb', 16);
-          oval(c, bx - 14, by + 14, 4, 4, '#172126');
-          oval(c, bx + 14, by + 14, 4, 4, '#172126');
-        }
-        c.save();
-        c.translate(ex, ey);
-        c.scale(facing, 1);
-        actor(c, -32, -46 + Math.sin(t * 9) * .7, 65, 65);
-        c.restore();
-        panel(c, 14, 12, 452, 44, '#102d30', 3);
-        caption(c, depots[stage][0], 26, 34, '#ffdaa1', 16, 'left');
-        caption(c, Math.ceil(clock) + 's', 449, 34, '#fff1d5', 17, 'right');
-        caption(c, flash > 0 ? notice : 'MOVES ' + moves + '   /   CHEF’S PAR ' + par, 240, 383, '#fff7cc', 15);
-        panel(c, 16, 408, 112, 52, '#244549', 4);
-        caption(c, '↶ UNDO', 72, 434, '#f9dfad', 16);
-        panel(c, 139, 408, 325, 52, state[2] ? '#eac88a' : '#b24e3c', 4);
-        caption(c, state[2] ? 'RELEASE COUPLER' : 'CLOSE COUPLER', 301, 434, state[2] ? '#263f42' : '#fff2ce', 18);
+        const a = guide.get(key(yard, state));
+        if (a !== undefined) execute(a);
+      },
+      draw(c, w, h) {
+        paint(c, w, h, {
+          yard,
+          state,
+          prev,
+          age,
+          time: api.reducedMotion ? 0 : time,
+          face,
+          plan,
+          afford,
+          mark,
+          done,
+          moves: steps,
+          par: book[yard.id].length,
+          records,
+          map,
+          pick,
+          page,
+          allowed,
+          plans,
+          book,
+          message: lineText,
+          stars,
+          reduced: api.reducedMotion,
+          livery: lines.reduce((last, _, i) => Array.from({
+            length: 6
+          }, (_, j) => !!records[i * 6 + j]).every(Boolean) ? i : last, -1)
+        });
+      },
+      pause() {
+        paused = true;
+        touchStart = null;
+        queue = [];
+        plan = null;
+        audio.stop();
+      },
+      resume() {
+        paused = false;
+      },
+      cancelInput() {
+        touchStart = null;
+        queue = [];
+      },
+      dispose() {
+        ended = true;
+        queue = [];
+        searching = null;
+        audio.stop();
+      },
+      inspect() {
+        return {
+          yard: yard.id,
+          state,
+          steps,
+          done,
+          stars,
+          menu,
+          mode,
+          map,
+          guide: guide.get(key(yard, state)),
+          lineText,
+          ended,
+          records
+        };
       }
     };
   }

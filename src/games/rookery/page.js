@@ -1,6 +1,6 @@
 import '../intro.js';
 import { createShell } from '../kit/shell.js';
-import { mountCartridge } from '../kit/cartridge.js';
+import { mountRemaster } from '../kit/remaster.js';
 import game from './game.js';
 
-mountCartridge('rookery', game, (options) => createShell({ game: 'rookery', ...options }), new URL('./catnap-desk.webp', import.meta.url).href);
+mountRemaster('rookery', game, (options) => createShell({ game: 'rookery', ...options }), new URL('./catnap-desk.webp', import.meta.url).href);
