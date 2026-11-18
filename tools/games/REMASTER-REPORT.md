@@ -178,3 +178,5 @@ newcomer · solved 432/504 · season median 48.5 min · scene P50/P90 73/104 s �
 regular · solved 504/504 · season median 33.8 min · scene P50/P90 46/76 s · score P10/50/90 720/960/1060 · attempts 1 · ink above par P50/P90 0/1 · rejected timing/ink 73/63
 expert · solved 504/504 · season median 20.9 min · scene P50/P90 30/46 s · score P10/50/90 930/1000/1070 · attempts 1 · ink above par P50/P90 0/0 · rejected timing/ink 0/0
 ```
+
+Grid release verification used a clean Node 24 build in UTC. The full suite passed 2,337 tests with six existing skips. On the built pages all five games started, accepted input and reached scored results on phone and desktop. Pause, resume and replay worked. The sideways phone, foldable and large desktop checks found no layout or CSP violations across the five games. The linked contact sheets show the actual title, play and result screens.
