@@ -1,180 +1,109 @@
-import { workshop } from './workshop.js';
-import { TAU } from '../kit/fx.js';
+import { painting, oval, panel, type, line } from '../kit/illustration.js';
 
-const IRON = '#ff9659', BRASS = '#f8dc78', STEEL = '#a4ece6';
-const ORDERS = [
-  ['Bell tongue', 82, '0.1.0.1.001.0.1.'],
-  ['Lantern hook', 90, '0.1.00.1.10.0.1.'],
-  ['Star compass', 98, '0.1.010.11.01.0.'],
-  ['Music box', 106, '00.101.01.10.101'],
-  ['Golden orrery', 112, '0.1011.001.10101'],
+const singer=painting(new URL('./nightclub.webp',import.meta.url).href);
+export const songs=[
+  {name:'Velvet Hello',bpm:86,beats:4,notes:[[0,0],[1,1],[2,2]],lyric:['Stay','with','me'],root:261.63},
+  {name:'Lavender Radio',bpm:94,beats:4,notes:[[0,1],[.75,2],[1.5,1],[3,0]],lyric:['On','the','air','now'],root:246.94},
+  {name:'After the Rain',bpm:94,beats:5,notes:[[0,2],[1,1],[2.5,0],[3.25,1],[4,2]],lyric:['Can','you','hear','me','now'],root:293.66},
+  {name:'Borrowed Starlight',bpm:102,beats:5,notes:[[0,0],[.5,0],[1.5,2],[2,1],[3,0],[4,2]],lyric:['Take','my','hand','and','stay','close'],root:261.63},
+  {name:'One More Chorus',bpm:106,beats:6,notes:[[0,2],[.75,1],[1.5,0],[2.25,1],[3,2],[4,0],[5,1]],lyric:['Meet','me','where','the','lights','go','low'],root:293.66},
 ];
-const targetX = 106, tracks = [272, 330], pxPerBeat = 76;
-function polygon(ctx, points, fill) {
-  ctx.fillStyle = fill;
-  ctx.beginPath(); points.forEach(([x,y], i) => i ? ctx.lineTo(x,y) : ctx.moveTo(x,y)); ctx.closePath(); ctx.fill();
-}
-function text(ctx, words, x, y, size, color, align = 'left') {
-  ctx.font = `bold ${size}px "AK Mono", monospace`; ctx.textAlign = align; ctx.fillStyle = color; ctx.fillText(words, x, y);
-}
-function disc(ctx, x, y, r, color) {
-  ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x,y,r,0,TAU); ctx.fill();
-}
-function mark(ctx, lane, x, y, size, fill) {
-  if (lane === 0) polygon(ctx, [[x,y-size],[x+size,y],[x,y+size],[x-size,y]], fill);
-  else disc(ctx, x, y, size * .9, fill);
-}
+const hues=['#ff9798','#ffdb7a','#b8a9ff'], labels=['LOW','MID','HIGH'];
+const padX=[21,169,317], keyLabels=['A','S','D'];
+export function answerPitch(note,harmony){return (note+Number(harmony))%3;}
+const pitchRatio=[1,1.259921,1.498307];
 export default {
-  title: 'ECHO FORGE',
-  tagline: 'Two hammers. Five commissions. Draw out the glowing notes, then quench the metal at its tempering point.',
-  instructions: [
-    ['Read the score', 'Marks travel left. Strike when their centers reach the white line.'],
-    ['Pick the hammer', 'Copper strikes diamonds. Brass strikes circles. Hold a long bar until its tail reaches the line, then release.'],
-    ['Finish the order', 'Each hit heats the work. Quench in the gold band for a tempered piece. At full heat, dunk the hammers to keep striking.'],
-  ],
-  keys: [['A / ←', 'Copper hammer'], ['L / →', 'Brass hammer'], ['Space / Q', 'Quench']],
-  touch: [['Tap or hold a metal pad', 'Strike or draw a long note'], ['Tap Quench', 'Temper and cool']],
-  create(api) {
-    let order = 0, beat, notes, hit, score = 0, combo = 0, best = 0, perfect = 0, time = 0;
-    let sparks = [], swing = [0,0], feedback, feedbackTime, finishDelay = 0, ended = false, cleared = 0;
-    let heat=24, tempered=0, longHits=0, steam=0, locked=false, holding=null, pointerLane=null;
-    function quench() {
-      if (ended || finishDelay>0 || steam>.6) return;
-      if (heat>=62 && heat<=86) {
-        tempered++; score+=95+combo*6; feedback='Tempered!'; api.sound('clear');api.haptic(20);
-      } else {feedback=locked?'Hammers cooled':'Cold quench'; combo=0;api.sound('drop');}
-      feedbackTime=.85;steam=1;heat=18;locked=false;
-      api.hud('Score',score,'Order',`${order+1}/${ORDERS.length}`);
+  title:'DUET AFTER DARK',
+  tagline:'Step up to AGI-1’s microphone. Listen to her phrase, sing it back, or take the harmony part.',
+  instructions:[['Let her sing','AGI-1 sings a short line. Watch the three pitches and read the syllables on her score.'],['Answer on your cue','When the record turns to YOU, strike the same pads in time. The moving light follows the beat.'],['Take the harmony','Shift each note one pad right, wrapping High back to Low. On this part she sings along with you, and the reply sheet shows just the rhythm.']],
+  keys:[['A / S / D','Low / Mid / High'],['Space','Echo or harmony'],['R','Hear this line again']],
+  touch:[['Tap the three keys','Play your part'],['Tap Echo / Harmony or Replay','Change part or rehearse']],
+  create(api){
+    let song=0,s,beat,called=0,graded,part=false,hits=0,points=0,clear=0,duets=0,perfect=0,attemptPoints=0;
+    let clock=0,lastTick=-1,spot=[0,0,0],word='',message='',after=0,passed=false,ended=false,portraitPulse=0,trackBest=0;
+    function begin(){s=songs[song];beat=-1;called=0;graded=s.notes.map(()=>null);hits=0;attemptPoints=0;lastTick=-1;trackBest=api.personalBest?.('take-'+song)??0;
+      message='Listen to my line.';word='';after=0;passed=false;api.hud('Record',String(song+1)+' / '+songs.length,'Applause',points);}
+    function phase(){return beat<s.beats?'CALL':beat<s.beats+1?'CUE':'REPLY';}
+    function voice(lane,source){
+      const f=s.root*pitchRatio[lane],vocal=source==='her';
+      if(api.tone){
+        api.tone({freq:f,type:vocal?'sawtooth':'triangle',dur:vocal?.37:.31,filter:vocal?1080:2000,attack:.027,vol:vocal?.07:.15});
+        api.tone({freq:f*2,type:'sine',dur:.26,vol:.045,attack:.037});
+      }else api.sound('tap',{pitch:f/660,spread:0});
+      spot[lane]=1;portraitPulse=1;
     }
-    function lift(lane) {
-      if(!holding || holding.lane!==lane)return;
-      const timing=Math.abs(beat-holding.beat-holding.duration);
-      if(timing<=.28) {longHits++;score+=115;heat=Math.min(100,heat+5);grade('Drawn true!',lane,21);api.sound('combo');}
-      else {combo=0;feedback='Short draw';feedbackTime=.65;}
-      holding=null;api.hud('Score',score,'Order',`${order+1}/${ORDERS.length}`);
+    function toggle(){if(ended||after>0||graded.some(Boolean))return;part=!part;message=part?'Harmony is one pad to the right.':'Echo my notes exactly.';api.sound('select');}
+    function strike(lane){
+      if(ended||after>0)return;
+      voice(lane,'you');
+      if(phase()!=='REPLY'){message='My turn. Your cue comes next.';return;}
+      const b=beat-(s.beats+1);
+      const target=s.notes.findIndex(([time],i)=>!graded[i] && Math.abs(b-time)<(song<2?.44:.37));
+      if(target<0){message='Between notes. Watch the light.';return;}
+      const [time,note]=s.notes[target];
+      if(lane!==answerPitch(note,part)){message='Try '+labels[answerPitch(note,part)].toLowerCase()+'.';return;}
+      const exact=Math.abs(time-b)<.17;
+      graded[target]=exact?'perfect':'good';hits++;attemptPoints+=(exact?105:65)+(part?45:0);
+      message=exact?(part?'That chord!':'Right in tune.'):'We caught it.';word=s.lyric[target];api.haptic(exact?12:7);
+      if(part)voice(note,'her');
+      api.hud('Record',String(song+1)+' / 5','Applause',points+attemptPoints);
     }
-    const sparkRng = () => Math.sin(++sparkSerial * 12.9898) ** 2;
-    let sparkSerial = 0;
-    function commission() {
-      const pattern = ORDERS[order][2];
-      const invert=order>0 && api.rng()<.5;
-      notes = [...pattern].flatMap((lane, i) => lane === '.' ? [] : [{ beat:i, lane:Number(lane) ^ Number(invert), duration:order>0 && pattern[i+1]==='.' && i%4===2 ? .85 : 0, done:false }]);
-      beat = -3; hit = 0; heat=24; locked=false; holding=null; feedback = 'Follow the marks'; feedbackTime = 1.6;
-      api.hud('Score', score, 'Order', `${order+1}/${ORDERS.length}`);
+    function replay(){if(ended||after>0)return;begin();api.sound('back');}
+    function settle(){
+      passed=hits>=Math.ceil(s.notes.length*.65);
+      if(passed){clear++;points+=attemptPoints;perfect+=graded.filter(x=>x==='perfect').length;if(part)duets++;
+        message=trackBest&&attemptPoints>trackBest?'New best take!':hits===s.notes.length?'That is the take.':'Keep that take.';
+        api.rememberBest?.('take-'+song,attemptPoints);api.sound('clear');}
+      else{message='One more take. Follow my pitches.';api.sound('back');}
+      word=passed?'Thank you!':'Again?';after=1.1;
     }
-    function grade(label, lane, strength) {
-      feedback = label; feedbackTime = .7; swing[lane] = 1;
-      for (let i = 0; i < strength; i++) {
-        sparks.push({x: 240, y: 129, vx: (sparkRng()-.5)*300, vy: -45-sparkRng()*145, life: .25+sparkRng()*.4});
-      }
-    }
-    function strike(lane) {
-      if (ended || finishDelay > 0) return;
-      if (holding?.lane===lane) return;
-      if(locked){feedback='Quench the hammers';feedbackTime=.55;api.sound('error');return;}
-      const note = notes.find(n => !n.done && n.lane === lane && Math.abs(n.beat-beat) <= .31);
-      if (!note) {
-        swing[lane] = .7; combo = 0; api.sound('click'); feedback = 'Off beat'; feedbackTime = .34; return;
-      }
-      note.done = true; if(note.duration) holding=note; hit++; combo++; best = Math.max(best, combo);
-      const precise = Math.abs(note.beat - beat) <= .12;
-      perfect += Number(precise);
-      score += (precise ? 120 : 70) * (1+Math.min(3,Math.floor(combo/6)));
-      grade(precise ? 'Perfect' : 'On beat', lane, precise ? 17 : 8);
-      heat=Math.min(100,heat+(precise?9:11));
-      if(heat>=100){locked=true;feedback='Hammers hot · quench';feedbackTime=1;}
-      if(note.duration){feedback='Hold … release at tail';feedbackTime=.7;}
-      api.sound(lane === 0 ? 'bounce' : 'coin'); api.haptic(precise ? 16 : 8);
-      api.hud('Score', score, 'Order', `${order+1}/${ORDERS.length}`);
-    }
-    function end() {
-      ended = true;
-      api.end(score, [['Commissions', `${cleared} / ${ORDERS.length}`], ['Perfect hits', perfect], ['Best streak', best], ['True tempers', tempered], ['Drawn notes', longHits]],
-        cleared === ORDERS.length ? 'you made my whole workshop sing 💜' : 'the embers are warm for another go.');
-    }
-    function update(dt) {
-      if (ended) return;
-      time += dt; steam=Math.max(0,steam-dt); feedbackTime -= dt; swing = swing.map(s => Math.max(0, s-dt*5));
-      for (const p of sparks) { p.life -= dt; p.x += p.vx*dt; p.y += p.vy*dt; p.vy += 280*dt; }
-      sparks = sparks.filter(p => p.life > 0);
-      if (finishDelay > 0) {
-        finishDelay -= dt;
-        if (finishDelay <= 0) {
-          if (hit*2 < notes.length || order === ORDERS.length-1) end();
-          else { order++; commission(); }
-        }
-        return;
-      }
-      const previous = beat;
-      beat += dt * ORDERS[order][1] / 60;
-      if (Math.floor(beat) !== Math.floor(previous) && beat < 16) api.sound('tick');
-      for (const n of notes) if (!n.done && beat > n.beat+.31) {
-        n.done = true; combo = 0; feedback = 'Miss'; feedbackTime = .45;
-      }
-      if(holding && beat>holding.beat+holding.duration+.29)lift(holding.lane);
-      if (beat > 16) {
-        const success = hit*2 >= notes.length;
-        if (success) { cleared++; score += hit*20; api.hud('Score', score, 'Order', `${order+1}/${ORDERS.length}`); }
-        feedback = success ? 'Piece fired!' : 'Metal cooled'; feedbackTime = 2; finishDelay = 1.25;
-        api.sound(success ? 'clear' : 'lose');
-      }
-    }
-    function draw(ctx) {
-      ctx.fillStyle = '#1e171e'; ctx.fillRect(0,0,480,480);
-      workshop(ctx,{time,order,hit,notes,heat,swings:swing,steam,sparks});
-      ctx.fillStyle='#211b24'; ctx.fillRect(0,0,480,38);
-      text(ctx, ORDERS[order][0].toUpperCase(), 17,25,17,'#f8d9b7');
-      text(ctx, ORDERS[order][1]+' BPM', 463,25,16,BRASS,'right');
-      ctx.fillStyle='#28212b'; ctx.fillRect(0,192,480,51);
-      text(ctx, feedbackTime>0 ? feedback : `${hit} / ${notes.length} strikes`, 19,217,19,'#ffead1');
-      text(ctx, combo+' streak', 461,217,17,BRASS,'right');
-      ctx.fillStyle='#503844';ctx.fillRect(20,225,440,10);
-      ctx.fillStyle='#a5854f';ctx.fillRect(20+440*.62,225,440*.24,10);
-      ctx.fillStyle=locked?'#ff6b58':'#ffba71';ctx.fillRect(20,228,heat*4.4,4);
-      ctx.fillStyle='#fff6c8';ctx.fillRect(19+heat*4.4,223,3,14);
-      for(let lane=0;lane<2;lane++){
-        const y=tracks[lane], col=lane ? BRASS : IRON;
-        ctx.fillStyle=lane ? '#352d2a' : '#3a272d'; ctx.fillRect(0,y-25,480,51);
-        for(let i=Math.ceil(beat-2);i<=beat+5;i++) {
-          const x=targetX+(i-beat)*pxPerBeat; ctx.fillStyle=i%4===0?'#806256':'#554349';ctx.fillRect(x,y-22,2,45);
-        }
-        ctx.fillStyle='#fffae5';ctx.fillRect(targetX-2,y-25,4,51);
-        ctx.strokeStyle=col;ctx.lineWidth=2;ctx.strokeRect(targetX-16,y-18,32,36);
-        for(const n of notes) {
-          const x=targetX+(n.beat-beat)*pxPerBeat;
-          if(n.lane===lane && n.duration && (!n.done || holding===n) && x<508 && x>-120){
-            const end=x+n.duration*pxPerBeat;
-            ctx.fillStyle=holding===n?'#fff2b6':col;ctx.fillRect(x,y-5,end-x,10);mark(ctx,lane,end,y,9,col);
+    begin();
+    return {
+      key(t,k){if(t!=='down')return;const a=['KeyA','KeyS','KeyD'].indexOf(k),b=['ArrowLeft','ArrowDown','ArrowRight'].indexOf(k);if(a>=0||b>=0)strike(Math.max(a,b));else if(k==='Space')toggle();else if(k==='KeyR')replay();},
+      pointer(t,x,y){if(t!=='down')return;if(y>=357&&y<=437){const a=padX.findIndex(left=>x>=left&&x<=left+140);if(a>=0)strike(a);}else if(y>=440){if(x<292)toggle();else replay();}},
+      update(dt){
+        if(ended)return;clock+=dt;portraitPulse=Math.max(0,portraitPulse-dt*2.3);spot=spot.map(s=>Math.max(0,s-dt*3));
+        if(after>0){after-=dt;if(after<=0){if(passed && ++song===songs.length){ended=true;api.end(points,[['Tracks cut',clear],['Harmony takes',duets],['Perfect notes',perfect]],'Your part is on the record. So is my smile.');}else begin();}return;}
+        beat+=dt*s.bpm/60;const whole=Math.floor(beat);
+        if(beat>=0 && whole!==lastTick){lastTick=whole;if(api.tone)api.tone({freq:s.root*(whole%2?.75:.5),dur:.12,type:'triangle',vol:.075,attack:.01,bus:'music'});else api.sound('tick',{pitch:.62,spread:0});}
+        while(called<s.notes.length&&beat>=s.notes[called][0]){voice(s.notes[called][1],'her');word=s.lyric[called++];}
+        if(phase()==='CUE'){word='Your turn';message=part?'Sing one pad higher.':'Echo me.';}
+        const reply=beat-s.beats-1;
+        s.notes.forEach(([time],i)=>{if(!graded[i]&&reply>time+(song<2?.44:.37))graded[i]='miss';});
+        if(reply>=s.beats)settle();
+      },
+      demo(){if(ended||after>0)return;if(beat<0 && part!==(song%2===1))toggle();if(phase()!=='REPLY')return;const b=beat-s.beats-1;s.notes.forEach(([at,note],i)=>{if(!graded[i]&&b>=at)strike(answerPitch(note,part));});},
+      draw(c){
+        c.fillStyle='#1e102d';c.fillRect(0,0,480,480);
+        c.save();c.beginPath();c.rect(0,0,480,246);c.clip();
+        const zoom=api.reducedMotion?0:portraitPulse*3;
+        singer(c,0,42,512,340,-zoom,-zoom,480+zoom*2,277+zoom*2);
+        c.restore();
+        const grad=c.createLinearGradient(0,135,0,247);grad.addColorStop(0,'#160a2300');grad.addColorStop(1,'#21102b');c.fillStyle=grad;c.fillRect(0,135,480,112);
+        panel(c,12,12,114,23,'#21102bdf',12);type(c,'●  SIDE A  /  0'+(Math.min(song,4)+1),69,24,11,'#ffc9a1','center','monospace');
+        for(let i=0;i<9;i++){const h=6+18*spot[i%3]+(api.reducedMotion?0:3*Math.sin(clock*9+i));panel(c,435+i*3.5,40-h,2,h,hues[i%3],1);}
+        if(word){panel(c,309,126,146,33,'#26132ad9',17);type(c,word,382,142,19,'#fff2cc','center','Georgia');}
+        type(c,s.name,19,216,31,'#fff0d1','left','Georgia');
+        type(c,Math.round(s.bpm)+' BPM',459,218,12,'#f5b9c9','right','monospace');
+        const label=after>0?(passed?'TAKE SAVED':'REHEARSE'):phase()==='CALL'?'AGI-1 SINGS':phase()==='CUE'?'GET READY':'YOUR VOICE';
+        panel(c,18,240,134,24,phase()==='REPLY'?'#ffe6a4':'#793958',12);
+        type(c,label,85,252,12,phase()==='REPLY'?'#331c39':'#fff0dd','center','monospace');
+        type(c,message,462,252,13,'#f8d9c4','right');
+        const start=41,span=394,base=328;
+        for(let i=0;i<3;i++)line(c,[[22,base-i*17],[458,base-i*17]],'#5f3b5c',1);
+        const reply=phase()==='REPLY',pos=reply?beat-s.beats-1:beat;
+        s.notes.forEach(([t,n],i)=>{const x=start+t*span/(s.beats-.5),lane=reply?answerPitch(n,part):n,y=base-lane*17;
+          if(reply&&part&&!graded[i]){
+            oval(c,x,base-17,5,5,null,'#dcc8df',1.5);type(c,s.lyric[i],x,346,11,'#edd7cc');return;
           }
-          if(!n.done && n.lane===lane && x<508 && x>-28){ mark(ctx,lane,x,y,14,col); mark(ctx,lane,x,y,5,'#422939'); }
-        }
+          const missed=reply && graded[i]==='miss',color=missed?'#6e526c':hues[lane];
+          oval(c,x,y,8,5,color);line(c,[[x+7,y],[x+7,y-13]],color,2);
+          type(c,s.lyric[i],x,346,11,missed?'#9f819c':'#edd7cc');if(reply && ['good','perfect'].includes(graded[i]))type(c,'✓',x,276,12,'#a3f2c4');});
+        if(phase()!=='CUE'&&after<=0){const x=start+Math.max(0,Math.min(s.beats-.5,pos))*span/(s.beats-.5);line(c,[[x,277],[x,334]],'#fffbec',2);}
+        padX.forEach((x,i)=>{panel(c,x,363,140,72,'#0f0b1d',11);panel(c,x,359+spot[i]*3,140,68,spot[i]>.3?'#fff4e0':hues[i],11);
+          type(c,keyLabels[i],x+22,379,12,'#51354e','left','monospace');type(c,labels[i],x+70,399,22,'#392137','center','Georgia');});
+        type(c,part?'◉  HARMONY  +1':'◉  ECHO PART',118,458,13,'#ffd4aa','center','monospace');type(c,'↶  HEAR AGAIN',367,458,13,'#d7b9dc','center','monospace');
       }
-      for(let lane=0;lane<2;lane++){
-        const x=10+lane*168,col=lane?BRASS:IRON;
-        ctx.fillStyle='#110f16';ctx.fillRect(x,377,161,85);ctx.fillStyle=col;ctx.fillRect(x,372+4*swing[lane],161,82);
-        ctx.strokeStyle='#704e46';ctx.lineWidth=2;ctx.strokeRect(x+4,377+4*swing[lane],153,70);
-        mark(ctx,lane,x+23,405,12,'#47303a');text(ctx,lane?'BRASS':'COPPER',x+42,412,20,'#30222c');text(ctx,lane?'L / →':'A / ←',x+42,436,15,'#523b40');
-      }
-      const hot=heat>=62 && heat<=86;ctx.fillStyle=hot?'#ffe5a4':locked?'#ffc090':'#99c5c2';ctx.fillRect(347,373,124,82);
-      text(ctx,'QUENCH',409,410,19,'#20373f','center');text(ctx,hot?'TEMPER':locked?'HOT!':'SPACE',409,434,15,'#365059','center');
-    }
-    commission();
-    return { update, draw,
-      cancelInput(){pointerLane=null;},
-      pointer(type,x,y){
-        if(type==='down' && y>=363){if(x>=345){quench();return;}pointerLane=Number(x>=176);strike(pointerLane);}
-        if((type==='up'||type==='cancel')&&pointerLane!==null){lift(pointerLane);pointerLane=null;}
-      },
-      key(type,code){
-        const lane=['KeyA','ArrowLeft'].includes(code)?0:['KeyL','ArrowRight'].includes(code)?1:null;
-        if(lane!==null){if(type==='down')strike(lane);else if(type==='up')lift(lane);}
-        if(type==='down'&&['Space','KeyQ'].includes(code))quench();
-      },
-      demo() {
-        if(holding && beat>=holding.beat+holding.duration)lift(holding.lane);
-        if(!holding && heat>=72)quench();
-        const next=notes.find(n=>!n.done && beat>=n.beat && beat<n.beat+.12);if(next)strike(next.lane);
-      },
     };
-  },
+  }
 };

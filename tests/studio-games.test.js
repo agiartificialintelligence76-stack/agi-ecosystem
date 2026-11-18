@@ -1,87 +1,61 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import detective, { program } from '../src/games/lanternlake/game.js';
+import { CASES } from '../src/games/lanternlake/cases.js';
+import { mountCorners } from '../src/games/lanternlake/exhibit.js';
+import parcel from '../src/games/waxworks/game.js';
+import { DEPOTS, startDepot, roll, route, delivered } from '../src/games/waxworks/parcel.js';
+import vinyl from '../src/games/returnaddress/game.js';
+import { pressRecord, judge, restoreTape } from '../src/games/returnaddress/record.js';
+import theatre from '../src/games/starlingrelay/game.js';
+import { SCENES, rehearsal, perform, solve, complete } from '../src/games/starlingrelay/blocking.js';
 import { rng } from '../src/games/kit/fx.js';
-import wax, { profiles } from '../src/games/waxworks/game.js';
-import fish, { project } from '../src/games/lanternlake/game.js';
-import court from '../src/games/returnaddress/game.js';
-import sky, { projectStar } from '../src/games/starlingrelay/game.js';
-import { landingDistance } from '../src/games/lanternlake/game.js';
-import { makeMold, matches, pieceCount, toolStroke, undo } from '../src/games/waxworks/mold.js';
-import { chartStars, tracePoint } from '../src/games/starlingrelay/chart.js';
-import { laneAt, shotPower, stampPoints } from '../src/games/returnaddress/sort.js';
 
-function start(game, seed=7) {
-  let hud, result;
-  const model = game.create({ rng:rng(seed).next, hud:(...v)=>{hud=v;}, end:(...v)=>{result=v;}, sound(){}, haptic(){} });
-  const step=(seconds, auto=false)=>{
-    for(let i=0; i<seconds*120 && !result; i++){if(auto)model.demo(1/120);model.update(1/120);}
-  };
-  return { model, step, get metrics(){return hud;}, get result(){return result;} };
+function run(game,seed=7){
+  let result,hud;const records=new Map();
+  const model=game.create({rng:rng(seed).next,sound(){},tone(){},haptic(){},hud:(...args)=>{hud=args;},end:(...args)=>{result=args;},
+    rememberBest:(k,v)=>records.set(k,Math.max(v,records.get(k)||0))});
+  function step(seconds,auto=false){for(let i=0;i<seconds*120&&!result;i++){if(auto)model.demo(1/120);model.update(1/120);}}
+  return {model,step,records,get hud(){return hud;},get result(){return result;}};
 }
-test('the cast reproduces both independent projections and all six commissions are solvable',()=>{
-  assert.deepEqual(profiles([[1,3],[2,0]]),{front:[2,3],side:[3,2]});
-  for(const seed of [1,7,22]) {const g=start(wax,seed);g.step(120,true);assert.ok(g.result[0]>500);assert.equal(g.result[1][0][1],6);}
+test('a radio show draws four different cases; each statement and physical exhibit can be cross-checked',()=>{
+ for(const seed of [1,7,61,93]){const show=program(rng(seed).next);assert.equal(show.length,4);assert.equal(new Set(show).size,4);}
+ for(const c of CASES){assert.equal(c.statements.length,3);assert.equal(c.exhibits.length,3);assert.ok(c.statements[c.answer[0]]&&c.exhibits[c.answer[1]]);}
+ assert.ok(mountCorners(Math.PI/2).every(([x])=>Math.abs(240-x)<.00001));
+ assert.ok(mountCorners(0)[0][0]<mountCorners(Math.PI)[0][0]);
+ const game=run(detective),press=k=>game.model.key('down',k);
+ press('Space');press('Space');assert.equal(game.hud[3],'●●●','an unexamined exhibit cannot cost an audience light');
+ press('KeyF');press('Space');
+ const first=program(rng(7).next)[0];assert.equal(game.hud[3],first.answer.join()==='0,0'?'●●●':'●●');
 });
-test('lantern lake gives six casts, fish nearer the dock project larger, and missed hooks consume a cast',()=>{
-  assert.ok(project(10,.1).zoom>project(10,2).zoom);
-  const g=start(fish);
-  for(let i=0;i<6;i++){g.model.key('down','Space');g.model.key('up','Space');g.step(10);}
-  assert.equal(g.result[0],0);
-  const auto=start(fish);auto.step(120,true);assert.equal(auto.result[1][0][1],'6 / 6');
+test('every parcel can be delivered upright, fragile pads reject a standing carton and a closed bridge cannot be crossed',()=>{
+ for(const depot of DEPOTS){let state=startDepot(depot);const best=route(depot);assert.ok(best?.length>=4);
+   for(const dir of best){state=roll(depot,state,dir);assert.ok(state);}assert.ok(delivered(depot,state));}
+ const level={rows:['A##!G']};
+ assert.equal(roll(level,roll(level,startDepot(level),'E'),'E'),null);
+ const gate={rows:['A##=G']},lying=roll(gate,startDepot(gate),'E');
+ assert.equal(roll(gate,lying,'E'),null);assert.ok(roll(gate,{...lying,bridge:true},'E'));
+ const game=run(parcel);game.model.key('down','ArrowRight');game.step(.25);assert.equal(game.hud[3],1);
+ game.model.key('down','KeyZ');assert.equal(game.hud[3],0);
 });
-test('mail court serves by pointer and loses unreturned parcels',()=>{
-  const g=start(court);
-  for(let i=0;i<3;i++){g.model.pointer('down',240,218);g.model.pointer('up',240,218);g.step(.4);g.model.pointer('move',460,352);g.step(5);}
-  assert.equal(g.metrics[3],0);assert.ok(g.result);
-  const bot=start(court);bot.step(100,true);assert.equal(bot.result[1][0][1],'12 / 12');assert.ok(bot.result[1][1][1]>0);
+test('cue strips are executable, rose collection precedes the bow, and the turntable rotates her on landing',()=>{
+ for(const scene of SCENES){let state=rehearsal(scene);const sheet=solve(scene);assert.ok(sheet&&sheet.length<=scene.budget);
+  for(const cue of sheet){state=perform(scene,state,cue);assert.ok(state);}assert.ok(complete(scene,state));}
+ const scene=SCENES[3],s=perform(scene,rehearsal(scene),'LEAP');assert.equal(s.d,0);
+ assert.equal(perform(SCENES[0],rehearsal(SCENES[0]),'LEFT').d,0);
+ assert.equal(complete(SCENES[0],{...rehearsal(SCENES[0]),x:3}),false);
+ const game=run(theatre);game.model.key('down','ArrowUp');game.model.key('down','Backspace');assert.match(game.hud[3],/^0\//);
 });
-test('observatory centers the tracked star across the right ascension seam and exposes six plates',()=>{
-  assert.deepEqual(projectStar(.1,.1,.1,.1).map(Math.round),[240,202]);
-  assert.ok(Math.abs(projectStar(-3.13,0,3.13,0)[0]-240)<15);
-  const idle=start(sky);idle.step(102);assert.equal(idle.result[0],0);
-  const bot=start(sky);bot.step(110,true);assert.equal(bot.result[1][0][1],'6 / 6');
+test('vinyl scratches require a jump, pickups require the right groove, and backspins restore the earlier score exactly once',()=>{
+ const record=pressRecord(rng(93).next);assert.equal(record.length,48);assert.ok(record.every((n,i)=>!i||record[i-1].time<n.time));
+ assert.equal(judge({seam:true},2,false),'scratch');assert.equal(judge({seam:true},0,true),'clear');
+ assert.equal(judge({lane:1},1,false),'groove');assert.equal(judge({lane:1},1,true),'miss');
+ const before={score:60,streak:2,faults:0,rewinds:2};
+ assert.deepEqual(restoreTape({...before,score:160,rewinds:1},[before],2),{...before,rewinds:0,at:0});assert.equal(restoreTape({rewinds:0},[before],1),null);
 });
-
-test('a wire cuts all tied peaks and undo returns every bead; the commission accepts its original sculpture',()=>{
-  for (let i=0;i<pieceCount;i++){
-    const mold=makeMold(i,rng(637).next);
-    const amount=()=>mold.pot+mold.board.flat().reduce((a,b)=>a+b,0);
-    const supply=amount();
-    const before=structuredClone(mold.board);
-    assert.ok(!matches(mold));
-    toolStroke(mold,0,0,'wire');assert.equal(amount(),supply);undo(mold);
-    assert.deepEqual(mold.board,before);assert.equal(mold.moves,0);
-    for (const [r,row] of mold.goal.entries()) for (const [x,height] of row.entries()){
-      while(mold.board[r][x]>height)toolStroke(mold,r,x,'chisel');
-    }
-    for (const [r,row] of mold.goal.entries()) for (const [x,height] of row.entries()){
-      while(mold.board[r][x]<height)assert.ok(toolStroke(mold,r,x,'pour'));
-    }
-    assert.equal(amount(),supply);assert.equal(mold.pot,0);assert.ok(matches(mold));
-    assert.equal(toolStroke(mold,0,0,'pour'),false);
-  }
-});
-test('bank shots reach the same addressed stamp along a different path, and a gold banked express earns more postage',()=>{
-  const start={x:-40,y:12},target={x:90,y:54};
-  assert.deepEqual(laneAt(start,target,true,1),target);
-  assert.deepEqual(laneAt(start,target,false,1),target);
-  assert.ok(laneAt(start,target,true,.55).x>laneAt(start,target,false,.55).x+80);
-  assert.ok(shotPower(1.1)>.95);assert.ok(shotPower(0)<.1);
-  assert.ok(stampPoints(true,true,3,true)>stampPoints(false,false,3,false));
-});
-test('bracing a running fish trades less line tension for faster retrieval; completed catches persist per species',()=>{
-  const single=landingDistance(.3,true,true,false),braced=landingDistance(.3,true,true,true);
-  assert.ok(braced.gain>single.gain);assert.ok(braced.tension<single.tension);
-  const journal=new Map();let ended=false;
-  const model=fish.create({rng:rng(14).next,hud(){},end(){ended=true;},sound(){},haptic(){},
-    personalBest:k=>journal.get(k),rememberBest:(k,v)=>journal.set(k,Math.max(journal.get(k)||0,v))});
-  for(let i=0;i<14400&&!ended;i++){model.demo(1/120);model.update(1/120);}
-  assert.equal(journal.size,4);assert.ok([...journal.values()].every(v=>v>=20));
-});
-test('tracing a chart can revisit a junction, while an incorrect star leaves the path intact',()=>{
-  const chart=chartStars([[0,0],[.1,.1],[0,0],[-.1,.1]],3);
-  assert.deepEqual(chart.order,[0,1,0,2]);assert.equal(tracePoint(chart,3),false);
-  assert.deepEqual(chart.ink,[]);assert.equal(chart.errors,1);
-  for(const i of chart.order)assert.equal(tracePoint(chart,i),true);
-  assert.deepEqual(chart.ink,chart.order);
-});
+for(const [game,expected,label] of [[detective,'4 / 4','Cases closed'],[parcel,6,'Depots cleared'],[vinyl,null,'Stars caught'],[theatre,6,'Curtain calls']]){
+ test(game.title+' completes its authored campaign through its own game actions',()=>{
+   for(const seed of [1,7,23,91]){const g=run(game,seed);g.step(210,true);assert.ok(g.result&&g.result[0]>0);
+     assert.equal(g.result[1][0][0],label);if(expected!==null)assert.equal(g.result[1][0][1],expected);else assert.ok(g.result[1][0][1]>30);}
+ });
+}

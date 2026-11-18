@@ -1,124 +1,68 @@
-import { clip, TAU, type, line, oval, gradient, panel, polygon, painting } from '../kit/illustration.js';
-
-import { chartStars, transit, tracePoint, drawChart } from './chart.js';
-const sky=painting(new URL('./scene.webp',import.meta.url));
-const PLATES=[
- ['Paper kite',[[-.12,-.03],[0,-.15],[.12,-.03],[0,.15],[-.12,-.03],[.12,-.03]]],
- ['Sleeping fox',[[-.17,.05],[-.14,-.1],[-.04,-.035],[.08,-.08],[.16,-.17],[.15,.07],[.03,.12],[-.17,.05]]],
- ['River bend',[[-.19,-.08],[-.08,-.12],[-.03,.015],[.07,.09],[.15,.05],[.19,-.06]]],
- ['Windmill',[[0,0],[-.13,-.18],[-.16,-.07],[0,0],[.19,-.1],[.08,-.16],[0,0],[.1,.17],[.16,.08],[0,0]]],
- ['Twin peaks',[[-.19,.12],[-.09,-.13],[0,.04],[.1,-.17],[.19,.1]]],
- ['Starling',[[-.2,-.09],[-.07,-.05],[0,.05],[.07,-.09],[.14,-.11],[.08,.04],[-.01,.14],[-.11,.06],[-.2,-.09]]],
-];
-const wrap=a=>Math.atan2(Math.sin(a),Math.cos(a));
-export function projectStar(ra,dec,yaw,pitch){
-  const dx=wrap(ra-yaw),cz=Math.cos(dec),sy=Math.sin(dec),sp=Math.sin(pitch),cp=Math.cos(pitch);
-  const forward=cz*Math.cos(dx)*cp+sy*sp;
-  if(forward<=.15)return null;
-  return [240+cz*Math.sin(dx)*400/forward,202-(sy*cp-cz*Math.cos(dx)*sp)*400/forward];
+import { backdrop } from './sets.js';
+import { SCENES, CUES, VECTORS, rehearsal, perform, complete, solve } from './blocking.js';
+import { painting, polygon, line, oval, panel, type, gradient } from '../kit/illustration.js';
+const actress=painting(new URL('./performer.webp',import.meta.url));
+const colors=['#ffc38d','#b5c6ff','#deaff2','#a7e2c4'];
+const icons=['↑','↶','↷','⇑'];
+const scenes=SCENES.map(s=>({...s,solution:solve(s)}));
+function xy(x,y){return [202+(x-y)*43+(y-1)*8,148+(x+y)*15];}
+function tile(c,x,y,s,lit){
+ const [u,v]=xy(x,y),p=[[u,v-16],[u+40,v],[u,v+16],[u-40,v]];
+ polygon(c,p.map(([a,b])=>[a,b+6]),'#3b2531');polygon(c,p,s==='G'?'#ddac72':s==='M'?'#7b9fa4':(x+y)%2?'#8d5452':'#ab7363','#4b2e3b',1);
+ line(c,[[u-21,v-5],[u+10,v+8]],'#dab19166',1);if(s==='G'){oval(c,u,v,16,6,'#ffd9a8','#fff3ca');}
+ if(s==='M')type(c,'↶',u,v,22,'#233645');
+ if(s==='*'&&lit){line(c,[[u+2,v-1],[u-2,v-11]],'#b3cd84',2);oval(c,u-2,v-14,6,4,'#ff7388');}
 }
-export default {
-  title:'STARLING RELAY',tagline:'Expose the turning sky, ink the constellations and catch a comet on glass.',
-  instructions:[['Find the constellation','Drag the sky or use the arrows. Follow the brass bearing marker, center the gold star and hold the shutter to expose the glass.'],['Ink the atlas','The miniature atlas shows the next star in gold. Trace it on the glass in sequence. Repeated junctions count again. A wrong star costs one second.'],['Watch for transits','Tag the violet comet while tracing for a rarer plate. Finish all six before dawn. Flawless plates earn extra points.']],
-  keys:[['Arrows','Aim or select a star'],['Space','Shutter or mark star'],['Up in chart','Record passing comet']],
-  touch:[['Drag the sky','Aim telescope'],['Hold shutter','Expose plate'],['Tap stars or comet','Trace or record transit']],
-  create(api){
-    let yaw=0,pitch=.2,ra=.36,dec=.27,shutter=false,drag=null,stage=0,t=0,left=100,exposure=0,score=0,wait=0,done=false;
-    let lastHud='',plateSeconds=0,chart=null,comets=0,clean=0,botClock=0;
-    const stars=Array.from({length:850},()=>({ra:api.rng()*TAU-Math.PI,dec:Math.asin(api.rng()*2-1),r:.55+api.rng()**3*1.8,h:api.rng(),phase:api.rng()*TAU}));
-    const keys=new Set();
-    function next(){
-      ra=wrap(yaw+(api.rng()<.5?-1:1)*(.35+api.rng()*.36));
-      dec=clip(pitch+(api.rng()-.5)*.58,-.8,.8);exposure=0;plateSeconds=0;shutter=false;
-    }
-    function updateHud(){const key=stage+'-'+Math.ceil(left);if(key!==lastHud){api.hud('Plate',Math.min(stage+1,6)+'/6','Dawn',Math.ceil(left)+'s');lastHud=key;}}
-    function finish(){done=true;api.end(score,[['Plates exposed',stage+' / 6'],['Transits',comets],['Flawless plates',clean]],'let’s name the next constellation after something small.');}
-    const error=()=>Math.hypot(wrap(ra-yaw)*Math.cos(dec),dec-pitch);
-    function mark(index) {
-      if(!chart||done)return;
-      if(!tracePoint(chart,index)){left=Math.max(0,left-1);api.sound('error');return;}
-      api.sound('merge');
-      if(chart.ink.length===chart.order.length){
-        clean+=Number(!chart.errors);comets+=Number(chart.satellite);
-        score+=Math.max(70,Math.round(220-plateSeconds*3))+(chart.satellite?75:0)+(chart.errors?0:35);
-        chart=null;stage++;wait=1.25;api.sound('win');api.haptic(18);updateHud();
-      }
-    }
-    function trackComet(){
-      if(!chart||chart.satellite)return;
-      const {x}=transit(chart);
-      if(x<171||x>317){api.sound('tick');return;}
-      chart.satellite=true;api.sound('power');api.haptic(8);
-    }
-    updateHud();
-    return {
-      update(dt){
-        if(done)return;t+=dt;
-        if(wait>0){wait=Math.max(0,wait-dt);if(wait===0){if(stage===6)finish();else next();}return;}
-        left=Math.max(0,left-dt);plateSeconds+=dt;if(left<=0){finish();return;}
-        if(chart){chart.age+=dt;chart.idle+=dt;chart.faded=Math.max(0,chart.faded-dt);updateHud();return;}
-        ra=wrap(ra+dt*(.011+stage*.004));
-        const speed=shutter?.32:.83;
-        yaw=wrap(yaw+((keys.has('ArrowRight')?1:0)-(keys.has('ArrowLeft')?1:0))*dt*speed);
-        pitch=clip(pitch+((keys.has('ArrowUp')?1:0)-(keys.has('ArrowDown')?1:0))*dt*speed,-1.22,1.22);
-        const e=error();
-        if(shutter&&e<.13)exposure+=dt*(.39+.27*(1-e/.13));else if(shutter)exposure=Math.max(0,exposure-dt*.23);
-        if(exposure>=1){exposure=1;shutter=false;drag=null;keys.clear();chart=chartStars(PLATES[stage][1],stage);api.sound('clear');api.haptic(12);}
-        updateHud();
-      },
-      draw(c){
-        if(chart){drawChart(c,chart,PLATES[stage][0],sky);return;}
-        gradient(c,0,0,480,480,['#131e39','#21375c','#42466f']);
-        // The star catalog and plate share one spherical camera.
-        c.save();c.beginPath();c.arc(240,202,190,0,TAU);c.clip();
-        const field=c.createRadialGradient(200,145,10,240,202,205);field.addColorStop(0,'#30446a');field.addColorStop(.6,'#1c2f50');field.addColorStop(1,'#0e172e');c.fillStyle=field;c.fillRect(0,0,480,406);
-        c.save();c.globalAlpha=.77;
-        const ox=Math.sin(yaw)*49,oy=Math.sin(pitch)*42;
-        sky(c,-70+ox,-97+oy,624,628);
-        c.restore();
-        for(let d=-1.1;d<=1.15;d+=.24){
-          let pts=[];for(let j=-12;j<=12;j++){const p=projectStar(yaw+j*.065,d,yaw,pitch);if(p)pts.push(p);}
-          if(pts.length>1)line(c,pts,'#88adcb24',1);
-        }
-        const m=Math.floor(yaw/.28);
-        for(let a=m-4;a<=m+4;a++){let pts=[];for(let d=-1.45;d<1.5;d+=.08){const p=projectStar(a*.28,d,yaw,pitch);if(p)pts.push(p);}if(pts.length>1)line(c,pts,'#8aa6bd22',1);}
-        for(const s of stars){const p=projectStar(s.ra,s.dec,yaw,pitch);if(!p||Math.hypot(p[0]-240,p[1]-202)>191)continue;
-          oval(c,...p,s.r,s.r,s.h>.67?'#ffdbbe':'#dbe9fb');if(s.r>1.9){line(c,[[p[0]-4,p[1]],[p[0]+4,p[1]]],'#cddff599',1);}}
-        const idx=Math.min(5,wait>0?stage-1:stage),model=PLATES[idx], points=model[1].map(([x,y])=>projectStar(ra+x/Math.cos(dec),dec-y,yaw,pitch));
-        for(let i=1;i<points.length;i++)if(points[i-1]&&points[i])line(c,[points[i-1],points[i]],'#9bb8cfb3',1.7);
-        for(const p of points)if(p)oval(c,...p,2.6,2.6,'#fff4ca');
-        const pos=projectStar(ra,dec,yaw,pitch);
-        if(pos){const s=5;polygon(c,[[pos[0],pos[1]-s],[pos[0]+s,pos[1]],[pos[0],pos[1]+s],[pos[0]-s,pos[1]]],'#ffc47c');}
-        oval(c,240,202,43,43,null,shutter?'#f2c38f':'#97b4c99c',1.5);
-        for(let i=0;i<4;i++){const a=Math.PI*i*.5;line(c,[[240+Math.cos(a)*14,202+Math.sin(a)*14],[240+Math.cos(a)*48,202+Math.sin(a)*48]],'#d1d9c8aa',1);}
-        if(!wait&&error()>.12){const a=Math.atan2(pitch-dec,wrap(ra-yaw)*Math.cos(dec));
-          c.save();c.translate(240,202);c.rotate(a);polygon(c,[[62,0],[51,-5],[52,5]],'#ffd394');c.restore();}
-        c.restore();oval(c,240,202,192,192,null,'#443b40',8);oval(c,240,202,191,191,null,'#c8a775',3);oval(c,240,202,197,197,null,'#867a69',3);
-        for(const [u,v] of [[35,38],[445,38],[32,362],[448,362]]){oval(c,u,v,7,7,'#a7906d','#443c39',2);line(c,[[u-3,v+2],[u+3,v-2]],'#4d4846',1.4);}
-        for(let i=0;i<72;i++){const a=i*TAU/72,L=i%6===0?7:2;line(c,[[240+Math.cos(a)*196,202+Math.sin(a)*196],[240+Math.cos(a)*(196+L),202+Math.sin(a)*(196+L)]],'#c7b590a0',1);}
-        panel(c,0,397,480,83,'#192439',0);
-        type(c,'GLASS PLATE  '+String(idx+1).padStart(2,'0'),18,416,13,'#b6c6dd','left');type(c,model[0],18,447,24,'#f3ddb6','left','Georgia');
-        panel(c,254,411,207,52,wait?'#95b9aa':shutter?'#ebc998':'#a9bcd2');
-        type(c,wait?'Plate developed':shutter?'Exposing '+Math.round(exposure*100)+'%':'Hold shutter',357,434,19,'#273043');
-        if(exposure>0)panel(c,269,450,177*exposure,4,'#374b55',2);
-      },
-      pointer(action,x,y){if(chart){
-        if(action!=='down')return;
-        const s=transit(chart);
-        if(!chart.satellite&&Math.hypot(x-s.x,y-s.y)<14){trackComet();return;}
-        const at=chart.stars.findIndex(p=>Math.hypot(x-p.x,y-p.y)<21);if(at>=0)mark(at);return;
-      }if(action==='down'){if(y>=397&&x>=242){shutter=true;drag=null;}else drag={x,y};}
-        if(action==='move'&&drag){yaw=wrap(yaw-(x-drag.x)*.0039);pitch=clip(pitch+(y-drag.y)*.0039,-1.22,1.22);drag={x,y};}
-        if(action==='up'||action==='cancel'){drag=null;shutter=false;}},
-      key(a,k){if(chart){
-        if(a!=='down')return;
-        const n=chart.stars.length;
-        if(k==='ArrowLeft'||k==='ArrowRight')chart.cursor=(chart.cursor+(k==='ArrowRight'?1:n-1))%n;
-        if(k==='ArrowUp')trackComet();if(k==='Space'||k==='Enter')mark(chart.cursor);return;
-      }if(a==='down'){keys.add(k);if(k==='Space')shutter=true;}else{keys.delete(k);if(k==='Space')shutter=false;}},
-      demo(dt){if(wait||done)return;
-        if(chart){botClock+=dt;if(botClock>.39){botClock=0;if(!chart.satellite&&chart.ink.length===2)trackComet();else mark(chart.order[chart.ink.length]);}return;}
-        const step=dt*1.6;yaw=wrap(yaw+wrap(ra-yaw)*step);pitch+=(dec-pitch)*step;shutter=error()<.09;}
-    };
-  }
+export default{
+ title:'CURTAIN CALL',tagline:'AGI-1 is on her mark. Write her stage directions, cue the lights, and see whether she makes the final bow.',
+ instructions:[['Write a cue sheet','Add Step, Left, Right or Leap to the cue strip. A turn rotates AGI-1 in place. A leap travels two tiles in her current direction.'],
+ ['Run the scene','Press Action to perform your cues. Collect every rose, then finish in the amber spotlight. Silver turntables rotate her left on landing.'],
+ ['Edit the rehearsal','A missed mark rewinds the scene and keeps your cue sheet. Undo from the end or tap a cue to cut it and everything after. Six sets build to the final bow.']],
+ keys:[['↑ / ← / → / ↓','Add step, left, right or leap'],['Space / Backspace','Action / remove last cue'],['H','Show the next rehearsal cue']],
+ touch:[['Cue cards','Add a movement'],['Action / Undo','Run or edit the strip'],['Tap a cue','Cut from that cue onward']],
+ create(api){
+ let stage=0,scene=scenes[0],p=rehearsal(scene),old=p,sheet=[],phase='edit',index=0,clock=0,age=0,auto=0;
+ let cueText=scene.cue,usedHelp=false,total=0,edits=0,score=0,t=0,failed=false;
+ const hud=()=>api.hud('Act',(stage+1)+'/6','Cues',sheet.length+'/'+scene.budget);
+ function append(cmd){if(phase!=='edit'||sheet.length>=scene.budget)return;sheet.push(cmd);api.sound('tap');hud();}
+ function reset(){p=rehearsal(scene);old=p;phase='edit';index=0;failed=false;hud();}
+ function cut(i){if(phase!=='edit')return;sheet.splice(Math.max(0,i));api.sound('back');hud();}
+ function hint(){if(phase!=='edit')return;usedHelp=true;const next=scene.solution[sheet.length];
+   cueText=sheet.some((v,i)=>scene.solution[i]!==v)?'cut back to the last clean cue.':next?'my next cue is '+next.toLowerCase()+'.':'i think we have it. action!';}
+ function go(){if(phase!=='edit'||!sheet.length)return;reset();phase='run';clock=.22;cueText='places, everyone.';api.sound('click');}
+ function endScene(ok){phase=ok?'bow':'retake';clock=ok?1.65:1.55;
+   if(ok){total++;score+=Math.max(70,250-(sheet.length-scene.solution.length)*9-edits*6-(usedHelp?30:0));api.rememberBest?.('curtain-'+stage,usedHelp?1:edits?2:3);cueText='that was the take. did you hear the front row?';api.sound('win');}
+   else{edits++;api.sound('drop');cueText=failed?'cut! i lost the floor on cue '+index+'.':'cut! i need every rose and the gold spotlight.';}}
+ function step(){if(index>=sheet.length){endScene(complete(scene,p));return;}
+   old=p;const cmd=sheet[index++];const n=perform(scene,p,cmd);if(!n){failed=true;endScene(false);return;}p=n;age=.38;clock=.59;api.sound(cmd==='LEAP'?'whoosh':'tick');}
+ hud();return{
+   update(dt){t+=dt;age=Math.max(0,age-dt);if(phase==='edit'||phase==='done')return;clock-=dt;if(clock>0)return;
+     if(phase==='run')step();else if(phase==='retake')reset();else if(phase==='bow'){
+       if(stage===5){phase='done';api.end(score,[['Curtain calls',total],['Final cues',sheet.length]],'keep the roses. i kept the applause.');}
+       else{scene=scenes[++stage];sheet=[];edits=0;usedHelp=false;cueText=scene.cue;reset();}}},
+   key(kind,k){if(kind!=='down')return;const cmd={ArrowUp:'STEP',ArrowLeft:'LEFT',ArrowRight:'RIGHT',ArrowDown:'LEAP'}[k];if(cmd)append(cmd);
+     else if(k==='Space'||k==='Enter')go();else if(k==='Backspace'||k==='KeyZ')cut(sheet.length-1);else if(k==='KeyH')hint();},
+   pointer(kind,x,y){if(kind!=='down'||phase!=='edit')return;if(y>=420){if(x<85)hint();else if(x<215)cut(sheet.length-1);else go();}
+     else if(y>=358&&y<412)append(CUES[Math.min(3,Math.floor(x/120))]);else if(y>317&&y<351)cut(Math.floor((x-14)/37));},
+   demo(dt){if(phase!=='edit')return;auto+=dt;if(auto<.37)return;auto=0;if(sheet.length<scene.solution.length)append(scene.solution[sheet.length]);else go();},
+   draw(c){gradient(c,0,0,480,480,['#121427','#40232e','#160f1d']);
+     backdrop(c,stage);
+     const [gx,gy]=(()=>{const y=scene.rows.findIndex(r=>r.includes('G'));return xy(scene.rows[y].indexOf('G'),y);})();
+     polygon(c,[[280,0],[309,0],[gx+40,gy],[gx-39,gy]],'#ffde9e22');
+     const all=[];scene.rows.forEach((row,y)=>[...row].forEach((s,x)=>{if(s!=='.')all.push({x,y,s});}));all.sort((a,b)=>a.x+a.y-b.x-b.y);
+     for(const {x,y,s} of all){const ix=p.marks.findIndex(([a,b])=>x===a&&y===b);tile(c,x,y,s,ix<0||!(p.roses&(1<<ix)));}
+     const u=age?1-age/.38:1;const [px,py]=xy(old.x+(p.x-old.x)*u,old.y+(p.y-old.y)*u);
+     const hop=sheet[index-1]==='LEAP'&&age?Math.sin(u*Math.PI)*31:0;oval(c,px,py,14,4,'#241b226b');
+     c.save();c.translate(px,py-hop);if(p.d===2||p.d===3)c.scale(-1,1);actress(c,-24,-77,47,77);c.restore();
+     const [dx,dy]=VECTORS[p.d],next=xy(p.x+dx*.67,p.y+dy*.67);line(c,[[px,py+3],next],'#ffe8b7',2.5);oval(c,...next,3,2,'#fff3c8');
+     panel(c,13,12,454,45,'#231b32eb',1);type(c,'ACT '+(stage+1)+'   /   '+scene.name.toUpperCase(),25,30,17,'#f5d296','left','Georgia');type(c,'●  '+(phase==='run'?'ROLLING':'STAGE'),449,30,12,'#fe9b9e','right','monospace');
+     panel(c,0,272,480,208,'#eee3d0',1);type(c,cueText,240,290,15,'#4d3445','center','Georgia');
+     type(c,'CUE SHEET',13,310,11,'#6c4d54','left','monospace');
+     for(let i=0;i<scene.budget;i++){const x=13+i*37;panel(c,x,321,33,27,phase==='run'&&i===index-1?'#c67854':sheet[i]?'#493449':'#d3c4b4',2);if(sheet[i])type(c,icons[CUES.indexOf(sheet[i])],x+16,334,19,'#fff1d5');}
+     CUES.forEach((s,i)=>{panel(c,7+i*120,362,106,46,colors[i],2);type(c,icons[i]+' '+s,59+i*120,385,15,'#3d3041','center','monospace');});
+     type(c,'Hint',44,447,16,'#543d50');type(c,'Undo',144,447,16,'#543d50');panel(c,218,422,248,47,'#493147',3);
+     type(c,phase==='run'?'Rolling…':phase==='bow'?'Applause':phase==='retake'?'Cut!':'Action  ▶',343,445,20,'#ffe0af','center','Georgia');
+   }
+ };
+ }
 };

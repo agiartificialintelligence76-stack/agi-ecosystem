@@ -1,182 +1,283 @@
-import { scenery, sprite, clamp, mix, poly, line, oval, panel, caption, gradient } from '../kit/field-art.js';
-
-import { crossingScene, yardSkyline, departureStrip } from './junction.js';
-
-const stations = ['A', 'B', 'C', 'D'];
-const paints = ['#ef985e','#ebce70','#63bcac','#9bb1e4'];
-const lanes = [-3.3,-1.1,1.1,3.3];
-const point = (u,v,h=0) => [54+u*32+v*12,285-u*11+v*21-h];
-const route = (u,branch,dest) => {
-  if(u<=3) return 0;
-  const half = branch ? 2.2 : -2.2;
-  const t = clamp((u-3)/3.6,0,1), s = t*t*(3-2*t);
-  if(u<=6.6) return half*s;
-  const q=clamp((u-6.6)/3,0,1);
-  return mix(half,lanes[dest],q*q*(3-2*q));
-};
-function block(c,u,v,w,d,h,roof,side,face) {
-  const a=point(u,v,h),b=point(u+w,v,h),e=point(u+w,v+d,h),f=point(u,v+d,h);
-  poly(c,[f,e,point(u+w,v+d),point(u,v+d)],side);
-  poly(c,[a,f,point(u,v+d),point(u,v)],face);
-  poly(c,[a,b,e,f],roof);
+import { caption, line, oval, panel, poly, scenery, sprite } from '../kit/field-art.js';
+const world = scenery(new URL('./playfield.webp', import.meta.url));
+const actor = sprite(new URL('./agi.webp', import.meta.url));
+const prop = sprite(new URL('./prop.webp', import.meta.url));
+const depots = [['SHOYU • PIER 1', ['.......', '..#..#.', '.EB..G.', '..#..#.', '.......']], ['MISO • OLD MILL', ['....#..', '.E.#...', '...B.#.', '.##..G.', '.......']], ['GINGER • WEST QUAY', ['..#....', '.B...#.', '.#.#..G', '.E...#.', '...#...']], ['SESAME • NIGHT FERRY', ['.E..#..', '.#.#.G.', '...B.#.', '.##....', '....#..']], ['HOUSE SPECIAL • LAST STOP', ['..G#...', '.#..B#.', '...#...', '.#..#.E', '.......']]];
+const dirs = [[0, -1], [1, 0], [0, 1], [-1, 0]];
+const index = (x, y) => y * 7 + x;
+const at = n => [54 + n % 7 * 47 + Math.floor(n / 7) * 21, 184 - n % 7 * 13 + Math.floor(n / 7) * 35];
+function tile(c, x, y) {
+  const top = [[x - 32, y - 11], [x + 13, y - 23], [x + 32, y + 11], [x - 13, y + 23]];
+  poly(c, [top[2], top[3], [x - 13, y + 29], [x + 32, y + 17]], '#112f32');
+  poly(c, [top[3], top[0], [x - 32, y - 5], [x - 13, y + 29]], '#27454a');
+  poly(c, top, '#355053');
 }
-const vehicle = sprite(new URL('./vehicle.webp', import.meta.url));
-const paintScenery = scenery(new URL('./scenery.webp', import.meta.url));
-
+function track(c, x, y, nx, ny) {
+  const dx = nx - x,
+    dy = ny - y,
+    mag = Math.hypot(dx, dy),
+    sx = -dy / mag,
+    sy = dx / mag;
+  for (let f = .15; f < 1; f += .24) {
+    line(c, [[x + dx * f - sx * 6, y + dy * f - sy * 6], [x + dx * f + sx * 6, y + dy * f + sy * 6]], '#ae8058', 3);
+  }
+  for (const s of [-3.8, 3.8]) line(c, [[x + sx * s, y + sy * s], [nx + sx * s, ny + sy * s]], '#dad1b3', 1.6);
+}
+function move(state, a, rails) {
+  const [p, b, c] = state,
+    px = p % 7,
+    py = Math.floor(p / 7),
+    bx = b % 7,
+    by = Math.floor(b / 7);
+  if (a === 4) return Math.abs(px - bx) + Math.abs(py - by) === 1 ? [p, b, !c] : null;
+  const [dx, dy] = dirs[a],
+    nx = px + dx,
+    ny = py + dy,
+    nb = index(nx, ny),
+    valid = (x, y) => x >= 0 && x < 7 && y >= 0 && y < 5 && rails.has(index(x, y));
+  if (!valid(nx, ny)) return null;
+  if (nb === b) {
+    if (!c || !valid(bx + dx, by + dy)) return null;
+    return [nb, index(bx + dx, by + dy), true];
+  }
+  return [nb, c ? p : b, c];
+}
+function route(start, goal, rails) {
+  const queue = [{
+      s: start,
+      path: []
+    }],
+    seen = new Set([start.join(',')]);
+  for (let i = 0; i < queue.length; i++) {
+    const {
+      s,
+      path
+    } = queue[i];
+    if (s[1] === goal) return path;
+    for (let a = 0; a < 5; a++) {
+      const n = move(s, a, rails);
+      if (!n || seen.has(n.join(','))) continue;
+      seen.add(n.join(','));
+      queue.push({
+        s: n,
+        path: [...path, a]
+      });
+    }
+  }
+  return [];
+}
 export default {
-  title:'SWITCHYARD', tagline:'Run the harbor junction at rush hour. Keep the express on time while freight lorries share the crossing.',
-  instructions:[
-    ['Read the train', 'Each locomotive carries its platform letter. Route fifteen trains before three reach the wrong platform.'],
-    ['Set both points', 'Switch 1 selects the A/B or C/D line. Switch 2 or 3 picks the exact platform.'],
-    ['Ring the crossing bell', 'Press Space or tap the amber crossing signal. Road traffic stops for five seconds so waiting trains can cross. Afterward lorries get a short road turn.'],
-    ['Keep time', 'Expresses carry a lightning mark and a tight deadline. Look at the approaching trains and time one bell for a convoy. A timely arrival earns a timetable bonus.'],
-  ],
-  keys:[['1 / 2 / 3','Flip the matching turnout'],['Space','Ring crossing bell']],touch:[['Tap a lever or signal','Flip that turnout'],['Tap crossing bell','Give trains a crossing window']],
-  create(api){
-    const switches=[0,0,0], trains=[], trees=[];
-    for(let i=0;i<48;i++){
-      const u=api.rng()*12-1, v=(api.rng()<.5?-1:1)*(3.8+api.rng()*2.5);
-      trees.push({u,v,h:7+api.rng()*12});
+  title: 'LAST TRAIN TO NOODLES',
+  tagline: 'AGI-1 has a locomotive, a dining car, and one last supper to deliver.',
+  instructions: [['Drive the little engine', 'Move one tile with the arrows, a swipe, or a tap on a neighboring track. Bring AGI-1 alongside the cream dining car.'], ['Work the coupler', 'Space or Coupler joins the two vehicles. Move toward the carriage to push. Move away or turn to pull it around corners. Tap Coupler again to leave it behind.'], ['Serve the platform', 'Leave the dining car on the red bowl. Short routes earn extra tips. Undo rewinds one move. Deliver five bowls before the night service ends.']],
+  keys: [['Arrows / WASD', 'Drive one tile'], ['Space', 'Couple / let go'], ['Z', 'Undo']],
+  touch: [['Tap a rail / swipe', 'Drive one tile'], ['Coupler / Undo', 'Operate the engine']],
+  create(api) {
+    const flipped = depots.map(() => api.rng() > .5);
+    let stage = 0,
+      t = 0,
+      clock = 112,
+      score = 0,
+      tips = 0,
+      ended = false,
+      delay = 0,
+      auto = 0,
+      flash = 0,
+      notice = '',
+      rails,
+      goal,
+      state,
+      history,
+      par,
+      moves,
+      facing = 1,
+      oldPos,
+      oldCar,
+      anim = 1,
+      startTap = null;
+    function setup() {
+      const rows = depots[stage][1].map(row => flipped[stage] ? [...row].reverse().join('') : row);
+      rails = new Set();
+      let p, b;
+      rows.forEach((r, y) => [...r].forEach((c, x) => {
+        const n = index(x, y);
+        if (c !== '#') rails.add(n);
+        if (c === 'E') p = n;
+        if (c === 'B') b = n;
+        if (c === 'G') goal = n;
+      }));
+      state = [p, b, false];
+      history = [];
+      par = route(state, goal, rails).length;
+      moves = 0;
+      oldPos = p;
+      oldCar = b;
+      anim = 1;
+      notice = 'COUPLE THE DINING CAR';
+      flash = 2.3;
     }
-    let time=0, spawned=0, next=0, served=0, errors=0, streak=0, score=0, ended=false;
-    let notice='RING FOR RAIL PRIORITY', noticeTime=2.4, lastDest=-1;
-    let clearance=0,roadTurn=0,roadClock=0,arm=0,requestRail=false,onTime=0,convoys=0,through=0;
-    function ring(){if(clearance>0||roadTurn>0||requestRail)return;requestRail=true;through=0;api.sound('power');api.haptic(12);}
-    function flip(i){switches[i]=1-switches[i]; api.sound('click'); api.haptic(8);}
-    function add(){
-      const want=spawned===0 ? 0 : (lastDest+1+Math.floor(api.rng()*3))%4;
-      const express=spawned%4===2||spawned%5===4;
-      lastDest=want; trains.push({u:Math.min(-.8,(trains.at(-1)?.u??1)-1.18),want,branch:null,actual:null,express,age:0,deadline:express?12.8:15.6,crossed:false}); spawned++;
-      next=Math.max(1.9,4.2-spawned*.16);
+    function finish() {
+      if (ended) return;
+      ended = true;
+      api.end(score, [['Suppers delivered', stage + '/5'], ['Shortest routes', tips]], stage === 5 ? 'last train, hot noodles. we did it.' : 'keep the stove warm for me.');
     }
-    function position(t,u=t.u){const b=t.branch??switches[0];return route(u,b,t.actual??(b*2+switches[b+1]));}
-    function track(c,from,to,branch,dest,active){
-      const path=[];
-      for(let n=0;n<=24;n++){
-        const u=mix(from,to,n/24), v=route(u,branch,dest); path.push(point(u,v));
-        if(n%3===0) line(c,[point(u,v-.28),point(u,v+.28)],'#78594b',3);
+    function action(a) {
+      if (ended || delay > 0) return;
+      if (a === 5) {
+        if (!history.length) return;
+        oldPos = state[0];
+        oldCar = state[1];
+        anim = 0;
+        state = history.pop();
+        moves--;
+        api.sound('back');
+        return;
       }
-      for(const offset of [-.14,.14]){
-        const rail=path.map(([px,py])=>[px+12*offset,py+21*offset]);
-        line(c,rail,active?'#ecddac':'#727874',2.6);
-        line(c,rail.map(([px,py])=>[px,py-1]),active?'#fff5d5':'#c0bc9f',1);
+      const next = move(state, a, rails);
+      if (!next) {
+        notice = a === 4 ? 'PULL BESIDE THE DINER' : 'TRACK BLOCKED';
+        flash = .7;
+        api.sound('tap');
+        return;
+      }
+      oldPos = state[0];
+      oldCar = state[1];
+      anim = 0;
+      history.push(state);
+      state = next;
+      moves++;
+      if (a === 1 || a === 3) facing = a === 1 ? 1 : -1;
+      api.sound(a === 4 ? 'merge' : 'tick');
+      if (a === 4) {
+        notice = state[2] ? 'COUPLED • PUSH OR PULL' : 'COUPLER OPEN';
+        flash = 1.2;
+      }
+      if (state[1] === goal) {
+        tips += Number(moves <= par);
+        score += Math.max(150, 530 - (moves - par) * 19);
+        notice = moves <= par ? 'SERVED • CHEF’S TIP!' : 'HOT SUPPER SERVED';
+        flash = 1.3;
+        delay = 1.1;
+        api.sound('clear');
+        api.haptic(18);
       }
     }
-    const signs=[[3,0],[6.6,-2.2],[6.6,2.2]];
-    function train(c,t){
-      const v=position(t), [px,py]=point(t.u,v);
-      const behind=point(t.u-.3,position(t,t.u-.3));
-      const angle=Math.atan2(py-behind[1],px-behind[0]);
-      c.save();c.translate(px,py);c.rotate(angle);
-      for(let j=1;j<=(t.express?1:2);j++){
-        const xx=-j*16-7;
-        poly(c,[[xx-5,0],[xx+6,0],[xx+6,-8],[xx-6,-8]],'#795546');
-        poly(c,[[xx-6,-8],[xx-2,-12],[xx+8,-12],[xx+6,-8]],paints[t.want]);
-        oval(c,xx-3,0,2.5,2.5,'#23322d');oval(c,xx+5,0,2.5,2.5,'#23322d');
-      }
-      if(!vehicle(c,-27,-26,36,27)){
-      panel(c,-19,-11,23,11,'#263e36',3); panel(c,-20,-20,11,15,paints[t.want],2);
-      c.fillStyle='#eff4dd';c.fillRect(-17,-17,5,6); c.fillStyle='#574f40';c.fillRect(-1,-17,4,7);
-      for (const wheel of [-15,-7,1]) oval(c,wheel,0,3.5,3.5,'#453b36','#c3b994',1.3);
-      }
-      const smoke=(time*1.1+t.want*.22)%1;
-      for(let k=0;k<4;k++){const q=(smoke+k*.25)%1;oval(c,-2-q*9,-17-q*18,1.4+q*4,1.7+q*3,'#e9e1c488');}
-      c.restore();
-      if(t.express){panel(c,px+12,py-50,17,18,'#f9c65f',3);caption(c,'↯',px+20,py-41,'#473c31',15);}
-      panel(c,px-14,py-51,28,24,'#233831');caption(c,stations[t.want],px,py-39,paints[t.want],18);
-    }
+    setup();
     return {
-      key(type,code){if(type!=='down')return;if(code==='Space')ring();else if(/^Digit[123]$/.test(code))flip(Number(code.slice(-1))-1);},
-      pointer(type,x,y){
-        if(type!=='down')return;
-        if(y>=320&&y<375&&x>=254){ring();return;}
-        if(y>=375){flip(clamp(Math.floor(x/160),0,2));return;}
-        const i=signs.findIndex(([u,v])=>{const [sx,sy]=point(u,v+1);return Math.hypot(x-sx,y-sy+13)<25;});
-        if(i>=0)flip(i);
+      key(type, k) {
+        if (type !== 'down') return;
+        const a = ['ArrowUp', 'ArrowRight', 'ArrowDown', 'ArrowLeft', 'Space', 'KeyZ'].indexOf(k);
+        const wasd = ['KeyW', 'KeyD', 'KeyS', 'KeyA'].indexOf(k);
+        if (a >= 0 || wasd >= 0) action(a >= 0 ? a : wasd);
       },
-      demo(){
-        if(!clearance&&!roadTurn&&trains.some(t=>!t.crossed&&t.u>.5))ring();
-        for(let i=0;i<3;i++){
-          const t=trains.filter(tr=>i===0?tr.branch===null:tr.branch===i-1&&tr.actual===null).sort((a,b)=>b.u-a.u)[0];
-          if(t)switches[i]=i===0?Math.floor(t.want/2):t.want%2;
+      pointer(type, x, y) {
+        if (type === 'cancel') {
+          startTap = null;
+          return;
+        }
+        if (type === 'down') {
+          startTap = [x, y];
+          return;
+        }
+        if (type !== 'up' || !startTap) return;
+        let dx = x - startTap[0],
+          dy = y - startTap[1];
+        startTap = null;
+        if (y > 398 && Math.hypot(dx, dy) < 18) {
+          action(x < 140 ? 5 : 4);
+          return;
+        }
+        if (Math.hypot(dx, dy) < 18) {
+          const [px, py] = at(state[0]),
+            u = x - px,
+            v = y - py;
+          dx = (35 * u - 21 * v) / 1918;
+          dy = (13 * u + 47 * v) / 1918;
+          if (Math.max(Math.abs(dx), Math.abs(dy)) > .35) action(Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 1 : 3 : dy > 0 ? 2 : 0);
+          return;
+        }
+        if (Math.max(Math.abs(dx), Math.abs(dy)) > 13) action(Math.abs(dx) > Math.abs(dy) ? dx > 0 ? 1 : 3 : dy > 0 ? 2 : 0);
+      },
+      demo(dt) {
+        auto -= dt;
+        if (auto <= 0 && delay <= 0) {
+          const steps = route(state, goal, rails);
+          if (steps.length) action(steps[0]);
+          auto = .39;
         }
       },
-      update(dt){
-        if(ended)return;
-        time+=dt;noticeTime-=dt;next-=dt;
-        if(clearance>0){clearance=Math.max(0,clearance-dt);if(!clearance)roadTurn=2.6;}else roadTurn=Math.max(0,roadTurn-dt);
-        arm=mix(arm,clearance>.3?1:0,Math.min(1,dt*5));
-        if(arm<.3)roadClock+=dt;
-        const occupied=[0,1,2].some(i=>Math.abs(((roadClock*.9+i*3.4)%10.6)-5.3)<.79);
-        if(requestRail&&!occupied){requestRail=false;clearance=5.1;}
-        if(next<=0&&spawned<15)add();
-        let leader=Infinity;
-        for(const t of trains){
-          t.age+=dt;
-          let proposed=t.u+(.93+spawned*.014+(t.express?.19:0))*dt;
-          if(!t.crossed&&clearance<.35)proposed=Math.min(proposed,1.34);
-          proposed=Math.min(proposed,leader-1.18);
-          if(!t.crossed&&proposed>=1.49){t.crossed=true;through++;if(through===2){convoys++;notice='DOUBLE DISPATCH';noticeTime=1.25;api.sound('combo');}}
-          t.u=proposed;leader=t.u;
-          if(t.u>=3&&t.branch===null)t.branch=switches[0];
-          if(t.u>=6.6&&t.actual===null)t.actual=t.branch*2+switches[t.branch+1];
-          if(t.u>=10.8&&!t.done){
-            t.done=true;served++;
-            if(t.actual===t.want){streak++;const punctual=t.age<=t.deadline;if(punctual)onTime++;score+=100+Math.min(6,streak-1)*20+(punctual?(t.express?140:50):0);notice=punctual?'ON TIME  •  PLATFORM '+stations[t.want]:'ARRIVAL  •  PLATFORM '+stations[t.want];api.sound('clear');}
-            else{errors++;streak=0;notice='WRONG PLATFORM  •  '+errors+'/3';api.sound('error');}
-            noticeTime=1.5;
+      update(dt) {
+        if (ended) return;
+        t += dt;
+        clock -= dt;
+        flash -= dt;
+        anim = Math.min(1, anim + dt * 6);
+        if (delay > 0) {
+          delay -= dt;
+          if (delay <= 0) {
+            stage++;
+            if (stage === 5) {
+              finish();
+              return;
+            }
+            setup();
           }
         }
-        while(trains[0]?.done)trains.shift();
-        api.hud('Dispatch',score,'Arrivals',served+'/15');
-        if(served===15||errors===3||time>=96){ended=true;api.end(score,[['Correct platforms',served-errors],['On time',onTime+'/15'],['Double dispatches',convoys],['Wrong platforms',errors]],errors===0?'every little train made it home.':'shift change. i saved you a window seat.');}
+        if (clock <= 0) finish();
+        api.hud('Tips', score, 'Service', Math.min(5, stage + 1) + '/5');
       },
-      draw(c){
-        c.fillStyle=gradient(c,0,480,[[0,'#edf0c9'],[.6,'#c7d8a6'],[1,'#9eae87']]);c.fillRect(0,0,480,480);
-        yardSkyline(c,time);
-        poly(c,[point(-1.5,-5.3),point(12,-5.3),point(12,5),point(-1.5,5)],'#b7ce92');
-        poly(c,[point(-1.5,5),point(12,5),point(12,5,-11),point(-1.5,5,-11)],'#91785b');
-        paintScenery(c);
-        for(const t of trees){
-          const [px,py]=point(t.u,t.v);oval(c,px+3,py,7,3,'#91a777');
-          line(c,[[px,py],[px,py-t.h]],'#735e48',2.3);poly(c,[[px,py-t.h-6],[px-6,py-5],[px+6,py-6]],'#648569');
+      draw(c) {
+        world(c);
+        if (ended) return;
+        const elevation = [...rails].sort((a, b) => at(a)[1] - at(b)[1]);
+        for (const n of elevation) {
+          const [x, y] = at(n);
+          tile(c, x, y);
         }
-        for(let i=0;i<4;i++){
-          const v=lanes[i];
-          block(c,9.6,v+.23,1.6,.48,4,'#e5cd98','#af956e','#876f54');
-          block(c,10.45,v-.92,.72,.62,15,'#e9e0c2','#f3deaf','#cfba90');
-          block(c,10.36,v-1,.89,.76,19,paints[i],'#736657','#97846a');
+        for (const n of rails) {
+          const [x, y] = at(n);
+          for (const offset of [1, 7]) {
+            if (offset === 1 && n % 7 === 6 || !rails.has(n + offset)) continue;
+            track(c, x, y, ...at(n + offset));
+          }
         }
-        crossingScene(c,point,arm,roadClock,time);
-        track(c,-1,3,0,0,true);
-        for(let b=0;b<2;b++){
-          track(c,3,6.6,b,b*2,b===switches[0]);
-          for(let j=0;j<2;j++)track(c,6.6,11.1,b,b*2+j,j===switches[b+1]);
+        for (const n of rails) {
+          const [x, y] = at(n);
+          oval(c, x, y, 2.4, 1.8, '#e8c78d');
         }
-        for(let i=0;i<4;i++){
-          const [px,py]=point(11.29,lanes[i]);
-          line(c,[[px,py],[px,py-26]],'#685d4d',3);
-          panel(c,px-12,py-39,24,23,'#31433a',4);caption(c,stations[i],px,py-27,paints[i],16);
+        const [gx, gy] = at(goal);
+        oval(c, gx, gy, 21 + 2 * Math.sin(t * 4), 18, null, '#ff9f6a', 3);
+        caption(c, '♨', gx, gy - 1, '#ffd99f', 26);
+        function lerp(a, b) {
+          const A = at(a),
+            B = at(b);
+          return [A[0] + (B[0] - A[0]) * anim, A[1] + (B[1] - A[1]) * anim];
         }
-        signs.forEach(([u,v],i)=>{
-          const [px,py]=point(u,v+1);
-          line(c,[[px,py],[px,py-16]],'#564d44',3);
-          oval(c,px,py-20,9,9,'#f7e9c8','#685d49',1.5);caption(c,i+1,px,py-20,'#384b3a',15);
-        });
-        for(const t of trains)train(c,t);
-        panel(c,14,15,195,38,'#283c34');caption(c,'NORTH VALLEY RAIL',27,34,'#f6e9c2',17,'left');departureStrip(c,trains,stations);
-        panel(c,10,328,234,37,'#30443be8');caption(c,noticeTime>0?notice:'ON TIME  '+onTime+' / '+served,127,347,'#fcf0cb',14);
-        panel(c,253,321,217,48,clearance>0?'#adcfaa':roadTurn>0?'#c4bbb1':'#f5c681');caption(c,clearance>0?'RAIL OPEN  '+clearance.toFixed(1):roadTurn>0?'ROAD TURN  '+roadTurn.toFixed(1):requestRail?'CLEARING ROAD…':'♢  RING CROSSING',361,346,'#304238',16);
-        for(let i=0;i<3;i++){
-          const bx=5+i*158;
-          panel(c,bx,380,153,83,'#35483e',10);
-          caption(c,'POINT '+(i+1),bx+14,398,'#d1d8b5',15,'left');
-          const label=i===0?['A / B','C / D'][switches[i]]:stations[(i-1)*2+switches[i]];
-          caption(c,label,bx+14,435,'#ffedc3',23,'left');
-          const ex=bx+114+switches[i]*17;line(c,[[bx+122,443],[ex,419]],'#e1dab8',5);
-          oval(c,ex,418,7,7,i===0?'#edab75':paints[(i-1)*2+switches[i]]);
+        const [ex, ey] = lerp(oldPos, state[0]),
+          [bx, by] = lerp(oldCar, state[1]);
+        if (state[2]) line(c, [[ex, ey], [bx, by]], '#ffe393', 5);
+        if (!prop(c, bx - 29, by - 30, 58, 42)) {
+          panel(c, bx - 24, by - 15, 48, 29, '#e5c78e', 6);
+          panel(c, bx - 23, by - 15, 46, 6, '#bf503c', 2);
+          for (const q of [-13, 0, 13]) panel(c, bx + q - 4, by - 6, 8, 9, '#4a545b', 2);
+          caption(c, '♨', bx, by + 2, '#fffbdb', 16);
+          oval(c, bx - 14, by + 14, 4, 4, '#172126');
+          oval(c, bx + 14, by + 14, 4, 4, '#172126');
         }
-      },
+        c.save();
+        c.translate(ex, ey);
+        c.scale(facing, 1);
+        actor(c, -32, -46 + Math.sin(t * 9) * .7, 65, 65);
+        c.restore();
+        panel(c, 14, 12, 452, 44, '#102d30', 3);
+        caption(c, depots[stage][0], 26, 34, '#ffdaa1', 16, 'left');
+        caption(c, Math.ceil(clock) + 's', 449, 34, '#fff1d5', 17, 'right');
+        caption(c, flash > 0 ? notice : 'MOVES ' + moves + '   /   CHEF’S PAR ' + par, 240, 383, '#fff7cc', 15);
+        panel(c, 16, 408, 112, 52, '#244549', 4);
+        caption(c, '↶ UNDO', 72, 434, '#f9dfad', 16);
+        panel(c, 139, 408, 325, 52, state[2] ? '#eac88a' : '#b24e3c', 4);
+        caption(c, state[2] ? 'RELEASE COUPLER' : 'CLOSE COUPLER', 301, 434, state[2] ? '#263f42' : '#fff2ce', 18);
+      }
     };
-  },
+  }
 };

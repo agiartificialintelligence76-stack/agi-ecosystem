@@ -1,153 +1,129 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import cloudfoil from '../src/games/cloudfoil/game.js';
-import switchyard from '../src/games/switchyard/game.js';
-import pearlshift from '../src/games/pearlshift/game.js';
-import moonfreight from '../src/games/moonfreight/game.js';
-import summitline from '../src/games/summitline/game.js';
-import driftglass from '../src/games/driftglass/game.js';
+import wingwalk from '../src/games/cloudfoil/game.js';
+import railway from '../src/games/switchyard/game.js';
+import radio from '../src/games/pearlshift/game.js';
+import billiards from '../src/games/moonfreight/game.js';
+import choir from '../src/games/summitline/game.js';
+import bandit from '../src/games/driftglass/game.js';
 
-const circuits = [
-  [cloudfoil, 'Hoops', v => v === '12 / 12'],
-  [switchyard, 'Correct platforms', v => v === 15],
-  [pearlshift, 'Pearls landed', v => v >= 10],
-  [moonfreight, 'Freight delivered', v => v === '5/5'],
-  [summitline, 'Stations served', v => v === '5/5'],
-  [driftglass, 'Clean gates', v => v === '18/18'],
-];
-function trial(game, autopilot, seed) {
-  let result = null, state = seed;
-  const model = game.create({
-    rng: () => ((state = (Math.imul(state, 1664525) + 1013904223) >>> 0) / 4294967296),
-    sound() {}, haptic() {}, hud() {},
-    end(score, stats) {
-      assert.equal(result, null, 'one result per run');
-      assert.ok(Number.isFinite(score) && score >= 0);
-      result = { score, stats: Object.fromEntries(stats) };
-    },
-  });
-  const dt = 1 / 60;
-  for (let frame = 0; !result && frame < 120 * 60; frame++) {
-    if (autopilot) model.demo(dt);
-    model.update(dt);
-  }
-  assert.ok(result, 'the run reaches a result');
-  for (let n = 0; n < 120; n++) model.update(dt);
-  return result;
-}
-for (const [game, label, finished] of circuits) {
-  test(game.title + ' can be completed, repeats a seeded run, and rewards active play', () => {
-    const idle = trial(game, false, 7);
-    const played = trial(game, true, 7);
-    assert.deepEqual(trial(game, true, 7), played);
-    assert.ok(finished(played.stats[label]), label);
-    assert.ok(played.score > idle.score);
-    assert.ok(finished(trial(game, true, 91).stats[label]), 'alternate course');
-  });
-}
-
-test('PEARL SHIFT lets both touch and keyboard pilots gather a shell, then bank it at the surface', () => {
-  for (const input of ['pointer', 'keyboard']) {
-    let catchScore = 0;
-    const model = pearlshift.create({
-      rng: () => .5, sound() {}, haptic() {},
-      hud(_label, score) { catchScore = score; },
-      end() { assert.fail('a single dive does not end the shift'); },
-    });
-    const wait = seconds => {
-      for (let i = 0; i < Math.round(seconds * 60); i++) model.update(1 / 60);
-    };
-    const tap = (x, y) => {
-      model.pointer('down', x, y);
-      model.pointer('up', x, y);
-    };
-    const space = () => { model.key('down', 'Space'); model.key('up', 'Space'); };
-    if (input === 'pointer') {
-      tap(362, 267);
-      tap(360, 440);
-    } else {
-      space();
-      model.key('down', 'ArrowRight');
-      wait(1.58);
-      model.key('up', 'ArrowRight');
-    }
-    wait(3.5);
-    assert.equal(catchScore, 0, 'the pearl still sits inside the bell');
-    if (input === 'pointer') tap(360, 440); else space();
-    wait(2.6);
-    assert.equal(catchScore, 100, input);
-  }
-});
-
-function manual(game, input) {
-  let result, points = 0;
+function play(game, random) {
+  let outcome, hud, calls = 0;
   const sounds = [];
   const model = game.create({
-    rng: () => .5, sound: preset => sounds.push(preset), haptic() {},
-    hud(_label, score) { points = score; },
-    end(score, stats) { result = {score, stats:Object.fromEntries(stats)}; },
+    rng: random, sound: (name, options) => sounds.push([name, options]), haptic() {},
+    hud: (...chips) => { hud = chips; },
+    end(score, stats) {
+      calls++;
+      assert.equal(calls, 1);
+      outcome = { score, stats: Object.fromEntries(stats) };
+    },
   });
-  const wait = seconds => { for(let i=0;i<Math.round(seconds*120);i++) model.update(1/120); };
-  const press = (key, x, y) => {
-    if(input==='touch'){model.pointer('down',x,y);model.pointer('up',x,y);}
-    else {model.key('down',key);model.key('up',key);}
-  };
-  return {model,wait,press,sounds,get points(){return points;},get result(){return result;}};
+  function wait(seconds, demo = false) {
+    for (let frame = 0; frame < Math.round(seconds * 120); frame++) {
+      if (demo && !outcome) model.demo(1 / 120);
+      model.update(1 / 120);
+    }
+  }
+  const tap = (x, y) => { model.pointer('down', x, y); model.pointer('up', x, y); };
+  const press = code => { model.key('down', code); model.key('up', code); };
+  return { model, wait, tap, press, sounds, get outcome() { return outcome; }, get hud() { return hud; } };
 }
-
-for(const input of ['keyboard','touch']) {
-  test('the six expanded controls work directly with '+input, () => {
-    const air=manual(cloudfoil,input);
-    air.wait(3.22);
-    air.press('Space',375,438);
-    if(input==='touch') {
-      const scale=165/(165+485-74*3.22);
-      air.press('',240+85*scale,156+(130-14)*scale);
-    } else {
-      air.model.key('down','ArrowRight');air.wait(85/205);air.model.key('up','ArrowRight');
-      air.model.key('down','ArrowUp');air.wait(14/146);air.model.key('up','ArrowUp');
-    }
-    air.wait(120);
-    assert.ok(air.result.stats['Needle shortcuts']>=1,'a folded glider can thread the needle');
-
-    const rail=manual(switchyard,input);
-    rail.wait(2);rail.press('Space',360,345);rail.wait(95);
-    assert.ok(rail.result.stats['Correct platforms']>=1,'ringing the bell lets the first service reach A');
-
-    const reef=manual(pearlshift,input);
-    reef.press('Space',366,440);reef.wait(2);reef.press('KeyE',199,440);
-    if(input==='touch') reef.press('',148,273);
-    else {
-      reef.model.key('down','ArrowLeft');reef.model.key('down','ArrowUp');reef.wait(.80);
-      reef.model.key('up','ArrowUp');reef.wait(.42);reef.model.key('up','ArrowLeft');
-    }
-    reef.wait(1.7);reef.press('Space',366,440);reef.wait(3.1);
-    assert.equal(reef.points,400,'sonar reveals a four-point opal and the bell banks it');
-
-    const tug=manual(moonfreight,input);
-    tug.wait(2.3);tug.press('KeyE',370,371);tug.wait(100);
-    assert.equal(tug.result.stats['Salvage retrieved'],1,'the deck winch captures a floating supply pod');
-
-    const cable=manual(summitline,input);
-    cable.wait(4.2);cable.press('Space',370,40);cable.wait(1/120);
-    const exposure=cable.points;
-    assert.ok(exposure>=60,'a wildlife exposure earns stars');
-    cable.press('Space',370,40);cable.wait(1/120);assert.equal(cable.points,exposure,'one exposure per species');
-    cable.wait(120);assert.equal(cable.result.stats['Field guide'],'1/5');
-
-    const race=manual(driftglass,input);
-    race.press('KeyB',100,443);race.press('KeyB',100,443);race.wait(120);
-    assert.equal(race.result.stats.Boosts,1,'the second tap cannot spend the same charge');
+function seeded(seed) {
+  let v = seed;
+  return () => ((v = (Math.imul(v, 1664525) + 1013904223) >>> 0) / 4294967296);
+}
+const objectives = [
+  [wingwalk, 'Letters delivered', '8/8'], [railway, 'Suppers delivered', '5/5'],
+  [radio, 'Songs archived', '5/5'], [billiards, 'Tables cleared', '5/5'],
+  [choir, 'Concerts played', '6/6'], [bandit, 'Broadcast', 'Your station'],
+];
+for (const [game, key, result] of objectives) {
+  test(game.title + ' completes on different seeds, repeats the same run, and rewards play', () => {
+    const run = (seed, demo) => {
+      const session = play(game, seeded(seed));
+      session.wait(120, demo);
+      assert.ok(session.outcome);
+      return session.outcome;
+    };
+    const best = run(7, true);
+    assert.deepEqual(run(7, true), best);
+    assert.equal(best.stats[key], result);
+    assert.equal(run(91, true).stats[key], result);
+    assert.ok(best.score > run(7, false).score);
   });
 }
 
-test('advanced flight lines, convoys, salvage, wildlife, sonar and racing are attainable within the clock', () => {
-  const best=circuits.map(([game])=>trial(game,true,91).stats);
-  assert.ok(best[0]['Needle shortcuts']>=4);
-  assert.ok(best[1]['Double dispatches']>=1);
-  assert.ok(best[2]['Wreck opals']>=1);
-  assert.equal(best[3]['Pods unloaded'],5);
-  assert.equal(best[4]['Field guide'],'5/5');
-  assert.ok(best[5]['Apex clips']>=8);
-  assert.equal(best[5].Finish,'1st of 2');
+for (const input of ['touch', 'keyboard']) {
+  test(input + ' directly delivers mail, shunts supper, broadcasts, shoots, echoes and steals', () => {
+    const make = game => play(game, () => .5);
+    const operate = (run, key, x, y) => input === 'touch' ? run.tap(x, y) : run.press(key);
+
+    const mail = make(wingwalk);
+    const jump = () => {
+      if (input === 'touch') mail.model.pointer('down', 70, 431); else mail.model.key('down', 'Space');
+      mail.wait(.46);
+      if (input === 'touch') mail.model.pointer('up', 70, 431); else mail.model.key('up', 'Space');
+      mail.wait(2.6);
+    };
+    jump();
+    assert.ok(mail.hud[1] > 0, 'the first letter lands');
+    const first = mail.hud[1];
+    jump();
+    assert.equal(mail.hud[1], first, 'a mismatched flight depth misses the second landing');
+    operate(mail, 'ArrowUp', 267, 444);
+    jump();
+    assert.ok(mail.hud[1] > first, 'steering into the far lane delivers the second letter');
+
+    const train = make(railway);
+    operate(train, 'Space', 320, 436);
+    const trackTap = col => [54 + col * 47 + 2 * 21, 184 - col * 13 + 2 * 35];
+    operate(train, 'ArrowRight', ...trackTap(2));
+    operate(train, 'KeyZ', 65, 436);
+    for (const col of [2, 3, 4]) operate(train, 'ArrowRight', ...trackTap(col));
+    train.wait(1.2);
+    assert.equal(train.hud[1], 530, 'undo and three coupled pushes achieve the chef’s par');
+
+    const ocean = make(radio);
+    operate(ocean, 'KeyE', 100, 438);
+    operate(ocean, 'Space', 325, 438);
+    ocean.wait(2);
+    assert.equal(ocean.hud[3], '1/5', 'the signal near the crosshair is archived');
+    assert.ok(ocean.sounds.some(([name]) => name === 'bounce'), 'the hydrophone returned its ping');
+
+    const pool = make(billiards);
+    operate(pool, 'Space', 322, 429);
+    pool.wait(.2);
+    assert.equal(pool.hud[3], 11, 'one launch spends one piece of chalk');
+    assert.ok(pool.sounds.some(([name]) => name === 'slice'));
+
+    const concert = make(choir);
+    concert.wait(2.8);
+    operate(concert, 'KeyE', 91, 315);
+    concert.wait(2.85);
+    for (const [key, x] of [['Digit1', 58], ['Digit3', 281], ['Digit1', 58]]) operate(concert, key, x, 429);
+    concert.wait(1.25);
+    assert.equal(concert.hud[3], '2/6', 'the first melody can be rehearsed and echoed');
+    assert.ok(concert.hud[1] >= 280);
+
+    const chase = make(bandit);
+    if (input === 'touch') chase.tap(201, 217);
+    else { chase.model.key('down', 'ArrowUp'); chase.wait(.43); chase.model.key('up', 'ArrowUp'); }
+    chase.wait(2);
+    operate(chase, 'Space', 245, 440);
+    chase.wait(.5);
+    assert.ok(parseFloat(chase.hud[1]) > 0, 'the player took the live cassette');
+  });
+}
+
+test('an interrupted hold cancels the jump and cue, and a rehearsal plays four distinct pitched notes', () => {
+  for (const game of [wingwalk, billiards]) {
+    const run = play(game, () => .5);
+    run.model.key('down', 'Space'); run.wait(.4); run.model.cancelInput(); run.model.key('up', 'Space');
+    assert.ok(run.sounds.every(([name]) => name !== 'whoosh' && name !== 'slice'));
+  }
+  const orchestra = play(choir, seeded(913));
+  orchestra.wait(119, true);
+  const tones = new Set(orchestra.sounds.filter(([n]) => n === 'tap').map(([, o]) => o.pitch));
+  assert.equal(tones.size, 4);
 });

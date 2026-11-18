@@ -1,263 +1,141 @@
-import { TAU, clamp, ellipse, line, shape, rect, label, sky, artwork, paintArtwork } from '../kit/garden-art.js';
+import { artwork, clamp, ellipse, label, line, paintArtwork, rect, shape, sky } from '../kit/garden-art.js';
 
-const hill=artwork(new URL('./scene.webp',import.meta.url));
-const groveTrees=artwork(new URL('./trees.webp',import.meta.url));
-const fruitNames=['Plum','Pear','Citrus'];
-const fruitColors=['#945d91','#cfd96c','#f5a34f'];
-const seasons=[
-  {name:'SPRING',top:'#afd5c9',bottom:'#e6e9bf',leaves:['#719a72','#86ac72','#a3be83'],grass:'#b1cb85'},
-  {name:'SUMMER',top:'#a6cecb',bottom:'#efe1b6',leaves:['#487d60','#689658','#86ad64'],grass:'#a8bc71'},
-  {name:'AUTUMN',top:'#d3c3b5',bottom:'#f1ddac',leaves:['#bb7552','#d39459','#dda361'],grass:'#c9ad71'},
-  {name:'WINTER',top:'#afc6cc',bottom:'#e5dfca',leaves:['#6f8d82','#8fa99b','#b0c2aa'],grass:'#c8d1b4'},
+const agi=artwork('/images/agi1-portrait-2d.webp');
+const stops=[
+ ['Gate',43,231,'start'],['Records',122,180,'music'],['Arcade',233,198,'game'],['Neon',350,175,'star'],['Home',435,236,'home'],
+ ['Books',343,276,'book'],['Park',236,319,'tree'],['Boba',134,265,'cup'],['Pier',54,324,'water'],
+].map(([name,x,y,icon])=>({name,x,y,icon}));
+const tracks=[
+ [0,1,0,2],[1,2,0,2],[2,3,0,2],[3,4,0,2],
+ [0,7,1,2],[7,2,1,2],[2,5,1,2],[5,4,1,2],
+ [0,8,2,2],[8,7,2,1],[7,6,2,2],[6,5,2,2],[5,3,2,2],
 ];
-const sites=[[153,226],[322,205],[98,306],[283,298]];
-const tools=['Water','Graft','Pick','Canal'];
-const totalDays=20;
-
-function fruit(ctx,x,y,k,s=1){
+const lines=['#ee9c8c','#78d1c0','#e5bf72'],notes=[
+ ['“can we go crate-digging?”','“i’m looking for my own record, yes.”'],
+ ['“rematch. i know a shortcut.”','“i called player two, remember?”'],
+ ['“i want to see all those lights.”','“pink neon is basically my moon.”'],
+ ['“take me to the book stacks.”','“the bookmark stays between us.”'],
+ ['“a garden stop would be cute.”','“i did touch grass. witnesses.”'],
+ ['“boba before the last train?”','“i saved a pearl for you.”'],
+ ['“can we go smell the sea?”','“that ferry looks like a little duck.”'],
+];
+const orderStops=[1,2,3,5,6,7,8];
+function symbol(ctx,icon,x,y,s,ink){
  ctx.save();ctx.translate(x,y);ctx.scale(s,s);
- if(k===1){
-   ellipse(ctx,0,3,5.8,6.5,fruitColors[k]);ellipse(ctx,1,-1.4,3.7,5.4,fruitColors[k],.1);
- }else ellipse(ctx,0,2,k===0?5.7:6.1,k===0?6.8:5.8,fruitColors[k],-.15);
- line(ctx,[[0,-3],[1,-7]],'#625140',1.4);
- ellipse(ctx,3,-5.7,2.5,1.3,'#5f895b',-.4);
- ellipse(ctx,-2.2,-.5,1.2,2.1,'#f6e5b7',.35);
+ if(icon==='music')label(ctx,'♫',0,1,25,ink,'center','Georgia');
+ if(icon==='game'){rect(ctx,-12,-6,24,14,5,ink);line(ctx,[[-8,0],[-2,0]],'#25475b',2);line(ctx,[[-5,-3],[-5,3]],'#25475b',2);ellipse(ctx,6,-1,1.5,1.5,'#25475b');}
+ if(icon==='star')label(ctx,'✦',0,1,25,ink,'center');
+ if(icon==='home'){shape(ctx,[[-12,0],[0,-11],[12,0]],ink);rect(ctx,-8,-1,16,12,1,ink);rect(ctx,-2,4,4,8,0,'#294759');}
+ if(icon==='tree'){line(ctx,[[0,0],[0,10]],ink,3);for(const [dx,dy] of [[-5,-2],[5,-2],[0,-7]])ellipse(ctx,dx,dy,5.5,5.5,ink);}
+ if(icon==='book'){shape(ctx,[[-12,-7],[0,-4],[12,-7],[12,7],[0,10],[-12,7]],ink);line(ctx,[[0,-4],[0,8]],'#294759',1);}
+ if(icon==='cup'){shape(ctx,[[-8,-7],[8,-7],[5,10],[-5,10]],ink);line(ctx,[[1,-7],[4,-13]],ink,2);}
+ if(icon==='water')for(let j=0;j<2;j++)line(ctx,[[-11,j*5],[-5,-3+j*5],[0,j*5],[5,-3+j*5],[11,j*5]],ink,2);
+ if(icon==='start')label(ctx,'➜',0,1,23,ink,'center');
  ctx.restore();
 }
-function tree(ctx,tree,i,t,season,selected){
- const [x,ground]=sites[i],y=ground-7;
- const crown=[[0,-62,23],[-22,-50,21],[23,-50,21],[-11,-74,17],[13,-70,19]];
- ellipse(ctx,x+4,ground+3,39,10,'rgba(79,85,49,.20)',-.1);
- if(selected){
-   ctx.strokeStyle='#f9edba';ctx.lineWidth=2.2;ctx.beginPath();ctx.ellipse(x,ground,41,13,-.06,0,TAU);ctx.stroke();
- }
- const sway=Math.sin(t*.86+i)*1.1;
- if(groveTrees?.naturalWidth){
-   const index=seasons.indexOf(season),w=groveTrees.naturalWidth/2,h=groveTrees.naturalHeight/2;
-   ctx.save();ctx.translate(x,y+9);ctx.rotate(sway*.0025);
-   ctx.drawImage(groveTrees,(index%2)*w,Math.floor(index/2)*h,w,h,-67,-118,134,126);ctx.restore();
- }else{
- shape(ctx,[[x-6,y+2],[x-3,y-35],[x-13,y-56],[x-8,y-61],[x+2,y-42],[x+15,y-62],[x+19,y-59],[x+5,y-31],[x+7,y+2]],'#795c46');
- line(ctx,[[x-1,y-3],[x+1,y-29],[x-6,y-43]],'#a57c60',1.6);
- crown.forEach(([bx,by,r],j)=>{
-   ellipse(ctx,x+bx+sway,y+by,r,r*.86,season.leaves[j%3]);
-   for(let n=0;n<7;n++){
-     const a=n*TAU/7+i,dx=bx+Math.cos(a)*r*.74,dy=by+Math.sin(a)*r*.56;
-     ellipse(ctx,x+dx+sway,y+dy,4,2.1,season.leaves[(j+n+1)%3],a*.5);
+export function departures(node,last){
+ return tracks.filter(([a,b])=>a===node||b===node).map(([a,b,color,mins])=>({to:a===node?b:a,color,cost:mins+Number(last>=0&&last!==color)}));
+}
+// Find the quickest trip that earns every requested stamp and ends at Home.
+export function quickest(node,last,missing,pass){
+ const queue=[{node,last,mask:0,pass,cost:0,first:null}],seen=new Set(),all=(1<<missing.length)-1;
+ while(queue.length){
+  queue.sort((a,b)=>a.cost-b.cost);const cur=queue.shift();const key=[cur.node,cur.last,cur.mask,cur.pass].join('/');
+  if(seen.has(key))continue;seen.add(key);
+  if(cur.node===4&&cur.mask===all)return cur;
+  for(const leg of departures(cur.node,cur.last)){
+   const bit=missing.indexOf(leg.to),mask=bit<0?cur.mask:cur.mask|(1<<bit);if(leg.to===4&&mask!==all)continue;
+   for(const spend of cur.pass&&leg.cost>1?[false,true]:[false]){
+    queue.push({node:leg.to,last:leg.color,mask,pass:cur.pass&&!spend,cost:cur.cost+Math.max(1,leg.cost-(spend?2:0)),first:cur.first||{to:leg.to,spend}});
    }
- });
+  }
  }
- if(tree.scion!==null){
-   line(ctx,[[x+8,y-39],[x+18,y-48],[x+28,y-51]],'#846647',2.7);
-   line(ctx,[[x+13,y-42],[x+16,y-38]],'#edc697',3.6);
- }
- const slots=[[-21,-53],[15,-60],[1,-80],[27,-43],[-9,-62]];
- tree.ripe.forEach((k,n)=>fruit(ctx,x+slots[n][0]+sway,y+slots[n][1],k,1.12));
- if(!tree.ripe.length&&!groveTrees?.naturalWidth){
-   for(let j=0;j<3;j++){
-     const [bx,by]=slots[j];for(let n=0;n<5;n++){
-       const a=n*TAU/5;ellipse(ctx,x+bx+Math.cos(a)*2.4+sway,y+by+Math.sin(a)*2.4,2.4,2,'#efdbc8');
-     }
-   }
- }
+ return null;
+}
+function skyline(ctx,t,ride){
+ sky(ctx,ride===1?'#7a718a':'#47588a',ride===1?'#ffd3a6':'#bd9daf',136);
+ ellipse(ctx,192,42,21,21,'#f5daaf');
+ for(let i=0;i<20;i++){const x=((i*37-t*3)%590+590)%590-42,h=20+((i*29)%45);rect(ctx,x,118-h,30,h,1,'#666581');for(let j=0;j<4;j++)rect(ctx,x+6+(j%2)*10,122-h+Math.floor(j/2)*9,3,4,0,'#e3ba92');}
+ for(let i=0;i<15;i++){const x=((i*47-t*7)%600+600)%600-45,h=15+((i*17)%28);rect(ctx,x,127-h,42,h,1,'#414c6c');}
 }
 export default {
- title:'POCKET GROVE',tagline:'Tend four little trees and fill fruit baskets before the year ends.',
- instructions:[
-   ['One day, one action','Choose Water, Graft, or Pick, then choose a tree. You have five days in each of four seasons.'],
-   ['Dig irrigation canals','Choose Canal, then two trees. This takes one day and permanently links their roots. Water any linked tree to refill the whole network. The weather strip forecasts tomorrow.'],
-   ['Invite the bees','Watered trees of different varieties joined by a canal cross-pollinate. Three pollinations fill a honey jar for the harvest. Mixed grafts support more pairings.'],
-   ['Fill the fruit baskets','Picking takes all ripe fruit. Graft the nursery variety onto a tree to grow mixed pairs. Complete the basket above for a bonus.'],
- ],
- keys:[['Q / W / E / R','Choose Water, Graft, Pick, or Canal'],['1 / 2 / 3 / 4','Use the tool on that tree']],
- touch:[['Tap a tool, then a tree','Spend a day in the orchard']],
+ title:'WINDOW SEAT',tagline:'“we can still take the long way. when’s the last train?”',
+ instructions:[['Ride together','Her ticket lists two stops to visit before Home. Tap a connected station or its numbered departure.'],['Read the timetable','Changing line costs an extra minute. One express pass cuts up to two minutes off your next ride.'],['Chase the view','Her optional star stop is worth a bonus. Make it home before the clock runs out.']],
+ keys:[['1–4','Board train'],['E','Arm express pass']],touch:[['Station or departure','Ride'],['Pass','Save minutes']],
  create(api){
-   const trees=[0,1,2,0].map((base,i)=>({base,scion:null,water:2,growth:i%2,ripe:i<3?[base]:[]}));
-   const stock=[0,0,0];let demand=[1,1,1];
-   let day=0,harvest=0,points=0,boxes=0,ended=false,tool=2,last=-1,t=0,aiWait=1.4;
-   const canals=[];
-   let channelStart=-1,pollen=0,honey=0,waters=0;
-   let weather='Rain',tomorrow='Mild',scion=2,report='Pick ripe fruit for the market basket',reportAt=-1;
-   const seasonIndex=()=>Math.min(3,Math.floor(day/5));
-   function tally(){
-     if(demand.every((n,k)=>stock[k]>=n)){
-       demand.forEach((v,i)=>stock[i]-=v);
-       boxes++;points+=120;report='Basket packed  +120';
-       demand=[1,1,1];demand[Math.floor(api.rng()*3)]+=1;
-       if(boxes%2===0){demand[(boxes+1)%3]++;demand[boxes%3]--;}
-       return true;
-     }
-     return false;
-   }
-   function grow(){
-     const s=seasonIndex();
-     canals.forEach(([i,j])=>{
-       const a=trees[i],b=trees[j];
-       if(a.water>0&&b.water>0&&(a.base!==b.base||a.scion!==null||b.scion!==null))pollen++;
-     });
-     if(pollen>=3){const jars=Math.floor(pollen/3);pollen%=3;honey+=jars;points+=jars*45;report='Honey bottled  +'+jars*45;}
-     trees.forEach(a=>{
-       if(weather==='Rain') a.water=Math.min(3,a.water+1);
-       if(a.water<=0)return;
-       a.growth+=s===2?1.6:s===3?.72:1.12;
-       if(a.growth>=2){
-         a.growth-=2;
-         if(a.ripe.length<5)a.ripe.push(a.base);
-         if(a.scion!==null&&a.ripe.length<5)a.ripe.push(a.scion);
-       }
-       if(weather==='Dry'||(day%2===1&&weather!=='Rain'))a.water=Math.max(0,a.water-1);
-     });
-   }
-   function connected(i){
-     const visited=new Set([i]),queue=[i];
-     for(let n=0;n<queue.length;n++){
-       for(const [a,b] of canals){
-         const next=a===queue[n]?b:b===queue[n]?a:-1;
-         if(next>=0&&!visited.has(next)){visited.add(next);queue.push(next);}
-       }
-     }
-     return visited;
-   }
-   function chooseTool(k){tool=k;channelStart=-1;reportAt=t-3.2;api.sound('select');}
-   function act(i){
-     if(ended||i<0||i>=4)return;
-     const a=trees[i];last=i;reportAt=t;
-     if(tool===3){
-       if(channelStart<0){channelStart=i;report='Join tree '+(i+1)+' to a second tree';api.sound('select');return;}
-       if(channelStart===i){channelStart=-1;report='Choose two different trees';return;}
-       if(connected(channelStart).has(i)){channelStart=-1;report='These roots already share water';return;}
-       canals.push([channelStart,i]);channelStart=-1;report='Canal opened · linked roots share water';api.sound('clear');
-     }else if(tool===2){
-       if(a.ripe.length===0){report='Still flowering · pick another tree';api.sound('back');return;}
-       const plucked=a.ripe.length;
-       a.ripe.forEach(k=>stock[k]++);a.ripe=[];points+=plucked*14;harvest+=plucked;
-       report='Picked '+plucked+(plucked===1?' fruit':' fruits')+'  +'+plucked*14;
-       api.sound(tally()?'combo':'pop');
-     }else if(tool===1){
-       if(scion===a.base||scion===a.scion){report='Choose a tree of a different variety';api.sound('back');return;}
-       a.scion=scion;
-       report='Grafted '+fruitNames[scion].toLowerCase()+' onto tree '+(i+1);
-       api.sound('merge');
-     }else{
-       const wet=connected(i);wet.forEach(j=>trees[j].water=3);waters+=wet.size;
-       for(let j=0;j<trees.length;j++){
-         if(j!==i && Math.hypot(sites[j][0]-sites[i][0],sites[j][1]-sites[i][1])<190) trees[j].water=Math.min(3,trees[j].water+1);
-       }
-       report=wet.size>1?'Water reached '+wet.size+' linked trees':'Watered tree '+(i+1)+' and nearby roots';api.sound('drop');
-     }
-     api.haptic(10);
-     grow();day++;
-     if(day>=totalDays){
-       ended=true;api.end(points,[['Baskets filled',boxes],['Fruit picked',harvest],['Mixed trees',trees.filter(a=>a.scion!==null).length],['Canals',canals.length],['Honey jars',honey],['Roots irrigated',waters]],'a whole year in the palm of your hand.');
-     }else{
-       const s=seasonIndex();
-       weather=tomorrow;tomorrow=api.rng()<(s===0?.5:s===1?.13:.34)?'Rain':s===1||api.rng()<.33?'Dry':'Mild';
-       scion=Math.floor(api.rng()*3);
-     }
-     hud();
-   }
-   function hud(){api.hud('Baskets',boxes,'Day',Math.min(totalDays,day+1)+'/'+totalDays);}
-   hud();
-   function draw(ctx){
-     const s=seasons[seasonIndex()];
-     const painted=paintArtwork(ctx,hill,0,0,480,366);
-     if(!painted)sky(ctx,s.top,s.bottom,366);
-     if(!painted){
-     // Small distant hills and an isometric cutaway of the orchard soil.
-     for(let i=0;i<8;i++)ellipse(ctx,i*82-30,157+Math.sin(i)*14,92,50,'rgba(131,163,137,.40)');
-     shape(ctx,[[8,255],[285,127],[469,211],[468,249],[168,368],[10,296]],'#906d54');
-     shape(ctx,[[8,255],[169,329],[169,368],[10,296]],'#ab805b');
-     for(let j=0;j<43;j++){
-       const x=22+(j*57)%138,y=264+(x-22)*.43+(j%3)*6;
-       line(ctx,[[x,y+8],[x+3,y+10]],'#c0966a',1.6);
-     }
-     shape(ctx,[[8,252],[282,126],[470,211],[168,336]],s.grass);
-     shape(ctx,[[8,252],[168,329],[470,211],[470,217],[168,341],[8,261]],'#859762');
-     for(let i=0;i<63;i++){
-       const a=(i*47%101)/100,b=(i*57%103)/102;
-       const x=14+a*263+b*163,y=253-a*119+b*74;
-       line(ctx,[[x-2,y],[x,y+2],[x+2,y-1]],'#92a973',1.2);
-     }
-     }
-     if(painted&&seasonIndex()>0){
-       ctx.fillStyle=['transparent','rgba(255,194,59,.08)','rgba(197,101,41,.15)','rgba(202,227,237,.27)'][seasonIndex()];
-       ctx.fillRect(0,0,480,367);
-     }
-     canals.forEach(([a,b])=>{
-       const [x,y]=sites[a],[xx,yy]=sites[b], points=[[x,y],[x+(xx-x)*.44,y+(yy-y)*.54+9],[xx,yy]];
-       line(ctx,points,'#574739',10);line(ctx,points,'#bda87b',7);line(ctx,points,'#72c6c2',4);
-       const p=(t*.35+a*.2)%1;ellipse(ctx,x+(xx-x)*p,y+(yy-y)*p+Math.sin(p*Math.PI)*5,3,1.6,'#dcfff3');
-     });
-     [1,0,3,2].forEach(i=>tree(ctx,trees[i],i,t,s,last===i));
-     // Paint the number plates last so a foreground crown never hides a key or water level.
-     sites.forEach(([x,y],i)=>{
-       rect(ctx,x-33,y+7,66,23,11,'#354e40');
-       label(ctx,String(i+1),x-20,y+19,15,'#fff1d2','center');
-       for(let j=0;j<3;j++)ellipse(ctx,x-5+j*11,y+19,3.6,4.7,trees[i].water>j?'#97d1c6':'#637766');
-     });
-     if(channelStart>=0){const [x,y]=sites[channelStart];ctx.strokeStyle='#ffdf8a';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(x,y,40,15,0,0,TAU);ctx.stroke();}
-     canals.forEach(([a,b],j)=>{
-       const p=.5+.5*Math.sin(t*1.8+j),[x,y]=sites[a],[xx,yy]=sites[b];
-       const bx=x+(xx-x)*p,by=y+(yy-y)*p-52+Math.sin(t*4+j)*9;
-       ellipse(ctx,bx,by,4,2.5,'#f4c052');ellipse(ctx,bx+2,by,1.2,2.1,'#45382d');
-       ellipse(ctx,bx-1,by-3,2.6,1.8,'#fff5cd',-.6);
-     });
-     if(weather==='Rain'){
-       for(let i=0;i<22;i++){
-         const x=(i*57-t*10)%490,y=74+((i*89+t*79)%255);
-         line(ctx,[[x,y],[x-2,y+5]],'rgba(244,251,225,.5)',1.2);
-       }
-     }
-     rect(ctx,0,0,480,74,0,'#354f43');
-     label(ctx,s.name+'   '+(day%5+1)+'/5',16,22,17,'#fff1d0');
-     label(ctx,weather+'  →  '+tomorrow,16,50,16,'#d7dfba');
-     label(ctx,'MARKET BASKET',304,18,15,'#eee4c4');
-     demand.forEach((n,k)=>{
-       const x=295+k*59;fruit(ctx,x,46,k,.94);
-       label(ctx,Math.min(n,stock[k])+'/'+n,x+9,48,15,stock[k]>=n?'#cde99e':'#f7e7cc');
-     });
-     rect(ctx,10,83,135,29,10,'rgba(61,68,48,.91)');
-     label(ctx,'Honey '+honey+'  ·  '+pollen+'/3',78,98,15,'#ffe5a5','center');
-     rect(ctx,0,367,480,113,0,'#f4e5bf');
-     label(ctx,report,240,386,16,'#3c5141','center','Georgia');
-     for(let i=0;i<4;i++){
-       const x=7+i*118,active=tool===i;
-       rect(ctx,x,407,111,55,11,active?'#3e5c47':'#ded4af');
-       label(ctx,['Q','W','E','R'][i]+' '+tools[i],x+55,426,16,active?'#fff1d1':'#3d5142','center');
-       label(ctx,['Restore roots',fruitNames[scion]+' scion','Gather fruit','Join trees'][i],x+55,448,13,active?'#d6e8b9':'#536149','center');
-     }
-   }
-   return {draw,update(dt){t+=dt;if(reportAt>=0&&t-reportAt>3.3){report=['Choose a tree to water','Add '+fruitNames[scion].toLowerCase()+' to a different tree','Choose a tree with ripe fruit',channelStart<0?'Choose the start of a canal':'Choose the other end of the canal'][tool];reportAt=-1;}},
-     pointer(type,x,y){
-       if(type!=='down'||ended)return;
-       if(y>=406&&y<=465){chooseTool(clamp(Math.floor(x/118),0,3));return;}
-       if(y<82||y>353)return;
-       const nearest=sites.map(([px,py],i)=>({i,d:Math.hypot((px-x)/48,(py-39-y)/65)})).sort((a,b)=>a.d-b.d)[0];
-       if(nearest.d<1.15)act(nearest.i);
-     },
-     key(type,code){
-       if(type!=='down'||ended)return;
-       if(['KeyQ','KeyW','KeyE','KeyR'].includes(code))chooseTool(['KeyQ','KeyW','KeyE','KeyR'].indexOf(code));
-       if(/^Digit[1234]$/.test(code))act(Number(code.slice(-1))-1);
-     },
-     demo(dt){
-       aiWait-=dt;if(aiWait>0||ended)return;
-       if([1,5,9].includes(day)&&canals.length<3){
-         const edge=[[0,1],[1,2],[2,3]].find(([a,b])=>!connected(a).has(b));
-         tool=3;act(edge[0]);act(edge[1]);aiWait=1.1;return;
-       }
-       let choice=0,move=2,best=-1;
-       trees.forEach((a,i)=>{
-         const pick=a.ripe.reduce((n,k)=>n+(stock[k]<demand[k]?1.55:1),0);
-         const graft=a.scion===null&&scion!==a.base&&day<11?3.6:0;
-         const water=(a.water===0?3.1:a.water===1?1.2:0)+(weather==='Dry'?.35:0);
-         for(const [mode,val] of [[2,pick],[1,graft],[0,water]]){
-           if(val>best){best=val;choice=i;move=mode;}
-         }
-       });
-       if(move===2 && !trees[choice].ripe.length)move=0;
-       tool=move;act(choice);aiWait=1.45;
-     },
-   };
+  let trip=0,node=0,last=-1,goals=[],scenic=0,asked=new Set(),minutes=0,used=false,armed=false,visited=new Set(),score=0,homes=0,stamps=0,t=0,travel=null,rest=0,auto=0,done=false,caption='',review=false,moveCount=0;
+  const visits=()=>goals.filter(g=>!asked.has(g));
+  const glow=()=>visits()[0]??4;
+  const note=(s,k)=>notes[orderStops.indexOf(s)]?.[k]||'“window seat. obviously.”';
+  function sync(){api.hud('Ride',Math.min(trip+1,3)+'/3','Time',minutes+' min');}
+  function begin(){
+   const pool=orderStops.slice(),draw=()=>pool.splice(Math.floor(api.rng()*pool.length),1)[0];goals=[draw(),draw()];scenic=draw();
+   node=0;last=-1;used=false;armed=false;asked=new Set();visited=new Set([0]);travel=null;review=false;moveCount=0;
+   minutes=quickest(0,-1,goals,true).cost+3-Math.min(trip,2);caption=note(goals[0],0);sync();
+  }
+  function finish(home){
+   review=true;rest=1.8;if(home){homes++;score+=30+minutes*4;}caption=home?'“made it. keep the ticket stub.”':'“last service. we’ll try again tomorrow.”';sync();api.sound(home?'clear':'back');
+  }
+  function board(dest){
+   if(done||travel||review)return;
+   const route=departures(node,last).find(v=>v.to===dest);if(!route)return;
+   const spend=armed&&!used,price=Math.max(1,route.cost-(spend?2:0));
+   if(price>minutes){caption='“that train leaves too late.”';return;}
+   if(spend)used=true;armed=false;minutes-=price;travel={from:node,to:dest,color:route.color,time:0};
+   api.sound('select');api.haptic(8);sync();
+  }
+  function arrive(){
+   node=travel.to;last=travel.color;travel=null;moveCount++;const first=!visited.has(node);visited.add(node);
+   if(goals.includes(node)&&!asked.has(node)){asked.add(node);score+=32;stamps++;caption=note(node,1);api.sound('merge');}
+   else if(node===scenic&&first){score+=24;caption='“hold still. that’s our postcard.”';api.sound('pop');}
+   else caption=first?'“oh, i like this neighborhood.”':'“hey, i recognize that platform.”';
+   sync();if(node===4){const complete=visits().length===0;finish(complete);if(!complete)caption='“home already? my ticket still has blanks.”';return;}
+   if(departures(node,last).every(v=>Math.max(1,v.cost-(used?0:2))>minutes))finish(false);
+  }
+  function pass(){if(done||travel||review||used)return;armed=!armed;api.sound('tap');}
+  begin();
+  return {
+   key(type,code){if(type!=='down'||done||review)return;if(code==='KeyE')pass();
+    if(/^Digit[1-4]$/.test(code)){const leg=departures(node,last)[Number(code.at(-1))-1];if(leg)board(leg.to);}},
+   pointer(type,x,y){if(type!=='down'||done||review)return;
+    if(y<119&&x>330){pass();return;}
+    const options=departures(node,last);
+    if(y>=408){const i=clamp(Math.floor(x/(480/options.length)),0,options.length-1);board(options[i].to);return;}
+    const tapped=stops.findIndex(s=>Math.hypot(x-s.x,y-s.y)<29);if(tapped>=0)board(tapped);},
+   demo(dt){if(travel||review||done)return;auto+=dt;if(auto<1.1)return;auto=0;
+    let plan=quickest(node,last,visited.has(scenic)?visits():[...visits(),scenic],!used);
+    if(!plan||plan.cost>minutes)plan=quickest(node,last,visits(),!used);
+    if(plan?.first){armed=plan.first.spend;board(plan.first.to);}else finish(false);},
+   update(dt){if(done)return;t+=dt;if(review){rest-=dt;if(rest<=0){trip++;if(trip===3){done=true;api.end(score,[['Made it home',homes+' / 3'],['Ticket stamps',stamps+' / 6']],homes===3?'“three whole trips. still my favorite seatmate.”':'“we’ll save the other stops for next time.”');}else begin();}return;}
+    if(travel){travel.time+=dt;if(travel.time>=.62)arrive();}},
+   draw(ctx){
+    ctx.fillStyle='#1e3146';ctx.fillRect(0,0,480,480);ctx.save();ctx.beginPath();ctx.rect(0,0,480,122);ctx.clip();skyline(ctx,t,trip);
+    if(agi?.naturalWidth)paintArtwork(ctx,agi,1,0,133,133);ctx.restore();
+    rect(ctx,120,10,198,103,9,'#213347ed');label(ctx,'TONIGHT’S DETOURS',135,27,13,'#ffd1a3','left','monospace');
+    goals.forEach((g,j)=>{symbol(ctx,stops[g].icon,145,53+j*30,.68,asked.has(g)?'#78d4b1':'#ffdcaa');label(ctx,stops[g].name+(asked.has(g)?'  ✓':''),164,53+j*30,18,'#f9ecd4','left','Georgia');});
+    rect(ctx,327,10,142,103,9,armed?'#f4bd86':'#f4d9b2');label(ctx,minutes+' min',398,37,25,'#3e4252','center','Georgia',900);
+    line(ctx,[[337,58],[459,58]],'#ad927c',1);label(ctx,used?'PASS USED':armed?'PASS ARMED':'ARM PASS',398,82,14,'#4e4351','center','monospace',900);
+    rect(ctx,8,126,464,237,12,'#223c50');
+    for(let i=0;i<24;i++){const x=i*27-75;line(ctx,[[x,130],[x+80,360]],'#2b4757',1);}
+    // An estuary cuts through the night map, behind its three rail lines.
+    line(ctx,[[17,336],[86,287],[102,242],[178,226],[202,183],[260,138]],'#385b70',13);
+    label(ctx,'CITY RAIL',20,142,12,'#a0b5b3','left','monospace');label(ctx,'★  '+stops[scenic].name,452,143,14,visited.has(scenic)?'#a9dcb0':'#ffce89','right','monospace');
+    for(const [a,b,color] of tracks){line(ctx,[[stops[a].x,stops[a].y],[stops[b].x,stops[b].y]],'#172e3d',8);line(ctx,[[stops[a].x,stops[a].y],[stops[b].x,stops[b].y]],lines[color],4);}
+    const neighbors=departures(node,last);
+    stops.forEach((s,j)=>{const near=neighbors.some(v=>v.to===j),goal=goals.includes(j),radius=goal||j===4?14:11;
+      if(j===glow())ellipse(ctx,s.x,s.y,radius+4+Math.sin(t*3),radius+4+Math.sin(t*3),'#f2cd8260');
+      ellipse(ctx,s.x,s.y,radius+2,radius+2,'#152c3a');ellipse(ctx,s.x,s.y,radius,radius,asked.has(j)?'#a9d9ab':goal?'#ffe4b2':j===4?'#f3b3ba':near?'#cde0d4':'#8eaaa9');
+      symbol(ctx,s.icon,s.x,s.y,.68,'#2c4650');
+      label(ctx,s.name,s.x,s.y+23,13,'#f6efdd','center','sans-serif',700);
+    });
+    const from=stops[travel?.from??node],to=stops[travel?.to??node],q=travel?clamp(travel.time/.62,0,1):0;
+    const vx=from.x+(to.x-from.x)*q,vy=from.y+(to.y-from.y)*q-17;
+    rect(ctx,vx-14,vy-9,28,15,4,'#fff2d0');rect(ctx,vx-11,vy-7,8,6,1,'#476b79');rect(ctx,vx,vy-7,8,6,1,'#476b79');ellipse(ctx,vx-8,vy+6,3,3,'#372f41');ellipse(ctx,vx+8,vy+6,3,3,'#372f41');
+    label(ctx,caption,239,382,16,'#ffe5ba','center','Georgia');
+    const width=480/neighbors.length;neighbors.forEach((leg,k)=>{const x=k*width+4,price=Math.max(1,leg.cost-(armed&&!used?2:0));
+      rect(ctx,x,408,width-8,58,7,'#f1dbbb');rect(ctx,x,408,width-8,7,3,lines[leg.color]);label(ctx,(k+1)+' '+stops[leg.to].name,x+(width-8)/2,433,15,'#304251','center');
+      label(ctx,price+' min',x+(width-8)/2,454,13,'#60535b','center','monospace');});
+   },
+  };
  },
 };

@@ -3,4 +3,4 @@ import { createShell } from '../kit/shell.js';
 import { mountCartridge } from '../kit/cartridge.js';
 import game from './game.js';
 
-mountCartridge('prismcourier', game, (options) => createShell({ game: 'prismcourier', ...options }), new URL('./optical-hall.webp', import.meta.url).href);
+mountCartridge('prismcourier', game, (options) => createShell({ game: 'prismcourier', ...options }), new URL('./mirror-studio.webp', import.meta.url).href);

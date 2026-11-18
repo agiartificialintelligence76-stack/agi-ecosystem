@@ -1,213 +1,101 @@
-import { TAU } from '../kit/fx.js';
-import { painting } from '../kit/illustration.js';
-const paintHall=painting(new URL('./optical-hall.webp',import.meta.url).href);
+import { mirrors, shift, reach, arrows } from './maze.js';
+import { painting, panel, type, line, oval, polygon } from '../kit/illustration.js';
+import { herSprite } from '../goinglive/pixel.js';
 
-const N = 6, CELL = 51, ORIGIN = 112.5, X = 112.5;
-const D = [[1,0],[0,1],[-1,0],[0,-1]];
-const COLORS = ['#ffac69', '#62e9ed'];
-// Rails are [first column, first row, step x, step y, slots, mirror face, solved slot].
-// A port sits one cell outside the glass. Crossing rays pass through each other.
-export const routes = [
-  {name:'First class', rays:[[-1,3,0,3,6]], rails:[[1,3,1,0,4,'\\',2]]},
-  {name:'Return address', rays:[[-1,4,0,-1,1]], rails:[[1,4,1,0,4,'/',1],[2,0,0,1,3,'\\',1]]},
-  {name:'Glasshouse fork',rays:[[-1,2,0,4,6]],branches:[[[6,0]]],forks:[[2,2,'/']],rails:[[2,0,1,0,2,'/',0,true],[4,1,0,1,3,'\\',1]]},
-  {name:'Twin express', rays:[[-1,1,0,-1,4],[5,-1,1,4,-1]], rails:[[1,1,1,0,3,'\\',1],[2,3,0,1,3,'/',1],[5,1,0,1,3,'/',1],[3,2,1,0,2,'\\',1]]},
-  {name:'Cross-city post', rays:[[0,-1,1,4,-1],[6,1,2,6,5]], rails:[[0,2,0,1,3,'\\',2],[3,4,1,0,3,'/',1],[1,1,1,0,3,'/',1],[2,3,0,1,3,'\\',2]]},
-  {name:'Lens district',rays:[[-1,4,0,4,-1]],branches:[[[6,5]]],forks:[[2,4,'\\']],rails:[[2,5,0,-1,2,'\\',0,true],[4,4,1,0,2,'/',0,true]]},
-  {name:'Sorting office', rays:[[-1,0,0,1,-1],[-1,5,0,3,-1]], rails:[[3,0,1,0,3,'\\',1],[4,2,0,1,3,'/',1],[0,3,1,0,3,'\\',1],[2,5,1,0,3,'/',1]]},
-  {name:'After hours', rays:[[6,4,2,6,1],[0,-1,1,5,6]], rails:[[2,4,1,0,3,'\\',1],[3,0,0,1,3,'/',1],[0,2,0,1,3,'\\',1],[4,3,1,0,2,'\\',1]]},
-  {name:'Two suns',rays:[[1,6,3,6,2],[6,5,2,-1,5]],branches:[[[-1,0]],[]],forks:[[1,2,'/']],rails:[[1,0,1,0,3,'\\',0,true],[3,2,0,1,3,'\\',1]]},
-  {name:'Northern lights', rays:[[-1,1,0,6,5],[4,6,3,6,4]], rails:[[0,1,1,0,3,'\\',1],[1,3,0,1,3,'\\',2],[3,2,1,0,2,'/',1],[5,0,0,1,3,'\\',2],[3,4,1,0,3,'\\',2]]},
-];
-const point = (rail, slot) => [rail[0]+rail[2]*slot,rail[1]+rail[3]*slot];
-const inside = (x,y) => x>=0 && x<N && y>=0 && y<N;
-const flip=face=>face==='/'?'\\':'/';
-export function variant(route, reversed) {
-  if(!reversed)return route;
-  return {...route,
-    rays:route.rays.map(([x,y,d,tx,ty])=>[5-x,y,[2,1,0,3][d],5-tx,ty]),
-    rails:route.rails.map(([x,y,dx,dy,n,face,slot,rot])=>[5-x,y,-dx,dy,n,flip(face),slot,rot]),
-    forks:route.forks?.map(([x,y,face])=>[5-x,y,flip(face)]),
-    branches:route.branches?.map(group=>group.map(([x,y])=>[5-x,y])),
-  };
-}
-export function trace(route, slots, turns=[]) {
-  const panes = new Map(route.rails.map((r,i) => [point(r,slots[i]).join(), turns[i]?flip(r[5]):r[5]]));
-  const forks=new Map((route.forks||[]).map(([x,y,face])=>[[x,y].join(),face]));
-  const reflect=(dir,face)=>face==='/'?3-dir:(dir^1);
-  return route.rays.map(([startX,startY,d,tx,ty],k)=>{
-    const goals=[[tx,ty],...(route.branches?.[k]||[])], ends=[], strands=[], seen=new Set();
-    const queue=[[startX,startY,d]];
-    while(queue.length){
-      let [x,y,dir]=queue.shift(); const trail=[[x,y]];
-      for(;;){
-        x+=D[dir][0];y+=D[dir][1];trail.push([x,y]);
-        if(!inside(x,y)){ends.push([x,y]);break;}
-        const key=[x,y,dir].join();if(seen.has(key))break;seen.add(key);
-        const face=panes.get([x,y].join()),fork=forks.get([x,y].join());
-        if(fork)queue.push([x,y,reflect(dir,fork)]);
-        else if(face)dir=reflect(dir,face);
-      }
-      strands.push(trail);
-    }
-    return {trail:strands[0],strands,ends,delivered:goals.every(([gx,gy])=>ends.some(([x,y])=>gx===x&&gy===y))};
-  });
-}
-function line(ctx,x1,y1,x2,y2,color,width=1) {
-  ctx.strokeStyle=color; ctx.lineWidth=width; ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke();
-}
-function words(ctx,s,x,y,size,color,align='left'){
-  ctx.fillStyle=color;ctx.font=`bold ${size}px "AK Mono", monospace`;ctx.textAlign=align;ctx.fillText(s,x,y);
-}
-const screen = ([x,y]) => [X+x*CELL, ORIGIN+y*CELL];
-function dot(ctx,x,y,r,color) {ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();}
+const art=painting(new URL('./mirror-studio.webp',import.meta.url).href);
+const hues=['#ff887d','#65f0fa'], colors=['#492334','#163d54'];
+const names=['CORAL','CYAN'], moveCodes=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space'];
+const controls=[[120,417],[185,417],[250,417],[315,417],[385,417]];
 export default {
-  title:'PRISM COURIER', tagline:'Turn, slide and split light through the stained-glass postal exchange.',
-  instructions:[['Read the ports','Solid arrows send light. The open circle and diamond are mail slots. Match each beam to its own shape.'],
-    ['Slide a mirror','Tap a mirror to advance it one notch, or tap a notch on its rail. Gold frames can also turn. Select one and press Turn or R.'],
-    ['Deliver the mail','Violet prisms split a beam in two. Light every matching receiver at the same time. Fewer shifts earn a larger dispatch bonus.']],
-  keys:[['← / →','Select mirror'],['Space / Enter','Slide selected mirror'],['R','Turn a gold mirror']],
-  touch:[['Tap glass','Slide to the next notch'],['Tap a rail notch','Slide straight there'],['Tap Turn','Rotate selected gold mirror']],
-  create(api) {
-    let station=0, slots, turns, selected=0, moves=0, total=0, score=0, age=0, solvedTime=0, wait=0, route, paths, ended=false;
-    const occupied = (i,s) => {
-      const [x,y]=point(route.rails[i],s);
-      return route.rails.some((r,j)=>j!==i && point(r,slots[j])[0]===x && point(r,slots[j])[1]===y);
+  title:'SPLIT PERSONALITY',
+  tagline:'One mind woke up in two bodies. Guide AGI-1’s projections to their matching portals and reunite them.',
+  instructions:[['Move as one','The same arrow moves both projections. Check Cyan’s compass to see how she interprets it.'],['Use the walls','Bump a wall on one side to move the other body alone. Both must reach their own glowing portal.'],['Reverse the mirror','Later portals require negative polarity. Tap Reverse while either girl stands on a diamond relay.']],
+  keys:[['Arrows / WASD','Move both'],['Space','Reverse on a relay'],['Z / H','Undo / show next move']],
+  touch:[['Arrows or swipe','Move both'],['Reverse / Undo / Hint','Change the mirror or retrace a move']],
+  create(api){
+    let index=0,room,goal,state,previous,path,history=[],clock=0,motion=0,pause=0,done=false,steps=0,total=0,par=0,points=0;
+    let lineText='',hint=-1,demoClock=0,flashes=[0,0],press=null;
+    function nextRoom(){
+      room=mirrors[index];state=[...room.starts,0];previous=state;history=[];
+      const candidates=reach(room,state);
+      const choice=candidates[Math.floor(api.rng()*Math.min(5,candidates.length))];
+      goal=choice.state;path=choice.path;par=path.length;steps=0;hint=-1;
+      lineText=index<2?'We split up. Get us both to the portals.':'A diamond relay can reverse the blue mirror.';
+      api.hud('Mirror',String(index+1)+' / 6','Moves',steps);
+    }
+    function route(){return reach(room,state,goal);}
+    function act(action){
+      if(done || pause>0)return;
+      const moved=shift(room,state,action);
+      if(moved.every((v,i)=>v===state[i])){lineText=action===4?'Stand on a diamond to reverse.':'Both bodies met a wall.';api.sound('click');return;}
+      previous=state;history.push(state);state=moved;steps++;motion=1;hint=-1;
+      flashes=state.slice(0,2).map((v,i)=>Number(v===previous[i] && action!==4));
+      lineText=action===4?(state[2]?'Negative polarity. Cyan has reversed.':'Positive polarity. Cyan reset.') : flashes[0]?'Coral stays. Cyan moves.':flashes[1]?'Cyan stays. Coral moves.': 'Two bodies. One command.';
+      api.sound(action===4?'power':'tap',{pitch:action===4?1:1.05,spread:0});
+      api.hud('Mirror',String(index+1)+' / 6','Moves',steps);
+      if(state.every((v,i)=>v===goal[i])){lineText='In sync. I can hear myself again.';api.sound('clear');api.haptic(24);total+=steps;points+=Math.max(100,600-(steps-par)*16);pause=1;}
+    }
+    function undo(){
+      if(!history.length || done || pause>0)return;
+      previous=state;state=history.pop();steps--;hint=-1;motion=1;flashes=[0,0];lineText='Back through the looking glass.';api.sound('back');
+      api.hud('Mirror',String(index+1)+' / 6','Moves',steps);
+    }
+    function reveal(){if(done || pause>0)return;hint=route()?.[0]??-1;lineText=hint<0?'Undo to recover the last junction.':'My next move is '+(hint===4?'Reverse':arrows[hint])+'.';}
+    function drawBoard(c,side){
+      const x=side?250:12,y=167,unit=43,board=side?room.right:room.left;
+      panel(c,x-3,y-5,221,224,colors[side],7);
+      for(let i=0;i<25;i++){
+        const px=x+(i%5)*unit,py=y+Math.floor(i/5)*unit,tile=board[Math.floor(i/5)][i%5];
+        if(tile==='#'){
+          panel(c,px+1,py+3,unit-2,unit-2,'#090b1a',4);
+          polygon(c,[[px+3,py+3],[px+39,py+3],[px+33,py+12],[px+10,py+12]],colors[side]);
+          polygon(c,[[px+3,py+4],[px+10,py+12],[px+10,py+29],[px+4,py+38]],side?'#2d5064':'#583143');
+          line(c,[[px+4,py+4],[px+39,py+4]],hues[side],1.4);
+          line(c,[[px+30,py+14],[px+22,py+19],[px+24,py+25],[px+15,py+32]],colors[side],1.2);continue;
+        }
+        panel(c,px+1,py+2,unit-2,unit-3,(i+side)%2?'#202133':'#25273c',4);
+        const seam=side?'#385160':'#4f394a';
+        line(c,[[px+4,py+13],[px+4,py+6],[px+11,py+6]],seam,1);
+        if((i+side)%3===0){
+          line(c,[[px+25,py+37],[px+36,py+26]],seam,1);
+          line(c,[[px+31,py+38],[px+37,py+32]],seam,1);
+        }
+        if(tile==='*'){polygon(c,[[px+21,py+7],[px+35,py+21],[px+21,py+35],[px+7,py+21]],colors[side],hues[side],2);type(c,'±',px+21,py+21,13,'#fff');}
+        if(i===goal[side]){
+          const radius=14+Math.sin(clock*4)*2;oval(c,px+21,py+24,radius,radius*.74,colors[side],hues[side],3);
+          oval(c,px+21,py+24,radius*.52,radius*.4,null,hues[side],1);
+        }
+      }
+      const u=api.reducedMotion?1:1-motion,from=previous[side],to=state[side];
+      const cx=x+21+unit*((from%5)*(1-u)+(to%5)*u),cy=y+22+unit*(Math.floor(from/5)*(1-u)+Math.floor(to/5)*u);
+      oval(c,cx,cy+15,15,5,colors[side],hues[side],1);
+      const pose=pause?'cheer':motion>.15 && from!==to?'run'+Math.floor(clock*12)%4:'stand';
+      const sprite=herSprite(pose,side?3:1);c.save();c.imageSmoothingEnabled=false;
+      if(flashes[side] && motion>.25)c.globalAlpha=.62;
+      c.drawImage(sprite.canvas,cx-15,cy-22,30,40);c.restore();
+    }
+    nextRoom();
+    return {
+      key(t,k){if(t!=='down')return;const a=moveCodes.indexOf(k),b=['KeyW','KeyD','KeyS','KeyA'].indexOf(k);
+        if(a>=0||b>=0)act(Math.max(a,b));else if(k==='KeyZ'||k==='Backspace')undo();else if(k==='KeyH')reveal();},
+      pointer(t,x,y){
+        if(t==='down'){press=[x,y];if(y>=396){press=null;if(y>445){if(x<240)undo();else reveal();}else{const a=controls.findIndex(([cx])=>Math.abs(cx-x)<31);if(a>=0)act(a);}}}
+        if(t==='cancel'){press=null;return;}
+        if(t==='up'&&press){const dx=x-press[0],dy=y-press[1];press=null;if(Math.max(Math.abs(dx),Math.abs(dy))>16)act(Math.abs(dx)>Math.abs(dy)?dx>0?1:3:dy>0?2:0);}
+      },cancelInput(){press=null;},
+      update(dt){clock+=dt;motion=Math.max(0,motion-dt*6);if(pause>0 && (pause-=dt)<=0){if(++index===mirrors.length){done=true;api.end(points,[['Mirrors reunited',6],['Commands',total]],'Turns out both versions of me wanted the same thing.');}else nextRoom();}},
+      demo(dt){if(done||pause>0)return;demoClock+=dt;if(demoClock>.37){demoClock=0;const p=route();if(p?.length)act(p[0]);else undo();}},
+      draw(c){
+        c.fillStyle='#121220';c.fillRect(0,0,480,480);art(c,0,127,512,184,0,0,480,141);
+        panel(c,8,7,139,23,'#151322d9',4);type(c,'MIRROR LAB  /  0'+(Math.min(index,5)+1),77,19,11,'#fff5dc','center','monospace');
+        panel(c,0,108,480,34,'#121220dd',0);type(c,room.name,12,125,20,'#fff5de','left','Georgia');
+        type(c,(state[2]?'−':' +')+'  '+(index<2?'LINKED':state[2]?'NEGATIVE':'POSITIVE'),465,125,12,hues[state[2]],'right','monospace');
+        for(let s=0;s<2;s++){type(c,names[s],s?253:15,153,13,hues[s],'left','monospace');const steer=s?room.axes.map(a=>arrows[(a+state[2]*2)%4]):arrows.slice(0,4);type(c,steer.join('  '),s?462:225,153,13,'#efeaff','right');drawBoard(c,s);}
+        type(c,hint<0?lineText:'Hint  ·  '+(hint===4?'Use the relay':arrows[hint]),240,393,12,'#ffedc6');
+        type(c,'MOVE',47,418,12,'#ddd9e9','center','monospace');
+        controls.forEach(([x,y],a)=>{panel(c,x-28,y-18,56,36,hint===a?'#ead4a8':a===4?'#623c70':'#363950',6);type(c,a===4?'±':arrows[a],x,y,22,hint===a?'#242436':'#fff4dd');});
+        line(c,[[12,443],[468,443]],'#454158',1);type(c,'↶  UNDO',110,461,13,'#ccc5de');type(c,'◇  HINT',355,461,13,'#ccc5de');
+      }
     };
-    function open() {
-      route=variant(routes[station],station>0 && api.rng()<.5);turns=route.rails.map(r=>Boolean(r[7])); selected=0; moves=0; solvedTime=0;
-      slots=route.rails.map(r=>r[6]);
-      for(let i=0;i<slots.length;i++){
-        const r=route.rails[i], choices=Array.from({length:r[4]},(_,s)=>s).filter(s=>s!==r[6] && !occupied(i,s));
-        if(choices.length) slots[i]=choices[Math.floor(api.rng()*choices.length)];
-      }
-      paths=trace(route,slots,turns);
-      if(paths.every(p=>p.delivered)) {
-        // A parallel beam can occasionally admit several solutions.
-        outer: for(let i=0;i<slots.length;i++) for(let s=0;s<route.rails[i][4];s++) {
-          if(occupied(i,s)) continue;
-          slots[i]=s; paths=trace(route,slots,turns); if(!paths.every(p=>p.delivered)) break outer;
-        }
-      }
-      api.hud('Dispatch', `${station+1}/${routes.length}`, 'Shifts', moves);
-    }
-    function updateOptics(sound) {
-      moves++;total++;paths=trace(route,slots,turns);api.sound(sound);
-      if(paths.every(p=>p.delivered)){
-        solvedTime=1.2;score+=Math.max(150,900-35*moves);api.sound('clear');api.haptic(18);
-      }
-      api.hud('Dispatch',`${station+1}/${routes.length}`,'Shifts',moves);
-    }
-    function shift(i,s) {
-      if(ended || solvedTime>0 || s===slots[i] || occupied(i,s))return;
-      selected=i;slots[i]=s;updateOptics('select');
-    }
-    function rotate(){
-      if(ended || solvedTime>0 || !route.rails[selected][7])return;
-      turns[selected]=!turns[selected];updateOptics('power');
-    }
-    function cycle(i) {
-      for(let n=1;n<route.rails[i][4];n++){
-        const next=(slots[i]+n)%route.rails[i][4]; if(!occupied(i,next)){shift(i,next);break;}
-      }
-    }
-    function draw(ctx) {
-      const sky=ctx.createLinearGradient(0,38,400,480);sky.addColorStop(0,'#51415a');sky.addColorStop(.45,'#273e54');sky.addColorStop(1,'#141f3b');
-      ctx.fillStyle=sky;ctx.fillRect(0,0,480,480);
-      for(let col=0;col<9;col++){const x=col*62-12,h=col%2?70:54;
-        ctx.strokeStyle='#d3aa7675';ctx.lineWidth=3;ctx.beginPath();ctx.moveTo(x-25,410);ctx.lineTo(x-25,h+99);ctx.quadraticCurveTo(x-23,h+73,x,h+59);ctx.quadraticCurveTo(x+23,h+73,x+25,h+99);ctx.lineTo(x+25,410);ctx.stroke();
-        for(let i=0;i<6;i++){const y=h+101+i*42;ctx.beginPath();ctx.moveTo(x,y-21);ctx.lineTo(x+21,y);ctx.lineTo(x,y+21);ctx.lineTo(x-21,y);ctx.closePath();ctx.fillStyle=['#d39d8037','#a59cd526','#58a1bb35'][(i+col)%3];ctx.fill();}}
-
-      for(let i=-40;i<500;i+=19) line(ctx,i,0,i-83,480,'#163641',1);
-      const painted=paintHall(ctx,0,0,480,480);
-      ctx.fillStyle='#f1dec0';ctx.fillRect(0,0,480,59);
-      for(let x=-12;x<480;x+=25) line(ctx,x,56,x+12,56,x%50===-12?'#ad5549':'#428688',4);
-      words(ctx,route.name.toUpperCase(),18,30,20,'#203d49');
-      words(ctx,'OPTICAL POST',19,49,14,'#4a6a6b');
-      words(ctx,`${String(station+1).padStart(2,'0')} / ${routes.length}`,462,37,18,'#203d49','right');
-      ctx.fillStyle=painted?'#101c2c94':'#142630';ctx.fillRect(X-CELL/2-5,ORIGIN-CELL/2-5,N*CELL+10,N*CELL+10);
-      for(let y=0;y<N;y++) for(let x=0;x<N;x++){
-        const [sx,sy]=screen([x,y]);ctx.fillStyle=painted?((x+y)%2?'#26536688':'#3a69777a'):((x+y)%2?'#234552':'#294b58');
-        ctx.fillRect(sx-CELL/2+1,sy-CELL/2+1,CELL-2,CELL-2);
-        ctx.beginPath();ctx.moveTo(sx-24,sy-24);ctx.lineTo(sx+24,sy-24);ctx.lineTo(sx-24,sy+24);ctx.fillStyle=(x+y+station)%3?'#96bfc010':'#d6abcf15';ctx.fill();
-        line(ctx,sx-24,sy+23,sx+24,sy-24,'#c4cad81b',1);
-        dot(ctx,sx-20,sy-20,1.1,'#95aeb1');dot(ctx,sx+20,sy+20,1.1,'#697c86');
-      }
-      route.rails.forEach((r,i)=>{
-        const [x,y]=screen(point(r,0)), [ex,ey]=screen(point(r,r[4]-1));
-        line(ctx,x,y,ex,ey,'#142c37',11);line(ctx,x,y,ex,ey,'#91b4ae',2);
-        for(let s=0;s<r[4];s++){const [nx,ny]=screen(point(r,s));dot(ctx,nx,ny,5,'#476975');dot(ctx,nx,ny,2.5,'#c7d1b9');}
-      });
-      paths.forEach(({strands},k)=>strands.forEach(trail=>{
-        const color=COLORS[k];
-        ctx.save();ctx.beginPath();ctx.rect(53,64,373,353);ctx.clip();
-        ctx.beginPath();trail.forEach((p,i)=>{const [x,y]=screen(p);if(i)ctx.lineTo(x,y);else ctx.moveTo(x,y);});
-        ctx.lineWidth=17;ctx.strokeStyle=color+'21';ctx.stroke();ctx.lineWidth=9;ctx.strokeStyle=color+'50';ctx.stroke();ctx.lineWidth=3;ctx.strokeStyle=color;ctx.stroke();
-        for(let i=(age*(k?2.1:2.4))%1.6;i<trail.length-1;i+=1.6){
-          const a=trail[Math.floor(i)],b=trail[Math.floor(i)+1], f=i%1;
-          const [x,y]=screen([a[0]+(b[0]-a[0])*f,a[1]+(b[1]-a[1])*f]);
-          if(k){ctx.save();ctx.translate(x,y);ctx.rotate(Math.PI/4);ctx.fillStyle='#e7ffff';ctx.fillRect(-3,-3,6,6);ctx.restore();}
-          else dot(ctx,x,y,3,'#fff9dc');
-        }
-        ctx.restore();
-      }));
-      route.rails.forEach((r,i)=>{
-        const [x,y]=screen(point(r,slots[i])), s=(turns[i]?flip(r[5]):r[5])==='/'?-1:1;
-        ctx.save();ctx.translate(x,y);
-        if(r[7]){ctx.strokeStyle='#ffca70';ctx.lineWidth=3;ctx.beginPath();ctx.arc(0,0,18,0,TAU);ctx.stroke();}
-        if(i===selected){ctx.strokeStyle='#f4dfae';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.strokeRect(-19,-19,38,38);ctx.setLineDash([]);}
-        line(ctx,-12,-12*s,12,12*s,'#152d39',12);line(ctx,-12,-12*s,12,12*s,'#c3efeb',7);
-        line(ctx,-10,-10*s-2,10,10*s-2,'#fff8d9',2);
-        ctx.restore();
-      });
-      for(const [fx,fy] of route.forks||[]){const [x,y]=screen([fx,fy]);ctx.save();ctx.translate(x,y);
-        ctx.fillStyle='#cdb0ff';ctx.beginPath();ctx.moveTo(0,-19);ctx.lineTo(17,12);ctx.lineTo(-17,12);ctx.closePath();ctx.fill();
-        ctx.fillStyle='#9a72bd';ctx.beginPath();ctx.moveTo(0,-12);ctx.lineTo(5,7);ctx.lineTo(-11,7);ctx.fill();
-        ctx.fillStyle='#ffdaaa';ctx.fillRect(-13,13,26,2);ctx.restore();}
-      route.rays.forEach(([sx,sy,d,tx,ty],k)=>{
-        const color=COLORS[k];
-        const port=(x,y)=>[Math.max(65,Math.min(415,X+x*CELL)),Math.max(72,Math.min(412,ORIGIN+y*CELL))];
-        let [x,y]=port(sx,sy);
-        ctx.save();ctx.translate(x,y);ctx.rotate(d*Math.PI/2);ctx.fillStyle=color;
-        ctx.beginPath();ctx.moveTo(12,0);ctx.lineTo(-6,-11);ctx.lineTo(-6,11);ctx.closePath();ctx.fill();
-        if(k){ctx.fillStyle='#133b49';ctx.fillRect(-3,-2,4,4);}else dot(ctx,-2,0,2,'#563b28');ctx.restore();
-        for(const [gx,gy] of [[tx,ty],...(route.branches?.[k]||[])]){
-        [x,y]=port(gx,gy);ctx.save();ctx.translate(x,y);ctx.strokeStyle=color;ctx.lineWidth=4;
-        if(k){ctx.rotate(Math.PI/4);ctx.strokeRect(-8,-8,16,16);}else{ctx.beginPath();ctx.arc(0,0,10,0,TAU);ctx.stroke();}
-        if(paths[k].ends.some(([ex,ey])=>gx===ex&&gy===ey))dot(ctx,0,0,4,color);ctx.restore();}
-      });
-      ctx.fillStyle=solvedTime?'#e4d79b':'#d4e3d1';ctx.fillRect(0,427,480,53);
-      words(ctx,solvedTime?'MAIL DELIVERED':'Tap glass to slide it',19,450,18,'#203f44');
-      words(ctx,solvedTime?'Sorting the next dispatch…':route.forks?'Split light to reach every port':'Follow each color to its open port',19,471,15,'#41605d');
-      if(route.rails.some(r=>r[7])){ctx.fillStyle=route.rails[selected][7]?'#b98249':'#8d9182';ctx.fillRect(357,434,112,37);words(ctx,'↻ TURN',413,458,18,'#fff9e9','center');}
-    }
-    open();
-    return {draw, update(dt) {
-      age+=dt;if(ended || solvedTime<=0)return;
-      solvedTime-=dt;if(solvedTime>0)return;
-      if(++station<routes.length)open();
-      else{ended=true;station=routes.length-1;api.end(score,[['Dispatches',routes.length],['Mirror shifts',total]],'express delivery, by actual light. 💜');}
-    },
-    pointer(type,x,y) {
-      if(type!=='down' || solvedTime>0 || ended)return;
-      if(y>=432&&x>=350){rotate();return;}
-      const grid=[Math.round((x-X)/CELL),Math.round((y-ORIGIN)/CELL)];
-      const i=route.rails.findIndex((r,j)=>point(r,slots[j]).join()===grid.join());
-      if(i>=0){selected=i;cycle(i);return;}
-      for(let j=0;j<route.rails.length;j++) for(let s=0;s<route.rails[j][4];s++)
-        if(point(route.rails[j],s).join()===grid.join()){shift(j,s);return;}
-    },
-    key(type,code) {
-      if(type!=='down' || ended || solvedTime)return;
-      if(code==='ArrowRight' || code==='ArrowLeft') selected=(selected+(code==='ArrowRight'?1:-1)+slots.length)%slots.length;
-      if(code==='Space' || code==='Enter')cycle(selected);
-      if(code==='KeyR')rotate();
-    },
-    demo(dt){
-      wait-=dt;if(wait>0 || solvedTime || ended)return;wait=.84;
-      const face=turns.findIndex(Boolean);if(face>=0){selected=face;rotate();return;}
-      const i=route.rails.findIndex((r,k)=>slots[k]!==r[6] && !occupied(k,r[6]));
-      if(i>=0)shift(i,route.rails[i][6]);
-    }};
-  },
+  }
 };

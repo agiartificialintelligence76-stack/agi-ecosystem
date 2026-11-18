@@ -1,259 +1,103 @@
-import { TAU, clamp, ellipse, line, shape, rect, label, sky, halo, artwork, paintArtwork } from '../kit/garden-art.js';
+import { clamp, ellipse, label, line, rect } from '../kit/garden-art.js';
+import { assess, blockedBy, center, focusQuality, focusStops, optics, project } from './camera.js';
+import { photograph, places } from './view.js';
 
-const conservatory = artwork(new URL('./scene.webp', import.meta.url));
-const lenses = [
-  { name: 'Amber', symbol: '◆', color: '#ffc572', glow: 'rgba(255,181,86,.36)' },
-  { name: 'Mint', symbol: '●', color: '#a1efc4', glow: 'rgba(114,244,176,.36)' },
-  { name: 'Lilac', symbol: '✦', color: '#deb2ff', glow: 'rgba(201,147,255,.38)' },
-];
-const species = ['Tiger silk', 'Moon lace', 'Orchid veil', 'Copper eye', 'Jade comet', 'Velvet star'];
-const lampX = [84, 240, 396];
-const lanternY = [277, 247, 277];
-
-function moth(ctx, x, y, kind, t, scale = 1, bank = 0, spread = null) {
-  const ink = lenses[kind % 3].color;
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(bank);
-  ctx.scale(scale * (.52 + .48 * (spread ?? Math.abs(Math.cos(t * 8)))), scale);
-  for (const side of [-1, 1]) {
-    ctx.save();
-    ctx.scale(side, 1);
-    ctx.fillStyle = ink;
-    ctx.beginPath();
-    ctx.moveTo(1, -5);
-    ctx.bezierCurveTo(9, -15, 31, -25, 37, -18);
-    ctx.bezierCurveTo(34, -5, 24, 1, 15, 3);
-    ctx.bezierCurveTo(28, 7, 18, 18, kind > 2 ? 12 : 5, kind === 4 ? 27 : 14);
-    ctx.quadraticCurveTo(1, 10, 1, -5);
-    ctx.fill();
-    line(ctx, [[4,-3],[16,-7],[28,-15]], '#5a4b62', 1.4);
-    ellipse(ctx, 21, -8, kind % 3 === 0 ? 5 : 3, 3, '#514660', -.45);
-    ellipse(ctx, 21, -9, 1.4, 1.4, '#fff7d1');
-    ellipse(ctx, 11, 6, 3, 2, '#6e6669');
-    for (let vein=0;vein<4;vein++) {
-      const tip=10+vein*6;
-      line(ctx,[[3,0],[tip*.63,-4],[tip,-9-vein*2]],'#63556a',.8);
-      ellipse(ctx,tip,-10-vein*2,1.8,.9,'#fff2c1',-.3);
-    }
-    ellipse(ctx,11,6,1.5,1.2,'#f6dfa0');
-    line(ctx, [[0,-4],[4,-12],[8,-14]], ink, 1.4);
-    ctx.restore();
-  }
-  ellipse(ctx, 0, 1, 2.7, 10, '#4a354b');
-  ellipse(ctx, 0, -5, 3.4, 4, '#fff2c3');
-  ctx.restore();
-}
-
-function scene(ctx, t, stars) {
-  if (paintArtwork(ctx, conservatory,0,0,480,384)) {
-    for(let i=0;i<24;i++){
-      const [sx,sy,r]=stars[i],x=sx+Math.sin(t*.4+i)*9,y=sy+95+Math.cos(t*.7+i)*12;
-      ctx.globalAlpha=.32+.25*Math.sin(t+i);ellipse(ctx,x,y,r,r,'#fffbc1');
-    }
-    ctx.globalAlpha=1;
-    return;
-  }
-  sky(ctx, '#13263c', '#46546c');
-  halo(ctx, 350, 76, 113, 'rgba(232,239,207,.19)', 'rgba(230,240,210,0)');
-  ellipse(ctx, 350, 76, 25, 25, '#f8ebc3');
-  ellipse(ctx, 343, 70, 3, 2, '#e7d9b3');
-  ellipse(ctx, 357, 85, 5, 3, '#e7d9b3');
-  stars.forEach(([x,y,s], i) => ellipse(ctx, x, y, s, s, i % 3 ? '#c0cbd4' : '#fff7ce'));
-  for (let layer = 0; layer < 2; layer++) {
-    const points = [[0,404]];
-    for (let x = 0; x <= 480; x += 8) {
-      points.push([x, 253 + layer * 38 + Math.sin(x / 57 + layer) * 18 + Math.cos(x / 17) * 6]);
-    }
-    shape(ctx, [...points, [480,404]], layer ? '#254549' : '#3b5460');
-  }
-  for (let i = 0; i < 47; i++) {
-    const x = (i * 67) % 501 - 10, y = 379 + (i % 5) * 4;
-    const h = 17 + (i * 19) % 70, sway = Math.sin(t * .7 + i) * 3;
-    const col = i % 3 ? '#203c40' : '#476b61';
-    line(ctx, [[x,y], [x + sway + 2,y-h/2], [x+sway-5,y-h]], col, 2);
-    for (let j = 1; j <= 4; j++) {
-      const side = j % 2 ? -1 : 1;
-      ellipse(ctx, x + side * 5 + sway, y - h*j/5, 7, 2.5, col, side * -.7);
-    }
-    if (i % 5 === 0) ellipse(ctx, x+sway-5, y-h, 3, 4, '#d5b6c6');
-  }
-}
+const lenses=['28 mm','50 mm','85 mm'];
+const crops=['whole outfit','waist up','cover portrait'];
+const vertical=[.84,1.27,1.50];
+const printLines=['that one goes on the wall.','omg. send me that one.','new profile pic. obviously.','wait. i actually love it.'];
+const gold='#ffe286';
 export default {
-  title: 'MOTHLIGHT',
-  tagline: 'Lure wild silk moths into a moonlit glasshouse, then catch the instant their wings unfold.',
-  instructions: [
-    ['Watch the visitors', 'Each moth follows a dotted path to a lantern. Its symbol tells you which glass it loves.'],
-    ['Turn the glass', 'Tap a lantern to cycle ◆ amber, ● mint, and ✦ lilac. Give the new glass a moment to warm up.'],
-    ['Photograph a landing', 'Tap the perched moth, or press Q, W, or E. When the viewfinder turns gold, its wings are open. Three film frames recharge over time.'],
-    ['Shoot the assignment', 'Photograph the species named on the film strip for extra film and points. Sharp exposures build a cover photo streak.'],
-  ],
-  keys: [['1 / 2 / 3', 'Cycle lantern glass'], ['Q / W / E','Photograph a moth on that lamp']],
-  touch: [['Tap a lantern', 'Cycle its colored glass'], ['Tap a perched moth','Take a photograph']],
-  create(api) {
-    const lights = [0,1,2], warm = [0,0,0], flashes = [0,0,0], visitors = [], journal = new Set();
-    const stars = Array.from({length: 43}, () => [api.rng()*480, 43+api.rng()*133, .6+api.rng()]);
-    let t = 0, spawnAt = 0, count = 0, points = 0, landed = 0, streak = 0, high = 0, ended = false;
-    let note = 'Follow each moth’s symbol to its lamp', noteTime = 3, aiWait = 0;
-    let film=3,recharge=0,frames=0,sharp=0,assignments=0,shutter=0,photos=[],target=0;
-    const openWing = v => .5+.5*Math.cos(v.depart*5.4+v.phase);
-    function shoot(lane) {
-      if(ended)return;
-      const moth=visitors.find(v=>v.lane===lane && v.landed && !v.shot);
-      if(!moth || film===0) return;
-      moth.shot=true;film--;frames++;shutter=.36;
-      const clean=openWing(moth)>.72;
-      const commission=moth.kind===target;
-      if(clean) sharp++;
-      let gift=clean?120:35;
-      if(commission){assignments++;gift+=160;film=Math.min(3,film+1);target=(target+1+Math.floor(api.rng()*5))%6;}
-      photos=[...photos.slice(-2),{kind:moth.kind,clean}];
-      points+=gift;note=(commission?'Cover shot':clean?'Wings open':'Field study')+'  +'+gift;noteTime=1.4;
-      api.sound(clean?'clear':'click');api.haptic(clean?20:8);
+ title:'CANDID CAMERA',tagline:'“you get six shots, love. catch my good side.”',
+ instructions:[['Work the camera','Tap to frame her, drag to sidestep, or use the arrows. Nearby posts can block her face.'],['Set the glass','Choose her requested lens. Read the distance in the finder and set the focus dial to the nearest mark.'],['Catch the moment','Shoot on the gold pose lamp. A clean, sharp print goes on her wall.']],
+ keys:[['Arrows','Move camera'],['1 / 2 / 3','Lens'],['Q / E','Focus'],['Space','Shoot']],touch:[['Tap / drag','Frame / move'],['Lens / focus','Turn dial'],['Shutter','Shoot']],
+ create(api){
+  const shots=Array.from({length:6},(_,i)=>({
+   id:(i+Math.floor(api.rng()*3))%4,lens:i===0?1:Math.floor(api.rng()*3),
+   depth:i===0?1:Math.floor(api.rng()*3),phase:api.rng()*5,dir:api.rng()<.5?-1:1,
+  }));
+  let frame=0,t=0,age=0,camera={x:0,y:1.2},lens=1,focus=1,points=0,perfect=0,sharpShots=0,review=0,done=false,drag=null,print=null;
+  const held=new Set(),shot=()=>shots[Math.min(frame,5)];
+  const pose=()=>.5+.5*Math.cos(age*(1.07+frame*.08)+shot().phase);
+  function stage(){
+   const c=shot(),beat=age*.51+c.phase;
+   const subject={x:.9*Math.sin(beat),y:0,z:focusStops[c.depth]+.14*Math.sin(beat*1.18)};
+   const companion={x:subject.x+c.dir*(.5+.08*Math.sin(age*1.7)),y:1.07+.13*Math.cos(age*1.4),z:subject.z+.37*Math.sin(beat+.4)};
+   const goal={x:c.lens===0?(subject.x+companion.x)*.5:subject.x,y:vertical[c.lens],z:subject.z};
+   const posts=[{x:-.85,z:1.8,h:1.84,radius:.046},{x:1.02,z:1.55,h:1.7,radius:.045}];
+   return {id:c.id,subject,companion,goal,posts,pose:pose(),side:c.dir};
+  }
+  function score(scene){return assess({subject:scene.subject,goal:scene.goal,camera,lens,wantLens:shot().lens,focus,pose:pose(),posts:scene.posts});}
+  function moveTo(x,y){camera={x:clamp(x,-1.85,1.85),y:clamp(y,.42,1.9)};}
+  function resetCamera(){const s=stage();moveTo(s.goal.x + (blockedBy(s.subject,s.goal,s.posts) ? .24 : 0),s.goal.y);}
+  function turnFocus(step){focus=(focus+step+3)%3;api.sound('tap');}
+  function sync(){api.hud('Roll',Math.min(frame+1,6)+'/6','Prints',points);}
+  function shoot(timeout=false){
+   if(done||review)return;const scene=stage(),g=score(scene),n=timeout?0:g.score;
+   let note=printLines[scene.id];
+   if(timeout)note='she walked on.';
+   else if(g.blocked)note='a post took my close-up. sidestep!';
+   else if(g.sharp<.66)note='soft focus. check the distance dial.';
+   else if(lens!==shot().lens)note='different lens next time, babe.';
+   else if(g.framing<.68)note='a little closer to the center.';
+   else if(pose()<.66)note='wait for my pose next time.';
+   points+=n;if(n>=88)perfect++;if(!timeout&&g.sharp>=.85&&!g.blocked)sharpShots++;
+   print={scene,camera:{...camera},lens,focus,t,n,note};review=1.2;
+   api.sound(n>=80?'clear':'tap');api.haptic(13);sync();
+  }
+  function next(){
+   frame++;if(frame===6){done=true;api.end(points,[['Cover shots',perfect+' / 6'],['Sharp portraits',sharpShots+' / 6']],perfect>=3?'“okay, you can be my photographer.”':'“one more roll? the light just changed.”');return;}
+   age=0;drag=null;resetCamera();sync();
+  }
+  resetCamera();sync();
+  return {
+   cancelInput(){held.clear();drag=null;},
+   key(type,code){if(type==='up'){held.delete(code);return;}if(review||done)return;held.add(code);
+    if(/^Digit[123]$/.test(code))lens=Number(code.at(-1))-1;
+    if(code==='KeyQ')turnFocus(-1);if(code==='KeyE')turnFocus(1);if(code==='Space'||code==='Enter')shoot();},
+   pointer(type,x,y){if(type==='up'||type==='cancel'){drag=null;return;}if(review||done)return;
+    if(type==='down'&&y>=401){if(x<144){lens=(lens+1)%3;api.sound('tap');}else if(x<289)turnFocus(1);else shoot();return;}
+    const metres=stage().subject.z/optics[lens];
+    if(type==='down'&&y>=49&&y<341){moveTo(camera.x+(x-center.x)*metres,camera.y-(y-center.y)*metres);drag={x,y};return;}
+    if(type==='move'&&drag){moveTo(camera.x+(drag.x-x)*metres,camera.y+(y-drag.y)*metres);drag={x,y};}
+   },
+   demo(){if(review||done)return;const s=stage();lens=shot().lens;focus=shot().depth;moveTo(s.goal.x,s.goal.y);
+    // A photographer can physically step past the pillar and preserve the pose.
+    if(blockedBy(s.subject,camera,s.posts))moveTo(camera.x+(camera.x<0?.28:-.28),camera.y);
+    if(age>1.8&&pose()>.85&&score(s).score>=88)shoot();},
+   update(dt){if(done)return;t+=dt;if(review){review=Math.max(0,review-dt);if(!review)next();return;}
+    age+=dt;const dx=Number(held.has('ArrowRight'))-Number(held.has('ArrowLeft')),dy=Number(held.has('ArrowUp'))-Number(held.has('ArrowDown'));
+    if(dx||dy)moveTo(camera.x+dx*dt*1.43,camera.y+dy*dt*.87);if(age>=12)shoot(true);
+   },
+   draw(ctx){
+    const c=shot(),p=places[c.id],snapshot=review?print:null,s=snapshot?.scene||stage(),cam=snapshot?.camera||camera,zoom=snapshot?.lens??lens,dial=snapshot?.focus??focus;
+    ctx.fillStyle='#272b2e';ctx.fillRect(0,0,480,480);
+    for(let y=2;y<42;y+=4)line(ctx,[[0,y],[480,y]],'#303537',1);
+    ctx.save();ctx.beginPath();ctx.rect(10,48,460,294);ctx.clip();photograph(ctx,s,cam,zoom,dial,snapshot?.t??t);
+    if(!snapshot){
+     ctx.globalAlpha=.27;for(const x of [164,316])line(ctx,[[x,48],[x,342]],'#fff8e7',1);for(const y of [146,244])line(ctx,[[10,y],[470,y]],'#fff8e7',1);ctx.globalAlpha=1;
+     const sharp=focusQuality(s.subject.z,focus,lens)>.81,blocked=blockedBy(s.subject,camera,s.posts);
+     const ink=blocked?'#ff8773':sharp?'#ecffc3':'#ffe2bb';
+     for(const dx of [-1,1])for(const dy of [-1,1])line(ctx,[[center.x+dx*34,center.y+dy*9],[center.x+dx*34,center.y+dy*18],[center.x+dx*24,center.y+dy*18]],ink,2.3);
+     const goal=project(s.goal,cam,zoom);
+     if(goal.x<25||goal.x>455){const x=goal.x<25?24:456;label(ctx,goal.x<25?'◀':'▶',x,186,22,gold,'center');}
+     rect(ctx,18,58,103,25,4,'#152028d9');ellipse(ctx,29,70,4,4,pose()>.78?gold:'#b5bcba');label(ctx,pose()>.78?'POSE NOW':'TRACKING',41,71,12,pose()>.78?gold:'#fff6e0','left','monospace');
+     rect(ctx,326,58,135,25,4,'#152028d9');label(ctx,'RANGE  '+s.subject.z.toFixed(1)+' m',394,71,14,'#fff2cf','center','monospace');
+     const flag=blocked?'POST IN FRAME':sharp?'FOCUS LOCK':'SOFT FOCUS';rect(ctx,19,308,131,25,3,'#152028cf');label(ctx,flag,84,321,12,ink,'center','monospace');
+     label(ctx,Math.max(0,12-Math.floor(age))+' s',451,321,15,'#fff3d4','right','monospace');
+    }else{if(review>1&&!api.reducedMotion){ctx.fillStyle='rgba(255,253,230,'+(review-1)*3+')';ctx.fillRect(0,40,480,310);}
+     rect(ctx,23,301,140,29,3,'#fff0ca');label(ctx,'PRINT '+snapshot.n+'/100',93,316,17,'#463942','center','monospace',900);}
+    ctx.restore();
+    label(ctx,'CC / 35',13,24,20,gold,'left','monospace',900);label(ctx,'AGI-1   •   '+p.name,467,25,15,'#fff4d8','right');
+    label(ctx,snapshot?'CONTACT SHEET   '+(frame+1)+'/6':'FRAME '+(frame+1)+'   /   '+crops[c.lens].toUpperCase()+'   /   '+lenses[c.lens],15,361,16,gold,'left','monospace');
+    label(ctx,snapshot?snapshot.note:c.lens===0?'“get the '+p.detail+' in with me.”':c.lens===1?'“waist up. catch me when i pose.”':'“eyes in the middle, love.”',15,385,17,'#fff5df','left','Georgia');
+    for(const [x,heading,value] of [[11,'LENS ↻',lenses[lens]],[153,'FOCUS ↻',focusStops[focus].toFixed(1)+' m']]){
+     rect(ctx,x,407,132,58,9,'#151b20');rect(ctx,x+3,410,126,50,7,'#4c5556');
+     for(let k=0;k<5;k++){line(ctx,[[x+7+k*3,419],[x+7+k*3,451]],'#788080',1);line(ctx,[[x+110+k*3,419],[x+110+k*3,451]],'#788080',1);}
+     label(ctx,heading,x+66,425,12,'#f1e6bd','center','monospace');label(ctx,value,x+66,447,20,'#fff4cf','center','monospace',900);
     }
-    function spawn() {
-      const lane = count === 0 ? 0 : Math.floor(api.rng()*3);
-      const kind = count < 6 ? (count * 5) % 6 : Math.floor(api.rng()*6);
-      const travel = 5.4 - Math.min(t / 35, 1.5);
-      visitors.push({lane, kind, life:0, travel, startX:clamp(lampX[lane]+(api.rng()-.5)*133,42,438), phase:api.rng()*TAU, landed:false, depart:0});
-      count++;
-      spawnAt = t + 2.95 - Math.min(t / 52, 1);
-    }
-    function cycle(lane) {
-      if (ended) return;
-      lights[lane] = (lights[lane]+1)%3;
-      warm[lane] = .38;
-      api.sound('tap');
-    }
-    function position(v) {
-      if (v.landed) return [lampX[v.lane]+Math.sin(v.phase)*22,lanternY[v.lane]-22+Math.sin(v.depart*2)*2];
-      const p = Math.min(1,v.life/v.travel);
-      return [v.startX+(lampX[v.lane]-v.startX)*p+Math.sin(v.phase+v.life*2.2)*14*(1-p), 91 + (lanternY[v.lane]-112)*p + Math.sin(v.phase+v.life*2)*5];
-    }
-    function update(dt) {
-      if (ended) return;
-      t += dt;
-      shutter=Math.max(0,shutter-dt);
-      if(film<3){recharge+=dt;if(recharge>=4.5){film++;recharge=0;}}else recharge=0;
-      warm.forEach((v,i) => warm[i]=Math.max(0,v-dt));
-      flashes.forEach((v,i) => flashes[i]=Math.max(0,v-dt));
-      noteTime -= dt;
-      if (t >= spawnAt && t < 51) spawn();
-      for (let i=visitors.length-1;i>=0;i--) {
-        const v = visitors[i];
-        if (v.landed) {
-          v.depart += dt;
-          if (v.depart > 2.15) visitors.splice(i,1);
-          continue;
-        }
-        v.life += dt;
-        if (v.life < v.travel) continue;
-        noteTime = 2;
-        if (lights[v.lane] === v.kind%3 && warm[v.lane] <= 0) {
-          const fresh = !journal.has(v.kind);
-          journal.add(v.kind);
-          landed++; streak++; high=Math.max(high,streak);
-          const gain = 90+Math.min(5,streak)*10+(fresh?85:0);
-          points += gain;
-          note = species[v.kind] + (fresh ? ' · first sighting!' : '  +' + gain);
-          v.landed = true;
-          flashes[v.lane] = .8;
-          api.sound(fresh?'merge':'pop');
-          api.haptic(10);
-        } else {
-          streak = 0;
-          note = species[v.kind]+' flew on';
-          visitors.splice(i,1);
-        }
-      }
-      api.hud('Journal',journal.size+'/6','Dawn',Math.ceil(Math.max(0,56-t))+'s');
-      if (t>=56) {
-        ended=true;
-        api.end(points,[['Species',journal.size+' / 6'],['Visitors',landed],['Best streak',high], ['Sharp photos',sharp+' / '+frames], ['Cover shots',assignments]],'the night shift has such pretty regulars.');
-      }
-    }
-    function draw(ctx) {
-      scene(ctx,t,stars);
-      rect(ctx,9,9,145,30,14,'rgba(13,32,40,.88)');
-      rect(ctx,288,9,184,30,14,'rgba(13,32,40,.88)');
-      label(ctx,'NIGHT GARDEN',18,25,17,'#dfedd6');
-      label(ctx,'FIELD JOURNAL  '+journal.size+'/6',462,25,15,'#dfedd6','right');
-      visitors.filter(v=>!v.landed).forEach(v=>{
-        const [x,y]=position(v);
-        ctx.save();
-        ctx.setLineDash([2,7]);
-        line(ctx,[[x,y+15],[lampX[v.lane],lanternY[v.lane]-19]],'#94adab',1.6);
-        ctx.restore();
-      });
-      lights.forEach((n,i)=>{
-        const x=lampX[i], y=lanternY[i], lens=lenses[n];
-        halo(ctx,x,y,77+(flashes[i]*24),lens.glow,'rgba(170,210,170,0)');
-        line(ctx,[[x+30,381],[x+30,y-59],[x+25,y-66],[x+3,y-66],[x,y-61],[x,y-43]],'#182e37',5);
-        shape(ctx,[[x-24,y-23],[x-19,y+22],[x+19,y+22],[x+24,y-23]],warm[i] ? '#b5b2a7' : lens.color);
-        shape(ctx,[[x-30,y-23],[x-17,y-32],[x-9,y-41],[x+9,y-41],[x+17,y-32],[x+30,y-23]],'#182f39');
-        line(ctx,[[x-16,y+23],[x+16,y+23]],'#172f38',7);
-        line(ctx,[[x-16,y-21],[x-13,y+17]],'#ffffe9',2);
-        label(ctx,lens.symbol,x,y,23,'#2b3d48','center');
-      });
-      visitors.forEach(v=>{
-        const [x,y]=position(v), lens=lenses[v.kind%3];
-        moth(ctx,x,y,v.kind,t+v.phase,v.landed?.91:.75,Math.sin(v.phase+t)*.13,v.landed?openWing(v):null);
-        if(v.landed&&!v.shot){
-          const col=openWing(v)>.72?'#ffe08a':'#d8e7df';
-          for(const edge of [-1,1])for(const side of [-1,1]){
-            line(ctx,[[x+edge*32,y+side*10],[x+edge*32,y+side*18],[x+edge*23,y+side*18]],col,2);
-          }
-          rect(ctx,x-18,y-37,36,18,5,'#182e36');
-          label(ctx,['Q','W','E'][v.lane],x,y-28,13,col,'center');
-        }
-        if (!v.landed) {
-          ellipse(ctx,x,y-25,13,13,'#203746');
-          label(ctx,lens.symbol,x,y-25,17,lens.color,'center');
-        }
-      });
-      if(shutter>0){
-        ctx.strokeStyle='rgba(255,231,168,'+shutter+')';ctx.lineWidth=7;
-        ctx.strokeRect(6,6,468,369);
-      }
-      rect(ctx,8,343,464,34,9,'rgba(20,37,47,.93)');
-      label(ctx,'Cover  ·  '+species[target],18,360,15,'#ffe4a9');
-      for(let i=0;i<3;i++){
-        rect(ctx,246+i*12,353,8,13,2,i<film?'#f4d695':'#58636b');
-      }
-      photos.forEach((shot,i)=>{
-        const x=325+i*46;
-        rect(ctx,x,347,38,26,2,shot.clean?'#ffe2a5':'#b4beb7');
-        rect(ctx,x+2,349,34,20,1,'#263746');moth(ctx,x+19,358,shot.kind,0,.36);
-      });
-      rect(ctx,0,384,480,96,0,'#182e36');
-      label(ctx, noteTime>0?note:'Watch the symbols above the moths',240,402,17,'#f3ead9','center','Georgia');
-      lights.forEach((n,i)=>{
-        const x=lampX[i], l=lenses[n];
-        rect(ctx,x-68,421,136,46,13,'#304851');
-        label(ctx,(i+1)+'  '+l.symbol+' '+l.name,x,444,17,l.color,'center');
-      });
-    }
-    return {update,draw,
-      pointer(type,x,y) {
-        if(type!=='down')return;
-        const subject=visitors.find(v=>v.landed&&!v.shot&&Math.hypot((x-position(v)[0])/44,(y-position(v)[1])/30)<1);
-        if(subject){shoot(subject.lane);return;}
-        if((y>=197&&y<340)||(y>=421&&y<=470))cycle(clamp(Math.floor(x/160),0,2));
-      },
-      key(type,code) {
-        if(type!=='down')return;
-        if(/^Digit[123]$/.test(code))cycle(Number(code.slice(-1))-1);
-        const lane=['KeyQ','KeyW','KeyE'].indexOf(code);
-        if(lane>=0)shoot(lane);
-      },
-      demo(dt) {
-        aiWait-=dt;
-        if (aiWait>0) return;
-        const model=visitors.find(v=>v.landed&&!v.shot&&openWing(v)>.83);
-        if(model && film && (film>1||model.kind===target)){shoot(model.lane);aiWait=.15;return;}
-        const v=visitors.filter(m=>!m.landed).sort((a,b)=>(a.travel-a.life)-(b.travel-b.life)).find(m=>m.travel-m.life<2.7);
-        if(v && lights[v.lane]!==v.kind%3) { cycle(v.lane); aiWait=.22; }
-      },
-    };
-  },
+    rect(ctx,296,406,173,59,29,'#a6aa9d');rect(ctx,302,412,161,44,22,'#eeeeda');ellipse(ctx,325,434,9,9,'#df675b');label(ctx,'SHUTTER',393,435,18,'#2c3130','center','monospace',900);
+   },
+  };
+ },
 };

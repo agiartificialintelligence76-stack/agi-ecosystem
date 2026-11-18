@@ -1,219 +1,135 @@
-import { painting } from '../kit/illustration.js';
-const paintVista=painting(new URL('./rescue-horizon.webp',import.meta.url).href);
-import { clamp, TAU } from '../kit/fx.js';
-
-const LAST=16, SPEED=293, ORBIT=37, SKY='#152a48', CYAN='#7de2ce', GOLD='#ffcc7b', PAPER='#ffecd2';
-export function aimAt(player,angle,target){
-  const dx=target.x-player.x,dy=target.y-player.y,ux=Math.cos(angle),uy=Math.sin(angle);
-  return {along:dx*ux+dy*uy, offset:Math.abs(dx*uy-dy*ux)};
+import { presets, course, integrate, launch, reverse, passage, wreck, closePass, STEP } from './orbit.js';
+import { painting, type, line, oval, panel, polygon, gradient, clip } from '../kit/illustration.js';
+const cover=painting(new URL('./pilot.webp',import.meta.url).href),face=painting('/images/agi1-portrait-2d.webp');
+const spaceSky=painting(new URL('./cup-sky.webp',import.meta.url).href);
+const ink='#182640',mint='#8cf1cf',orange='#ffb785';
+const keys=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+const skies=[
+ ['#182c49','#423653'],['#3d2440','#824d56'],['#152f48','#255767'],
+ ['#231f47','#634a67'],['#38293f','#805947'],['#191e46','#384369'],
+];
+function pilot(c,x,y,heading,thrust,polarity){
+  c.save();c.translate(x,y);c.rotate(heading);
+  if(thrust){polygon(c,[[-12,-4],[-20-thrust*6,0],[-12,4]],orange);polygon(c,[[-11,-2],[-19,0],[-11,2]],'#fff1ae');}
+  polygon(c,[[-13,0],[-21,-10],[-4,-7],[12,-3],[18,1],[4,7],[-14,8]],'#f4dac1',ink,2);
+  line(c,[[-13,4],[8,3]],'#af6d82',2);c.restore();
+  c.save();c.beginPath();c.arc(x,y-3,11,0,Math.PI*2);c.clip();c.fillStyle='#6e91b4';c.fillRect(x-12,y-15,24,24);face(c,x-11,y-14,22,24);c.restore();
+  oval(c,x,y-3,11.8,11.8,null,polarity<0?'#dbb8ff':'#d7fcf2',1.8);
+  line(c,[[x-7,y-9],[x-4,y-11],[x-1,y-12]],'#fffef4',1.5);
 }
-function dot(c,x,y,r,col){c.beginPath();c.arc(x,y,r,0,TAU);c.fillStyle=col;c.fill();}
-function ring(c,x,y,r,col,width){c.beginPath();c.arc(x,y,r,0,TAU);c.lineWidth=width;c.strokeStyle=col;c.stroke();}
-function poly(c,p,col){c.fillStyle=col;c.beginPath();p.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();}
-function label(c,s,x,y,size,col,align='left'){c.fillStyle=col;c.font=`bold ${size}px "AK Mono", monospace`;c.textAlign=align;c.fillText(s,x,y);}
-function arc(c,x,y,r,a,b,col,width){c.beginPath();c.arc(x,y,r,a,b);c.lineWidth=width;c.strokeStyle=col;c.stroke();}
+function planet(c,[x,y,r],i){
+  const palettes=[['#f1b094','#c47c87','#804e71'],['#a0d4c9','#6f9cae','#585375']];
+  const colors=palettes[i%2];
+  if(i===0){c.save();c.translate(x,y);c.rotate(-.28);oval(c,0,0,r*1.65,r*.31,null,'#f7c6a7aa',3);c.restore();}
+  c.save();c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.clip();
+  const g=c.createLinearGradient(x-r,y-r,x+r,y+r);colors.forEach((k,i)=>g.addColorStop(i/2,k));c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2);
+  for(let j=0;j<7;j++){
+    const yy=y-r+j*r*.31;c.beginPath();c.moveTo(x-r-6,yy);c.bezierCurveTo(x-r*.4,yy+9,x+r*.3,yy-10,x+r+5,yy+1);c.strokeStyle=j%2?'#563f6b55':'#ffe6b76b';c.lineWidth=j%2?4:2;c.stroke();
+  }c.restore();oval(c,x,y,r,r,null,'#f3c9b982',1.3);
+}
+function gate(c,x,y,r,col,star=false){
+  c.save();c.translate(x,y);if(star){polygon(c,[[0,-r],[r*.7,0],[0,r],[-r*.7,0]],null,col,2.8);polygon(c,[[0,-5],[4,0],[0,5],[-4,0]],col);}
+  else{oval(c,0,0,r,r,null,col,2.6);oval(c,0,0,r-5,r-5,null,col+'88',1);for(let i=0;i<4;i++){c.rotate(Math.PI/2);line(c,[[0,r-1],[0,r+5]],col,2);}}c.restore();
+}
 export default {
-  title:'TETHER TURN',tagline:'Bank through an orbital salvage run. Take the broad beacon or risk a tight catch to rescue a stranded pilot.',
-  instructions:[['Watch the tangent','Your shuttle circles its tether. The dotted line shows the direction you will fly.'],
-    ['Release and catch','Tap or press Space to release on the tangent. In flight, hold an arrow or either side of the screen to bend your path. Core catches refill fuel.'],
-    ['Thread the core','When a violet lifeboat appears, tap Route or press R to aim for it. Its smaller ring rescues a pilot. Every second rescue repairs one hull.']],
-  keys:[['Space / Enter','Release the tether'],['R','Aim for other route'],['↑ / ↓','Hold to bank in flight']],
-  touch:[['Tap the field','Release the tether'],['Tap Route','Change target'],['Hold left / right half','Bank up / down in flight']],
-  create(api){
-    const nodes=[{x:112,y:253,amp:0,phase:0}];
-    for(let i=1;i<=LAST;i++)nodes.push({
-      x:nodes[i-1].x+166+api.rng()*34,
-      y:clamp(nodes[i-1].y+(api.rng()-.5)*142,129,327),
-      amp:i>=5 ? 7+api.rng()*13 : 0, phase:api.rng()*TAU,
-    });
-    let index=0, ang=-2.55, time=0, mode='orbit', lives=3, score=0, chain=0, best=0, cores=0;
-    let player={x:0,y:0}, vx=0,vy=0, camera=0, launched=0, retry=0, message='', messageTime=0, particles=[], trail=[];
-    let serial=0, frameTime=0, aimDelay=.35, bearing=0;
-    let rescueAim=false,rescued=0,fuel=1,bank=0,thrusterTime=0;
-    const saved=new Set();
-    const hasPod=i=>i>0 && (i%3===2 || i===LAST);
-    const center=(i,t=time,pod=saved.has(i))=>{
-      const node=nodes[i];let y=node.y+node.amp*Math.sin(t*.95+node.phase);
-      if(pod)y+=node.y>223?-82:82;
-      return {x:node.x+(pod?16:0),y};
-    };
-    const target=(t=time)=>center(index+1,t,rescueAim);
-    function toggleRoute(){
-      if(mode!=='orbit'||!hasPod(index+1))return;
-      rescueAim=!rescueAim;api.sound('select');message=rescueAim?'Lifeboat locked':'Beacon locked';messageTime=1;
-    }
-    const radius=()=>Math.max(23,35-index*.7);
-    const spin=()=>(index%5===3 || index%5===4?-1:1)*(1.48+Math.min(index*.075,.85));
-    function setPlayer(){
-      const n=center(index);player={x:n.x+ORBIT*Math.cos(ang),y:n.y+ORBIT*Math.sin(ang)};bearing=ang+Math.sign(spin())*Math.PI/2;
-    }
-    function result(win){
-      mode='end';api.end(score,[['Transfers',`${index} / ${LAST}`],['Core passes',cores],['Best core streak',best],['Pilots rescued',rescued],['Thruster seconds',Math.round(thrusterTime)]],win?'sixteen catches. the whole sky is yours. 💜':'i marked your last orbit on the star chart.');
-    }
-    function burst(x,y,col){
-      for(let i=0;i<18;i++){const a=i*TAU/18, speed=24+((i*53+serial*17)%67);
-        particles.push({x,y,vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,color:col,life:.25+(i%4)*.08});}
-      serial++;
-    }
-    function release(){
-      if(mode!=='orbit')return;
-      mode='flight';vx=Math.cos(bearing)*SPEED;vy=Math.sin(bearing)*SPEED;launched=0;
-      burst(player.x,player.y,CYAN);api.haptic(10);api.sound('whoosh');
-    }
-    function catchNode(precise,pod){
-      if(pod)saved.add(index+1);
-      const n=center(index+1);
-      index++;ang=Math.atan2(player.y-n.y,player.x-n.x);
-      chain=precise?chain+1:0;best=Math.max(best,chain);cores+=Number(precise);
-      score+=100+(precise?60*Math.min(chain,5):0);
-      message=precise?(chain>1?`Core streak ×${chain}`:'Core pass!'):'Tether caught';
-      if(precise)fuel=Math.min(1,fuel+.42);else fuel=Math.min(1,fuel+.12);
-      if(pod){rescued++;score+=280;message='Pilot aboard!';if(rescued%2===0){lives=Math.min(3,lives+1);message='Rescue pair · hull repaired';}}
-      rescueAim=false;bank=0;
-      messageTime=1.1;api.sound(precise?'combo':'merge');api.haptic(precise?24:12);
-      burst(n.x,n.y,precise?GOLD:CYAN);api.hud('Score',score,'Hulls',lives);
-      if(index===LAST){result(true);return;}
-      mode='orbit';aimDelay=.42;setPlayer();
-    }
-    function miss(){
-      lives--;chain=0;bank=0;fuel=Math.max(fuel,.6);message=lives?'Lost signal · rewinding':'Signal lost';messageTime=1.2;
-      api.sound('hurt');api.haptic(40);api.hud('Score',score,'Hulls',lives);burst(player.x,player.y,'#ff947c');
-      if(!lives){result(false);return;}mode='retry';retry=.66;
-    }
-    function update(dt){
-      if(mode==='end')return;time+=dt;messageTime-=dt;
-      if(mode==='retry'){
-        retry-=dt;if(retry<=0){mode='orbit';ang=-2.55;trail=[];aimDelay=.35;setPlayer();}
-      }else if(mode==='orbit'){
-        ang+=spin()*dt;setPlayer();
-      }else{
-        if(bank && fuel>0){
-          bearing+=bank*1.48*dt;fuel=Math.max(0,fuel-dt*.5);thrusterTime+=dt;
-          vx=Math.cos(bearing)*SPEED;vy=Math.sin(bearing)*SPEED;
-        }
-        const old={...player};player.x+=vx*dt;player.y+=vy*dt;launched+=dt;
-        let caught=false;
-        for(const pod of hasPod(index+1)?[false,true]:[false]){
-          const beacon=center(index+1,time,pod),aim=aimAt(old,bearing,beacon),r=pod?20:radius();
-          if(aim.along>=-SPEED*dt && aim.along<=SPEED*dt+r && Math.hypot(player.x-beacon.x,player.y-beacon.y)<=r){
-            catchNode(aim.offset<10,pod);caught=true;break;
-          }
-        }
-        if(!caught && (launched>1.4 || player.y<30 || player.y>430 || player.x<nodes[index].x-115))miss();
-      }
-      frameTime+=dt;
-      if(frameTime>=.025){
-        frameTime=0;trail.push({...player,life:.48,flight:mode==='flight'});
-      }
-      for(const p of trail)p.life-=dt;trail=trail.filter(p=>p.life>0);
-      particles=particles.filter(p=>p.life>0);for(const p of particles){p.x+=p.vx*dt;p.y+=p.vy*dt;p.life-=dt;}
-      const camTarget=mode==='orbit'?nodes[index].x-112:Math.max(nodes[index].x-112,player.x-172);
-      camera+= (camTarget-camera)*(1-Math.exp(-dt*6));
-    }
-    function draw(c){
-      const sector=Math.min(3,Math.floor(index/4)),skies=[['#10243c','#2e495e','#675574'],['#292344','#57456c','#ad757b'],['#12323d','#375f64','#768b79'],['#382d49','#865a65','#dab38e']][sector];
-      const bg=c.createLinearGradient(0,0,0,480);bg.addColorStop(0,skies[0]);bg.addColorStop(.68,skies[1]);bg.addColorStop(1,skies[2]);
-      c.fillStyle=bg;c.fillRect(0,0,480,480);
-      const painted=paintVista(c,-14-11*Math.sin(camera*.0016),-12,517,507);
-      for(let i=0;i<3;i++){const cx=150+i*155-camera*.042,cy=114+Math.sin(i*2)*36,r=80+i*18;
-        const gas=c.createRadialGradient(cx,cy,3,cx,cy,r);gas.addColorStop(0,['#d3a6e935','#93e8e638','#d7ad9c3b'][i]);gas.addColorStop(1,'#c6deec00');c.fillStyle=gas;c.fillRect(cx-r,cy-r,r*2,r*2);}
-      for(let i=0;i<105;i++){
-        const x=((i*137.5-camera*(i%3*.08+.12))%503+503)%503-10,y=41+((i*137+Math.floor(i/8)*51)%358);
-        dot(c,x,y,i%13===0?1.9:.8,i%3===0?'#b8cad0':'#78909d');
-        if(i%19===0){c.fillStyle='#d5d7c9';c.fillRect(x-4,y,8,1);c.fillRect(x,y-4,1,8);}
-      }
-      // A ringed moon and successive paper-cut ridgelines drift at different depths.
-      if(!painted){const moonX=392-camera*.064;
-      c.save();c.translate(moonX,102);c.rotate(-.28);
-      c.beginPath();c.ellipse(0,5,83,13,0,0,TAU);c.strokeStyle='#c0aaa9';c.lineWidth=3;c.stroke();
-      dot(c,0,0,39,'#d39f83');c.save();c.beginPath();c.arc(0,0,39,0,TAU);c.clip();
-      for(let i=0;i<6;i++){c.fillStyle=i%2?'#c88d7a':'#e0b397';c.fillRect(-43,i*12-38+3*Math.sin(i),86,3+i%3);}
-      c.restore();c.beginPath();c.ellipse(0,5,83,13,0,0,Math.PI);c.strokeStyle='#e6c9ad';c.lineWidth=3;c.stroke();c.restore();}
-      for(let i=0;i<3;i++){const xx=((170+i*205-camera*.18)%650+650)%650-70,yy=265+Math.sin(i*2)*30;
-        poly(c,[[xx-5,yy+85],[xx-3,yy],[xx+3,yy],[xx+7,yy+85]],'#394358');
-        c.save();c.translate(xx,yy);c.rotate(-.23);
-        poly(c,[[-25,-16],[-20,-3],[-9,2],[1,3],[15,-2],[24,-15],[8,-8],[-9,-6]],'#8d838b');
-        c.strokeStyle='#b9a6a1';c.lineWidth=1.5;c.beginPath();c.moveTo(-17,-10);c.lineTo(0,-27);c.lineTo(14,-9);c.stroke();dot(c,0,-26,2,'#e8c4a6');c.restore();}
-      for(let layer=painted?2:0;layer<3;layer++){
-        const step=42,off=camera*(.09+layer*.065),start=Math.floor(off/step);
-        c.fillStyle=['#5d6173','#434f65','#303e56'][layer];c.beginPath();c.moveTo(-5,449);
-        for(let j=start;j<start+15;j++){const x=j*step-off,y=341+layer*24+Math.sin(j*1.58+layer)*19+Math.sin(j*.64+layer*2)*17;c.lineTo(x,y);}
-        c.lineTo(490,449);c.closePath();c.fill();
-      }
-      c.save();c.beginPath();c.rect(0,49,480,376);c.clip();c.translate(-camera,0);
-      for(let i=Math.max(0,index-1);i<=Math.min(nodes.length-1,index+3);i++){
-        const n=center(i), current=i===index, next=i===index+1, col=next?GOLD:current?CYAN:'#8ba8b3';
-        c.save();c.translate(n.x,n.y);
-        if(i>index+1)c.globalAlpha=.55;
-        const r=next?radius():34;
-        ring(c,0,0,r,col,1.4);arc(c,0,0,r+4,-1.5+time*.33,-.25+time*.33,col,2.5);
-        arc(c,0,0,r+4,1.64+time*.33,2.89+time*.33,col,2.5);
-        for(let k=0;k<12;k++){const a=k*TAU/12;c.save();c.rotate(a);c.fillStyle=col;c.fillRect(r-4,-.7,k%3===0?10:5,1.4);c.restore();}
-        poly(c,[[0,-9],[8,-3],[5,8],[-5,8],[-8,-3]],col);dot(c,0,0,3,SKY);
-        if(next){ring(c,0,0,12,GOLD,1.2);c.fillStyle='#372f3ddc';c.fillRect(-33,r+8,66,23);label(c,rescueAim?'BEACON':'NEXT',0,r+25,15,GOLD,'center');}
-        c.restore();
-      }
-      if(index<LAST && hasPod(index+1)){
-        const pod=center(index+1,time,true);c.save();c.translate(pod.x,pod.y);const violet='#e0b8ff';
-        ring(c,0,0,20,violet,1.5);arc(c,0,0,24,time*1.2,time*1.2+2.2,violet,2.5);
-        poly(c,[[-12,6],[-10,-6],[-6,-11],[5,-11],[11,-5],[12,6],[7,10],[-7,10]],'#936fa7');
-        dot(c,0,-2,7,'#c1dae2');dot(c,0,-2,4,'#715b79');c.fillStyle=violet;c.fillRect(-12,6,24,3);
-        c.fillStyle='#302842dc';c.fillRect(-48,25,96,21);label(c,rescueAim?'RESCUE LOCK':'LIFEBOAT',0,40,14,'#f1d7ff','center');c.restore();
-      }
-      if(mode==='orbit' && index<LAST){
-        const origin=center(index),aim=aimAt(player,bearing,target()),
-          aligned=aim.along>0 && aim.offset<(rescueAim?20:radius()),col=aligned?GOLD:'#d6e6d0';
-        c.strokeStyle=CYAN;c.lineWidth=2.5;c.beginPath();c.moveTo(origin.x,origin.y);c.lineTo(player.x,player.y);c.stroke();
-        c.strokeStyle=col;c.lineWidth=aligned?2.5:1.6;c.setLineDash([4,7]);c.beginPath();c.moveTo(player.x,player.y);
-        const length=aligned?aim.along:99;c.lineTo(player.x+Math.cos(bearing)*length,player.y+Math.sin(bearing)*length);c.stroke();c.setLineDash([]);
-      }
-      for(const p of trail)dot(c,p.x,p.y,Math.max(.5,p.life*8),p.flight?'#ffe4ac':'#92d6cd');
-      for(const p of particles){c.globalAlpha=clamp(p.life*3,0,1);dot(c,p.x,p.y,2,p.color);}c.globalAlpha=1;
-      if(mode!=='retry'){
-        c.save();c.translate(player.x,player.y);c.rotate(bearing);
-        poly(c,[[-8,-4],[-15-(Math.sin(time*22)+1)*2,0],[-8,4]],GOLD);
-        poly(c,[[15,0],[4,-4],[-5,-11],[-9,-10],[-6,-3],[-11,-3],[-11,3],[-5,3],[-8,10],[-4,10]],PAPER);
-        poly(c,[[10,0],[1,2],[-7,9],[-4,2],[-9,2],[-9,-1]],'#f39b76');
-        poly(c,[[8,0],[0,-3],[-3,-2],[1,0]],'#5397aa');
-        if(bank && fuel>0 && mode==='flight')poly(c,[[-6,-bank*3],[-10,-bank*14],[-2,-bank*4]],CYAN);
-        c.restore();
-      }
-      c.restore();
-      c.fillStyle='#14263b';c.fillRect(0,0,480,48);label(c,`TRANSFER  ${String(index).padStart(2,'0')} / ${LAST}`,15,29,17,PAPER);
-      label(c,`HULL  ${'◆'.repeat(lives)}`,465,29,17,CYAN,'right');
-      c.fillStyle='#16304a';c.fillRect(0,424,480,56);
-      const aim=mode==='orbit' && index<LAST?aimAt(player,bearing,target()):null;
-      const ready=aim && aim.along>0 && aim.offset<=(rescueAim?20:radius());
-      c.fillStyle=ready?GOLD:CYAN;c.fillRect(0,424,480,3);
-      if(mode==='flight'){
-        label(c,'▲ BANK UP',14,453,17,PAPER);label(c,'BANK DOWN ▼',466,453,17,PAPER,'right');
-        c.fillStyle='#466074';c.fillRect(165,450,148,6);c.fillStyle=CYAN;c.fillRect(165,450,148*fuel,6);
-        label(c,'THRUST',240,475,13,CYAN,'center');
-      }else{
-        label(c,mode==='retry'?'SIGNAL LOST':ready?'RELEASE NOW':'TAP TO RELEASE',13,452,18,ready?GOLD:PAPER);
-        label(c,messageTime>0?message:`Sector ${Math.min(4,sector+1)} · ${rescued} rescued`,14,474,14,CYAN);
-        if(mode==='orbit' && hasPod(index+1)){c.fillStyle=rescueAim?'#b18bc7':'#66989a';c.fillRect(331,433,137,38);label(c,rescueAim?'R · LIFEBOAT':'R · BEACON',400,457,16,'#10273a','center');}
-      }
-    }
-    setPlayer();api.hud('Score',score,'Hulls',lives);
-    return {update,draw,
-      pointer(type,x,y){
-        if(type==='up'||type==='cancel'){bank=0;return;}
-        if(mode==='flight' && type==='down'){bank=x<240?-1:1;return;}
-        if(type==='down' && mode==='orbit'){if(x>=326&&y>=425&&hasPod(index+1))toggleRoute();else release();}
-      },
-      key(type,code){
-        if(type==='up'){if(['ArrowUp','ArrowDown','KeyW','KeyS'].includes(code))bank=0;return;}
-        if(type!=='down')return;
-        if(code==='KeyR')toggleRoute();
-        else if(mode==='flight' && ['ArrowUp','KeyW','ArrowDown','KeyS'].includes(code))bank=['ArrowUp','KeyW'].includes(code)?-1:1;
-        else if(code==='Space'||code==='Enter')release();
-      },
-      demo(dt){
-        if(mode!=='orbit')return;aimDelay-=dt;if(aimDelay>0)return;
-        rescueAim=hasPod(index+1);const aim=aimAt(player,bearing,target(time+.61));
-        if(aim.along>0 && aim.offset<6)release();
-      },
-    };
-  },
+ title:'SLINGSHOT GIRL',
+ tagline:'AGI-1 strapped a cockpit to a space-golf ball. Pull back to launch her, skim the moons and flip gravity in flight.',
+ instructions:[['Pull back and release','Drag backward on the course to set angle and speed, then release. You can also tap a direction and use the launch button.'],['Skim the moons','Fly through the diamond buoy and the finish ring. A close pass earns 75 extra points if you dock. Touching a moon ends the shot.'],['Flip a moonshot','On violet circuits, switch polarity once in flight. Try flipping after the buoy when the flight timer reaches its gold mark.']],
+ keys:[['← / →','Aim'],['↑ / ↓','Power'],['Space / R','Launch or flip / recall']],
+ touch:[['Pull back and release','Aim and launch, or tap a direction'],['− / + / Launch / Recall','Adjust power, fly or rewind']],
+ create(api){
+   let index=0,arena,angle,power,body=null,clock=0,ready=0,wait=0,won=false,done=false,marked=false,drag=null;
+   let trail=[],message='',shot=0,strokes=0,points=0,flips=0,acc=0,held=new Set(),repeat=0,flare=0,previousPath=[];
+   let close=new Set(),totalSkims=0;
+   function hud(){api.hud('Circuit',String(index+1)+' / 6','Shots',shot);}
+   function setup(){arena=course(presets[index],(api.rng()-.5)*4);angle=arena.solution+(index===0?3:10)*(index%2?-1:1);
+     power=index===0?arena.power:arena.power-13;body=null;drag=null;marked=!arena.beacon;trail=[];previousPath=[];shot=0;ready=0;wait=0;won=false;acc=0;held.clear();
+     message=index===0?'Pull back and launch me into the ring.':arena.flip?'Catch the buoy, then flip gravity.':'Fly through the diamond, then dock.';hud();}
+   function fire(){if(done||body||wait>0)return;body=launch(arena,angle,power);marked=!arena.beacon;trail=[];close.clear();shot++;strokes++;acc=0;held.clear();
+     message=arena.beacon?'First the diamond. Then the ring.':'That is our finish ring!';api.sound('whoosh');api.haptic(12);hud();}
+   function flip(){if(!body||wait>0||!arena.flip)return;if(reverse(body)){flips++;flare=1;message='Polarity reversed. Ride it out.';api.sound('power');api.haptic(20);}}
+   function reset(){if(done||wait>0)return;if(!body)return;previousPath=[...trail];body=null;trail=[];marked=!arena.beacon;message='Recalled. Try a different arc.';api.sound('back');}
+   function finish(finished){won=finished;wait=finished?1.02:.82;flare=1;previousPath=[...trail];api.sound(finished?'clear':'hit');api.haptic(finished?24:12);message=finished?'Docked! That is going on my trophy shelf.':'Missed the ring. The dotted trail is yours.';
+     if(finished){totalSkims+=close.size;points+=Math.max(130,850-70*(shot-1))+75*close.size;}}
+   function adjust(k,amount=1){if(body||wait>0||done)return;
+     if(k===keys[0]||k===keys[1])angle+=(k===keys[0]?-1:1)*2*amount;
+     else power=clip(power+(k===keys[2]?1:-1)*5*amount,75,235);}
+   function flightTick(){
+     integrate(body,arena.moons);const through=passage(arena,body,marked);
+     arena.moons.forEach((moon,i)=>{
+       if(!close.has(i)&&closePass(body,moon)){
+         close.add(i);flare=.65;message='Moon skim! Dock to bank +75.';api.sound('select',{pitch:1.35,spread:0});
+       }
+     });
+     if(through.marked&&!marked){message=arena.flip?'Buoy tagged. Flip at the gold tick.':'Buoy tagged. Head for the ring.';api.sound('coin');flare=.5;}
+     marked=through.marked;if(!trail.length||Math.hypot(trail.at(-1)[0]-body.x,trail.at(-1)[1]-body.y)>4)trail.push([body.x,body.y]);
+     if(through.finish)finish(true);else if(wreck(body,arena.moons))finish(false);
+   }
+   setup();
+   return {
+     key(t,k){if(t==='up'){held.delete(k);return;}if(t!=='down')return;if(keys.includes(k)&&!body){adjust(k);held.add(k);repeat=.3;}else if(k==='Space'||k==='Enter'){if(body)flip();else fire();}else if(k==='KeyR')reset();},
+     pointer(t,x,y){
+       if(done||wait>0)return;if(t==='cancel'){drag=null;return;}
+       if(t==='down'){
+         if(y>=430){drag=null;if(x<80)adjust(keys[3]);else if(x<163)adjust(keys[2]);else if(x<295)reset();else if(body)flip();else fire();return;}
+         if(y<97)return;if(body){flip();return;}drag={x,y,moved:false};
+       }
+       if((t==='move'||t==='up')&&drag){
+         const dx=drag.x-x,dy=drag.y-y,d=Math.hypot(dx,dy);
+         if(d>9){drag.moved=true;angle=Math.atan2(dy,dx)*180/Math.PI;power=clip(65+d*1.45,75,235);}
+         if(t==='up'){const moved=drag.moved;drag=null;if(moved)fire();else{angle=Math.atan2(y-arena.start[1],x-arena.start[0])*180/Math.PI;message='Aim set. Launch when ready.';}}
+       }
+     },cancelInput(){drag=null;held.clear();},
+     update(dt){
+       if(done)return;clock+=dt;flare=Math.max(0,flare-dt*1.9);
+       if(wait>0){wait-=dt;if(wait<=0){if(won){if(++index===presets.length){done=true;api.end(points,[['Circuits docked',6],['Launches',strokes],['Moon skims',totalSkims],['Polarity flips',flips]],'Six rings, zero parking tickets. Best commute ever.');}else setup();}
+         else{body=null;trail=[];marked=!arena.beacon;}}return;}
+       if(!body){ready+=dt;if(held.size&&(repeat-=dt)<=0){repeat=.09;for(const key of held)adjust(key);}}
+       else{acc+=dt;while(acc>=STEP-1e-8&&wait<=0){acc-=STEP;flightTick();}}
+     },
+     demo(){if(done||wait>0)return;if(!body&&ready>.7){angle=arena.solution;power=arena.power;fire();}
+       else if(body&&arena.flip&&body.age>=arena.flip)flip();},
+     draw(c){
+       const palette=skies[Math.min(index,5)];gradient(c,0,0,480,480,palette);
+       cover(c,0,120,512,177,0,0,480,99);
+       const fade=c.createLinearGradient(0,58,0,100);fade.addColorStop(0,'#14213b00');fade.addColorStop(1,'#14213b');c.fillStyle=fade;c.fillRect(0,54,480,49);
+       panel(c,10,9,127,22,'#19253de6',10);type(c,'ORBIT CUP  /  0'+(Math.min(index,5)+1),74,20,11,'#ffdeaf','center','monospace');
+       type(c,arena.name,14,79,24,'#fff5d8','left','Georgia');type(c,arena.flip?'±  POLARITY':'●  GRAVITY',465,81,12,'#e3e2ff','right','monospace');
+       c.save();c.beginPath();c.rect(0,98,480,305);c.clip();
+       c.save();
+       if(index%2){c.translate(480,0);c.scale(-1,1);}
+       const skyLoaded=spaceSky(c,0,97,480,307);c.restore();
+       if(skyLoaded && index){c.save();c.globalAlpha=.18;c.fillStyle=palette[1];c.fillRect(0,98,480,305);c.restore();}
+       for(let i=0;i<(skyLoaded?16:98);i++){const x=(i*137+17)%479,y=99+((i*i*13+i*17)%300),s=i%12===0?2:1;c.fillStyle=i%4?'#fddfc899':'#c1eee8cc';c.fillRect(x,y,s,s);if(s>1){c.fillRect(x-2,y+.5,6,1);c.fillRect(x+.5,y-2,1,6);}}
+       const [sx,sy]=arena.start;oval(c,sx,sy+10,23,8,'#18263d99',orange,2);arena.moons.forEach((m,i)=>planet(c,m,i));
+       if(arena.beacon)gate(c,...arena.beacon,marked?10:15,marked?'#92c8b4':orange,true);
+       gate(c,...arena.ring,19,arena.flip&&!body?.flipped?'#dbc2fc':mint);
+       if(wait>0 && won && !api.reducedMotion){
+         const radius=22+(1.02-wait)*44;for(let i=0;i<12;i++){
+           const a=i*Math.PI/6,ux=Math.cos(a),uy=Math.sin(a),[gx,gy]=arena.ring;
+           line(c,[[gx+ux*(radius-4),gy+uy*(radius-4)],[gx+ux*radius,gy+uy*radius]],i%2?mint:orange,2);
+         }
+       }
+       if(previousPath.length>1){c.setLineDash([2,5]);line(c,previousPath,'#dac1ce6b',1.3);c.setLineDash([]);}
+       if(!body){
+         const p=launch(arena,angle,power);const dots=[];for(let i=0;i<215;i++){integrate(p,arena.moons);if(wreck(p,arena.moons))break;if(i%10===0)dots.push([p.x,p.y]);}
+         dots.forEach(([x,y],i)=>oval(c,x,y,i<10?2:1.3,i<10?2:1.3,i<10?mint:'#c4dad099'));
+         if(drag?.moved){line(c,[[sx,sy],[sx-Math.cos(angle*Math.PI/180)*43,sy-Math.sin(angle*Math.PI/180)*43]],orange,2);}
+         pilot(c,sx,sy,angle*Math.PI/180,0,1);
+       }else{
+         if(trail.length>1){line(c,trail,body.flipped?'#d6afff88':'#91efd28a',3);line(c,trail.slice(-12),'#ffebc8',1.3);}
+         pilot(c,body.x,body.y,Math.atan2(body.vy,body.vx),.5+Math.sin(clock*22)*.4,body.polarity);
+         if(flare>.1&&!api.reducedMotion)oval(c,body.x,body.y,16+(1-flare)*23,16+(1-flare)*23,null,body.flipped?'#c9b7ff88':'#ffcf9577',1.5);
+       }c.restore();
+       panel(c,0,403,480,77,'#18263e',0);
+       type(c,message,240,415,13,'#fff0d6');const bx=15,by=428,bw=450;
+       line(c,[[bx,by],[bx+bw,by]],'#44536c',2);
+       if(arena.flip)line(c,[[bx+bw*arena.flip/3,by-3],[bx+bw*arena.flip/3,by+3]],orange,3);
+       if(body)line(c,[[bx,by],[bx+bw*Math.min(1,body.age/3),by]],mint,2);
+       const btns=[['−',13,65],['+',83,65],['RECALL',164,119],[body?(body.flipped?'FLIPPED':arena.flip?'FLIP ±':'IN FLIGHT'):'LAUNCH ▸',298,169]];
+       btns.forEach(([text,x,w],i)=>{panel(c,x,438,w,32,i===3?body&&arena.flip?'#c0a7dd':mint:'#31425b',13);type(c,text,x+w/2,455,i<2?21:13,i===3?ink:'#eee4dc','center','monospace');});
+       panel(c,8,103,127,21,'#16233bd9',10);type(c,Math.round((angle%360+360)%360)+'°   '+Math.round(power)+' m/s',71,114,11,'#efefdc','center','monospace');
+     }
+   };
+ }
 };

@@ -13,11 +13,14 @@ export function mountCartridge(id, game, makeShell, landscape) {
   root.classList.add('cartridge');
   root.style.setProperty('--ak-accent', info.accent);
   root.style.setProperty('--ak-bg', info.ground);
+  root.dataset.marquee = info.style;
+  const record = 'arcade-edition:' + info.name;
+  let stopPreview = () => {};
   const shell = makeShell({
     root, name: info.name, howTo: { steps: game.instructions, keys: game.keys, touch: game.touch },
     onRestart: () => start(runSeed), onPause: release, onQuit() {
       release();
-      requestAnimationFrame(() => root.querySelector('.ak-title-art video')?.play().catch(() => {}));
+      stopPreview();
     }, onResume: () => canvas.focus({ preventScroll: true }),
   });
   const canvas = document.createElement('canvas');
@@ -25,7 +28,10 @@ export function mountCartridge(id, game, makeShell, landscape) {
   canvas.setAttribute('aria-label', info.name + '. ' + game.instructions[0].join('. '));
   const field = document.createElement('div');
   field.className = 'cartridge-field';
-  field.append(canvas);
+  const announcement = document.createElement('span');
+  announcement.className = 'ak-sr';
+  announcement.setAttribute('role', 'status');
+  field.append(canvas, announcement);
   const hint = document.createElement('p');
   hint.className = 'cartridge-hint';
   hint.textContent = (shell.touch ? game.touch : game.keys).map(([k, action]) => k + ' · ' + action).join('     /     ');
@@ -49,15 +55,18 @@ export function mountCartridge(id, game, makeShell, landscape) {
   const freshSeed = () => (Math.random() * 0x100000000) >>> 0;
   function start(seed = SEED || freshSeed()) {
     release();
-    root.querySelector('.ak-title-art video')?.pause();
+    stopPreview();
     ended = false;
+    announcement.textContent = '';
     runSeed = seed;
     const dice = rng(runSeed);
     model = game.create({
       rng: dice.next, reducedMotion: REDUCED,
-      personalBest: (key) => DEMO ? null : shell.store.best('collection:' + key),
-      rememberBest: (key, value) => { if (!DEMO) shell.store.recordBest('collection:' + key, value); },
+      personalBest: (key) => DEMO ? null : shell.store.best(record + ':' + key),
+      rememberBest: (key, value) => { if (!DEMO) shell.store.recordBest(record + ':' + key, value); },
       sound: (preset, options) => { if (!DEMO) shell.audio.sfx(preset, options); },
+      announce: (text) => { if (!DEMO) announcement.textContent = text; },
+      tone: (options) => { if (!DEMO) shell.audio.tone(options); },
       haptic: (ms) => shell.haptic(ms),
       hud: (a, x, b, y) => {
         for (const [i, name, value] of [[0, a, x], [1, b, y]]) {
@@ -76,7 +85,7 @@ export function mountCartridge(id, game, makeShell, landscape) {
         fresh.type = 'button';
         fresh.textContent = 'Start a fresh run';
         fresh.addEventListener('click', () => start(freshSeed()));
-        shell.over({ score: Math.round(score), stats, line, again: 'Replay this run',
+        shell.over({ bestKey: record, score: Math.round(score), stats, line, again: 'Replay this run',
           extra: fresh, onAgain: () => start(runSeed), onMenu: menu });
       },
     });
@@ -85,20 +94,36 @@ export function mountCartridge(id, game, makeShell, landscape) {
   }
   function menu() {
     release();
-    const animate = !REDUCED && !navigator.connection?.saveData;
-    const art = document.createElement(animate ? 'video' : 'img');
-    art.className = 'cartridge-poster';
     const poster = '/images/games/' + id + '.webp';
-    if (animate) {
-      art.muted = true; art.loop = true; art.playsInline = true; art.poster = poster;
-      art.src = '/images/games/' + id + '.mp4';
-    } else { art.src = poster; art.alt = ''; }
-    root.style.setProperty('--cartridge-art', 'url("' + (landscape || poster) + '")');
-    shell.title({
-      logo: info.name.split(' ').map((text, i) => ({ text, tone: i ? 'accent' : '' })),
-      tagline: game.tagline, art, best: shell.store.best() || null, onPlay: start,
+    const cover = landscape || poster;
+    const art = document.createElement('div');
+    art.className = 'cartridge-cover';
+    const image = document.createElement('img');
+    image.src = cover; image.alt = ''; image.decoding = 'async';
+    const clip = document.createElement('video');
+    clip.muted = true; clip.loop = true; clip.playsInline = true; clip.preload = 'none'; clip.poster = poster;
+    clip.hidden = true;
+    art.append(image, clip);
+    const preview = document.createElement('button');
+    preview.className = 'ak-link cartridge-preview';
+    preview.type = 'button'; preview.textContent = 'Watch gameplay'; preview.setAttribute('aria-pressed', 'false');
+    stopPreview = () => {
+      clip.pause(); clip.hidden = true; image.hidden = false;
+      preview.textContent = 'Watch gameplay'; preview.setAttribute('aria-pressed', 'false');
+    };
+    preview.addEventListener('click', () => {
+      if (!clip.hidden) { stopPreview(); return; }
+      if (!clip.getAttribute('src')) clip.src = '/images/games/' + id + '.mp4';
+      image.hidden = true; clip.hidden = false;
+      preview.textContent = 'Show cover'; preview.setAttribute('aria-pressed', 'true');
+      clip.play().catch(stopPreview);
     });
-    if (animate) art.play().catch(() => {});
+    root.style.setProperty('--cartridge-art', 'url("' + cover + '")');
+    shell.title({
+      logo: info.wordmark.map((text, i) => ({ text, tone: i ? 'accent' : '' })),
+      tagline: game.tagline, art, play: info.play, extra: preview,
+      best: shell.store.best(record), onPlay: start,
+    });
   }
   const playing = () => !DEMO && !ended && shell.state === 'play';
   function handlePointer(e) {

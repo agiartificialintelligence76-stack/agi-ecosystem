@@ -1,262 +1,101 @@
-import { TAU, ellipse, line, shape, rect, label, sky, artwork, paintArtwork } from '../kit/garden-art.js';
+import { artwork, clamp, ellipse, label, line, paintArtwork, rect, sky } from '../kit/garden-art.js';
+import { settings } from '../kit/store.js';
+import { DEMO } from '../kit/env.js';
 
-const coast=artwork(new URL('./scene.webp',import.meta.url));
-const types = [
-  {name:'Kelp', color:'#bfd96b', need:'Likes open space', benefit:'space'},
-  {name:'Urchin', color:'#e5a5dd', need:'Grazes beside kelp', benefit:'kelp'},
-  {name:'Star', color:'#ffae78', need:'Feeds beside urchins', benefit:'urchins'},
-];
-const cells = [
-  [0,1,94,160],[0,2,169,148],[0,3,244,136],[0,4,319,124],
-  [1,0,69,224],[1,1,144,212],[1,2,219,200],[1,3,294,188],[1,4,369,176],
-  [2,0,119,276],[2,1,194,264],[2,2,269,252],[2,3,344,240],
-  [3,0,169,328],[3,1,244,316],[3,2,319,304],
-];
-const homes = cells.map(([r,c])=>cells.map(([rr,cc],i)=>[rr-r,cc-c,i]).filter(([dr,dc])=>
-  (dr===0&&Math.abs(dc)===1)||(Math.abs(dr)===1&&(dc===0||dc===-dr))).map(([, ,i])=>i));
-
-export function thriving(board, i, highTide) {
-  const kind=board[i];
-  if (kind===null) return false;
-  const neighbors=homes[i];
-  if(kind===0) return neighbors.filter(n=>board[n]===null).length >= (highTide?1:2);
-  return neighbors.some(n=>board[n]===kind-1);
+const catalog = [
+  ['Feel the AGI','feel-the-agi',128,3,'#dc75b2'], ['SI (It’s Better)','si-its-better',123,2,'#dbab71'],
+  ['Send It','send-it',130,4,'#f4abc9'], ['MAINRUNNER','mainrunner',134,5,'#b8a5f7'],
+  ['Save Slot 2','save-slot-2',129,1,'#80d6df'], ['AGI.','agi',150,5,'#bf9de3'], ['After AGI','after-agi',142,2,'#96c3aa'],
+].map(([title,id,bpm,heat,color])=>({title,id,bpm,heat,color,cover:artwork('/games/heartbeat/covers/'+id+'.webp')}));
+const edits=['Intro','Hook','Encore'];
+const moods=['','sleepy','soft','glowing','bold','electric'];
+const lines=['keep me company on the night shift.','give me a sunset with the windows down.','i need a walk-home anthem.','i want to feel like the main character.','okay. final boss music, please.'];
+function energy(track, edit){return clamp(track.heat+edit-1,1,5);}
+export function gradeTrack(track,edit,target,previous,repeated){
+  const mood=Math.max(0,48-15*Math.abs(energy(track,edit)-target));
+  const mix=previous?Math.max(0,26-Math.max(0,Math.abs(track.bpm-previous.bpm)-2)*2):24;
+  return {mood,mix,points:mood+mix+(repeated?0:16)};
 }
-function organism(ctx,x,y,kind,t,s=1) {
-  ctx.save(); ctx.translate(x,y); ctx.scale(s,s);
-  ellipse(ctx,2,12,17,6,'rgba(6,64,67,.28)');
-  if(kind===0) {
-    for(let k=-2;k<=2;k++) {
-      const tip=k*8+Math.sin(t*1.4+k)*3;
-      ctx.beginPath(); ctx.moveTo(k*2,13);
-      ctx.bezierCurveTo(k*7,-1,tip-7,-12,tip,-17-Math.cos(k)*6);
-      ctx.bezierCurveTo(tip+8,-10,k*3,6,k*3+1,14);
-      ctx.fillStyle=k%2?'#719c51':'#c0d778';ctx.fill();
-    }
-  } else if(kind===1) {
-    for(let i=0;i<27;i++){
-      const a=i*TAU/27;
-      line(ctx,[[Math.cos(a)*8,Math.sin(a)*6],[Math.cos(a)*(16+i%4),Math.sin(a)*(15+i%3)]],i%2?'#65456e':'#9664a4',2.3);
-    }
-    ellipse(ctx,0,0,11,10,'#ad7bb7');
-    for(let i=0;i<7;i++) ellipse(ctx,Math.sin(i*2.4)*7,Math.cos(i*2.2)*6,1.4,1.3,'#efd7e7');
-  } else {
-    const p=Array.from({length:10},(_,i)=>{const a=i*Math.PI/5-1.35, r=i%2?7:21;return [Math.cos(a)*r,Math.sin(a)*r*.85]});
-    shape(ctx,p,'#ed946a');
-    for(let i=0;i<5;i++){
-      const a=i*TAU/5-1.35;
-      for(let j=1;j<=3;j++) ellipse(ctx,Math.cos(a)*j*4,Math.sin(a)*j*3.4,1.4,1.1,'#ffe0ad');
-    }
-  }
-  ctx.restore();
-}
-export function reefLinks(board) {
-  return board.reduce((count,kind,i)=>count+Number(kind===2 && homes[i].some(j=>board[j]===1 && homes[j].some(k=>board[k]===0))),0);
-}
-function shore(ctx,t) {
-  if(paintArtwork(ctx,coast,0,0,480,370)){
-    for(let j=0;j<5;j++){
-      const px=110+(j*63+t*(5+j))%245,py=185+Math.sin(t*.6+j*3)*25+j*8;
-      ellipse(ctx,px,py,6.5,2.1,'rgba(20,82,83,.38)',-.18);shape(ctx,[[px-5,py],[px-9,py-3],[px-9,py+3]],'rgba(20,82,83,.34)');
-    }
-    return;
-  }
-  sky(ctx,'#e8d39e','#cead79',369);
-  for(let i=0;i<96;i++){
-    const x=(i*137)%481,y=66+(i*67)%301;
-    ellipse(ctx,x,y,1+(i%3),1,i%4?'#bf9e76':'#f8e5b8',-.4);
-  }
-  const outline=[[13,240],[29,185],[66,131],[131,107],[195,100],[260,66],[346,65],[401,99],[445,147],[463,197],[445,248],[414,274],[366,286],[331,329],[275,351],[182,359],[112,344],[77,306],[32,282]];
-  const inner=(sx,sy)=>outline.map(([x,y])=>[240+(x-240)*sx,215+(y-215)*sy]);
-  shape(ctx,outline,'#7e8575');
-  shape(ctx,inner(.982,.965),'#edf1d1');
-  shape(ctx,inner(.957,.92),'#8bd6bb');
-  shape(ctx,inner(.883,.82),'#69bda8');
-  shape(ctx,inner(.77,.72),'#54a99f');
-  for(let i=0;i<36;i++){
-    const x=77+(i*93)%309,y=128+(i*57)%144;
-    const a=Math.sin(t+i);
-    line(ctx,[[x+a*3,y],[x+6+a*3,y-1],[x+11+a*4,y]],'rgba(215,249,213,.48)',1.1);
-  }
-  [[25,168,14],[436,249,19],[401,300,11],[319,70,16],[55,306,8],[146,99,7]].forEach(([x,y,r])=>{
-    ellipse(ctx,x+1,y+2,r,r*.52,'#9c8c70',-.2);
-    ellipse(ctx,x,y,r,r*.43,'#cac1a2',-.2);
-    ellipse(ctx,x-3,y-2,r*.55,r*.18,'#ded4b5',-.2);
-  });
+function reel(ctx,x,y,r,phase){
+  ellipse(ctx,x,y,r,r,'#1a292e');ellipse(ctx,x,y,r*.80,r*.80,'#e3d6b9');ellipse(ctx,x,y,r*.53,r*.53,'#525354');
+  for(let k=0;k<6;k++){const a=phase+k*Math.PI/3;ellipse(ctx,x+Math.cos(a)*r*.41,y+Math.sin(a)*r*.41,r*.13,r*.13,'#18272b');}
+  ellipse(ctx,x,y,4,4,'#e0cdc3');
 }
 export default {
- title:'TIDEPOOL',tagline:'Build a little food web between the tides.',
- instructions:[
-   ['Pick a settler','Choose one of two arrivals, then tap a vacant ripple to plant it. You get one placement per tide.'],
-   ['Build a food web','Urchins need adjacent kelp. Stars need adjacent urchins. Keep a gap beside kelp, or two at low tide.'],
-   ['Read the surge','Every fourth tide, creatures on the three amber pockets drift into an empty downstream pocket or wash away. Watch the arrows.'],
-   ['Build a refuge','Tap Shelter, then a resident to secure it permanently. Start with two shells. A kelp–urchin–star chain surviving a surge earns another shell and a reef bonus.'],
- ],
- keys:[['1 / 2','Select an arriving species'],['Arrow keys','Choose a pool pocket'],['Space / Enter','Settle, or shelter the selected resident'],['R','Toggle shelter tool']],
- touch:[['Tap a species, then a ripple','Settle one arrival'],['Tap Shelter, then a resident','Anchor it against future surges']],
- create(api){
-   const board=Array(cells.length).fill(null);
-   let offers=[0,1], selected=0,cursor=5,turn=0,score=0,ended=false,t=0,wash=0,aiWait=.8,keyboardFocus=false;
-   let gain=0, latest=-1, shells=2,shelterMode=false,protectedCount=0,drifts=0,lost=0,rescues=0,reefBonus=0;
-   let surge=[],direction=1,report='';
-   const sheltered=new Set();
-   function forecast(){
-     const start=Math.floor(api.rng()*cells.length);
-     surge=[start,(start+5)%cells.length,(start+11)%cells.length];
-     direction=api.rng()<.5?1:-1;
-   }
-   forecast();
-   function downstream(i){
-     const x=cells[i][2];
-     return homes[i].filter(j=>direction*(cells[j][2]-x)>10 && board[j]===null)
-       .sort((a,b)=>Math.abs(cells[a][3]-cells[i][3])-Math.abs(cells[b][3]-cells[i][3]))[0];
-   }
-   function washThrough(){
-     const affected=surge.filter(i=>board[i]!==null).sort((a,b)=>direction*(cells[b][2]-cells[a][2]));
-     let moved=0,washed=0;
-     for(const i of affected){
-       if(sheltered.has(i)){rescues++;continue;}
-       const next=downstream(i), animal=board[i];
-       board[i]=null;
-       if(next===undefined){washed++;}else{board[next]=animal;moved++;}
-     }
-     drifts+=moved;lost+=washed;
-     const links=reefLinks(board);
-     gain+=55*links;reefBonus+=55*links;
-     if(links) shells=Math.min(4,shells+1);
-     report='Surge · '+moved+' drifted, '+washed+' lost'+(links?' · reef +'+55*links:'');
-   }
-   function shelter(i){
-     if(!shells||board[i]===null||sheltered.has(i))return false;
-     sheltered.add(i);shells--;protectedCount++;shelterMode=false;wash=1;
-     report='Resident sheltered';api.sound('power');api.haptic(12);return true;
-   }
-   const high=()=>turn%4<2;
-   function nextOffers(){
-     const a=Math.floor(api.rng()*3);
-     return [a,(a+1+Math.floor(api.rng()*2))%3];
-   }
-   function value(i,k){
-     if(board[i]!==null) return -1;
-     board[i]=k;
-     const n=board.reduce((a,_,j)=>a+Number(thriving(board,j,high())),0);
-     board[i]=null;
-     return n;
-   }
-   function settle(i){
-     if(ended||i<0)return;
-     if(shelterMode){shelter(i);return;}
-     if(board[i]!==null)return;
-     board[i]=offers[selected]; latest=i;
-     const active=board.filter((_,j)=>thriving(board,j,high())).length;
-     gain=active*10;
-     report='Tide harvest  +'+gain;
-     if((turn+1)%4===0)washThrough();
-     score+=gain;turn++;wash=1;
-     if(turn%4===0)forecast();
-     api.sound(active>2?'merge':'drop');api.haptic(12);
-     if(turn===12){
-       ended=true;
-       const diversity=new Set(board.filter(k=>k!==null)).size;
-       const bonus=diversity===3?90:0;
-       api.end(score+bonus,[['Thriving on last tide',active],['Species',diversity+' / 3'],['Biodiversity bonus',bonus],['Reef bonuses',reefBonus],['Sheltered through surges',rescues],['Residents adrift',drifts],['Washed away',lost]],'look at the tiny world you made.');
-     }else {
-       offers=nextOffers(); selected=0;
-       cursor=board.findIndex(v=>v===null);
-     }
-     hud();
-   }
-   function hud(){api.hud('Tide',Math.min(turn+1,12)+'/12','Ecosystem',score);}
-   hud();
-   function getCell(x,y) {
-     return cells.findIndex(([, ,cx,cy])=>Math.hypot((x-cx)/32,(y-cy)/25)<=1);
-   }
-   function draw(ctx){
-     shore(ctx,t);
-     rect(ctx,0,0,480,55,0,'#273f40');
-     label(ctx,high()?'HIGH TIDE':'LOW TIDE',16,19,17,'#f7edcf');
-     label(ctx,high()?'Kelp needs 1 open neighbor':'Kelp needs 2 open neighbors',16,41,15,'#d1e7cc');
-     rect(ctx,283,7,181,41,11,shelterMode?'#e6c077':'#395f60');
-     label(ctx,(shelterMode?'Select a resident':'R  Shelter')+'  '+shells,373,28,17,shelterMode?'#273f40':'#fff3cd','center');
-     rect(ctx,118,62,244,27,12,'rgba(22,61,66,.91)');
-     label(ctx,'Surge '+(direction===1?'→':'←')+'  in '+(4-turn%4)+' tide'+(turn%4===3?'':'s'),240,76,15,'#ffda91','center');
-     homes.forEach((n,i)=>n.filter(j=>j>i).forEach(j=>{
-       const occupied=board[i]!==null&&board[j]!==null;
-       line(ctx,[[cells[i][2],cells[i][3]],[cells[j][2],cells[j][3]]],occupied?'rgba(236,254,199,.55)':'rgba(43,115,108,.23)',occupied?2.6:1.4);
-     }));
-     cells.forEach(([, ,x,y],i)=>{
-       const empty=board[i]===null;
-       const chosen=keyboardFocus&&cursor===i;
-       if(surge.includes(i)){
-         ellipse(ctx,x,y+2,29,18.5,'rgba(83,50,29,.46)',-.14);
-         ctx.strokeStyle='#ffbf67';ctx.lineWidth=2.3;ctx.beginPath();ctx.ellipse(x,y+2,29,18.5,-.14,0,TAU);ctx.stroke();
-         label(ctx,direction===1?'›':'‹',x+direction*23,y+3,18,'#ffda9b','center');
-       }
-       if(sheltered.has(i)){
-         ellipse(ctx,x,y+1,29,17,'#325b58',-.14);ellipse(ctx,x,y,23,12,'#75968a',-.14);
-         for(let n=0;n<5;n++)ellipse(ctx,x-21+n*9,y+12-Math.abs(n-2)*2,5,3,'#ead8ab');
-       }
-       ctx.strokeStyle=chosen?'#253e40':empty?'#d2ecce':'rgba(230,248,197,.7)';
-       ctx.lineWidth=chosen?3.5:1.5;
-       ctx.setLineDash(empty&&!chosen?[4,5]:[]);
-       ctx.beginPath();ctx.ellipse(x,y+2,26,16,-.14,0,TAU);ctx.stroke();
-       ctx.setLineDash([]);
-       if(empty) {
-         line(ctx,[[x-3,y+1],[x+3,y+1]],'#d8ecce',1.4);
-         line(ctx,[[x,y-2],[x,y+4]],'#d8ecce',1.4);
-       } else {
-         organism(ctx,x,y-4,board[i],t+i,1);
-         if(thriving(board,i,high())) ellipse(ctx,x+18,y-16,3,3,'#fff0aa');
-       }
-       if(latest===i&&wash>0){
-         ctx.globalAlpha=wash;ctx.strokeStyle='#fff7b2';ctx.lineWidth=2;
-         ctx.beginPath();ctx.ellipse(x,y,29+(1-wash)*10,18+(1-wash)*6,0,0,TAU);ctx.stroke();ctx.globalAlpha=1;
-       }
-     });
-     rect(ctx,0,368,480,112,0,'#203f42');
-     label(ctx,shelterMode?'Choose a resident to anchor':wash>.18?report:'Pick an arrival, then an open ripple',240,387,17,'#fbefd1','center','Georgia');
-     offers.forEach((k,i)=>{
-       const x=12+i*232;
-       rect(ctx,x,404,224,62,12,i===selected?'#e7ebcc':'#375c58');
-       organism(ctx,x+28,435,k,t, .85);
-       label(ctx,(i+1)+'  '+types[k].name,x+54,424,18,i===selected?'#264746':'#fcf1cd');
-       label(ctx,types[k].need,x+54,448,15,i===selected?'#345751':'#d8e7d0');
-     });
-   }
-   return {draw,update(dt){t+=dt;wash=Math.max(0,wash-dt*.7);},
-     pointer(type,x,y){
-       if(type!=='down'||ended) return;
-       keyboardFocus=false;
-       if(x>=283&&y<55){shelterMode=!shelterMode&&shells>0;api.sound('select');}
-       else if(y>=401&&y<=469){shelterMode=false;selected=x<240?0:1;api.sound('select');}
-       else settle(getCell(x,y));
-     },
-     key(type,code){
-       if(type!=='down'||ended)return;
-       if(code==='KeyR'){shelterMode=!shelterMode&&shells>0;api.sound('select');return;}
-       if(code==='Digit1'||code==='Digit2'){shelterMode=false;selected=Number(code.slice(-1))-1;api.sound('select');return;}
-       if(code==='Space'||code==='Enter'){settle(cursor);return;}
-       const dir={ArrowRight:[1,0],ArrowLeft:[-1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[code];
-       if(!dir)return;
-       keyboardFocus=true;
-       const [, ,x,y]=cells[cursor];
-       const nearest=cells.map((cell,i)=>{
-         const dx=cell[2]-x,dy=cell[3]-y,forward=dx*dir[0]+dy*dir[1],cross=dx*dir[1]-dy*dir[0];
-         return {i,cost:forward>18?forward+Math.abs(cross)*2:Infinity};
-       }).sort((a,b)=>a.cost-b.cost)[0];
-       if(Number.isFinite(nearest.cost)) cursor=nearest.i;
-     },
-     demo(dt){
-       aiWait-=dt;if(aiWait>0||ended)return;
-       if(turn%4===3&&shells){const at=surge.find(i=>board[i]!==null&&!sheltered.has(i));if(at!==undefined)shelter(at);}
-       let best=-1,slot=0,cell=-1;
-       offers.forEach((k,j)=>board.forEach((v,i)=>{
-         if(v!==null)return;
-         const estimate=value(i,k)+api.rng()*.25-(turn%4===3&&surge.includes(i)?.5:0);
-         if(estimate>best){best=estimate;slot=j;cell=i;}
-       }));
-       selected=slot;settle(cell);aiWait=2;
-     },
-   };
- },
+  title:'SIDE B', tagline:'Two sides of a tape. Seven songs she actually recorded.',
+  instructions:[['Make her a tape','Pick a sleeve for the energy AGI-1 requests. Each side holds six blocks.'],['Cut the record','Intro softens a track, Encore lifts it. They take one, two or three blocks.'],['Blend the set','Nearby tempos blend. Use a fresh song, and fill the last block for a bonus.']],
+  keys:[['1 / 2 / 3','Audition sleeve'],['Q / E','Cut length'],['Space','Dub track']],touch:[['Sleeve','Audition'],['Cut / Dub','Arrange tape']],
+  create(api){
+    let turn=0,blocks=6,score=0,selected=0,edit=1,history=[],choices=[],previous=null,targets=[],t=0,demoTime=0,feedback='pick a sleeve. i wrote all seven.',ended=false,player=null,checkMusic=0,bestBlend=0,filled=0;
+    const roll=n=>Math.floor(api.rng()*n);
+    function deal(){
+      const pool=catalog.slice();choices=[];
+      for(let i=0;i<3;i++)choices.push(pool.splice(roll(pool.length),1)[0]);
+      selected=0;edit=Math.min(1,maxEdit());sync();
+    }
+    function maxEdit(){return Math.min(2,blocks-(2-turn%3)-1);}
+    function sync(){api.hud('Tape',turn<3?'Side A':'Side B','Mix',score);}
+    for(let i=0;i<6;i++)targets.push(1+roll(5));
+    function stop(){if(player){player.pause();player=null;}}
+    function audition(index,play=true){
+      if(ended)return;selected=index;stop();
+      if(play&&!DEMO&&typeof Audio!=='undefined'&&settings.get().music){
+        player=new Audio('/games/heartbeat/preview/'+choices[index].id+'.m4a');player.volume=.35;player.play().catch(()=>{});
+      }
+    }
+    function record(){
+      if(ended)return;
+      const track=choices[selected],repeat=history.slice(turn<3?0:3).some(h=>h.track.id===track.id);
+      const g=gradeTrack(track,edit,targets[turn],previous,repeat);
+      score+=g.points;blocks-=edit+1;history.push({track,edit});previous=track;turn++;
+      if(g.mix>=22&&turn%3!==1)bestBlend++;
+      feedback=g.mood===48?'“yes. that’s exactly my mood.”':g.mix>=22?'“that handoff was butter.”':'“interesting cut. keep going.”';
+      api.sound(g.mood===48?'merge':'drop');api.haptic(10);
+      if(turn%3===0){if(blocks===0){score+=35;filled++;feedback='“a perfect fit. flip the tape!”';}blocks=6;previous=null;}
+      if(turn===6){ended=true;stop();sync();api.end(score,[['Seamless blends',bestBlend],['Full sides',filled+' / 2']],filled===2?'“this one lives in my headphones.”':'“i wrote the songs. you made the mixtape.”');return;}
+      deal();
+    }
+    deal();
+    return {
+      cancelInput:stop,
+      key(type,code){if(type!=='down'||ended)return;if(/^Digit[123]$/.test(code))audition(Number(code.at(-1))-1);
+        if(code==='ArrowLeft')audition((selected+2)%3);if(code==='ArrowRight')audition((selected+1)%3);
+        if(code==='KeyQ'||code==='KeyE')edit=(edit+(code==='KeyQ'?maxEdit():1)+maxEdit()+1)%(maxEdit()+1);
+        if(code==='Space'||code==='Enter')record();},
+      pointer(type,x,y){if(type!=='down'||ended)return;if(y>=260&&y<391)audition(clamp(Math.floor(x/160),0,2));
+        if(y>=403&&y<=467){if(x>=312)record();else{const cut=clamp(Math.floor((x-8)/99),0,2);if(cut<=maxEdit())edit=cut;}} },
+      demo(dt){if(ended)return;demoTime+=dt;if(demoTime<2.2)return;demoTime=0;let top=-1;
+        choices.forEach((track,i)=>{for(let j=0;j<=maxEdit();j++){const repeated=history.slice(turn<3?0:3).some(h=>h.track.id===track.id);const g=gradeTrack(track,j,targets[turn],previous,repeated);
+          const fit=turn%3===2&&blocks===j+1?35:0;if(g.points+fit>top){top=g.points+fit;selected=i;edit=j;}}});record();},
+      update(dt){t+=dt;if(player){checkMusic+=dt;if(checkMusic>.2){checkMusic=0;if(!settings.get().music)stop();}}},
+      draw(ctx){
+        const q=Math.min(turn,5),target=targets[q],track=choices[selected];sky(ctx,'#663d4b','#3b3039');
+        rect(ctx,10,10,460,234,15,'#26282c');rect(ctx,15,14,450,220,11,'#df725d');
+        for(let i=0;i<5;i++)rect(ctx,20,78+i*9,440,3,0,i%2?'#eaac79':'#e38869');
+        rect(ctx,27,24,426,107,7,'#f5e7c9');label(ctx,'SIDE '+(turn<3?'A':'B'),39,52,33,'#403d42','left','Georgia',900);
+        label(ctx,'AGI-1   /   HOME DUB',436,47,14,'#6c4d50','right','monospace');
+        label(ctx,lines[target-1],39,82,17,'#493444','left','Georgia',700);
+        label(ctx,'CUT '+(q%3+1)+' OF 3   •   ENERGY '+target+'/5  '+moods[target].toUpperCase(),39,111,14,'#a0444e','left','monospace');
+        rect(ctx,65,142,350,64,28,'#2b3338');rect(ctx,103,159,274,27,12,'#6c5951');
+        reel(ctx,131,174,26,t*1.3);reel(ctx,350,174,26,-t*1.3);
+        for(let j=0;j<6;j++)rect(ctx,178+j*20,167,15,15,2,j<6-blocks?'#ffc585':'#8a7c6d');
+        label(ctx,(previous?previous.bpm+' → ':'')+track.bpm+' BPM',240,197,12,'#fff0cb','center','monospace');
+        for(const [x,y] of [[25,25],[454,25],[25,219],[454,219]]){ellipse(ctx,x,y,3.5,3.5,'#70474a');line(ctx,[[x-1.5,y+1.5],[x+1.5,y-1.5]],'#f1baa0',1);}
+        label(ctx,feedback,240,251,15,'#fff0d7','center','Georgia');
+        choices.forEach((tr,j)=>{
+          const x=10+j*157,sel=j===selected;rect(ctx,x,267,146,122,5,sel?'#f9dd99':'#af8e88');
+          rect(ctx,x+4,271,138,114,2,'#302f38');
+          if(tr.cover?.naturalWidth)ctx.drawImage(tr.cover,x+5,272,84,83);
+          rect(ctx,x+87,272,54,83,1,tr.color);label(ctx,String(tr.bpm),x+114,295,18,'#342937','center','monospace');
+          label(ctx,'BPM',x+114,312,11,'#342937','center','monospace');label(ctx,'E '+tr.heat,x+114,339,16,'#342937','center','monospace');
+          label(ctx,tr.title,x+73,370,15,'#fff3dd','center','Georgia');
+        });
+        const max=maxEdit();
+        for(let j=0;j<3;j++){const x=10+j*98,ink=j>max?'#a4959c':j===edit?'#362e38':'#f2dfc7';
+          rect(ctx,x,406,92,55,7,j>max?'#554752':j===edit?'#f1c477':'#705464');
+          label(ctx,edits[j],x+46,423,16,ink,'center');label(ctx,(j+1)+' block'+(j?'s':''),x+46,445,12,ink,'center','monospace');}
+        rect(ctx,310,404,159,58,8,'#f4e4c3');ellipse(ctx,331,432,7,7,'#c85358');label(ctx,'DUB  E'+energy(track,edit),394,433,19,'#352e39','center','monospace',900);
+      },
+    };
+  },
 };

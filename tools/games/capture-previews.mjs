@@ -30,9 +30,10 @@ const only = args.filter((a, i) => !a.startsWith('--') && !args[i - 1]?.startsWi
 const kit = (id, seed = 7, { warm = 2500, dur = 6000, poster = 0.45, ...more } = {}) => ({ url: `/games/${id}?demo&seed=${seed}`, warm, dur, poster, shotTimeout: 180000, ...more });
 // Sample each playable scene where its main decision is visible, including some second-stage mechanics.
 const moments = {
-  lanternlake: { warm: 250, poster: .45 }, starlingrelay: { warm: 100, poster: .08 },
-  echoforge: { warm: 6200 }, returnaddress: { warm: 6500 }, driftglass: { warm: 5000 },
-  moonfreight: { warm: 3500 }, tetherturn: { warm: 4500 }, pocketgrove: { warm: 900 },
+  lanternlake: { warm: 100, poster: .03 }, starlingrelay: { warm: 150, poster: .24 },
+  echoforge: { warm: 1900 }, returnaddress: { warm: 1800, poster: .48 },
+  driftglass: { warm: 2400 }, waxworks: { warm: 200, poster: .23 },
+  moonfreight: { warm: 1450 }, tetherturn: { warm: 1500 }, pocketgrove: { warm: 450 },
 };
 export const RECIPES = {
   ...Object.fromEntries(COLLECTION.map(({ id }) => [id, kit(id, 7, moments[id])])),

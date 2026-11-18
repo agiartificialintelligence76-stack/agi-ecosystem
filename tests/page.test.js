@@ -627,7 +627,7 @@ test('AGI games: its page at /games, its head and link preview (its own picture)
   assert.ok(readPage('rideemagi.html').includes('<meta property="og:image" content="__SITE__/cards/games.jpg" />'), 'its game shares its picture');
   // (2026-10-21) its second game at /games/trenchingsimulator, with its own picture (its test below)
   assert.ok(vercel.rewrites.some((r) => r.source === '/games/trenchingsimulator' && r.destination === '/trenchingsimulator'), 'its second game at /games/trenchingsimulator');
-  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Fifty-two free browser games with AGI-1: CLOUDFOIL, MOTHLIGHT, WAXWORKS, ECHO FORGE, SWITCHYARD and more\./, 'its preview names games from the current release');
+  assert.match(page.match(/<meta property="og:description" content="([^"]+)"/)[1], /^Fifty-two free browser games with AGI-1: WINGWALK EXPRESS, CANDID CAMERA, HANDLE WITH CARE, DUET AFTER DARK, LAST TRAIN TO NOODLES and more\./, 'its preview names games from the current release');
   // the site's own top bar and footer, Games marked as the page you're on (and nothing else)
   const strip = (s) => s.replace(/ aria-current="page"/g, '');
   const live = readPage('live.html');

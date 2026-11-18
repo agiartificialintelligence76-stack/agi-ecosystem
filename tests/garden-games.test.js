@@ -1,114 +1,74 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import mothlight from '../src/games/mothlight/game.js';
-import tidepool, { thriving, reefLinks } from '../src/games/tidepool/game.js';
-import nightpress, { scorePull } from '../src/games/nightpress/game.js';
-import cloudkitchen from '../src/games/cloudkitchen/game.js';
-import pocketgrove from '../src/games/pocketgrove/game.js';
+import candids from '../src/games/mothlight/game.js';
+import { project, focusQuality, blockedBy } from '../src/games/mothlight/camera.js';
+import mixtape, { gradeTrack } from '../src/games/tidepool/game.js';
+import sticker, { proofGrade } from '../src/games/nightpress/game.js';
+import boba, { taste } from '../src/games/cloudkitchen/game.js';
+import railway, { departures, quickest } from '../src/games/pocketgrove/game.js';
 
-function start(game, seed = 17) {
-  let hud, result, finishes = 0;
-  const model=game.create({
-    rng() { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return seed / 4294967296; },
-    hud(...v) { hud = v; },
-    sound() {}, haptic() {},
-    end(points, stats, line) { finishes++; result = { points, stats: Object.fromEntries(stats), line }; },
-  });
-  return {
-    model, get hud() { return hud; }, get result() { return result; }, get finishes() { return finishes; },
-    tick(seconds, autoplay=false) {
-      const frames = Math.round(seconds*60);
-      for(let i=0;i<frames;i++){if(autoplay)model.demo(1/60);model.update(1/60);}
-    },
-    key(code) { model.key('down', code); model.key('up', code); },
-    tap(x,y) { model.pointer('down',x,y);model.pointer('up',x,y); },
-  };
+function play(game, seed=17){
+ let hud, result, ends=0;
+ const model=game.create({
+  rng(){seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;},
+  hud(...values){hud=values;},sound(){},haptic(){},
+  end(score,rows,line){ends++;result={score,stats:Object.fromEntries(rows),line};},
+ });
+ return {model,get hud(){return hud;},get result(){return result;},get ends(){return ends;},
+  wait(sec,automatic=false){for(let k=0;k<Math.ceil(sec*60);k++){if(automatic)model.demo(1/60);model.update(1/60);}},
+  key(k){model.key('down',k);model.key('up',k);},
+  tap(x,y){model.pointer('down',x,y);model.pointer('up',x,y);},
+ };
 }
-for(const game of [mothlight,tidepool,nightpress,cloudkitchen,pocketgrove]){
-  test(game.title+' completes a scored, repeatable full run',()=>{
-    const a=start(game),b=start(game);
-    a.tick(130,true);b.tick(130,true);
-    assert.equal(a.finishes,1);assert.equal(b.finishes,1);
-    assert.ok(a.result.points>0);
-    assert.deepEqual(a.result,b.result);
-  });
+for(const game of [candids,mixtape,sticker,boba,railway]){
+ test(game.title+' can finish a repeatable full run from the real inputs used by its demo',()=>{
+  const a=play(game),b=play(game);a.wait(130,true);b.wait(130,true);
+  assert.equal(a.ends,1);assert.ok(a.result.score>0);assert.deepEqual(a.result,b.result);
+ });
 }
-
-test('mothlight lets lantern choices change visits and collect the six species',()=>{
-  const matched=start(mothlight),ignored=start(mothlight);
-  matched.tick(60,true);ignored.tick(60);
-  assert.equal(matched.result.stats.Species,'6 / 6');
-  assert.ok(matched.result.stats.Visitors>ignored.result.stats.Visitors);
+test('Candid Camera rewards a framed pose and correct focal length, and expires missed frames',()=>{
+ const a=play(candids),b=play(candids);
+ a.wait(115,true);b.wait(115);
+ assert.equal(a.result.stats['Cover shots'],'6 / 6');assert.equal(b.result.score,0);
+ const c=play(candids);c.key('Digit3');c.tap(379,433);c.wait(1.3);assert.equal(c.hud[1],'2/6');assert.ok(c.hud[3]>0);
 });
-test('tidepool models grazing, predation and space that changes between high and low tide',()=>{
-  const board=Array(16).fill(null);
-  board[0]=0;board[1]=1;board[2]=2;
-  assert.ok(thriving(board,1,true));
-  assert.ok(thriving(board,2,true));
-  board[0]=null;assert.equal(thriving(board,1,true),false);
-  board[0]=0;board[4]=2;assert.ok(thriving(board,0,true));
-  assert.equal(thriving(board,0,false),false);
+test('Candid Camera gives the foreground faster parallax and allows physically stepping around a post',()=>{
+ const camera={x:0,y:1.4},other={x:.4,y:1.4};
+ const near={x:1,y:1.5,z:2},far={...near,z:8};
+ assert.equal(project(near,camera,1).scale/project(far,camera,1).scale,4);
+ assert.equal((project(near,camera,1).x-project(near,other,1).x)/(project(far,camera,1).x-project(far,other,1).x),4);
+ const post=[{x:.25,z:2,h:2,radius:.06}];assert.ok(blockedBy(far,camera,post));assert.equal(blockedBy(far,other,post),false);
+ assert.ok(focusQuality(2.4,0,2)>.95);assert.ok(focusQuality(2.4,2,2)<.15);
 });
-test('tidepool ignores occupied pockets and lets touch and keyboard finish tides',()=>{
-  const a=start(tidepool);
-  a.tap(94,160);assert.equal(a.hud[1],'2/12');
-  a.tap(94,160);assert.equal(a.hud[1],'2/12');
-  a.key('Digit2');a.key('Space');assert.equal(a.hud[1],'3/12');
+test('Candid Camera touch and keyboard focus dials change shutter scores independently of the lens',()=>{
+ const inFocus=play(candids),softTouch=play(candids),softKeys=play(candids);
+ softTouch.tap(220,435);softKeys.key('KeyE');
+ for(const run of [inFocus,softTouch,softKeys])run.tap(379,433);
+ assert.ok(inFocus.hud[3]>softTouch.hud[3]);assert.equal(softTouch.hud[3],softKeys.hud[3]);
 });
-test('night press registers two axes, inks both physical plates, and can retry a collector proof',()=>{
-  const a=start(nightpress);
-  a.key('KeyF');a.key('Space');a.key('KeyZ');
-  for(let pass=0;pass<2;pass++){
-    a.key('Space');a.tick(.4);a.tap(200,200);
-    a.tick(1);assert.equal(a.hud[3],(pass+1)+'/2','a registered plate waits for pressure');
-    a.model.pointer('down',233,431);a.tick(.9);a.model.pointer('up',233,431);a.tick(2);
-  }
-  assert.equal(a.hud[1],'2/6');assert.equal(a.hud[3],'1/2');
-  a.tick(130,true);assert.equal(a.result.stats['Proof sheets used'],1);
-  assert.equal(a.result.stats['Posters printed'],6);
-  assert.ok(scorePull(1,.65,.66,true).score>scorePull(1,.65,.66,false).score);
-  assert.ok(scorePull(7,.87,.65,true).score<scorePull(7,.87,.65,false).score);
+test('Side B scores individual edits, adjacent tempos and repeated sleeves independently',()=>{
+ const tr={heat:3,bpm:128};assert.equal(gradeTrack(tr,2,4,{bpm:129},false).points,90);
+ assert.ok(gradeTrack(tr,0,4,{bpm:150},true).points<gradeTrack(tr,2,4,{bpm:129},false).points);
+ const p=play(mixtape);p.tap(235,330);p.tap(250,432);p.tap(374,438);p.key('Digit3');p.key('KeyQ');p.key('Space');p.key('Space');
+ assert.equal(p.hud[1],'Side B');for(let i=0;i<3;i++)p.tap(376,440);assert.equal(p.ends,1);assert.ok(p.result.score>0);
 });
-test('cloud kitchen completes a two-ingredient ticket and early taps keep cooking',()=>{
-  const a=start(cloudkitchen);
-  a.key('Digit1');a.tap(240,425);a.tick(1);a.key('Digit1');
-  a.tick(2.4);a.tap(70,433);assert.equal(a.hud[1],0);
-  a.tick(2.4);a.key('Digit2');a.tick(.1);assert.equal(a.hud[1],1);
-  a.tick(65);assert.equal(a.result.stats['Tickets served'],1);
+test('Sticker Club grades placement, angle and layer order separately and refuses incomplete covers',()=>{
+ const targets=[[100,160,-1],[265,215,1],[315,167,0]],pieces=targets.map(([x,y,rot])=>({x,y,rot}));
+ assert.deepEqual(proofGrade(pieces,targets,[0,1,2],2),{alignment:60,angle:24,top:16});
+ pieces[0].x+=42;pieces[1].rot=-1;const messy=proofGrade(pieces,targets,[2,0,1],2);
+ assert.ok(messy.alignment<60);assert.ok(messy.angle<24);assert.equal(messy.top,0);
+ const a=play(sticker);a.key('Space');a.wait(2);assert.equal(a.hud[1],'1/4');
+ for(let i=0;i<3;i++){a.tap(37+i*85,440);a.tap(100+i*110,243);a.key('KeyE');}a.tap(405,436);a.wait(1.8);assert.equal(a.hud[1],'2/4');assert.ok(a.hud[3]>0);
 });
-test('orchard baskets use picked inventory and invalid grafts preserve the day',()=>{
-  const a=start(pocketgrove);
-  a.key('KeyW');a.key('Digit3');assert.equal(a.hud[3],'1/20');
-  a.key('KeyE');a.key('Digit1');a.tap(322,170);a.key('Digit3');
-  assert.equal(a.hud[1],1);
-  assert.equal(a.hud[3],'4/20');
+test('Boba Break scores the actual liquid and topping counts and both input paths can pour and serve',()=>{
+ const recipe={tea:4,milk:4,pearls:2,star:1},order={pearls:2,star:1,ice:0};assert.equal(taste(4,4,order,recipe),100);assert.equal(taste(0,0,order,recipe),0);assert.ok(taste(6,2,{...order,ice:2},recipe)<60);
+ const a=play(boba);a.model.pointer('down',74,438);a.wait(1.6);a.model.pointer('up',74,438);a.model.key('down','KeyD');a.wait(1.6);a.model.key('up','KeyD');a.key('Space');a.wait(3);a.tap(391,438);a.wait(1.6);
+ assert.equal(a.hud[1],'2/4');assert.ok(a.hud[3]>=37);
 });
-
-test('moth photography spends one frame per perched visitor and completes a cover commission',()=>{
-  const a=start(mothlight);
-  a.tick(5.55);a.key('KeyQ');a.key('KeyQ');a.tick(60);
-  assert.equal(a.result.stats['Cover shots'],1);
-  assert.match(a.result.stats['Sharp photos'],/ \/ 1$/);
-});
-test('a sheltered resident survives its forecast surge and an intact reef needs three trophic levels',()=>{
-  const a=start(tidepool), board=Array(16).fill(null);
-  board[0]=0;board[1]=1;board[2]=2;
-  assert.equal(reefLinks(board),1);board[0]=null;assert.equal(reefLinks(board),0);
-  a.tap(319,124);a.key('KeyR');a.tap(319,124);
-  assert.equal(a.hud[1],'2/12','sheltering is a free preparation for the tide');
-  a.tick(130,true);assert.ok(a.result.stats['Sheltered through surges']>=1);
-});
-test('routing high flame changes cooking speed and awards a manually timed golden sear',()=>{
-  const a=start(cloudkitchen);
-  a.tap(70,370);a.key('Digit1');a.tick(2.12);a.tap(70,432);a.tick(67);
-  assert.equal(a.result.stats['Golden sears'],1);
-});
-test('canals require two distinct trees, irrigate connected roots, and support a honey crop',()=>{
-  const a=start(pocketgrove);
-  a.key('KeyR');a.key('Digit1');a.key('Digit1');
-  assert.equal(a.hud[3],'1/20');
-  a.key('Digit1');a.key('Digit2');assert.equal(a.hud[3],'2/20');
-  a.key('KeyQ');a.key('Digit1');a.tick(130,true);
-  assert.ok(a.result.stats.Canals>=1);assert.ok(a.result.stats['Honey jars']>0);
-  assert.ok(a.result.stats['Roots irrigated']>=2);
+test('Window Seat charges for transfers, chooses a usable express leg and finishes seeded train schedules',()=>{
+ assert.equal(departures(2,0).find(g=>g.to===5).cost,3);
+ assert.equal(departures(2,1).find(g=>g.to===5).cost,2);
+ const base=quickest(0,-1,[7,3],false),express=quickest(0,-1,[7,3],true);assert.ok(express.cost<base.cost);
+ const a=play(railway);const before=parseInt(a.hud[3]);a.tap(391,81);a.key('Digit1');a.wait(.7);assert.equal(parseInt(a.hud[3]),before-1);
+ for(const seed of [1,4,17,31,78]){const p=play(railway,seed);p.wait(90,true);assert.equal(p.result.stats['Made it home'],'3 / 3');assert.equal(p.result.stats['Ticket stamps'],'6 / 6');}
 });

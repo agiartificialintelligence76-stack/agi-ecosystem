@@ -1,156 +1,288 @@
-import { scenery, sprite, clamp, mix, TAU, poly, line, oval, gradient, caption, panel, meter } from '../kit/field-art.js';
-
-import { drawSkyport, drawAurora, drawTail } from './skyport.js';
-
-const vehicle = sprite(new URL('./vehicle.webp', import.meta.url));
-const paintScenery = scenery(new URL('./scenery.webp', import.meta.url));
-
+import { caption, clamp, line, meter, oval, panel, poly, scenery, sprite, TAU } from '../kit/field-art.js';
+const world = scenery(new URL('./playfield.webp', import.meta.url));
+const actor = sprite(new URL('./agi.webp', import.meta.url));
+const prop = sprite(new URL('./prop.webp', import.meta.url));
+const runSheet = typeof Image === 'undefined' ? null : new Image();
+if (runSheet) runSheet.src = new URL('./run.webp', import.meta.url).href;
+const bands = ['FAR', 'MID', 'NEAR'];
+const depthScale = z => 1 + .15 * z;
+function project(x, y, z) {
+  return [240 + (x - 240) * depthScale(z), y + 32 * z];
+}
+const depots = ['Poppy Airfield', 'Bell Tower', 'Marigold Pass', 'Tangerine Strait', 'The Windmill', 'Brass Arch', 'Zephyr Spire', 'Little Cloud'];
+function biplane(c, x, y, hue, stamp, t) {
+  c.save();
+  c.translate(x, y);
+  if (prop(c, -65, -14, 130, 62)) {
+    line(c, [[55, -13 - Math.sin(t * 45) * 4], [56, 21 + Math.sin(t * 45) * 4]], '#ffe6a266', 2);
+    c.restore();
+    return;
+  }
+  line(c, [[-49, -4], [-69, -23], [-59, -21], [-36, -4]], '#253e43', 4);
+  poly(c, [[-68, -3], [-44, -8], [22, -8], [44, -2], [34, 8], [-20, 9]], hue);
+  line(c, [[-56, -7], [-35, -9], [22, -9], [38, -4]], '#fff2c3', 3);
+  line(c, [[-29, -13], [23, -13]], '#293337', 6);
+  line(c, [[-13, -12], [-5, 13], [15, -12]], '#31454d', 2);
+  line(c, [[-30, 9], [30, 9]], hue, 7);
+  line(c, [[45, -16], [45, 13]], '#fcf3d7', 2);
+  oval(c, 45, -1, 3, 16 * Math.abs(Math.sin(t * 34)) + 2, '#f4ead29b');
+  oval(c, -7, 15, 4, 4, '#263238');
+  caption(c, stamp, -28, 0, '#fff5cc', 8);
+  c.restore();
+}
 export default {
-  title: 'CLOUDFOIL',
-  tagline: 'Race the airmail line above a drifting cloud city. Risk the needle gates or ride the warmer, slower route.',
-  instructions: [
-    ['Fly', 'Tap the next hoop to aim, drag to trim, or use the arrow keys. Gold hoops refill more lift.'],
-    ['Choose a line', 'Wide sea-green and gold hoops restore lift. The violet needle beside them is a shortcut. It gives a much larger score and a slipstream.'],
-    ['Fold the wings','Switch wing shape with Space or the Fold button. Folded wings fly faster and fit the needles, while open wings give stronger steering and preserve lift.'],
-    ['Thread the centre', 'A centred pass earns a precision bonus. Consecutive passes multiply your score.'],
-  ],
-  keys: [['Arrows / WASD', 'Steer and climb'], ['Space', 'Fold or open wings']], touch: [['Drag', 'Steer and climb'], ['Wing button', 'Fold or open wings']],
+  title: 'WINGWALK EXPRESS',
+  tagline: 'The mail flies with AGI-1. The pilots never land.',
+  instructions: [['Charge a jump', 'Hold Space or hold the red airmail ticket. Release to send AGI-1 leaping from the wing. The dotted arc previews her jump.'], ['Cross the flight lanes', 'Each plane marks its depth as Far, Mid or Near. Set the matching depth with Up / Down or the three buttons. AGI-1 crosses lanes in flight. Left / Right or either side of the sky trims the jump.'], ['Deliver the post', 'Land close to the flag for a first-class stamp. Eight deliveries finish the route. Three spare parachutes catch missed jumps.']],
+  keys: [['Space', 'Hold and release to leap'], ['← / →', 'Trim in the air'], ['↑ / ↓', 'Set flight depth']],
+  touch: [['Hold / release', 'Wind up and leap'], ['Sky left / right', 'Trim in flight'], ['Far / Mid / Near', 'Set flight depth']],
   create(api) {
-    let x = 0, altitude = 0, goalX = 0, goalY = 0, lean = 0, progress = 0, time = 0;
-    let lift = 82, score = 0, streak = 0, cleared = 0, passed = 0, ended = false;
-    let feedback = 'THREAD THE SKY HOOPS', feedbackTime = 2, pointerHeld = false;
-    let dragX=0,dragY=0,startX=0,startY=0;
-    let folded = false, needles = 0, slip = 0, feather = 0;
-    const trails = [];
-    const keys = new Set(), gates = [], clouds = [];
-    for (let i = 0; i < 12; i++) {
-      gates.push({ x: i ? (api.rng() - .5) * 260 : 0, h: i ? (api.rng() - .5) * 128 : 0,
-        z: 235 + i * 250, thermal: i % 3 === 1 });
-    }
-    for (let i = 0; i < 52; i++) clouds.push({
-      x: (api.rng() - .5) * 1500, h: -90 - api.rng() * 130, z: api.rng() * 1550, r: 24 + api.rng() * 58,
+    const legs = depots.map((name, i) => ({
+      name,
+      x: 275 + api.rng() * 76,
+      y: 260 + (api.rng() - .5) * 76,
+      wind: (api.rng() - .5) * (25 + i * 3),
+      phase: api.rng() * TAU,
+      band: i === 0 ? 0 : i % 3 === 1 ? -1 : i % 3 === 2 ? 1 : 0
+    }));
+    let stage = 0,
+      lives = 3,
+      score = 0,
+      perfect = 0,
+      t = 0,
+      clock = 86,
+      mode = 'deck',
+      power = 0,
+      charging = false,
+      elapsed = 0,
+      origin = 280,
+      x = 83,
+      y = 280,
+      vx = 0,
+      vy = 0,
+      trim = 0,
+      pointerTrim = 0,
+      grace = 0,
+      note = 'HOLD, AIM, RELEASE',
+      flash = 1.9,
+      ended = false;
+    let z = 0,
+      deckZ = 0,
+      destZ = 0;
+    const keys = new Set();
+    const deckY = () => origin + 3 * Math.sin(t * 2.1);
+    const target = time => ({
+      x: legs[stage].x + 17 * Math.sin(time * 1.15 + legs[stage].phase),
+      y: legs[stage].y + 9 * Math.sin(time * 1.7 + legs[stage].phase)
     });
-    for (let i=0;i<gates.length;i++) {
-      const g=gates[i];
-      if(i%3!==0) g.needle={x:g.x+(g.x>0?-1:1)*85,h:g.h*.68+14,z:g.z};
+    const velocity = q => [104 + q * 149 + legs[stage].wind, -198 - q * 84];
+    function endpoint(q) {
+      const [dx, dy] = velocity(q);
+      let horizon = 1.4;
+      for (let i = 0; i < 3; i++) {
+        const dest = target(t + horizon);
+        horizon = (-dy + Math.sqrt(Math.max(0, dy * dy + 680 * (dest.y - deckY())))) / 340;
+      }
+      return {
+        x: 83 + dx * horizon,
+        dest: target(t + horizon),
+        flight: horizon
+      };
     }
-    function changeWing(){folded=!folded;api.sound(folded?'power':'select');}
-    const camera = (wx, h, z) => {
-      const scale = 165 / (165 + z);
-      return [240 + (wx - x * .55) * scale, 156 + (130 - h + altitude * .38) * scale, scale];
-    };
+    function down() {
+      if (mode === 'deck' && !charging) {
+        charging = true;
+        elapsed = 0;
+        power = 0;
+        api.sound('tap');
+      }
+    }
+    function up() {
+      if (!charging || mode !== 'deck') return;
+      charging = false;
+      [vx, vy] = velocity(power);
+      mode = 'air';
+      api.sound('whoosh');
+    }
     function finish() {
+      if (ended) return;
       ended = true;
-      api.end(score, [['Hoops', cleared + ' / 12'], ['Needle shortcuts', needles], ['Flight time', Math.floor(time) + 's']], passed === 12 ? 'you folded the sky in your pocket.' : 'one more little thermal?');
+      api.end(score, [['Letters delivered', stage + '/8'], ['First-class stamps', perfect], ['Parachutes left', lives]], stage === 8 ? 'every letter has a little sky in it.' : 'the flying post will try again tomorrow.');
     }
-    function hoop(c, g) {
-      const [gx, gy, s] = camera(g.x, g.h, g.z - progress), r = 51 * s;
-      const main = g.thermal ? '#ffdd69' : '#c6fff0', shadow = g.thermal ? '#97532d' : '#177e89';
-      oval(c, gx, gy + 1.5 * s, r * 1.08, r, null, shadow, 9 * s);
-      oval(c, gx, gy, r * 1.08, r, null, main, 5 * s);
-      for (let i = 0; i < 8; i++) {
-        const a = i * TAU / 8;
-        oval(c, gx + Math.cos(a) * r * 1.08, gy + Math.sin(a) * r, 2.8 * s, 2.8 * s, '#fff7d6');
-      }
-      if(g.needle){
-        const [nx,ny,ns]=camera(g.needle.x,g.needle.h,g.z-progress);
-        const points=Array.from({length:7},(_,i)=>[nx+Math.cos(i*TAU/6)*23*ns,ny+Math.sin(i*TAU/6)*23*ns]);
-        line(c,points,'#642b68',7*ns);line(c,points,'#ffc7fc',3.5*ns);
-        for(const [cx,cy] of points.slice(0,6))oval(c,cx,cy,2.3*ns,2.3*ns,'#fff0dc');
-        if(g.z-progress<170)caption(c,'NEEDLE',nx,ny-32*ns,'#483747',Math.max(10,13*ns));
-      }
-      if (g.thermal) {
-        for (let i = 0; i < 3; i++) {
-          const off = ((i / 3 + time * .42) % 1) * 33;
-          line(c, [[gx - 8*s, gy + (15-off)*s], [gx, gy + (7-off)*s], [gx + 8*s, gy + (15-off)*s]], '#fff3a0', Math.max(1, 3*s));
-        }
+    function land() {
+      const d = target(t),
+        error = Math.abs(x - d.x),
+        depthError = Math.abs(z - legs[stage].band);
+      if (error <= 47 && Math.abs(y - d.y) < 14 && depthError < .48) {
+        const bull = error < 13 && depthError < .19;
+        score += bull ? 315 : Math.round(215 - error);
+        perfect += Number(bull);
+        origin = d.y;
+        deckZ = legs[stage].band;
+        destZ = deckZ;
+        stage++;
+        note = bull ? 'FIRST CLASS!' : 'LETTER DELIVERED';
+        flash = 1.6;
+        api.sound(bull ? 'combo' : 'clear');
+        api.haptic(18);
+        mode = 'transfer';
+        grace = .68;
+        if (stage === 8) finish();
       }
     }
     return {
-      key(type, code) { if (type === 'down') {if(code==='Space'&&!keys.has(code))changeWing();keys.add(code);} else keys.delete(code); },
-      pointer(type, px, py) {
-        if (type === 'down' && py>405 && px>=308){changeWing();return;}
-        if(type==='down'){
-          pointerHeld=true;dragX=px;dragY=py;
-          const nextGate=gates[passed];
-          if(nextGate){
-            const targets=nextGate.needle?[nextGate.needle,nextGate]:[nextGate];
-            const aim=targets.find(t=>{const [sx,sy,s]=camera(t.x,t.h,t.z-progress);return Math.hypot(px-sx,py-sy)<(t===nextGate?51:23)*s+5;});
-            if(aim){goalX=aim.x;goalY=aim.h;}
-          }
-          startX=goalX;startY=goalY;
+      key(type, k) {
+        if (type === 'down') {
+          keys.add(k);
+          if (k === 'Space') down();
+          if (k === 'ArrowUp' || k === 'KeyW') destZ = clamp(destZ - 1, -1, 1);
+          if (k === 'ArrowDown' || k === 'KeyS') destZ = clamp(destZ + 1, -1, 1);
+        } else {
+          keys.delete(k);
+          if (k === 'Space') up();
         }
-        if(pointerHeld&&type==='move'){
-          goalX=clamp(startX+(px-dragX)*1.05,-165,165);
-          goalY=clamp(startY+(dragY-py)*.85,-90,90);
-        }
-        if (type === 'up' || type === 'cancel') pointerHeld = false;
       },
-      demo() { const g = gates[passed]; if (g) {folded=Boolean(g.needle)&&lift>38;const target=folded?g.needle:g;goalX=target.x;goalY=target.h;} },
+      pointer(type, px, py) {
+        if (type === 'down') {
+          if (py >= 400 && px >= 234) {
+            destZ = clamp(Math.floor((px - 234) / 78) - 1, -1, 1);
+            return;
+          }
+          if (mode === 'air') pointerTrim = px < 240 ? -1 : 1;else down();
+        } else if (type === 'up') {
+          up();
+          pointerTrim = 0;
+        } else if (type === 'cancel') {
+          charging = false;
+          pointerTrim = 0;
+        }
+      },
+      cancelInput() {
+        charging = false;
+        pointerTrim = 0;
+        keys.clear();
+      },
+      demo() {
+        if (!ended) destZ = legs[stage].band;
+        if (mode === 'deck') {
+          if (!charging) down();else if (power > .1 && endpoint(power).x >= endpoint(power).dest.x) up();
+        } else if (mode === 'air') trim = clamp((target(t + .15).x - x - vx * Math.max(0, (target(t).y - y) / Math.max(70, vy))) * .025, -1, 1);
+      },
       update(dt) {
         if (ended) return;
-        time += dt; feedbackTime -= dt;
-        const has = (a,b) => Number(keys.has(a) || keys.has(b));
-        goalX = clamp(goalX + 205*dt*(has('ArrowRight','KeyD')-has('ArrowLeft','KeyA')), -165,165);
-        goalY = clamp(goalY + 146*dt*(has('ArrowUp','KeyW')-has('ArrowDown','KeyS')), -90,90);
-        lean = mix(lean, clamp((goalX-x)/54,-.85,.85), Math.min(1,5*dt));
-        x = mix(x,goalX,Math.min(1,(folded?3.4:4.8)*dt)); altitude = mix(altitude,goalY,Math.min(1,4*dt));
-        slip=Math.max(0,slip-dt);feather=mix(feather,folded?1:0,Math.min(1,6*dt));
-        progress += (74+passed*1.9+(folded?19:0)+(slip?27:0))*dt; lift -= dt*((folded?4.3:3.15)+Math.max(0, goalY-altitude)*.045);
-        if(!trails.length||progress-trails.at(-1).p>3){trails.push({p:progress,x,h:altitude,wing:feather});if(trails.length>24)trails.shift();}
-        const g = gates[passed];
-        if (g && progress >= g.z) {
-          const dist = Math.hypot((x-g.x)/1.08,altitude-g.h);
-          const needle=g.needle&&folded&&Math.hypot(x-g.needle.x,altitude-g.needle.h)<24;
-          if (needle) {
-            needles++;cleared++;streak++;slip=2.4;score+=300+streak*25;lift=Math.min(100,lift+13);
-            feedback='NEEDLE RUN  +'+(300+streak*25);api.sound('combo');api.haptic(18);
-          } else if (dist < 52) {
-            cleared++; streak++; score += Math.round((dist < 19 ? 180 : 100) * (1 + Math.min(5,streak-1)*.2));
-            lift = Math.min(100, lift + (g.thermal ? 31 : 7)); api.sound(g.thermal ? 'power' : 'clear');
-            feedback = g.thermal ? 'THERMAL  +31 LIFT' : dist < 19 ? 'CENTRE LINE  ×' + streak : 'THREADED  ×' + streak;
-          } else { streak = 0; lift -= 12; feedback = 'MISSED THE HOOP'; api.sound('back'); }
-          feedbackTime = 1.45; passed++;
+        t += dt;
+        clock -= dt;
+        flash -= dt;
+        if (clock <= 0) {
+          finish();
+          return;
         }
-        api.hud('Flight',score,'Hoops',cleared + '/12');
-        if (lift <= 0 || passed === gates.length) finish();
+        if (mode === 'deck') {
+          z = deckZ;
+          x = 83;
+          y = deckY();
+          if (charging) {
+            elapsed += dt;
+            power = 1 - Math.abs(1 - elapsed * 1.12 % 2);
+          }
+        }
+        if (mode === 'transfer') {
+          grace -= dt;
+          if (grace <= 0) {
+            mode = 'deck';
+            x = 83;
+            y = deckY();
+            z = deckZ;
+            power = 0;
+          }
+        }
+        if (mode === 'air') {
+          z += (destZ - z) * Math.min(1, dt * 4.6);
+          const h = Number(keys.has('ArrowRight') || keys.has('KeyD')) - Number(keys.has('ArrowLeft') || keys.has('KeyA'));
+          const oldY = y;
+          x += (vx + 65 * (h || pointerTrim || trim)) * dt;
+          y += vy * dt;
+          vy += 340 * dt;
+          const d = target(t);
+          if (vy > 0 && oldY <= d.y + 2 && y >= d.y - 1) land();
+          if (mode === 'air' && y > 455) {
+            lives--;
+            flash = 1.5;
+            note = 'PARACHUTE OPEN';
+            api.sound('hurt');
+            if (!lives) finish();else {
+              mode = 'transfer';
+              grace = .55;
+            }
+          }
+        }
+        trim = 0;
+        api.hud('Air mail', score, 'Route', Math.min(stage + 1, 8) + '/8');
       },
       draw(c) {
-        c.fillStyle = gradient(c,0,480,[[0,'#315f96'],[.39,'#a5d9d8'],[.53,'#ffdab1'],[1,'#6da9b8']]); c.fillRect(0,0,480,480);
-        drawAurora(c,time,progress,passed);
-        for (let j=0;j<3;j++) {
-          const ridge = [[0,235]];
-          for (let k=-2;k<=18;k++) ridge.push([k*31-x*(.025+j*.018),170+j*13+18*Math.sin(k*1.24+j)+11*Math.cos(k*2.2+j)]);
-          ridge.push([480,248]); poly(c,ridge,['#aac6c6','#8fb5bd','#77a1ad'][j]);
+        world(c, -x * .025, Math.sin(t * .5) * 3);
+        if (ended) return;
+        const d = target(t);
+        const deck = deckY();
+        for (let i = 0; i < 7; i++) {
+          let sx = (i * 92 - t * (20 + i % 3 * 8)) % 570;
+          if (sx < 0) sx += 570;
+          line(c, [[sx - 40, 98 + i * 39], [sx - 16, 98 + i * 39]], '#fff4c680', 2);
         }
-        const visible = clouds.map(p => ({...p, d: (p.z-progress%1550+3100)%1550-80})).sort((a,b)=>b.d-a.d);
-        for(const p of visible) {
-          const [cx,cy,s] = camera(p.x,p.h,p.d), r = p.r*s;
-          if(cx < -r*2 || cx>480+r*2 || cy>480+r) continue;
-          oval(c,cx,cy,r*1.85,r*.42,'#bed1d0'); oval(c,cx-r*.7,cy-r*.18,r,r*.54,'#eee2ce');
-          oval(c,cx+r*.24,cy-r*.3,r*1.13,r*.65,'#fff0d6'); oval(c,cx+r,cy,r,r*.33,'#f9e9d2');
+        const targetZ = legs[stage].band;
+        const drawPlane = (px, py, pz, color, number) => {
+          const [sx, sy] = project(px, py, pz);
+          c.save();
+          c.translate(sx, sy);
+          c.scale(depthScale(pz), depthScale(pz));
+          biplane(c, 0, 13, color, number, t);
+          c.restore();
+        };
+        const [destX, destY] = project(d.x, d.y, targetZ);
+        for (const band of [-1, 0, 1]) {
+          const p = project(d.x, d.y, band);
+          if (band === targetZ) oval(c, p[0], p[1] + 19, 57 * depthScale(band), 11, '#fff4a833', '#fff2b3', 2);else oval(c, p[0], p[1] + 19, 42 * depthScale(band), 5, null, '#fff3c48a', 1);
         }
-        if(paintScenery(c,-x*.075,altitude*.082)){
-          for(let k=0;k<11;k++){const off=(time*57+k*51)%508,side=k%2?1:-1;
-            if(slip>0||k<3)line(c,[[240+side*(127+k%4*13),off],[240+side*(133+k%4*13),off+9+k%3*4]],'#fff5d270',1.2);}
+        drawPlane(83, deck, deckZ, '#e55b44', '01');
+        drawPlane(d.x, d.y, targetZ, '#248a86', String(stage + 2).padStart(2, '0'));
+        line(c, [[destX, destY], [destX, destY - 26]], '#3c403b', 2);
+        panel(c, destX - 21, destY - 41, 43, 18, '#283f47', 3);
+        caption(c, bands[targetZ + 1], destX, destY - 32, '#ffeaab', 10);
+        if (mode === 'deck') {
+          const q = charging ? power : .4;
+          const [dx, dy] = velocity(q),
+            dur = endpoint(q).flight;
+          for (let i = 1; i <= 17; i++) {
+            const a = i * dur / 17;
+            oval(c, ...project(83 + dx * a, deck + dy * a + 170 * a * a, deckZ + (destZ - deckZ) * (1 - Math.exp(-4.6 * a))), i % 3 ? 2.4 : 3.3, i % 3 ? 2.4 : 3.3, charging ? '#8c3441' : '#fff0c7', '#352f3755', 1);
+          }
         }
-        drawSkyport(c,camera,progress,time);
-        for(let i=Math.min(passed+4,11); i>=passed; i--) hoop(c,gates[i]);
-        const [px,py]=camera(x,altitude,0);
-        drawTail(c,trails,camera,progress,slip>0);
-        c.save(); c.translate(px,py); c.rotate(lean*.48);c.scale(1-feather*.5,1+feather*.20);
-        line(c,[[-53,13],[-56,29],[-69+Math.sin(time*3)*3,48]],'#fff4df99',1.6);
-        line(c,[[53,13],[56,29],[69+Math.sin(time*3)*3,48]],'#fff4df99',1.6);
-        if(!vehicle(c,-71,-41,142,86)){
-        poly(c,[[-67,19],[0,-18],[68,19],[16,13],[3,30],[-13,12]],'#304859');
-        poly(c,[[-67,15],[0,-20],[-6,9]],'#f27159'); poly(c,[[0,-20],[67,15],[7,8]],'#ffae67');
-        poly(c,[[-50,10],[-39,5],[-12,4],[-8,6]],'#fff1c6'); poly(c,[[38,3],[50,9],[13,6],[8,3]],'#fff1c6');
-        poly(c,[[0,-20],[7,10],[2,25],[-6,9]],'#fff3c9');oval(c,0,-4,4,8,'#4c5f6b','#ffdeb1',1);}c.restore();
-        panel(c,15,16,122,42,'#213f51e8'); caption(c,'WING LIFT',27,30,'#fff1d2',15,'left');
-        meter(c,27,41,98,lift/100,lift<24?'#ff8976':'#fcd277','#536e72');
-        panel(c,315,411,149,53,folded?'#fee3a2':'#23384bec');caption(c,folded?'OPEN WINGS':'FOLD WINGS',389,436,folded?'#393943':'#ffe6bf',16);
-        if(feedbackTime>0) { panel(c,11,421,295,36,'#203e4be8'); caption(c,feedback,158,439,'#fff2d7',16); }
-      },
+        const [poseX, poseY] = project(mode === 'transfer' ? Math.min(375, x) : x, y, z);
+        c.save();
+        c.translate(poseX, poseY);
+        c.scale(depthScale(z), depthScale(z));
+        if (mode === 'deck' && charging && runSheet?.complete && runSheet.naturalWidth) {
+          const frame = Math.floor(elapsed * 12) % 8;
+          c.drawImage(runSheet, frame * 68, 0, 68, 86, -48 + power * 14, -64, 66, 71);
+        } else actor(c, -38, -73 + Math.sin(t * 5) * 1.5, 77, 77);
+        c.restore();
+        panel(c, 12, 14, 222, 42, '#f8ebc8', 3);
+        caption(c, depots[stage].toUpperCase(), 24, 34, '#303e43', 17, 'left');
+        panel(c, 328, 14, 140, 42, '#263e46', 3);
+        caption(c, '✉ ' + stage + '/8   ' + Math.ceil(clock) + 's', 398, 35, '#fff1ca', 16);
+        panel(c, 13, 395, 454, 70, '#f9edc9', 3);
+        for (let i = 0; i < 17; i++) poly(c, [[17 + i * 26, 395], [26 + i * 26, 395], [19 + i * 26, 401], [10 + i * 26, 401]], i % 2 ? '#398b91' : '#d85048');
+        caption(c, flash > 0 ? note : mode === 'air' ? 'TRIM LEFT  /  RIGHT' : 'FROM THE FLYING POST', 27, 419, '#4a4141', 12, 'left');
+        caption(c, mode === 'air' ? 'AIRBORNE' : charging ? 'RELEASE TO LEAP' : 'HOLD TO LEAP', 27, 444, '#a63f3b', 19, 'left');
+        meter(c, 25, 455, 187, charging ? power : 0, '#df5949', '#c6af87');
+        caption(c, 'FLIGHT DEPTH   /   TARGET ' + bands[targetZ + 1], 346, 413, '#45433c', 11);
+        for (let i = 0; i < 3; i++) {
+          const bx = 236 + i * 77,
+            sel = i === destZ + 1;
+          panel(c, bx, 425, 71, 32, sel ? '#386e72' : '#ddcda9', 4);
+          caption(c, bands[i], bx + 35, 441, sel ? '#fff4cb' : '#3f5252', 13);
+        }
+      }
     };
-  },
+  }
 };

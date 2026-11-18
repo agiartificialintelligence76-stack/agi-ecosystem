@@ -1,221 +1,89 @@
-import { folio, soil, fledgling } from './marsh.js';
-import { TAU } from '../kit/fx.js';
-
-const N=5, OX=65, OY=70, CELL=70;
-const fields=[
-  ['Reed meadow',[7,17], [20,24]], ['Willow bend',[1,8,16,23], [21,9]],
-  ['Salt marsh',[6,12,18], [20,4]], ['Heron steps',[7,10,14,22],[1,24]],
-  ['Alder hollow',[3,6,17,21],[15,9]], ['Winter roost',[5,8,11,19,22],[0,24]],
-];
-const ORTHO=[[1,0],[-1,0],[0,1],[0,-1]];
-const JUMPS=[[2,1],[2,-1],[-2,1],[-2,-1],[1,2],[-1,2],[1,-2],[-1,-2]];
-export const wetlands=[
-  {pools:[],egg:-1}, {pools:[7,13,22],egg:-1}, {pools:[4,10,14],egg:7},
-  {pools:[6,12,16],egg:8}, {pools:[2,11,22],egg:7}, {pools:[3,10,12,21],egg:17},
-];
-const pack = ([rook,owl,tide=0,egg=0]) => (rook*25+owl)*4+tide*2+egg;
-function landed(state,bird,cell,wetland){
-  const next=[...state];next[bird]=cell;
-  if(wetland?.pools.length)next[2]=1-(state[2]||0);
-  if(wetland?.egg>=0)next[3]=Number(state[3]===1 || cell===wetland.egg);
-  return next;
+import { desks,targets,paths,command } from './keys.js';
+import { painting, type, panel, line, oval, polygon } from '../kit/illustration.js';
+import { herSprite } from '../goinglive/pixel.js';
+const scene=painting(new URL('./catnap-desk.webp',import.meta.url).href);
+const left=27,top=153,w=85,h=50;
+const at=i=>[left+(i%5+.5)*w,top+(Math.floor(i/5)+.5)*h];
+const letters=['Esc','1','2','3','Del','Tab','Q','W','E','R','Caps','A','S','D','F','Shift','Z','X','C','V','Ctrl','Alt','Fn','⌘','End'];
+const moves=['↑','→','↓','←','pspsps'];
+function cat(c,x,y,asleep,face,t){
+  c.save();c.translate(x,y);c.scale(face<0?-1:1,1);
+  const fur='#fff0d1',ginger='#e39a62',ink='#553744';
+  oval(c,0,12,18,5,'#84674c66');
+  c.beginPath();c.moveTo(-10,7);c.quadraticCurveTo(-27,11+Math.sin(t)*2,-19,-4);c.strokeStyle=ink;c.lineWidth=6;c.stroke();
+  oval(c,-1,3,15,10,fur,ink,1.6);oval(c,-5,2,7,6,ginger);
+  polygon(c,[[3,-9],[5,-19],[12,-11],[18,-17],[20,-5]],fur,ink,1.4);oval(c,11,-5,11,9,fur,ink,1.4);
+  polygon(c,[[1,-9],[5,-17],[8,-10],[8,-3],[3,-3]],ginger);polygon(c,[[13,-10],[18,-15],[20,-5],[15,-5]],'#6a5351');
+  if(asleep){line(c,[[4,-4],[7,-3],[9,-4]],ink,1.4);line(c,[[12,-4],[15,-3],[17,-4]],ink,1.4);}
+  else{oval(c,7,-4,1.3,1.8,ink);oval(c,15,-4,1.3,1.8,ink);}
+  polygon(c,[[9,-1],[13,-1],[11,1]],'#db8891');line(c,[[16,0],[22,1]],ink,1);
+  if(!asleep){oval(c,-7,10,4,2.8,fur,ink,1);oval(c,7,10,4,2.8,fur,ink,1);}c.restore();
 }
-const matches=(a,b,habitat)=>a[0]===b[0] && a[1]===b[1] && (habitat.egg<0 || a[3]===1);
-const pos = i => [i%5,Math.floor(i/5)];
-const onscreen = i => {const [x,y]=pos(i); return [OX+(x+.5)*CELL,OY+(y+.5)*CELL];};
-const inside=(x,y)=>x>=0 && y>=0 && x<N && y<N;
-export function legalMoves(field,state,bird,wetland) {
-  const [x,y]=pos(state[bird]), occupied=state[1-bird];
-  const free=(a,b)=>inside(a,b) && !field.includes(a+b*N) && a+b*N!==occupied && !(state[2]===1 && wetland?.pools.includes(a+b*N));
-  if(bird===1) return JUMPS.map(([a,b])=>[a+x,b+y]).filter(([a,b])=>free(a,b)).map(([a,b])=>a+b*N);
-  const moves=[];
-  for(const [dx,dy] of ORTHO) {
-    let a=x,b=y;while(free(a+dx,b+dy)){a+=dx;b+=dy;}
-    if(a!==x || b!==y)moves.push(a+b*N);
-  }
-  return moves;
-}
-// At most 600 ordered pairs on a five-by-five board. The tree supplies both the puzzle's par and real hints.
-export function flights(field,start,wetland) {
-  const first={state:start,depth:0,first:null};
-  const nodes=[first], visited=new Map([[pack(start),first]]);
-  for(let i=0;i<nodes.length;i++) {
-    const parent=nodes[i];
-    for(let bird=0;bird<2;bird++)for(const cell of legalMoves(field,parent.state,bird,wetland)){
-      const state=landed(parent.state,bird,cell,wetland);
-      if(visited.has(pack(state)))continue;
-      const node={state,depth:parent.depth+1,first:parent.first || [bird,cell]};
-      visited.set(pack(state),node); nodes.push(node);
-    }
-  }
-  return visited;
-}
-function label(c,s,x,y,size,color,align='left'){
-  c.fillStyle=color;c.textAlign=align;c.font=`bold ${size}px "AK Mono",monospace`;c.fillText(s,x,y);
-}
-function poly(c,pts,col) {
-  c.fillStyle=col;c.beginPath();pts.forEach(([x,y],i)=>i?c.lineTo(x,y):c.moveTo(x,y));c.closePath();c.fill();
-}
-function ellipse(c,x,y,rx,ry,col,rot=0){
-  c.fillStyle=col;c.beginPath();c.ellipse(x,y,rx,ry,rot,0,TAU);c.fill();
-}
-function birdIcon(c,bird,x,y,size){
-  c.save();c.translate(x,y);c.scale(size,size);
-  if(!bird){
-    poly(c,[[-18,5],[-34,12],[-24,14],[-16,12],[-20,17],[-9,13]],'#283e3b');
-    ellipse(c,-1,1,19,13,'#223936',-.4);ellipse(c,9,-10,11,12,'#233b39',.18);
-    poly(c,[[14,-13],[31,-9],[16,-6]],'#bb7055');
-    poly(c,[[-15,4],[-3,-6],[8,-5],[0,3],[-13,9]],'#457471');
-    poly(c,[[-14,8],[-4,1],[1,1],[-8,8]],'#6a9083');
-    ellipse(c,12,-12,2.2,2.2,'#fff0bd');
-  }else{
-    poly(c,[[-18,-9],[-19,-25],[-7,-17],[8,-16],[19,-25],[17,-7]],'#97563e');
-    ellipse(c,0,0,18,22,'#a05c44');
-    ellipse(c,-7,-6,8,9,'#efd3a1');ellipse(c,7,-6,8,9,'#efd3a1');
-    ellipse(c,-7,-6,3,4,'#293b37');ellipse(c,7,-6,3,4,'#293b37');
-    poly(c,[[-3,0],[4,0],[0,6]],'#52332d');
-    for(let j=0;j<3;j++)for(let i=0;i<3;i++){
-      const px=-9+i*8+(j%2)*2,py=7+j*4;poly(c,[[px,py],[px+4,py],[px+2,py+2.6]],'#edbd86');
-    }
-  }
-  c.restore();
-}
-export default {
-  title:'ROOKERY', tagline:'Walk the tides, lift a lost chick, and bring your two birds home.',
-  instructions:[['Choose a bird','Tap the rook or owl. Dots show its possible landings. Tap a dot to fly.'],
-    ['Use their moves','The rook slides straight until the edge, reeds, or the owl stops it. The owl jumps two squares then one sideways.'],
-    ['Find both nests','Blue tide pools flood or drain after each move. Flooded tiles block flight. When a chick appears, land on it before nesting both birds.']],
-  keys:[['Arrow keys','Move cursor'],['Space / Enter','Select bird or landing'],['B','Switch bird'],['U / H','Undo / hint']],
-  touch:[['Tap bird, then dot','Make a flight'],['Tap Undo or Hint','Rewind or reveal a move']],
-  create(api){
-    let stage=0, state, target, par, field, selected=0, cursor, history, hints, totalMoves=0, score=0;
-    let wetland, rescued=0;
-    let delay=0, hop=null, age=0, auto=0, ended=false, hintCell=null, notice='', noticeTime=0;
-    function open(){
-      const entry=fields[stage];wetland=wetlands[stage];field=entry[1];state=[...entry[2],0,0];history=[];hints=0;hintCell=null;noticeTime=0;
-      selected=0;cursor=state[0];hop=null;
-      const tree=[...flights(field,state,wetland).values()];
-      const unique=new Map();
-      for(const node of tree){const [a,b]=node.state;if((wetland.egg>=0 && node.state[3]!==1)||a===state[0]||b===state[1])continue;
-        const key=a*25+b;if(!unique.has(key))unique.set(key,node);}
-      const depth=Math.min(stage+3,8), eligible=[...unique.values()], candidates=eligible.filter(n=>n.depth===depth);
-      const chosen=candidates.length?candidates[Math.floor(api.rng()*candidates.length)]:eligible.at(-1);
-      target=chosen.state;par=chosen.depth;
-      api.hud('Habitat',`${stage+1}/${fields.length}`,'Flights',0);
-    }
-    function move(bird,cell){
-      if(ended || delay || !legalMoves(field,state,bird,wetland).includes(cell))return;
-      history.push(state.slice()); selected=bird; hop={bird,from:state[bird],to:cell,t:0};
-      const carried=state[3];state=landed(state,bird,cell,wetland);cursor=cell;hintCell=null;noticeTime=0;
-      if(!carried && state[3]){notice='Chick tucked in';noticeTime=1.3;api.sound('power');}api.sound(bird?'pop':'whoosh');api.haptic(8);
-      api.hud('Habitat',`${stage+1}/${fields.length}`,'Flights',history.length);
-      if(matches(state,target,wetland)){
-        if(wetland.egg>=0)rescued++;
-        delay=1.1;totalMoves+=history.length;score+=Math.max(180,1000-60*(history.length-par)-hints*40);api.sound('clear');
-      }
-    }
-    function select(cell){
-      if(delay || ended)return;
-      cursor=cell;
-      const which=state.slice(0,2).indexOf(cell);
-      if(which!==-1){selected=which;hintCell=null;api.sound('tap');return;}
-      move(selected,cell);
-    }
-    function undo(){
-      if(!history.length || delay || ended)return;
-      const old=state;state=history.pop();selected=old[0]!==state[0]?0:1;cursor=state[selected];hintCell=null;hop=null;noticeTime=0;
-      api.hud('Habitat',`${stage+1}/${fields.length}`,'Flights',history.length);api.sound('back');
-    }
-    function hint(act){
-      const solution=[...flights(field,state,wetland).values()].find(n=>matches(n.state,target,wetland));
-      if(!solution?.first){
-        if(act)undo();else{notice='Try undoing a flight';noticeTime=2;}return;
-      }
-      const [bird,cell]=solution.first;
-      if(act)move(bird,cell);
-      else{selected=bird;hintCell=cell;cursor=cell;hints++;api.sound('tick');}
-    }
-    function draw(c){
-      folio(c,stage,age);
-      label(c,fields[stage][0].toUpperCase(),18,25,19,'#263e36');
-      label(c,`PAR ${par}`,462,25,17,'#476458','right');
-      if(wetland.pools.length){c.fillStyle=state[2]?'#426c7c':'#678575';c.fillRect(346,36,117,23);label(c,state[2]?'HIGH TIDE':'LOW TIDE',405,53,15,'#fff1cf','center');}
-      label(c,delay?'Both birds are home':selected===0?'Rook · slides to the last perch':'Owl · jumps in an L shape',18,52,16,'#445e50');
-      c.fillStyle='#526659';c.fillRect(OX-4,OY-4,CELL*N+8,CELL*N+8);
-      const legal=legalMoves(field,state,selected,wetland);
-      for(let i=0;i<25;i++){
-        const [x,y]=onscreen(i),[a,b]=pos(i),lo=x-CELL/2,top=y-CELL/2;
-        soil(c,x,y,CELL,i,stage,age,wetland.pools.includes(i),state[2]===1);
-        if(field.includes(i)){
-          ellipse(c,x,y+5,26,14,'#93af9a');
-          for(let k=0;k<7;k++){
-            const dx=((k*19+i*7)%38)-19,dy=((k*11)%15)-7;
-            c.strokeStyle=k%2?'#476e5a':'#5a805f';c.lineWidth=2;c.beginPath();c.moveTo(x+dx,y+dy+13);c.quadraticCurveTo(x+dx+2,y+dy-3,x+dx-3,y+dy-17);c.stroke();
-            ellipse(c,x+dx-3,y+dy-17,2.4,5,'#956d48',-.17);
-          }
-        }else{
-          for(let k=0;k<4;k++){c.fillStyle='#9fae8a';c.fillRect(lo+8+(i*19+k*31)%54,top+8+(i*11+k*17)%54,3,1);}
-        }
-        if(i===wetland.egg && !state[3])fledgling(c,x,y,age);
-        const nest=target.slice(0,2).indexOf(i);
-        if(nest>=0){
-          const col=nest?'#ae6447':'#365f5b';
-          ellipse(c,x,y+6,26,15,col);
-          ellipse(c,x,y+4,19,10,nest?'#d5a97e':'#9abca7');
-          for(let k=0;k<7;k++) {
-            c.strokeStyle=nest?'#d89969':'#769c85';c.lineWidth=1.7;c.beginPath();
-            c.ellipse(x+(k%2)*2,y+6+(k%3),23-k%4,11-k%3,k*.21-.6,k*.7,k*.7+2.3);c.stroke();
-          }
-          if(!state.slice(0,2).includes(i)){birdIcon(c,nest,x,y, .47);}
-        }
-        if(legal.includes(i) && !delay){
-          const color=selected?'#a16043':'#426d62';
-          c.strokeStyle=hintCell===i?'#ffd86d':color;c.lineWidth=hintCell===i?5:2.5;
-          c.beginPath();c.arc(x,y,nest>=0?21:8,0,TAU);c.stroke();
-          if(nest<0)ellipse(c,x,y,3,3,color);
-        }
-        if(cursor===i){c.strokeStyle='#f9f1c7';c.lineWidth=3;c.strokeRect(lo+3,top+3,CELL-6,CELL-6);}
-      }
-      state.slice(0,2).forEach((cell,i)=>{
-        let [x,y]=onscreen(cell), lift=0;
-        if(hop?.bird===i && hop.t<1){const [fx,fy]=onscreen(hop.from);x=fx+(x-fx)*hop.t;y=fy+(y-fy)*hop.t;lift=Math.sin(hop.t*Math.PI)*17;}
-        ellipse(c,x,y+16,18,5,'#879b81');
-        if(i===selected){c.strokeStyle='#f4ecc8';c.lineWidth=2;c.beginPath();c.ellipse(x,y+14,22,7,0,0,TAU);c.stroke();}
-        if(hop?.bird===i && hop.t<1){const [fx,fy]=onscreen(hop.from);c.save();c.setLineDash([3,7]);c.beginPath();c.moveTo(fx,fy);c.quadraticCurveTo((fx+x)/2,(fy+y)/2-22,x,y-lift);c.strokeStyle='#e9e3b6';c.lineWidth=3;c.stroke();c.restore();}
-        birdIcon(c,i,x,y-lift+.8*Math.sin(age*2+i),.94);
-        if(state[3] && i===1){c.save();c.translate(x+15,y+10-lift);c.scale(.66,.66);fledgling(c,0,0,age);c.restore();}
-      });
-      for(const [x,txt] of [[65,'↶  Undo'],[251,'?  Hint']]){
-        c.fillStyle='#34564c';c.fillRect(x,432,164,38);
-        label(c,txt,x+82,457,17,'#f7eed6','center');
-      }
-      if(noticeTime>0){c.fillStyle='#34564c';c.fillRect(73,378,334,34);label(c,notice,240,401,16,'#fff0d0','center');}
-    }
-    open();
-    return {draw,update(dt){
-      age+=dt;if(hop)hop.t=Math.min(1,hop.t+dt*4.2);noticeTime-=dt;
-      if(ended || delay<=0)return;
-      delay-=dt;if(delay>0)return;
-      if(++stage<fields.length){delay=0;open();}
-      else{ended=true;stage=fields.length-1;api.end(score,[['Habitats',fields.length],['Flights taken',totalMoves],['Chicks rescued',rescued]],'both birds made it home. i saved you a perch. 💜');}
-    },
-    pointer(type,x,y){
-      if(type!=='down' || delay || ended)return;
-      const a=Math.floor((x-OX)/CELL),b=Math.floor((y-OY)/CELL);
-      if(inside(a,b)){select(a+b*N);return;}
-      if(y>=432 && y<=470){if(x>=65 && x<=229)undo();if(x>=251 && x<=415)hint(false);}
-    },
-    key(type,code){
-      if(type!=='down' || delay || ended)return;
-      if(code==='KeyU')undo();else if(code==='KeyH')hint(false);
-      else if(code==='KeyB'){selected=1-selected;cursor=state[selected];hintCell=null;}
-      else if(code==='Space' || code==='Enter')select(cursor);
-      else {
-        const d={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[code];
-        if(d){const [x,y]=pos(cursor);if(inside(x+d[0],y+d[1]))cursor+=d[0]+N*d[1];}
-      }
-    },
-    demo(dt){auto-=dt;if(auto<=0 && !delay && !ended){auto=.95;hint(true);}},
-    };
-  },
+export default{
+ title:'KEYBOARD CATNAP',
+ tagline:'AGI-1’s cat will only sleep on one particular key. Climb onto her keyboard, nudge the cat or call it over.',
+ instructions:[['Nudge the cat','Step into your cat to push her one key away. Get her onto the moon key for a nap.'],['Call from a distance','Stand in the same clear row or column, then call “pspsps.” She takes one step toward you.'],['Watch her paws','Mint keys with arrows are slippery. She slides until she reaches a dry cap or meets an obstacle.']],
+ keys:[['Arrows / WASD','Walk or nudge'],['Space','Call your cat'],['Z / H','Undo / get a hint']],
+ touch:[['Tap a key toward your destination','Walk or nudge one square'],['Tap PSPSPS / Undo / Hint','Call the cat or retrace a move']],
+ create(api){
+   let index=0,desk,state,previous,goal,par,steps=0,history=[],clock=0,age=1,face=1,herFace=1,call=0,word='',hint=-1,delay=0,done=false,score=0,purrs=0,nudges=0,slides=0,demoClock=0;
+   function setup(){desk=desks[index];state=[...desk.start];previous=state;steps=0;history=[];age=1;hint=-1;const opts=targets(desk);
+     const chosen=opts[Math.floor(api.rng()*Math.min(3,opts.length))];goal=chosen[0];par=chosen[1].length;
+     word=index===0?'Walk into her. She wants the moon key.':index===1?'Line up, then call “pspsps.”':'Mint keys are slippery. Watch her paws.';api.hud('Bedtime',String(index+1)+' / 6','Keys',steps);}
+   function act(a){
+     if(done||delay>0)return;const next=command(desk.layout,state,a);
+     if(next.every((v,i)=>v===state[i])){word=a===4?'She needs a clear line and a little space.':'That key is blocked.';if(a===4)call=.65;api.sound('click');return;}
+     history.push({state,purrs,nudges,slides});previous=state;state=next;age=0;steps++;hint=-1;
+     if(a===1||a===3)herFace=a===1?1:-1;
+     if(state[1]!==previous[1]){face=Math.sign(state[1]%5-previous[1]%5)||face;
+       const distance=Math.abs(state[1]%5-previous[1]%5)+Math.abs(Math.floor(state[1]/5)-Math.floor(previous[1]/5));
+       if(a===4){call=1;purrs++;}else nudges++;
+       if(distance>1)slides++;
+       word=distance>1?'Whoosh! Those caps are polished.':a===4?'She heard me. Come here, sleepyhead.':'A gentle nudge.';api.sound(a===4?'merge':'bounce');api.haptic(9);
+     }else{word='A clear row lets her hear your call.';api.sound('tap',{pitch:.64,spread:.02});}
+     api.hud('Bedtime',String(index+1)+' / 6','Keys',steps);
+     if(state[1]===goal){word='There she goes. Goodnight, trouble.';score+=Math.max(80,550-(steps-par)*11);delay=1.22;api.sound('clear');}
+   }
+   function undo(){if(done||delay>0||!history.length)return;const snap=history.pop();previous=state;state=snap.state;({purrs,nudges,slides}=snap);age=0;steps--;hint=-1;call=0;word='Back one pawprint.';api.sound('back');api.hud('Bedtime',String(index+1)+' / 6','Keys',steps);}
+   function clue(){if(done||delay>0)return;const p=paths(desk.layout,state,goal);hint=p?.[0]??-1;word=hint<0?'Undo until she can reach the moon.':hint===4?'Call her from this key.':'Try walking '+moves[hint]+'.';}
+   setup();
+   return{
+     key(t,k){if(t!=='down')return;const a=['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space'].indexOf(k),b=['KeyW','KeyD','KeyS','KeyA'].indexOf(k);
+       if(a>=0||b>=0)act(Math.max(a,b));else if(k==='KeyZ'||k==='Backspace')undo();else if(k==='KeyH')clue();},
+     pointer(t,x,y){if(t!=='down')return;if(y>=437){if(x<130)undo();else if(x<345)act(4);else clue();return;}
+       if(x<left||x>=left+5*w||y<top||y>=top+5*h)return;
+       const col=Math.floor((x-left)/w),row=Math.floor((y-top)/h),dx=col-state[0]%5,dy=row-Math.floor(state[0]/5);
+       if(dx||dy)act(Math.abs(dx)>Math.abs(dy)?dx>0?1:3:dy>0?2:0);},
+     update(dt){clock+=dt;age=Math.min(1,age+dt*5);call=Math.max(0,call-dt*1.8);
+       if(delay>0&&(delay-=dt)<=0){if(++index===desks.length){done=true;api.end(score,[['Catnaps',6],['Successful calls',purrs],['Gentle nudges',nudges],['Slides',slides]],'I saved my work before she fell asleep. For once.');}else setup();}},
+     demo(dt){if(done||delay>0)return;demoClock+=dt;if(demoClock<.34)return;demoClock=0;const p=paths(desk.layout,state,goal);if(p?.length)act(p[0]);else undo();},
+     draw(c){
+       c.fillStyle='#6e4c4c';c.fillRect(0,0,480,480);scene(c,0,70,512,277,0,0,480,171);
+       const fade=c.createLinearGradient(0,102,0,148);fade.addColorStop(0,'#4d293300');fade.addColorStop(1,'#4d2933e0');c.fillStyle=fade;c.fillRect(0,100,480,54);
+       panel(c,12,10,114,24,'#4b3134d9',12);type(c,'BEDTIME  ·  0'+(Math.min(index,5)+1),69,22,12,'#fff4d6','center','monospace');
+       type(c,desk.name,17,129,25,'#fff2d2','left','Georgia');type(c,'PAR '+par,461,130,12,'#fff4de','right','monospace');
+       panel(c,13,145,454,272,'#483646',16);panel(c,18,148,444,261,'#ab8480',14);
+       for(let i=0;i<25;i++){
+         const [x,y]=at(i),tile=desk.layout[Math.floor(i/5)][i%5],sleep=i===goal,slip=tile==='~';
+         const xx=x-w/2+2,yy=y-h/2+2;
+         panel(c,xx,yy+2,w-4,h-4,'#634b51',8);
+         if(tile==='#'){panel(c,xx+3,yy+3,w-10,h-9,'#584a51',6);for(let j=0;j<5;j++)line(c,[[xx+14+j*10,yy+13],[xx+7+j*10,yy+31]],'#76696a',2);continue;}
+         panel(c,xx+1,yy,w-6,h-10,sleep?'#f3c268':slip?'#a9d7c5':(i%5===0?'#d7a8a8':'#eedcbc'),7);
+         line(c,[[xx+8,yy+4],[xx+w-16,yy+4]],'#fff3d5',1.6);
+         type(c,sleep?'☾':slip?'⇉':letters[i],x-w/2+13,y-9,sleep?22:slip?16:11,sleep?'#654334':slip?'#4d746c':'#7f6261','left','monospace');
+         if(sleep)type(c,'sleep',x+13,y+10,12,'#694739','center','Georgia');
+       }
+       const f=api.reducedMotion?1:age,ease=f*(2-f);
+       const pos=k=>at(previous[k]).map((v,j)=>v+(at(state[k])[j]-v)*ease);
+       const [hx,hy]=pos(0),[cx,cy]=pos(1);
+       if(call>0 && !api.reducedMotion){for(let k=0;k<3;k++)oval(c,hx,hy,10+(1-call)*30+k*6,6+(1-call)*15+k*3,null,'#fffbceaa',1.5);}
+       oval(c,hx,hy+13,13,4,'#72585d66');const s=herSprite(delay?'cheer':call>.3?'wave':age<1?'walk'+Math.floor(clock*14)%4:'stand',0);
+       c.save();c.imageSmoothingEnabled=false;c.translate(hx,hy);c.scale(herFace,1);c.drawImage(s.canvas,-18,-28,36,46);c.restore();
+       cat(c,cx,cy-3+(age<1&&!api.reducedMotion?-Math.sin(age*Math.PI)*5:0),delay>0,face,clock*4);
+       if(delay>0)type(c,'z Z',cx+17,cy-25,15,'#73587e','center','Georgia');
+       type(c,word,240,426,14,'#fff1d5');panel(c,135,441,206,32,'#dfb5ad',16);
+       type(c,'↶  UNDO',69,457,12,'#fff1d7','center','monospace');type(c,'♡  PSPSPS',238,457,15,'#503b49','center','monospace');type(c,'◇  HINT',412,457,12,'#fff1d7','center','monospace');
+     }
+   };
+ }
 };
