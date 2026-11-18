@@ -132,3 +132,37 @@ test('quiet gallery previews never create audio or write the album',()=>{
  for(const cue of Object.keys(CUES))mix.play(cue,1);assert.ok(calls.length<10);mix.update(2,4);assert.equal(calls.at(-1).bus,'music');
  mix.pause();const count=calls.length;mix.play('keeper',2.8);assert.equal(calls.length,count);
 });
+
+import {negativeLayer,figureLayer} from '../src/games/mothlight/layers.js';
+import {printCard} from '../src/games/mothlight/render.js';
+function rasterHarness(){
+ const changes=[],blits=[];let made=0;
+ const sink=new Proxy({measureText:()=>({width:6}),createLinearGradient:()=>({addColorStop(){}})},{
+  get:(o,k)=>k in o?o[k]:()=>{},set:(o,k,v)=>{o[k]=v;return true;}});
+ const target=new Proxy({canvas:{ownerDocument:{createElement(){made++;return {width:0,height:0,getContext:()=>sink};}}},
+  getTransform:()=>({a:4,b:0}),drawImage:(...args)=>blits.push(args),save(){},restore(){},measureText:()=>({width:6})},{
+  get:(o,k)=>k in o?o[k]:()=>{},set:(o,k,v)=>{if(k==='filter')changes.push(v);o[k]=v;return true;}});
+ return {target,blits,changes,get surfaces(){return made;}};
+}
+test('bounded compositing caches rasterize a frozen recipe once and reuse three surfaces',()=>{
+ const {target}=rasterHarness();let paints=0;
+ const photo=key=>({recipe:{key}}),draw=()=>paints++;
+ const a=negativeLayer(target,photo('a'),400,250,draw);
+ assert.equal(a.width,800);assert.equal(a.height,500);
+ assert.equal(negativeLayer(target,photo('a'),400,250,draw),a);assert.equal(paints,1);
+ for(const key of ['b','c','d'])negativeLayer(target,photo(key),400,250,draw);
+ assert.equal(negativeLayer(target,photo('d'),400,250,draw),a);assert.equal(paints,4);
+ const resized=negativeLayer(target,photo('d'),2300,1500,draw);assert.equal(resized.width,1280);assert.equal(paints,5);
+});
+test('one composited print receives saturation, reduced motion omits the developer filter',()=>{
+ const q=rasterHarness(),p=snap(2,9);
+ printCard(q.target,p,0,0,310,260,{develop:.72});printCard(q.target,p,0,0,310,260,{develop:.51});
+ const old=q.changes.length;printCard(q.target,p,0,0,310,260,{develop:.72,reduced:true});
+ assert.equal(q.changes.length,old);assert.equal(q.blits.length,3);assert.ok(q.changes.every(v=>v.startsWith('saturate(')));
+ assert.equal(q.blits[0][0],q.blits[1][0]);assert.equal(q.blits[1][0],q.blits[2][0]);
+});
+test('a moving figure redraws in a reusable size bucket; unavailable 2D surfaces fall back',()=>{
+ const q=rasterHarness(),p=snap(2,9);const a=figureLayer(q.target,101,p.scene),b=figureLayer(q.target,102,p.scene);
+ a.draw(q.target,40,60);b.draw(q.target,45,67);assert.equal(q.surfaces,1);assert.equal(q.blits[0][0],q.blits[1][0]);assert.notDeepEqual(q.blits[0].slice(1),q.blits[1].slice(1));
+ assert.equal(figureLayer({},90,p.scene),null);assert.equal(negativeLayer({},p,90,60,()=>assert.fail()),null);
+});

@@ -1,5 +1,7 @@
 # Arcade remaster release record
 
+[See all twenty playfields together](remaster-evidence/arcade-overview.jpg). Individual phone and desktop screenshots in the tables show each title, a live round and its result.
+
 ## Before the remaster
 
 Production commit `84edf7b7a6efd0c3922e25aaedacb4173155b8ba` was the clean source for the audit. Each built entry ran in Chromium on a 360 × 640 phone viewport and a 1440 × 900 desktop viewport. The three demo durations below use the actual game model, fixed 1/120-second steps and seeds 7, 23 and 91. Code size counts JavaScript in the individual game directory, excluding binary assets and the shared kit. The sound column counts literally named shared presets only. All twenty had coverage through grouped suites but none had a dedicated test file. No game had a dedicated sound or dialogue module.
@@ -37,9 +39,9 @@ Source sizes exclude the shared kit, chart data, recordings and artwork. The tes
 |---|---:|---|---|---:|---:|---:|---|
 | DUET AFTER DARK | 9,252 → 49,149 (11) | 5 short phrases → 7 originals, 380 call/answer pairs, 3 arrangements and 3 vocal parts | Setlist, chorus rehearsal, daily | 193 / 193 / 193 | 32 | 14 | [Phone](remaster-evidence/echoforge-phone.jpg) · [Desktop](remaster-evidence/echoforge-desktop.jpg) |
 | NEEDLE DROP | 8,036 → 24,990 (8) | 4 short sides → 7 full sides, 3 cuts and 21 graded sleeves | Tour, practice, daily | 59 / 236 / 1,380 | 32 | 10 | [Phone](remaster-evidence/returnaddress-phone.jpg) · [Desktop](remaster-evidence/returnaddress-desktop.jpg) |
-| CABLE CHOIR | 9,697 → 36,619 (10) | 6 concerts → 24 authored songs, 7 growing phrases per song, 8 stations and chords | Concert book, endless climb, daily | 64 / 147 / 266 | 32 | 12 | [Phone](remaster-evidence/summitline-phone.jpg) · [Desktop](remaster-evidence/summitline-desktop.jpg) |
-| SIDE B | 8,089 → 55,723 (13) | 6 picks → 7 originals, 8 hosted broadcasts, 2 live decks, unlockable edits | Hosted series, endless late shift, daily | 157 / 296 / 450 | 43 | 20 | [Phone](remaster-evidence/tidepool-phone.jpg) · [Desktop](remaster-evidence/tidepool-desktop.jpg) |
-| ABYSS FM | 9,518 → 44,568 (11) | 5 whales → 32 watches with moving pods, depth layers, stereo calls and a recording log | Calm survey, night shift, daily | 147 / 277 / 353 | 32 | 11 | [Phone](remaster-evidence/pearlshift-phone.jpg) · [Desktop](remaster-evidence/pearlshift-desktop.jpg) |
+| CABLE CHOIR | 9,697 → 36,642 (10) | 6 concerts → 24 authored songs, 7 growing phrases per song, 8 stations and chords | Concert book, endless climb, daily | 64 / 147 / 266 | 32 | 12 | [Phone](remaster-evidence/summitline-phone.jpg) · [Desktop](remaster-evidence/summitline-desktop.jpg) |
+| SIDE B | 8,089 → 55,834 (13) | 6 picks → 7 originals, 8 hosted broadcasts, 2 live decks, unlockable edits | Hosted series, endless late shift, daily | 157 / 296 / 450 | 43 | 20 | [Phone](remaster-evidence/tidepool-phone.jpg) · [Desktop](remaster-evidence/tidepool-desktop.jpg) |
+| ABYSS FM | 9,518 → 44,591 (11) | 5 whales → 32 watches with moving pods, depth layers, stereo calls and a recording log | Calm survey, night shift, daily | 147 / 277 / 353 | 32 | 11 | [Phone](remaster-evidence/pearlshift-phone.jpg) · [Desktop](remaster-evidence/pearlshift-desktop.jpg) |
 
 DUET AFTER DARK plays each chosen recording to its end. Median accuracy was 44%, 82% and 99%. NEEDLE DROP measures a full tour. The other three measure escalating modes. An expert completed a 24m14s concert book and a 22m27s calm survey. The eight hosted broadcasts took a representative steady DJ 21.8 minutes. The seven complete recordings in NEEDLE DROP and DUET AFTER DARK total 22m59s. These are simulations of the rules.
 
@@ -115,11 +117,11 @@ The five games contain 205 authored puzzles. Every advertised par comes from the
 
 | Game | JS bytes before → after (files) | Content and modes | Modeled times, beginner / steady / expert | Lines | Dedicated tests | Screens |
 |---|---:|---|---|---:|---:|---|
-| HANDLE WITH CARE | 8,851 → 55,401 (9) | 6 depots → 42 authored depots in 5 worlds. Depot ledger, daily dispatch and practice shift. | 75.0 / 30.1 / 8.7 min | 36 | 13 | [Phone](remaster-evidence/waxworks-phone.jpg) · [Desktop](remaster-evidence/waxworks-desktop.jpg) |
-| LAST TRAIN TO NOODLES | 10,601 → 70,183 (12) | 5 bowls → 36 yards, ordered cars, two kitchens and 144 mirrored certificates. Station pass, daily dish and replay. | 56.8 / 36.2 / 13.2 min | 44 | 15 | [Phone](remaster-evidence/switchyard-phone.jpg) · [Desktop](remaster-evidence/switchyard-desktop.jpg) |
-| SPLIT PERSONALITY | 10,862 → 33,900 (11) | 6 mazes → 40 paired chambers, 5 rule galleries and 120 stars. Gallery, daily mirror and studio. | 62.9 / 31.9 / 14.9 min | 32 | 12 | [Phone](remaster-evidence/prismcourier-phone.jpg) · [Desktop](remaster-evidence/prismcourier-desktop.jpg) |
-| KEYBOARD CATNAP | 11,123 → 60,027 (13) | 6 desks → 45 naps, 135 stars, 6 cat poses and saved replays. Bedtime Story, Daily Cat and Cat Journal. | 70 / 43 / 13 min | 45 | 23 | [Phone](remaster-evidence/rookery-phone.jpg) · [Desktop](remaster-evidence/rookery-desktop.jpg) |
-| CURTAIN CALL | 10,704 → 66,631 (10) | 6 sets → 42 productions, 5 acts and 645 scored performance beats. Story season, daily matinée and free rehearsal. | 48.5 / 33.8 / 20.9 min | 32 | 11 | [Phone](remaster-evidence/starlingrelay-phone.jpg) · [Desktop](remaster-evidence/starlingrelay-desktop.jpg) |
+| HANDLE WITH CARE | 8,851 → 55,485 (9) | 6 depots → 42 authored depots in 5 worlds. Depot ledger, daily dispatch and practice shift. | 75.0 / 30.1 / 8.7 min | 36 | 13 | [Phone](remaster-evidence/waxworks-phone.jpg) · [Desktop](remaster-evidence/waxworks-desktop.jpg) |
+| LAST TRAIN TO NOODLES | 10,601 → 70,246 (12) | 5 bowls → 36 yards, ordered cars, two kitchens and 144 mirrored certificates. Station pass, daily dish and replay. | 56.8 / 36.2 / 13.2 min | 44 | 15 | [Phone](remaster-evidence/switchyard-phone.jpg) · [Desktop](remaster-evidence/switchyard-desktop.jpg) |
+| SPLIT PERSONALITY | 10,862 → 33,957 (11) | 6 mazes → 40 paired chambers, 5 rule galleries and 120 stars. Gallery, daily mirror and studio. | 62.9 / 31.9 / 14.9 min | 32 | 12 | [Phone](remaster-evidence/prismcourier-phone.jpg) · [Desktop](remaster-evidence/prismcourier-desktop.jpg) |
+| KEYBOARD CATNAP | 11,123 → 60,199 (13) | 6 desks → 45 naps, 135 stars, 6 cat poses and saved replays. Bedtime Story, Daily Cat and Cat Journal. | 70 / 43 / 13 min | 45 | 23 | [Phone](remaster-evidence/rookery-phone.jpg) · [Desktop](remaster-evidence/rookery-desktop.jpg) |
+| CURTAIN CALL | 10,704 → 66,725 (10) | 6 sets → 42 productions, 5 acts and 645 scored performance beats. Story season, daily matinée and free rehearsal. | 48.5 / 33.8 / 20.9 min | 32 | 11 | [Phone](remaster-evidence/starlingrelay-phone.jpg) · [Desktop](remaster-evidence/starlingrelay-desktop.jpg) |
 
 | Game | Previous named shared effects | Sound after | Measured peak |
 |---|---:|---|---:|
@@ -189,11 +191,11 @@ Each game uses its own physical rules. The browser checks used an actual leap, b
 
 | Game | JS bytes before → after (files) | Content and modes | Modeled times, beginner / steady / expert | Lines | Dedicated tests | Screens |
 |---|---:|---|---|---:|---:|---|
-| WINGWALK EXPRESS | 11,930 → 36,025 (10) | 8 leaps → 18 named round trips with 397 handoffs across 6 districts, Red-eye nonstop and Daily Airbill. | 59 / 178 / 468 s nonstop. Post Run modeled at 59 / 30 / 23 min. | 34 | 14 | [Phone](remaster-evidence/cloudfoil-phone.jpg) · [Desktop](remaster-evidence/cloudfoil-desktop.jpg) |
-| MOONSHOT BILLIARDS | 11,522 → 66,999 (10) | 5 single shots → 36 trick tables, 18 conditions on the AI ladder, daily three-rack match and House Run. | 73 / 162 / 570 s in House Run. | 34 | 13 | [Phone](remaster-evidence/moonfreight-phone.jpg) · [Desktop](remaster-evidence/moonfreight-desktop.jpg) |
+| WINGWALK EXPRESS | 11,930 → 36,048 (10) | 8 leaps → 18 named round trips with 397 handoffs across 6 districts, Red-eye nonstop and Daily Airbill. | 59 / 178 / 468 s nonstop. Post Run modeled at 59 / 30 / 23 min. | 34 | 14 | [Phone](remaster-evidence/cloudfoil-phone.jpg) · [Desktop](remaster-evidence/cloudfoil-desktop.jpg) |
+| MOONSHOT BILLIARDS | 11,522 → 67,063 (10) | 5 single shots → 36 trick tables, 18 conditions on the AI ladder, daily three-rack match and House Run. | 73 / 162 / 570 s in House Run. | 34 | 13 | [Phone](remaster-evidence/moonfreight-phone.jpg) · [Desktop](remaster-evidence/moonfreight-desktop.jpg) |
 | SLINGSHOT GIRL | 14,242 → 51,318 (8) | 6 circuits → 36 tour flags, 144 certified variations, Daily Nine, Comet Carry and personal flight ghosts. | 85 / 227 / 329 s in Comet Carry. Tour modeled at 41 / 22.5 / 12 min. | 34 | 13 | [Phone](remaster-evidence/tetherturn-phone.jpg) · [Desktop](remaster-evidence/tetherturn-desktop.jpg) |
-| CASSETTE BANDIT | 12,982 → 62,733 (12) | 1 race → 12 championship matches against 6 driving personalities, Radio Check, Marathon, Daily Rival and Local Duet. | 87 / 210 / 455 s in Marathon Radio. | 68 | 22 | [Phone](remaster-evidence/driftglass-phone.jpg) · [Desktop](remaster-evidence/driftglass-desktop.jpg) |
-| AGI'S ALIBI | 12,979 → 93,983 (14) | 5 tape loops → 36 authored archives with quiet and unrestricted par, Daily and three-alert Noir. 256 variants solver-checked. | 110 / 226 / 312 s in Noir. Campaign modeled at 70.3 / 24.8 / 20.3 min. | 34 | 14 | [Phone](remaster-evidence/inkveil-phone.jpg) · [Desktop](remaster-evidence/inkveil-desktop.jpg) |
+| CASSETTE BANDIT | 12,982 → 62,911 (12) | 1 race → 12 championship matches against 6 driving personalities, Radio Check, Marathon, Daily Rival and Local Duet. | 87 / 210 / 455 s in Marathon Radio. | 68 | 22 | [Phone](remaster-evidence/driftglass-phone.jpg) · [Desktop](remaster-evidence/driftglass-desktop.jpg) |
+| AGI'S ALIBI | 12,979 → 94,155 (14) | 5 tape loops → 36 authored archives with quiet and unrestricted par, Daily and three-alert Noir. 256 variants solver-checked. | 110 / 226 / 312 s in Noir. Campaign modeled at 70.3 / 24.8 / 20.3 min. | 34 | 14 | [Phone](remaster-evidence/inkveil-phone.jpg) · [Desktop](remaster-evidence/inkveil-desktop.jpg) |
 
 | Game | Previous named shared effects | Sound after | Measured peak |
 |---|---:|---|---:|
@@ -263,7 +265,7 @@ These five games use a working lens, a radio producer’s desk, a decal press, a
 
 | Game | JS bytes before → after (files) | Content and modes | Modeled times, beginner / steady / expert | Lines | Dedicated tests | Screens |
 |---|---:|---|---|---:|---:|---|
-| CANDID CAMERA | 16,098 → 68,230 (14) | 6 shots → 8 location rolls, 32 commissions and 8 optional candids. Campaign, Daily Photo Walk, Darkroom and print album. | 111 / 180 / 38 s per modeled roll. The expert anticipates the pose. Eight steady rolls total about 24 min. | 36 | 20 | [Phone](remaster-evidence/mothlight-phone.jpg) · [Desktop](remaster-evidence/mothlight-desktop.jpg) |
+| CANDID CAMERA | 16,098 → 71,308 (15) | 6 shots → 8 location rolls, 32 commissions and 8 optional candids. Campaign, Daily Photo Walk, Darkroom and print album. | 111 / 180 / 38 s per modeled roll. The expert anticipates the pose. Eight steady rolls total about 24 min. | 36 | 23 | [Phone](remaster-evidence/mothlight-phone.jpg) · [Desktop](remaster-evidence/mothlight-desktop.jpg) |
 | OFF THE RECORD | 14,176 → 113,684 (18) | 4 cases drawn from 6 → 18 connected broadcasts over 7 nights, 37 corrected claims and 55 exhibits. Story Week, Rehearsal and Daily Rebroadcast. | 64.3 / 43.9 / 35.0 min per story week. | 41 | 13 | [Phone](remaster-evidence/lanternlake-phone.jpg) · [Desktop](remaster-evidence/lanternlake-desktop.jpg) |
 | STICKER CLUB | 10,005 → 78,259 (12) | 4 traced covers → 36 editorial briefs, 15 die cuts and 6 materials. Campaign, Rush, Free Studio, Daily and the local print drawer. | 117 / 203 / 489 s in Rush. | 39 | 19 | [Phone](remaster-evidence/nightpress-phone.jpg) · [Desktop](remaster-evidence/nightpress-desktop.jpg) |
 | BOBA BREAK | 9,959 → 67,310 (10) | 4 drinks → 24 distinct recipes across 8 three-wave shifts. Counter Week, Daily Menu, Endless Rush and Recipe Bench. | 162 / 259 / 530 s touch. Keyboard medians 166 / 275 / 568 s. | 34 | 14 | [Phone](remaster-evidence/cloudkitchen-phone.jpg) · [Desktop](remaster-evidence/cloudkitchen-desktop.jpg) |
@@ -386,3 +388,15 @@ newbie · night seconds P10/50/90 119/166/269 · score P10/50/90 914/1076/1160 �
 steady · night seconds P10/50/90 92/134/189 · score P10/50/90 994/1124/1232 · median full journal 34.2 min · returned with wishes 479/480 · detours 114 · missing return 1
 expert · night seconds P10/50/90 86/110/158 · score P10/50/90 1100/1196/1268 · median full journal 29.3 min · returned with wishes 480/480 · detours 15 · missing return 0
 ```
+
+## Final play and performance checks
+
+All twenty original concepts, names, category tags and URLs were retained, including the live `switchyard` address. Each title has a new gameplay clip, poster and share card. The arcade wall was regenerated from its current selection. The Desktop checkout and its pre-existing zero-byte index lock were left intact.
+
+Each of the twenty games ran under the production Content Security Policy in five viewport sizes from 360 × 640 to 2560 × 1440, including a landscape phone and a foldable. All forty full phone and desktop sessions reached scored endings and replayed. A separate check covered campaign replays after new progress had been earned. Explicit replay now starts from the original opening progression while earned unlocks remain in the player's save.
+
+In a separate run, Chromium sampled 100 animation frames per title at 360 × 640, double pixel density and fourfold CPU throttling. Average rates across the twenty demos ranged from 73.5 to 75.0 fps, with 95th-percentile frame intervals of 13.4 to 13.6 ms. The sample covers a short opening segment on a desktop computer. Physical iOS and Android performance, sustained handset frame rates and listening by ear remain unverified. Sound levels were measured digitally.
+
+Candid Camera now retains the developed negative and a bounded cache of rendered figures. An identical test scene fell from 911.4 to 7.7 ms in the software renderer and still produced a 96-point print. Window Seat's timetable solver also verified that all 1,440 sampled schedules allow both wishes, the optional star and a return before the last train.
+
+Two playtest results differ from the design targets. The steady Sticker Club model took 32 seconds on early covers and 68–78 seconds in the last two volumes. Cassette Bandit's steady championship match changed possession 14 times. Modeled times throughout this report are reproducible comparisons of player strategies. They do not measure human retention.
