@@ -493,10 +493,11 @@ export default {
         } else if (id === 'next') {
           if (isNoir) load(noir(seed, cases));
           else {
-            const eligible = rooms.filter((r) => unlocked(book, r)),
+            const opening = api.openingProgress ? notebook(api.openingProgress) : book;
+    const eligible = rooms.filter((r) => unlocked(opening, r)),
               next =
                 eligible.find((r) => r.id > room.id && !book.cases[r.id]) ||
-                eligible.find((r) => !book.cases[r.id]);
+                eligible.find((r) => !opening.cases[r.id]);
             if (next) load(campaign(next));
             else file();
           }
@@ -564,10 +565,11 @@ export default {
       }
       if (['N', 'E', 'S', 'W', 'Z'].includes(id)) handle(id);
     }
-    const eligible = rooms.filter((r) => unlocked(book, r)),
+    const opening = api.openingProgress ? notebook(api.openingProgress) : book;
+    const eligible = rooms.filter((r) => unlocked(opening, r)),
       chosen =
         eligible.find((r) => r.id === Number(api.options?.room)) ||
-        eligible.find((r) => !book.cases[r.id]) ||
+        eligible.find((r) => !opening.cases[r.id]) ||
         eligible[0];
     load(api.demo ? campaign(rooms[30]) : dated ? daily(seed) : isNoir ? noir(seed, 0) : campaign(chosen));
     return {

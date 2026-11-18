@@ -1,6 +1,6 @@
 import '../intro.js';
 import { createShell } from '../kit/shell.js';
-import { mountCartridge } from '../kit/cartridge.js';
+import { mountRemaster } from '../kit/remaster.js';
 import game from './game.js';
 
-mountCartridge('mothlight', game, (options) => createShell({ game: 'mothlight', ...options }), new URL('./cover.webp', import.meta.url).href);
+mountRemaster('mothlight', game, (options) => createShell({ game: 'mothlight', ...options }), new URL('./cover.webp', import.meta.url).href);

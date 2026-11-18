@@ -997,7 +997,7 @@ test('its styles: every rule a gi- class, over the game from the first paint, go
   const z = Number(gi['z-index']);
   for (const id of Object.keys(GAMES)) {
     const files = cssOf(`src/games/${id}`);
-    if (COLLECTION.some(game => game.id === id)) files.push('src/games/kit/cartridge.css', 'src/games/kit/kit.css');
+    if (COLLECTION.some(game => game.id === id)) files.push('src/games/kit/marquee.css', 'src/games/kit/kit.css');
     assert.ok(files.length >= 1, `${id}: its styles`);
     for (const f of files) {
       for (const m of read(f).matchAll(/z-index:\s*(-?\d+)/g)) assert.ok(z > Number(m[1]), `over ${f}'s z-index ${m[1]}`);

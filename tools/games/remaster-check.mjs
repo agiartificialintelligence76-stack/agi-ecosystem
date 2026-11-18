@@ -33,6 +33,8 @@ async function check(id,label) {
     const full=['phone','desktop'].includes(label);
     if(phase==='full'&&id==='echoforge'){await page.locator('select[name=mode]').selectOption('rehearse');const song=page.locator('select').filter({has:page.locator('option[value="agi"]')});if(await song.count())await song.first().selectOption('agi');}
     if(phase==='full'&&id==='prismcourier')await page.locator('select[name=room]').selectOption('6');
+    if(id==='cloudkitchen'&&full)await page.locator('select[name=mode]').selectOption('bench');
+    if(id==='mothlight'&&full)await page.locator('select[name=mode]').selectOption('darkroom');
     if(id==='driftglass'&&full)await page.locator('select[name=mode]').selectOption('check');
     if(full)await shot('title');
     await page.locator('.ak-title .ak-btn-play').click();
@@ -40,12 +42,18 @@ async function check(id,label) {
     const first=page.locator('.rm-pad:not([disabled])').first();
     const openingPuzzles = new Set(['switchyard','waxworks','starlingrelay','prismcourier','rookery']);
     if(id==='cloudfoil'){await page.keyboard.down('Space');await delay(600);await page.keyboard.up('Space');}
+    else if(['mothlight','lanternlake','nightpress','cloudkitchen'].includes(id)){
+      if(id==='nightpress'){await page.keyboard.press('Digit1');await page.keyboard.press('ArrowRight');}
+      if(id==='mothlight')await page.keyboard.press('KeyD');
+      if(id==='lanternlake')await page.locator('[data-radio="claim:lead"]').click();
+    }
+    else if(id==='pocketgrove'){await page.keyboard.press('Enter');}
     else if(id==='inkveil'){await page.keyboard.press('Space');}
     else if(id==='driftglass'){await delay(3180);await page.keyboard.press('Space');}
     else if(id==='moonfreight'||id==='tetherturn'){await page.keyboard.press('Space');}
     else if(!openingPuzzles.has(id)){await first.click();await page.keyboard.press(id==='returnaddress'?'ArrowUp':'ArrowRight');}
     else if(id==='prismcourier')await page.keyboard.press('KeyH');
-    const until=phase.startsWith('layout')?250:phase.includes('dev')?1600:({cloudfoil:480,moonfreight:420,tetherturn:770,inkveil:850}[id]??7500);
+    const until=phase.startsWith('layout')?250:phase.includes('dev')?1600:({cloudfoil:480,moonfreight:420,tetherturn:770,inkveil:850,pocketgrove:6000}[id]??7500);
     await delay(until);
     const size=await page.evaluate(()=>{
       const box=n=>{const r=n.getBoundingClientRect();return [Math.round(r.x),Math.round(r.y),Math.round(r.width),Math.round(r.height)];};
@@ -74,8 +82,23 @@ async function check(id,label) {
           await page.keyboard.press('Space');await page.waitForTimeout(1800);
         }
       }
+      if(id==='cloudkitchen'){
+        await page.keyboard.down('KeyQ');await delay(1340);await page.keyboard.up('KeyQ');
+        await delay(780);await page.keyboard.press('Space');
+      }
+      if(id==='mothlight'){
+        await page.locator('[data-action="shoot"]').click();
+        await page.locator('[data-action="keep-0"]').click();
+        await page.locator('[data-action="file"]').click();
+      }
+      if(id==='lanternlake'){
+        for(const action of ['press','item:ex0','present','next','claim:lead','item:ex1','present','next','file']){
+          await page.locator('[data-radio="'+action+'"]').click({timeout:6000});
+        }
+      }
       const puzzleInputs={
-        cloudfoil:['KeyF'],inkveil:['KeyT','Enter','ArrowRight','ArrowRight','ArrowDown','ArrowRight','ArrowDown','KeyF'],
+        nightpress:['ArrowRight','ArrowUp','ArrowUp','Enter','Digit2','ArrowLeft','ArrowUp','Enter','Space','Space'],
+        pocketgrove:['ArrowLeft','Space','KeyV','KeyF'],cloudfoil:['KeyF'],inkveil:['KeyT','Enter','ArrowRight','ArrowRight','ArrowDown','ArrowRight','ArrowDown','KeyF'],
         moonfreight:['KeyX'],tetherturn:['KeyX'],
         prismcourier:[...[...chamber(6).witness].map(k=>['ArrowUp','ArrowRight','ArrowDown','ArrowLeft','Space','KeyX'][Number(k)]),'KeyB'],switchyard:['ArrowRight','Space','ArrowRight','KeyX'],
         starlingrelay:['KeyB','KeyG','KeyF'],waxworks:['ArrowRight','ArrowRight','KeyF'],rookery:['ArrowRight'],

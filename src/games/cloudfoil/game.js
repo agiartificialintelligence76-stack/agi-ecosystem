@@ -11,7 +11,7 @@ const keyboard={Space:'jump',ArrowLeft:'left',ArrowRight:'right',KeyA:'left',Key
  Digit1:'far',Digit2:'middle',Digit3:'near',ArrowUp:'up',ArrowDown:'down'};
 const report={id:'file',label:'File airbill',key:'F'};
 function chooseRoute(api){
- const book=shelf(api.store?.read());
+ const book=shelf(api.openingProgress ?? api.store?.read());
  const next=routes.findIndex(r=>!book[r.id]);
  const requested=api.options?.route;
  return requested==null||requested==='next'?Math.max(0,next):clamp(parseInt(requested,10)||0,0,routes.length-1);

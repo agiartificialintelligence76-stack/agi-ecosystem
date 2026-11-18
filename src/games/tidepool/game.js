@@ -64,11 +64,12 @@ export default {
   let library=readLibrary(api.store?.read?.());
   const mode=modes.some(m=>m.id===api.mode)?api.mode:'hosted';
   const seed=api.seed??Math.floor((api.rng?.()??.3)*0xffffffff);
-  const next=library.lastHosted?.seed===seed?library.lastHosted.shift:library.unlocked;
+  const opening=api.openingProgress==null?library:readLibrary(api.openingProgress);
+  const next=api.openingProgress==null&&opening.lastHosted?.seed===seed?opening.lastHosted.shift:opening.unlocked;
   const wanted=api.options?.episode==='next'||api.options?.episode==null?next:Number(api.options.episode)||0;
-  const shift=mode==='hosted'?Math.min(wanted,library.unlocked):mode==='daily'?4:library.unlocked;
+  const shift=mode==='hosted'?Math.min(wanted,opening.unlocked):mode==='daily'?4:opening.unlocked;
   const day=mode==='daily'?new Date().toISOString().slice(0,10):'';
-  const config=configFor({mode,shift,seed,day,edits:availableEdits(library,shift,mode)});
+  const config=configFor({mode,shift,seed,day,edits:availableEdits(opening,shift,mode)});
   const sim=openShow(config), bot=makeDJ('demo',rng(seed^0x71bb15).next);
   const sound=createDeskSound(api.audio,{demo:api.demo,onUnavailable:()=>api.say?.('the recording is offline. the beat lights still run the show.')});
   let logPage=-1,paused=false,saved=false,closed=false,elapsed=0,controlsDirty=true,lastFader=-1;

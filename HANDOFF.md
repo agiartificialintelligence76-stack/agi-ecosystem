@@ -1,5 +1,10 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Sims and stories · 2026-11-18
+
+The final shelf completes all twenty live remasters and retires kit/cartridge.js. Candid Camera grades an editable contact sheet across eight locations. Off The Record spans eighteen handwritten mysteries over seven nights; pressing a caller changes their testimony. Sticker Club checks 36 editorial briefs and saves editable local prints. Boba Break supports simultaneous pours, recipe days and an escalating rush. Window Seat runs five municipal timetables, tests genuine last trains, transfer walks and view sides, and saves stamped prints and city seals. Each title has its own rules suite, sounds, dialogue, balance tool, gameplay clip, cover and scored phone/desktop evidence in tools/games/REMASTER-REPORT.md.
+
+
 ## Physics and action · 2026-11-18
 
 The action remasters keep all five IDs and use the responsive remaster frame. Wingwalk’s postal round trips use swept contacts on moving wings. Moonshot adjudicates real cue-ball turns, calls and fouls. Slingshot uses the player’s in-flight burns and stored ghosts. Cassette Bandit scores tape possession and supports two drivers. Alibi’s patrols follow observations and thrown sounds. Each title has a dedicated test suite and a tools/games/<id>/balance.mjs. See tools/games/REMASTER-REPORT.md for balance, sound peaks and paired screenshots.

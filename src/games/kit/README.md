@@ -77,3 +77,7 @@ shell.demo / shell.touch    // the page is a recorded demo / a touchscreen
   "buy" anywhere; no real coins, people or brands; Share on X only opens X's own post box.
 - Phones first, computers too: touch, mouse and keyboard; any size from 360 px wide to 4K; sideways phones; the notch
   (`--ak-safe-*`); pause when the tab is hidden (the shell does it); "reduce motion" (no shake or flashes).
+
+## Responsive game pages
+
+The newest twenty titles mount through `mountRemaster` in `remaster.js`. The field follows the available screen and the action dock uses actual focusable controls. Each game owns its controls, drawing, simulation, local progress and sound. The kit handles pausing, capture cancellation, safe-area spacing, reduced motion and the silent, unsaved demo. See [the remaster report](../../../tools/games/REMASTER-REPORT.md) for each game's balance, sound measurement and phone and desktop screens.

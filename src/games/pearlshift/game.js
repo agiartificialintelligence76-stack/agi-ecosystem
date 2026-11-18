@@ -82,7 +82,7 @@ export default {
     return n || b.stations.length ? n + '/12 voices in your log · ' + b.stations.length + '/32 watches surveyed' : '';
   },
   create(api) {
-    const log = logBook(api.store?.read()),
+    const log = logBook(api.openingProgress ?? api.store?.read()),
       next = Array.from({
         length: 32
       }, (_, i) => i).find(i => !log.stations.includes(i)) ?? 0;

@@ -8,7 +8,7 @@ export const COLLECTION = [
   },
   {
     id: "mothlight", name: "CANDID CAMERA", genre: "Photo walk",
-    line: "Frame her pose before the moment passes", tags: ["3d", "chill"],
+    line: "Catch her pose and edit your contact sheet", tags: ["3d", "chill"],
     accent: "#ffdf63", ground: "#25272c", style: "photo",
     wordmark: ["Candid", "Camera"], play: "Take the camera",
   },
@@ -32,7 +32,7 @@ export const COLLECTION = [
   },
   {
     id: "lanternlake", name: "OFF THE RECORD", genre: "Radio mystery",
-    line: "Turn the evidence and catch a caller’s lie", tags: ["3d", "chill", "puzzle"],
+    line: "Find the evidence that changes her story", tags: ["3d", "chill", "puzzle"],
     accent: "#a6e2bf", ground: "#193737", style: "editorial",
     wordmark: ["Off the", "Record"], play: "Take the call",
   },
@@ -43,8 +43,8 @@ export const COLLECTION = [
     wordmark: ["AGI's", "Alibi"], play: "Enter the archive",
   },
   {
-    id: "nightpress", name: "STICKER CLUB", genre: "Collage studio",
-    line: "Layer her stickers into a cover she loves", tags: ["chill"],
+    id: "nightpress", name: "STICKER CLUB", genre: "Collage puzzle",
+    line: "Pack a cover to order, then pull a proof", tags: ["chill"],
     accent: "#ffbbed", ground: "#312d69", style: "zine",
     wordmark: ["Sticker", "Club"], play: "Open the zine",
   },
@@ -68,7 +68,7 @@ export const COLLECTION = [
   },
   {
     id: "cloudkitchen", name: "BOBA BREAK", genre: "Tea counter",
-    line: "Pour her order and shake in the pearls", tags: ["chill"],
+    line: "Work two cups through the evening rush", tags: ["chill"],
     accent: "#f6dba0", ground: "#18463f", style: "tea",
     wordmark: ["Boba", "Break"], play: "Open the counter",
   },
@@ -92,7 +92,7 @@ export const COLLECTION = [
   },
   {
     id: "pocketgrove", name: "WINDOW SEAT", genre: "Railway sim",
-    line: "Plan her detours on the last train home", tags: ["chill"],
+    line: "Catch both wishes and the last train home", tags: ["chill"],
     accent: "#ffc297", ground: "#20344d", style: "travel",
     wordmark: ["Window", "Seat"], play: "Punch the ticket",
   },

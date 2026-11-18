@@ -344,7 +344,8 @@ export default {
       }
       if (id === 'drop') execute(8);else if (id.startsWith('go')) execute(+id.slice(2));else if (id.startsWith('link')) execute(+id.slice(4));else if (id.startsWith('dev') && yard.devices[+id.slice(3)]) execute(9 + Number(id.slice(3)));
     }
-    const initialId = api.demo ? 19 : mode === 'sandbox' ? 0 : nextStop(records, api.store?.read?.().noodleRail?.lastYard ?? 35);
+    const opening = api.openingProgress ?? api.store?.read?.();
+    const initialId = api.demo ? 19 : mode === 'sandbox' ? 0 : nextStop(stations(opening), opening?.noodleRail?.lastYard ?? 35);
     load(mode === 'daily' ? dailyDish(seed) : makeYard(initialId));
     if (mode === 'sandbox') {
       map = true;

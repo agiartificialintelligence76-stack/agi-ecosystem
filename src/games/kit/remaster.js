@@ -5,7 +5,7 @@ import { DEMO, SEED, REDUCED } from './env.js';
 import { el } from './shell.js';
 import { COLLECTION } from '../collection.js';
 import { createDock, makeChoices } from './remaster-controls.js';
-import './cartridge.css';
+import './marquee.css';
 import './remaster.css';
 
 const randomSeed = () => crypto.getRandomValues(new Uint32Array(1))[0];
@@ -20,7 +20,7 @@ export function mountRemaster(id, game, makeShell, cover) {
   root.style.setProperty('--ak-accent', info.accent);
   root.style.setProperty('--ak-bg', info.ground);
   root.dataset.marquee = info.style;
-  let model, runSeed, ended, dpr = Math.min(2,window.devicePixelRatio || 1), stopPreview = () => {}, effectHold = 0, slow = 0;
+  let model, runSeed, openingProgress, ended, dpr = Math.min(2,window.devicePixelRatio || 1), stopPreview = () => {}, effectHold = 0, slow = 0;
   let runGeneration = 0, canvasPointer = null, lastPoint = null;
   const held = new Set(), shake = new Shake({ max:5 }), words = new FloatText(), sparks = new Particles(75);
   const shell = makeShell({
@@ -57,6 +57,8 @@ export function mountRemaster(id, game, makeShell, cover) {
   }
   function dispose() { release(); runGeneration++; model?.dispose?.(); model = null; stopPreview(); }
   function start(seed) {
+    const replaying = seed != null && seed === runSeed && openingProgress != null;
+    if (!replaying) openingProgress = storage.read();
     dispose();
     if (!DEMO) shell.audio.unlock();
     runSeed = seed ?? (selected.mode?.includes('daily') ? Number(new Date().toISOString().slice(0,10).replaceAll('-','')) : SEED || randomSeed());
@@ -69,12 +71,12 @@ export function mountRemaster(id, game, makeShell, cover) {
     const { mode, ...options } = selected;
     const generation = runGeneration;
     const current = () => generation === runGeneration && !ended;
-    const group = game.scoreGroup?.({mode,options,seed:runSeed}) ??
+    const group = game.scoreGroup?.({mode,options,seed:runSeed,openingProgress}) ??
       (mode?.includes('daily') ? mode+'/'+runSeed : Object.values(selected).join('/'));
     const scoreKey = 'remaster:' + group;
     const say = line => { if (current() && !DEMO && line && voice.textContent !== line) voice.textContent = line; };
     model = game.create({
-      seed:runSeed, rng:rng(runSeed).next, mode, options, demo:DEMO, audio:DEMO ? null : shell.audio,
+      openingProgress:structuredClone(openingProgress), seed:runSeed, rng:rng(runSeed).next, mode, options, demo:DEMO, audio:DEMO ? null : shell.audio,
       reducedMotion:REDUCED, store:storage, controls:list => { if (current()) dock.render(list); }, say, announce:say,
       personalBest:key => storage.best(scoreKey + ':' + key),
       rememberBest:(key,value) => { if (current()) return storage.recordBest(scoreKey + ':' + key,value); },

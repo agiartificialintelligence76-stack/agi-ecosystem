@@ -139,12 +139,13 @@ export default {
     }
     const free = mode === 'free',
       isDaily = mode === 'daily';
-    const eligible = productions.filter((s) => unlocked(book, s));
-    const requested = api.options?.scene === 'saved' ? book.rehearsal?.id : Number(api.options?.scene);
+    const opening = api.openingProgress ? read(api.openingProgress) : book;
+    const eligible = productions.filter((s) => unlocked(opening, s));
+    const requested = api.options?.scene === 'saved' ? opening.rehearsal?.id : Number(api.options?.scene);
     const chosen =
-      eligible.find((s) => s.id === requested) || eligible.find((s) => !book.scenes[s.id]) || eligible[0];
+      eligible.find((s) => s.id === requested) || eligible.find((s) => !opening.scenes[s.id]) || eligible[0];
     let base = api.demo ? productions[28] : isDaily ? daily(seed) : chosen;
-    const saved = free && book.rehearsal?.id === base.id && book.rehearsal.v !== 0 ? book.rehearsal : null;
+    const saved = free && opening.rehearsal?.id === base.id && opening.rehearsal.v !== 0 ? opening.rehearsal : null;
     function controls() {
       let list;
       if (panel === 'archive')

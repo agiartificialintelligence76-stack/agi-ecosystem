@@ -25,7 +25,7 @@ export default {
  create(api){
    const mode=api.mode||'gallery',seed=api.seed??Math.floor(api.rng()*4294967296),selection=api.options?.room;
    const book=()=>readGallery(api.store?.read());
-   let room=api.demo?chamber(10):choose(seed,mode,selection,book()), take,from,clock=0,tween=1,flash=0,ended=false;
+   let room=api.demo?chamber(10):choose(seed,mode,selection,api.openingProgress ? readGallery(api.openingProgress) : book()), take,from,clock=0,tween=1,flash=0,ended=false;
    let score=0,clears=0,lastBeat=-1,demoAge=0,demoPath=[],preview=null,earned=0,drag=null,paused=false,seen=new Set(),studioTape='';
    const sound=mirrorSound(api), voiceCounts={};
    function tell(kind,custom){

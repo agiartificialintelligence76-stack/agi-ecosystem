@@ -40,7 +40,7 @@
 @media (max-aspect-ratio:4/5){.rm-choices{justify-content:center}.ak.remastered .ak-title-art{width:min(50vw,22dvh,240px)}}
 @media (max-height:520px) and (orientation:landscape){
  .ak.cartridge.remastered:not([data-ak-demo]) .ak-stage{grid-template:minmax(0,1fr) / minmax(0,1fr) clamp(125px,21vw,180px);padding-top:calc(49px + var(--ak-safe-t))}
- .rm-dock {align-content:center; overflow:auto; border-top:0; border-left:3px solid #211334}
+ .rm-dock {align-content:safe center; overflow:auto; border-top:0; border-left:3px solid #211334}
  .rm-pad{min-height:44px}.rm-fader{flex-wrap:wrap;gap:0}
 }
 @media (max-height:400px) and (orientation:landscape){.ak.remastered .ak-title{align-items:safe center}.ak.remastered .ak-title-body{gap:1px}.ak.remastered .ak-title-art{width:min(82%,57dvh)}}

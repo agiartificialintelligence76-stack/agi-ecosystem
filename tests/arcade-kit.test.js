@@ -13,17 +13,9 @@ const exists = (p) => existsSync(new URL(`../${p}`, import.meta.url));
 const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive',
   ...COLLECTION.map(({ id }) => id)];
 
-const groupedTests = {
-  'depth-games': ['cloudfoil', 'switchyard', 'pearlshift', 'moonfreight', 'summitline', 'driftglass'],
-  'garden-games': ['mothlight', 'tidepool', 'nightpress', 'cloudkitchen', 'pocketgrove'],
-  'kinetic-games': ['echoforge', 'inkveil', 'prismcourier', 'rookery', 'tetherturn'],
-  'studio-games': ['waxworks', 'lanternlake', 'returnaddress', 'starlingrelay'],
-};
-
 test('the kit games are in the games list, after the first four, with their names and addresses', async () => {
   const { GAMES, isGame } = await import('../src/games/list.js');
   assert.deepEqual(Object.keys(GAMES).slice(4), KIT_IDS);
-  assert.deepEqual(Object.values(groupedTests).flat().sort(), COLLECTION.map(({ id }) => id).sort());
   for (const id of KIT_IDS) {
     assert.equal(isGame(id), true);
     assert.equal(GAMES[id].path, `/games/${id}`);
@@ -79,8 +71,7 @@ test('each kit game is wired into the site: its address, its build entry, the ow
     assert.ok(neededGameArt().includes(`cards/games/${id}.jpg`), `${id}: the build checks its picture is there`);
     assert.ok(Object.hasOwn(LOOK_GAMES, id), `${id}: its reviews judged as reviews of this game`);
     assert.ok(lookSystem(id).includes(`"${(await import('../src/games/list.js')).GAMES[id].name}"`));
-    const suite = exists('tests/'+id+'.test.js') ? id : Object.keys(groupedTests).find(name => groupedTests[name].includes(id)) || id;
-    const file = `tests/${suite}.test.js`;
+    const file = `tests/${id}.test.js`;
     assert.ok(exists(file), `${id}: its gameplay tests`);
     assert.ok(pkg.scripts.test.split(' ').includes(file), `${id}: npm test runs them`);
   }

@@ -52,14 +52,15 @@ export default {
  touch:[['Drag the road','Set lateral position and pace'],['Steering pads','Tap a lane or hold to keep moving'],['Snatch / Jam / Boost','Work the pirate radio'],['Local Duet','Two sets of pads on wide screens. On a phone, alternate identical heats.']],
  modes,options,controls:[btn('mint-radio','Snatch','Space')],
  progress(raw){const b=readLibrary(raw);return b.wins.filter(Boolean).length+'/12 wins  ·  '+b.sleeves.length+'/6 sleeves  ·  Next: '+MEETS[b.unlocked].title;},
- scoreGroup:({mode,options,seed})=>mode==='daily'?'daily/'+seed:mode==='ladder'?'ladder/'+selection(readLibrary(gameStore('driftglass').read()),options?.match,seed):mode,
+ scoreGroup:({mode,options,seed,openingProgress})=>mode==='daily'?'daily/'+seed:mode==='ladder'?'ladder/'+selection(readLibrary(openingProgress??gameStore('driftglass').read()),options?.match,openingProgress==null?seed:null):mode,
  create(api){
   let book=readLibrary(api.store?.read?.());const seed=api.seed??7,mode=modes.some(x=>x.id===api.mode)?api.mode:'ladder';
   const compact=api.compact??compactDuet(globalThis.innerWidth??1024,globalThis.innerHeight??768);
   const passes=mode==='local'&&compact&&!api.demo,local=mode==='local'&&!passes&&!api.demo;
-  const requested=selection(book,api.options?.match,seed),normal=api.demo?'check':passes?'pass':mode;
+  const opening=api.openingProgress==null?book:readLibrary(api.openingProgress);
+  const requested=selection(opening,api.options?.match,api.openingProgress==null?seed:null),normal=api.demo?'check':passes?'pass':mode;
   const config=configuration(normal,requested,seed),day=new Date().toISOString().slice(0,10);
-  const selected=DECKS.find(d=>d.id===api.options?.deck&&d.blocks<=book.blocks)||DECKS[0];
+  const selected=DECKS.find(d=>d.id===api.options?.deck&&d.blocks<=opening.blocks)||DECKS[0];
   let s=createDuel(config),opponent=makeDriver('rival',1,seed),auto=makeDriver('demo',0,seed);
   const sound=radioSound(api.audio,api.demo),held=[new Set(),new Set()];let paused=false,closed=false,chart=false,handoff=false,passFirst=null,
     pointer=false,autoplay=Boolean(api.demo),acc=0,lastControls='',lastHUD='',lastVoice=-8,counter=seed,finishIn=null;

@@ -34,7 +34,7 @@ export default {
  keys:[['Arrows / WASD','Walk or nudge'],['C / Space','Call down a row'],['Q / E / T','Look left / right / wait'],['1–5','Aim numbered dot'],['Z / H / R','Undo / two-stage hint / reset']],
  touch:[['Tap a cap or swipe','Walk one key or nudge'],['Numbered cap','Aim its laser dot'],['Pspsps / More','Call, wait, turn or undo']],
  modes,options,controls:standard,
- scoreGroup:({mode,options,seed})=>mode==='daily'?'daily/'+seed:'bedtime/'+chooseNap(readBook(gameStore('rookery').read()),seed,options?.nap).id,
+ scoreGroup:({mode,options,seed,openingProgress})=>mode==='daily'?'daily/'+seed:'bedtime/'+chooseNap(readBook(openingProgress??gameStore('rookery').read()),openingProgress==null?seed:null,options?.nap).id,
  progress(raw){const book=readBook(raw);return Object.keys(book.runs).length+'/45 naps  ·  '+starTotal(book)+'/135 stars  ·  Next: '+nextNap(book).name;},
  create(api){
   const seed=api.seed??7,mode=api.mode||'story',day=mode==='daily'?new Date().toISOString().slice(0,10):'';
@@ -49,7 +49,8 @@ export default {
    hintPhase=0;hintAction=-1;preview=-1;tools=b.anchors.length>0&&b.steps[s.agi].every(k=>k<0||['#',':'].includes(b.tiles[k]));
    catFace=1;herFace=1;drag=null;
   }
-  const target=api.demo?NAPS[15]:chooseNap(book,seed,api.options?.nap);
+  const opening=api.openingProgress==null?book:readBook(api.openingProgress);
+  const target=api.demo?NAPS[15]:chooseNap(opening,api.openingProgress==null?seed:null,api.options?.nap);
   if(mode==='daily'&&!api.demo){const result=dailyNap(seed);loadBoard(result.board,result.proof);}
   else loadBoard(target,PROOFS[target.id-1]);
   function hud(){

@@ -367,10 +367,11 @@ export default {
         fo.strike('post');
       }
     }
-    const eligible = depots.filter((d) => practice || open(book, d));
+    const opening = api.openingProgress ? ledger(api.openingProgress) : book;
+    const eligible = depots.filter((d) => practice || open(opening, d));
     const chosen =
       eligible.find((d) => d.id === Number(api.options?.depot)) ||
-      eligible.find((d) => !book.jobs[d.id]) ||
+      eligible.find((d) => !opening.jobs[d.id]) ||
       eligible[0];
     load(api.demo ? depots[28] : dated ? daily(seed) : chosen);
     if (dated) speak('daily');

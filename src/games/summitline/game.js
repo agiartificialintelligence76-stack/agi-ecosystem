@@ -83,7 +83,7 @@ export default {
     return p.stamps.length || p.longest ? 'Songbook ' + p.stamps.length + '/24 · longest echo ' + p.longest + (p.stamps.length ? ' · last stamp ' + REPERTOIRE[p.stamps.at(-1)].title : '') : '';
   },
   create(api) {
-    const p = book(api.store?.read()),
+    const p = book(api.openingProgress ?? api.store?.read()),
       next = REPERTOIRE.findIndex(piece => !p.stamps.includes(piece.id));
     const unfinished = next < 0 ? 0 : next;
     const start = api.options?.program === 'opening' ? 0 : api.options?.program === 'station' ? Math.floor(unfinished / 3) * 3 : unfinished;

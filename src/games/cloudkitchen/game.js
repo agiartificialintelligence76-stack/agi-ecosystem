@@ -1,112 +1,390 @@
-import { artwork, clamp, ellipse, label, line, rect, shape, sky } from '../kit/garden-art.js';
-
-const chef=artwork('/memes/previews/agi-cooking.webp');
-const face=artwork('/images/agi1-portrait-2d.webp');
-const recipes=[
- {name:'First message',tea:4,milk:4,pearls:2,star:0,ink:'#b87953',cream:'#f1d8ae',line:'soft launch. extra creamy.'},
- {name:'Sleepover',tea:3,milk:5,pearls:3,star:0,ink:'#926573',cream:'#f1d1d6',line:'it is a little pastel and so am i.'},
- {name:'Main character',tea:5,milk:3,pearls:2,star:1,ink:'#687951',cream:'#dceab5',line:'give me the little gold star.'},
- {name:'Last encore',tea:6,milk:2,pearls:3,star:1,ink:'#82584c',cream:'#ecca9f',line:'strong tea. i have lore to spill.'},
-];
-const lanes=[90,240,390];
-function drawGlass(ctx,x,baseline,w,h,tea,milk,r,counts,time){
- const y=baseline-h;
- ctx.save();ctx.translate(x,y);
- const glass=()=>{ctx.beginPath();ctx.moveTo(-w/2,0);ctx.lineTo(w/2,0);ctx.lineTo(w*.38,h);ctx.lineTo(-w*.38,h);ctx.closePath();};
- glass();ctx.fillStyle='#e5fff12b';ctx.fill();ctx.save();glass();ctx.clip();
- const fluid=(amount,color,offset=0)=>{
-  if(amount<.005)return;const top=h-h*.092*(amount+offset);
-  ctx.beginPath();ctx.moveTo(-w/2,h+2);
-  for(let i=0;i<=12;i++){const px=-w/2+w*i/12;ctx.lineTo(px,top+Math.sin(i*.5+time*3)*1.6);}
-  ctx.lineTo(w/2,h+2);ctx.closePath();ctx.fillStyle=color;ctx.fill();
- };
- fluid(milk,r.cream,tea);fluid(tea,r.ink);
- for(let i=0;i<counts.pearls;i++)ellipse(ctx,-w*.25+(i%5)*w*.12,h-8-Math.floor(i/5)*11,5.6,5.6,'#3c2940');
- for(let i=0;i<counts.star;i++)label(ctx,'★',w*.23-i*10,h-12,17,'#ffcb50','center');
- for(let i=0;i<counts.ice;i++)rect(ctx,2+i*8,h-22-i*8,12,12,3,'#d1ffffbf');
- ctx.restore();glass();ctx.strokeStyle='#e4f7da';ctx.lineWidth=3;ctx.stroke();line(ctx,[[-w*.38,8],[-w*.31,h*.77]],'#ffffff96',2);
- for(let i=1;i<=9;i++)line(ctx,[[w*.35,h-h*.092*i],[w*.44,h-h*.092*i]],'#fff8dbb3',1.4);
- ellipse(ctx,0,1,w*.5,4,'#d1efe480');
- if(h>110&&face?.naturalWidth){ctx.save();ctx.beginPath();ctx.arc(0,h*.50,21,0,Math.PI*2);ctx.clip();ctx.fillStyle='#ffdfaa';ctx.fillRect(-23,h*.5-23,46,46);ctx.drawImage(face,-20,h*.5-20,40,40);ctx.restore();}
- ctx.restore();
-}
-function ingredient(ctx,v){
- if(v.type==='pearl'){ellipse(ctx,v.x,v.y,9,9,'#3d293d');ellipse(ctx,v.x-3,v.y-3,2.5,2.5,'#b98e92');}
- if(v.type==='star')label(ctx,'★',v.x,v.y,25,'#ffcf53','center');
- if(v.type==='ice'){ctx.save();ctx.translate(v.x,v.y);ctx.rotate(.22);rect(ctx,-9,-9,18,18,4,'#bfe8ef');line(ctx,[[-6,4],[-6,-6],[4,-6]],'#fff5d8',2);ctx.restore();}
-}
-export function taste(tea,milk,caught,r){
- if(tea+milk<.25)return 0;
- const blend=Math.max(0,52-12*(Math.abs(tea-r.tea)+Math.abs(milk-r.milk)));
- const chew=Math.max(0,30-9*Math.abs(caught.pearls-r.pearls));
- const garnish=Math.max(0,18-12*Math.abs(caught.star-r.star)-6*caught.ice);
- return Math.round(blend+chew+garnish);
-}
+import { RECIPES, DAYS, BASES, GUESTS, dailyMenu } from './menu.js';
+import { open, act, step, drain, cancel, recipe, cupCount, sealPhase, ticketBy, STEP } from './counter.js';
+import { notebook, record } from './progress.js';
+import { keys as code } from './controls.js';
+import { barista, openingRush } from './barista.js';
+import { kitchenAudio } from './sound.js';
+import { paint, layout, ticketHit } from './render.js';
+import { voice } from './lines.js';
+const b = (id, label, key, extra = {}) => ({
+  id,
+  label,
+  key,
+  ...extra
+});
+const first = [b('tea', 'Hold tea', 'Q'), b('seal', 'Seal & serve', 'Space')];
 export default {
- title:'BOBA BREAK',tagline:'“the recipe is personal. so is my pearl-to-tea ratio.”',
- instructions:[['Open the taps','Hold tea or milk to add the number of measures on her receipt. Release a little early.'],['Catch the toppings','Hit Shake. Slide the cup under brown pearls and requested gold stars. Dodge the blue ice.'],['Cap the drink','Serve when the receipt is filled. Four drinks earn her verdict.']],
- keys:[['Hold A / D','Tea / milk'],['← / →','Shift cup'],['Space','Shake / serve']],touch:[['Hold tap','Pour'],['Slide or tap lane','Catch'],['Shake / cap','Finish']],
- create(api){
-  let course=0,t=0,phase='pour',tea=0,milk=0,flow=[0,0],held=new Set(),targetX=240,cupX=240,items=[],drop=0,dropNo=0,age=0,score=0,good=0,review=0,note='',touchValve=-1,auto=0,done=false,flash=0;
-  let caught={pearls:0,star:0,ice:0};
-  const order=[0,...(api.rng()<.5?[1,2]:[2,1]),3],offset=Math.floor(api.rng()*3);
-  const recipe=()=>recipes[order[Math.min(course,3)]];
-  function sync(){api.hud('Ticket',Math.min(course+1,4)+'/4','Tips',score);}
-  function serving(){
-   if(done||review)return;const r=recipe();
-   if(phase==='pour'){phase='catch';age=0;drop=0;dropNo=0;flow=[0,0];touchValve=-1;api.sound('drop');return;}
-   const n=taste(tea,milk,caught,r);score+=n;if(n>=84)good++;
-   note=n>=84?'“i would cross town for this.”':Math.abs(tea-r.tea)+Math.abs(milk-r.milk)>2?'“a little heavy on the pour, babe.”':caught.ice?'“cold! that was an ice cube.”':'“love the effort. count the toppings.”';
-   phase='review';review=1.5;api.sound(n>=84?'clear':'pop');api.haptic(14);sync();
-  }
-  function advance(){if(++course===4){done=true;api.end(score,[['House specials',good+' / 4'],['Drinks served',4]],good>=3?'“i’m keeping your name on the menu.”':'“same time tomorrow? i’ll bring the pearls.”');return;}
-   phase='pour';tea=0;milk=0;flow=[0,0];touchValve=-1;held.clear();cupX=240;targetX=240;items=[];caught={pearls:0,star:0,ice:0};age=0;sync();}
-  function spawn(){const pattern=['pearl','ice','pearl','star','pearl','ice','pearl','star'];const lane=(offset+dropNo*2+Math.floor(dropNo/3)+course)%3;
-   items.push({type:pattern[dropNo%8],x:lanes[lane],y:121,v:132+course*9});dropNo++;}
-  function setLane(dir){const near=lanes.reduce((best,x,i)=>Math.abs(x-targetX)<Math.abs(lanes[best]-targetX)?i:best,0);targetX=lanes[clamp(near+dir,0,2)];}
-  sync();
-  return {
-   cancelInput(){held.clear();touchValve=-1;},
-   key(type,code){if(type==='up'){held.delete(code);return;}if(done||review)return;held.add(code);
-    if(code==='Space'||code==='Enter')serving();if(phase==='catch'&&code==='ArrowLeft')setLane(-1);if(phase==='catch'&&code==='ArrowRight')setLane(1);},
-   pointer(type,x,y){if(type==='up'||type==='cancel'){touchValve=-1;return;}if(done||review)return;
-    if(type==='down'&&y>=408&&x>=316){serving();return;}
-    if(phase==='pour'&&type==='down'&&y>=408)touchValve=x<158?0:1;
-    if(phase==='catch'&&y>=110&&y<403)targetX=clamp(x,62,418);
-    if(phase==='catch'&&type==='down'&&y>=408&&x<316)setLane(x<158?-1:1);},
-   demo(dt){if(done||review)return;const r=recipe();
-    if(phase==='pour'){if(tea<r.tea-.35)touchValve=0;else if(milk<r.milk-.35)touchValve=1;else{touchValve=-1;auto+=dt;if(auto>.55){auto=0;serving();}}}
-    else{const next=items.find(v=>v.y<339);if(next){const want=next.type==='pearl'?caught.pearls<r.pearls:next.type==='star'?caught.star<r.star:false;targetX=want?next.x:lanes.find(x=>Math.abs(x-next.x)>150)||90;}
-      if(caught.pearls>=r.pearls&&caught.star>=r.star)serving();}},
-   update(dt){if(done)return;t+=dt;flash=Math.max(0,flash-dt);if(review>0){review=Math.max(0,review-dt);if(!review)advance();return;}age+=dt;
-    if(phase==='pour'){for(let j=0;j<2;j++){const pouring=touchValve===j||held.has(j?'KeyD':'KeyA');flow[j]+=(Number(pouring)*2.35-flow[j])*(1-Math.exp(-dt*(pouring?7:8)));
-      const added=Math.min(flow[j]*dt,Math.max(0,10-tea-milk));if(j)milk+=added;else tea+=added;}
-      if(age>=24)serving();return;}
-    cupX+=(targetX-cupX)*(1-Math.exp(-dt*15));drop-=dt;if(drop<=0){spawn();drop=.96-course*.055;}
-    for(const item of items){item.y+=item.v*dt;item.v+=18*dt;if(item.y>=322&&item.y<352&&!item.used&&Math.abs(item.x-cupX)<43){item.used=true;caught[item.type==='pearl'?'pearls':item.type==='star'?'star':'ice']++;flash=.28;api.sound(item.type==='ice'?'hit':'pop');}}
-    items=items.filter(v=>!v.used&&v.y<394);if(age>=13)serving();
-   },
-   draw(ctx){
-    const r=recipe();sky(ctx,'#3c756a','#153d3a');
-    for(let j=0;j<15;j++)rect(ctx,j*36,-1,18,31,0,j%2?'#ffd5ad':'#87b8a0');
-    rect(ctx,0,29,480,7,0,'#173d37');rect(ctx,12,43,456,62,10,'#f8e8c6');label(ctx,r.name,26,65,24,'#344d40','left','Georgia',900);
-    label(ctx,'AGI-1  /  '+String(course+1).padStart(2,'0'),452,62,13,'#736444','right','monospace');label(ctx,'Tea '+r.tea+'   Milk '+r.milk+'     ● '+r.pearls+' pearls    ★ '+r.star,26,90,16,'#514f40','left','monospace');
-    if(phase==='pour'){
-      rect(ctx,14,120,206,218,9,'#f1d6ac');if(chef?.naturalWidth){ctx.save();ctx.beginPath();ctx.roundRect(20,126,194,206,6);ctx.clip();ctx.drawImage(chef,75,0,595,680,20,126,194,206);ctx.restore();}
-      rect(ctx,22,304,190,27,3,'#345448ed');label(ctx,'AGI-1  /  TEA BAR',117,319,14,'#fff4cd','center','monospace');
-      for(let j=0;j<2;j++){const x=310+j*62;rect(ctx,x-15,120,30,31,5,j?r.cream:r.ink);rect(ctx,x-5,145,10,15,2,'#d7cfb4');if(flow[j]>.08)line(ctx,[[x,157],[x+Math.sin(t*9)*1.2,292]],j?r.cream:r.ink,2+flow[j]*1.5);}
-      drawGlass(ctx,341,335,118,153,tea,milk,r,caught,t);
-      label(ctx,'“'+r.line+'”',240,361,16,'#fff4cd','center','Georgia');
-      label(ctx,'TEA  '+tea.toFixed(1)+' / '+r.tea+'     MILK  '+milk.toFixed(1)+' / '+r.milk,240,389,17,'#ffdda5','center','monospace');
-    }else{
-      rect(ctx,16,118,448,246,12,'#23574f');for(let lane=0;lane<3;lane++){const x=lanes[lane];line(ctx,[[x,144],[x,355]],'#438576',2);rect(ctx,x-26,116,52,16,5,'#c0cbb0');ellipse(ctx,x,131,15,4,'#173e3a');}
-      for(const v of items)ingredient(ctx,v);
-      if(flash)ellipse(ctx,cupX,325,49,7,'#ffe4a08c');
-      drawGlass(ctx,cupX,373,100,50,tea,milk,r,caught,t);
-      label(ctx,phase==='review'?note:'●  '+caught.pearls+'/'+r.pearls+'      ★  '+caught.star+'/'+r.star+'      ICE  '+caught.ice,240,391,phase==='review'?16:18,'#fff0cb','center',phase==='review'?'Georgia':'monospace');
+  title: 'BOBA BREAK',
+  tagline: 'AGI-1 runs the tea taps. Make each guest’s drink while the next cup is already filling.',
+  modes: [{
+    id: 'week',
+    label: 'Counter Week'
+  }, {
+    id: 'daily',
+    label: 'Daily Menu'
+  }, {
+    id: 'endless',
+    label: 'Endless Rush'
+  }, {
+    id: 'bench',
+    label: 'Recipe Bench'
+  }],
+  options: [{
+    id: 'shift',
+    label: 'Week shift',
+    values: [{
+      id: 'latest',
+      label: 'Latest unlocked day'
+    }, ...DAYS.map((d, i) => ({
+      id: String(i),
+      label: i + 1 + ' · ' + d.name
+    }))]
+  }, {
+    id: 'drink',
+    label: 'Recipe Bench drink',
+    values: RECIPES.map(r => ({
+      id: String(r.id),
+      label: r.id + 1 + ' · ' + r.name
+    }))
+  }],
+  controls: first,
+  instructions: [['Read the ticket', 'Tea and milk are measured in marks. Hold their taps and release just before each target. The stream coasts after release.'], ['Run two stations', 'Switch cups while a held or latched tap fills the first. Later, batch two tickets with the same base. Oolong and berry kettles take time to steep.'], ['Finish the drink', 'Match pearl and star scoops, ice and shake count. Wait for the green sealer window, then press Seal & serve.'], ['Rescue a wrong cup', 'Choose a waiting ticket and relabel the active cup. The old recipe swaps to the other station if necessary. Three guests walking out closes Endless.']],
+  keys: [['Q / W, F', 'Hold tea / milk, switch cup'], ['A / S / I, B', 'Pearl, star jelly, ice, change tea base'], ['E, Z / C', 'Hold shaker, or alternate left and right'], ['Space, G / K', 'Seal, latch tea / batch both taps'], ['T / L, R, X', 'Next ticket / relabel, remake, file a shift after serving']],
+  touch: [['The taps', 'Hold and release tea or milk. Latch keeps the tea running when you switch cups.'], ['The counter', 'Tap a cup to select it. Open Finish for toppings, shake and the sealer.'], ['Orders', 'Tap a visible ticket or use Next ticket. Relabel gives your current cup that ticket.']],
+  progress(data) {
+    const n = notebook(data);
+    return n.day + 1 + ' / 8 shifts open · ' + (n.day + 1) * 3 + ' recipes · best clean streak ' + n.streak;
+  },
+  create(api) {
+    const seed = api.seed ?? Math.floor((api.rng?.() ?? .5) * 0xffffffff),
+      mode = api.mode || 'week',
+      book = notebook(api.store?.read?.()),
+      opening = api.openingProgress ? notebook(api.openingProgress) : book;
+    const desired = api.options?.shift,
+      day = api.demo ? 3 : mode === 'daily' ? dailyMenu(seed).day : mode === 'bench' ? Math.min(opening.day, Math.floor((Number(api.options?.drink) || 0) / 3)) : mode === 'week' && desired != null && desired !== 'latest' ? Math.min(opening.day, Math.max(0, Number(desired) || 0)) : opening.day;
+    const bench = Math.max(0, Math.min((opening.day + 1) * 3 - 1, Number(api.options?.drink) || 0)),
+      audio = kitchenAudio(api.audio),
+      pilot = api.demo ? openingRush(seed) : barista('demo', seed);
+    let s = open(day, mode, seed, bench, api.demo, opening.guests),
+      bookIndex = bench;
+    let panel = 'mix',
+      paused = false,
+      ended = false,
+      mark = 0,
+      clock = 0,
+      acc = 0,
+      drag = null,
+      seal = .0,
+      note = '',
+      lastDock = '',
+      demoPlay = !!api.demo;
+    const held = new Set(),
+      say = id => {
+        note = voice[id] || id;
+        api.say?.(note);
+      };
+    function current() {
+      return s.cups[s.active];
     }
-    for(let j=0;j<3;j++){const x=10+j*156;rect(ctx,x,412,147,55,12,j===2?'#f4d79e':j===0?'#985f4b':'#e9d5ad');label(ctx,phase==='pour'?['HOLD TEA','HOLD MILK','SHAKE →'][j]:['←  LEFT','RIGHT  →','CAP  ✓'][j],x+74,440,18,j===0?'#fff4d6':'#344a40','center','monospace',900);}
-   },
-  };
- },
+    function teaching() {
+      return s.day === 0 && s.served === 0 && recipe(s)?.id === 0 && (mode === 'week' || mode === 'bench');
+    }
+    function dock() {
+      let items = [];
+      const r = recipe(s),
+        c = current(),
+        canSwitch = cupCount(s) > 1,
+        swap = b('switch', 'Cup ' + (s.active ? 'A' : 'B'), 'F'),
+        orders = b('orders', 'Tickets', 'T'),
+        finish = b('finish', 'Finish cup', '');
+      if (panel === 'receipt') {
+        items = [b('mix', 'Back to taps'), b('orders', 'Tickets'), b('file', 'File shift', 'X')];
+      } else if (panel === 'book') {
+        items = [b('prevRecipe', '‹ Recipe'), b('nextRecipe', 'Recipe ›'), b('orders', 'Tickets')];
+        if (mode === 'bench') items.push(b('practice', 'Practice drink'));
+      } else if (panel === 'orders') {
+        items = [b('ticket', 'Next ticket', 'T'), b('label', 'Relabel cup', 'L'), b('remake', 'Remake cup', 'R'), b('book', 'Recipe book'), b('mix', 'Back to taps')];
+        if (s.receipt) items.push(b('receipt', 'Last receipt'));
+        if (canSwitch) items.push(swap);
+        if (s.gear.batch) items.push(b('batch', 'Pair tea taps', 'K'));
+        if (s.served) items.push(b('file', 'File shift', 'X'));
+      } else if (teaching()) {
+        items = [b('tea', 'Hold tea', 'Q'), b('seal', 'Seal & serve', 'Space'), b('remake', 'Remake', 'R'), b('orders', 'Tickets', 'T')];
+      } else if (panel === 'mix') {
+        items = [b('tea', 'Hold tea', 'Q'), b('milk', 'Hold milk', 'W'), finish];
+        if (s.gear.bases > 1) items.push(b('leaf', BASES[c.base], 'B'));
+        if (canSwitch) items.push(b('latch', c.latch ? 'Stop latch' : 'Latch tea', 'G', {
+          pressed: c.latch
+        }), swap);
+        items.push(orders);
+      } else {
+        items = [b('pearl', 'Pearls ' + c.pearl, 'A')];
+        if (s.gear.star) items.push(b('star', 'Stars ' + c.star, 'S'));
+        if (s.gear.ice) items.push(b('ice', c.ice ? 'Iced' : 'Add ice', 'I', {
+          pressed: !!c.ice
+        }));
+        if (s.gear.shake) items.push(b('shaker', 'Hold shake ' + c.shake, 'E'));
+        items.push(b('seal', 'Seal & serve', 'Space'), b('mix', 'Back to taps'));
+        if (canSwitch) items.push(swap);
+      }
+      const k = JSON.stringify(items);
+      if (k !== lastDock) {
+        lastDock = k;
+        api.controls?.(items);
+      }
+    }
+    function hud() {
+      api.hud?.('Score', s.score, mode === 'endless' ? 'Walkouts' : mode === 'bench' ? 'Recipe' : 'Shift', mode === 'endless' ? s.lost + ' / 3' : mode === 'bench' ? s.bench + 1 + ' / 24' : Math.floor(Math.max(0, s.dayInfo.length - s.time) / 60) + ':' + String(Math.floor(Math.max(0, s.dayInfo.length - s.time) % 60)).padStart(2, '0'));
+    }
+    function finish(real) {
+      if (ended) return;
+      ended = true;
+      cancel(s);
+      audio.stop();
+      const stars = record(api.store, s, real);
+      const last = s.receipt,
+        quality = last ? Math.round(last.quality * 100) + '%' : '—';
+      api.end?.(s.score, [['Drinks served', s.served], ['Clean cups', s.perfect], ['Guests lost', s.lost], ['Best streak', s.bestStreak], ['Last drink', quality], ['Last cup points', last?.score || 0], ['Shift stars', '★'.repeat(stars) || '—']], voice[mode === 'daily' ? 'Daily finished' : real ? 'Close' : 'Personal best']);
+    }
+    function events() {
+      for (const e of drain(s)) {
+        switch (e.type) {
+          case 'guest':
+            audio.ring('guest');
+            audio.ring('printer');
+            if (e.id === 1) say('First customer');else if (e.regular) say('Regular returns');else if (s.queue.length >= 4) say('Long queue');else if (s.queue.length === 2) say('Second cup');
+            break;
+          case 'valve':
+            if (s.served === 0) say('First hold');
+            break;
+          case 'assist':
+            say('Seal ready');
+            break;
+          case 'pearl':
+            audio.ring('pearl');
+            say(e.count > (recipe(s)?.pearl ?? 0) ? 'Extra pearl' : e.count === recipe(s)?.pearl ? 'Correct count' : 'First pearl');
+            break;
+          case 'star':
+            audio.ring('star');
+            say('Correct count');
+            break;
+          case 'ice':
+            audio.ring('ice');
+            if (e.count !== recipe(s)?.ice) say('Wrong ice');
+            break;
+          case 'shake':
+            audio.ring('shake', current().side);
+            say(e.count > (recipe(s)?.shake ?? 0) ? 'Overshake' : e.count === 1 ? 'First shaker' : e.count > 3 ? 'Frothy shake' : 'Gentle shake');
+            break;
+          case 'latch':
+          case 'batch':
+            audio.ring('latch');
+            say(e.type === 'batch' ? 'Two compatible orders' : 'Second cup');
+            break;
+          case 'steep':
+          case 'kettle':
+            audio.ring('kettle');
+            say(e.type === 'steep' ? 'The kettle needs three seconds. Start the other cup.' : 'Fresh tea at the tap.');
+            break;
+          case 'served':
+            audio.ring('seal');
+            seal = .5;
+            mark = 1;
+            api.effect?.(e.perfect ? 'perfect' : 'serve');
+            api.haptic?.(e.perfect ? 25 : 10);
+            say(e.perfect ? 'Clean seal' : e.miss === 'tea' ? 'Too much tea' : e.miss === 'milk' ? 'Too much milk' : 'Underfilled');
+            panel = 'mix';
+            break;
+          case 'earlySeal':
+            audio.ring('miss');
+            say('Seal too early');
+            break;
+          case 'reject':
+            audio.ring('miss');
+            say('Check ' + e.miss + ' on this ticket. You can relabel or remake the cup.');
+            break;
+          case 'relabel':
+            say('Rescued order');
+            audio.ring('printer');
+            break;
+          case 'mismatch':
+            say('These taps need the same tea base on both tickets.');
+            break;
+          case 'low':
+            say('Patience low');
+            break;
+          case 'lost':
+            say('Guest leaves');
+            audio.ring('miss');
+            break;
+          case 'streak':
+            audio.ring('streak');
+            say('Clean streak');
+            api.effect?.('streak');
+            break;
+          case 'wave':
+            say(e.wave === 1 ? 'First rush' : e.wave === 3 ? 'Last ticket' : 'Rush cleared');
+            audio.ring('guest');
+            break;
+          case 'switch':
+            say('Second cup');
+            break;
+          case 'sameLabel':
+            say('That ticket already belongs to this cup.');
+            break;
+          case 'empty':
+            say('Underfilled');
+            break;
+          case 'close':
+            finish(true);
+            break;
+        }
+      }
+      if (!ended) {
+        hud();
+        dock();
+      }
+    }
+    function send(id, phase) {
+      if (phase === 'up') {
+        act(s, id, 'up');
+        return;
+      }
+      if (ended || paused || phase !== 'down') return;
+      if (id === 'file' && s.served) {
+        finish(false);
+        return;
+      }
+      if (['orders', 'mix', 'finish', 'book', 'receipt'].includes(id)) {
+        panel = id;
+        if (id === 'book') bookIndex = recipe(s)?.id ?? 0;
+        if (id === 'receipt' && s.receipt) say('Last drink ' + s.receipt.score + ' points. Weakest mark: ' + s.receipt.miss + '.');
+        dock();
+        return;
+      }
+      const unlocked = (Math.max(book.day, mode === 'daily' || mode === 'endless' ? s.day : 0) + 1) * 3;
+      if (panel === 'book' && (id === 'prevRecipe' || id === 'nextRecipe')) {
+        bookIndex = (bookIndex + (id === 'prevRecipe' ? unlocked - 1 : 1)) % unlocked;
+        const r = RECIPES[bookIndex];
+        say(r.name + '. ' + BASES[r.base] + ', ' + r.tea + ' tea marks and ' + r.milk + ' milk marks.');
+        dock();
+        return;
+      }
+      if (panel === 'book' && id === 'practice' && mode === 'bench') {
+        s = open(Math.floor(bookIndex / 3), 'bench', seed, bookIndex, false, book.guests);
+        panel = 'mix';
+        events();
+        return;
+      }
+      act(s, id);
+      events();
+    }
+    function update(dt) {
+      if (ended || paused) return;
+      clock += dt;
+      seal = Math.max(0, seal - dt);
+      mark = Math.max(0, mark - dt);
+      acc += Math.min(.1, dt);
+      while (acc + 1e-9 >= STEP && !ended) {
+        acc -= STEP;
+        if (demoPlay) pilot.run(s, STEP);
+        step(s);
+        events();
+      }
+      if (!ended) audio.sync(s);
+    }
+    say('Open');
+    events();
+    if (mode === 'bench' && Number(api.options?.drink) > bench) say('This page is still locked. The bench has ' + RECIPES[bench].name + ' ready.');
+    return {
+      action: send,
+      key(edge, k) {
+        if (!code[k]) return;
+        if (edge === 'up') {
+          held.delete(k);
+          send(code[k], edge);
+          return;
+        }
+        if (held.has(k)) return;
+        held.add(k);
+        send(code[k], edge);
+      },
+      pointer(kind, x, y, w, h) {
+        if (ended || paused) return;
+        if (kind === 'cancel') {
+          drag = null;
+          return;
+        }
+        if (kind === 'down') {
+          drag = {
+            x,
+            y
+          };
+          return;
+        }
+        if (!drag) return;
+        if (Math.hypot(x - drag.x, y - drag.y) > 14) {
+          drag = null;
+          return;
+        }
+        if (kind !== 'up') return;
+        drag = null;
+        const g = layout(s, w, h),
+          id = ticketHit(s, g, x, y);
+        if (id) {
+          s.focus = id;
+          panel = 'orders';
+          say('Ticket for ' + GUESTS[ticketBy(s, id).guest] + '. Relabel to assign this cup.');
+          dock();
+          return;
+        }
+        const i = g.xs.findIndex(xx => Math.abs(x - xx) < g.unit * .49 && y >= g.base - g.unit * 1.25 && y <= g.base + 14);
+        if (i >= 0 && i !== s.active) send('switch', 'down');
+      },
+      update,
+      demo() {
+        demoPlay = true;
+      },
+      draw(c, w, h) {
+        paint(c, w, h, s, {
+          time: clock,
+          seal,
+          mark,
+          panel,
+          bookIndex,
+          reduced: api.reducedMotion,
+          note
+        });
+      },
+      pause() {
+        paused = true;
+        cancel(s);
+        held.clear();
+        drag = null;
+        audio.stop();
+      },
+      resume() {
+        paused = false;
+      },
+      cancelInput() {
+        held.clear();
+        drag = null;
+        cancel(s);
+      },
+      dispose() {
+        ended = true;
+        cancel(s);
+        audio.stop();
+      },
+      inspect() {
+        return {
+          state: s,
+          panel,
+          ended,
+          paused,
+          note
+        };
+      }
+    };
+  }
 };

@@ -93,7 +93,7 @@ export default {
       queueShot = null;
     let index = api.demo ? 21 : clamp(Number(api.options?.card) || 0, 0, 35),
       racks = 0,
-      ladder = Math.min(17, save.ladder || 0),
+      ladder = Math.min(17, (api.openingProgress ? api.openingProgress.moonSalon?.ladder : save.ladder) || 0),
       innings = 5,
       chalk = 0,
       won = 0,

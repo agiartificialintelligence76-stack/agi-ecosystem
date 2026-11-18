@@ -254,3 +254,135 @@ expert Noir · time P10/50/90 211/312/491 s · median cases/turns 10/120 · scor
 ```
 
 The clean Node 24 UTC release passed 2,401 tests with six existing skips. All five titles reached nonzero scored endings on both a phone and a desktop and replayed. All 25 viewport checks passed the production CSP and the touch-control size checks. Cassette Bandit’s separate Radio Check was also won 18–2 by touch. The final championship rival changed possession 14 times in the median steady match, above the seven-change design target.
+
+The five action games went live at revision 701f943. On the hosted preview, a capsule captured its flag in one stroke and the opening archive dossier reached its seven-turn par. Each live game loaded the same checked entry file as the clean build and returned its poster, video and share card.
+
+## Sims and stories
+
+These five games use a working lens, a radio producer’s desk, a decal press, a two-cup tea counter and actual railway departures. All cases, timetables and printed briefs are local. Timings are from the individual balance tools. Short practice results and experts skipping or recognizing familiar material can be faster than a first visit.
+
+| Game | JS bytes before → after (files) | Content and modes | Modeled times, beginner / steady / expert | Lines | Dedicated tests | Screens |
+|---|---:|---|---|---:|---:|---|
+| CANDID CAMERA | 16,098 → 68,230 (14) | 6 shots → 8 location rolls, 32 commissions and 8 optional candids. Campaign, Daily Photo Walk, Darkroom and print album. | 111 / 180 / 38 s per modeled roll. The expert anticipates the pose. Eight steady rolls total about 24 min. | 36 | 20 | [Phone](remaster-evidence/mothlight-phone.jpg) · [Desktop](remaster-evidence/mothlight-desktop.jpg) |
+| OFF THE RECORD | 14,176 → 113,684 (18) | 4 cases drawn from 6 → 18 connected broadcasts over 7 nights, 37 corrected claims and 55 exhibits. Story Week, Rehearsal and Daily Rebroadcast. | 64.3 / 43.9 / 35.0 min per story week. | 41 | 13 | [Phone](remaster-evidence/lanternlake-phone.jpg) · [Desktop](remaster-evidence/lanternlake-desktop.jpg) |
+| STICKER CLUB | 10,005 → 78,259 (12) | 4 traced covers → 36 editorial briefs, 15 die cuts and 6 materials. Campaign, Rush, Free Studio, Daily and the local print drawer. | 117 / 203 / 489 s in Rush. | 39 | 19 | [Phone](remaster-evidence/nightpress-phone.jpg) · [Desktop](remaster-evidence/nightpress-desktop.jpg) |
+| BOBA BREAK | 9,959 → 67,310 (10) | 4 drinks → 24 distinct recipes across 8 three-wave shifts. Counter Week, Daily Menu, Endless Rush and Recipe Bench. | 162 / 259 / 530 s touch. Keyboard medians 166 / 275 / 568 s. | 34 | 14 | [Phone](remaster-evidence/cloudkitchen-phone.jpg) · [Desktop](remaster-evidence/cloudkitchen-desktop.jpg) |
+| WINDOW SEAT | 11,256 → 57,192 (11) | 3 rides → 15 scheduled nights across 5 cities, a weekly featured city, Daily Excursion and Window Ride; ticket journal and window prints. | 166 / 134 / 110 s per night. First tour modeled at 45.7 / 34.2 / 29.3 min. | 34 | 17 | [Phone](remaster-evidence/pocketgrove-phone.jpg) · [Desktop](remaster-evidence/pocketgrove-desktop.jpg) |
+
+| Game | Previous named shared effects | Sound after | Measured peak |
+|---|---:|---|---:|
+| CANDID CAMERA | 1 | 14 camera and darkroom cues, including focus, leaf shutter, negative selection and development. | −15.01 dBFS |
+| OFF THE RECORD | 6 | 24 radio, field-recording and studio cues, accompanied by visual evidence. | −18.91 dBFS |
+| STICKER CLUB | 2 | 16 paper, adhesive, peel, placement, ink and print cues. | −14.24 dBFS |
+| BOBA BREAK | 1 | Two independently audible liquid streams, ice, pearls, shaker, latch, sealing thunk and streak chord. | -14.79 dBFS |
+| WINDOW SEAT | 4 | 18 station, door, rail, ticket, window and arrival cues with city-dependent bell tuning. | −14.71 dBFS |
+
+### Balance tool output
+
+#### CANDID CAMERA
+
+```text
+novice · roll 102/111/114s P10/M/P90 · photo score 65/70/74 · 1% keepers · first rolls 48/48 · points lost framing 5.7, focus 2, gesture 17.7, request 5.2
+steady · roll 165/180/186s P10/M/P90 · photo score 84/90/92 · 93% keepers · first rolls 48/48 · points lost framing 2.4, focus 0.1, gesture 6.9, request 2.1
+expert · roll 35/38/40s P10/M/P90 · photo score 87/97/98 · 95% keepers · first rolls 48/48 · points lost framing 2.9, focus 0.3, gesture 0.5, request 1.4
+```
+
+#### OFF THE RECORD
+
+```text
+48 seeded exhibit and testimony orderings per 18-case week, per policy. Times model words actually read plus per-decision time.
+
+New listener: 3.57 min/case, 64.3 min/week, pilot unaided 97.9%, clean two-edit 32.6%, assisted 1.2%, 1.31 lost lights/case.
+Weekly score P10 / median / P90: 12830 / 13340 / 13760
+Case | edits | seconds | lost lights | rehearsal %
+01   | 2     | 192      | 1.17        | 2.1
+02   | 2     | 202      | 1.35        | 2.1
+03   | 2     | 184      | 1.35        | 0.0
+04   | 2     | 189      | 1.27        | 0.0
+05   | 2     | 198      | 1.15        | 0.0
+06   | 2     | 192      | 1.02        | 2.1
+07   | 2     | 246      | 1.44        | 0.0
+08   | 2     | 201      | 1.56        | 4.2
+09   | 2     | 187      | 1.27        | 2.1
+10   | 2     | 216      | 1.35        | 0.0
+11   | 2     | 208      | 1.31        | 2.1
+12   | 2     | 214      | 1.29        | 4.2
+13   | 2     | 199      | 1.29        | 0.0
+14   | 2     | 205      | 1.33        | 0.0
+15   | 2     | 214      | 1.52        | 0.0
+16   | 2     | 211      | 1.06        | 0.0
+17   | 2     | 215      | 1.33        | 0.0
+18   | 3     | 389      | 1.52        | 2.1
+
+Steady producer: 2.44 min/case, 43.9 min/week, pilot unaided 100.0%, clean two-edit 73.5%, assisted 0.0%, 0.30 lost lights/case.
+Weekly score P10 / median / P90: 14190 / 14490 / 14750
+Case | edits | seconds | lost lights | rehearsal %
+01   | 2     | 127      | 0.17        | 0.0
+02   | 2     | 134      | 0.33        | 0.0
+03   | 2     | 121      | 0.33        | 0.0
+04   | 2     | 129      | 0.31        | 0.0
+05   | 2     | 134      | 0.31        | 0.0
+06   | 2     | 132      | 0.21        | 0.0
+07   | 2     | 171      | 0.33        | 0.0
+08   | 2     | 130      | 0.19        | 0.0
+09   | 2     | 126      | 0.29        | 0.0
+10   | 2     | 150      | 0.25        | 0.0
+11   | 2     | 142      | 0.27        | 0.0
+12   | 2     | 145      | 0.29        | 0.0
+13   | 2     | 139      | 0.48        | 0.0
+14   | 2     | 138      | 0.33        | 0.0
+15   | 2     | 145      | 0.29        | 0.0
+16   | 2     | 148      | 0.27        | 0.0
+17   | 2     | 148      | 0.25        | 0.0
+18   | 3     | 274      | 0.50        | 0.0
+
+Veteran editor: 1.95 min/case, 35.0 min/week, pilot unaided 100.0%, clean two-edit 96.1%, assisted 0.0%, 0.04 lost lights/case.
+Weekly score P10 / median / P90: 14880 / 15010 / 15140
+Case | edits | seconds | lost lights | rehearsal %
+01   | 2     | 104      | 0.02        | 0.0
+02   | 2     | 107      | 0.10        | 0.0
+03   | 2     | 97      | 0.02        | 0.0
+04   | 2     | 103      | 0.08        | 0.0
+05   | 2     | 107      | 0.04        | 0.0
+06   | 2     | 106      | 0.02        | 0.0
+07   | 2     | 137      | 0.06        | 0.0
+08   | 2     | 104      | 0.00        | 0.0
+09   | 2     | 103      | 0.00        | 0.0
+10   | 2     | 120      | 0.08        | 0.0
+11   | 2     | 114      | 0.02        | 0.0
+12   | 2     | 117      | 0.04        | 0.0
+13   | 2     | 109      | 0.08        | 0.0
+14   | 2     | 110      | 0.04        | 0.0
+15   | 2     | 115      | 0.04        | 0.0
+16   | 2     | 119      | 0.00        | 0.0
+17   | 2     | 119      | 0.02        | 0.0
+18   | 3     | 213      | 0.08        | 0.0
+```
+
+#### STICKER CLUB
+
+```text
+exploratory | Rush p10/50/90 50/117/174s, scores 0/660/1020 | vols 1–6 med actions 2/5/7/17/31/19; median sec 36/67/110/176/372/220; losses 20/17/8/3/0/0; principal head/head/apart/window/gutter/film | starter books 288/288
+steady | Rush p10/50/90 140/203/299s, scores 996/1352/2322 | vols 1–6 med actions 2/3/2/3/6/5; median sec 32/37/34/44/78/68; losses 3/1/9/22/7/6; principal border/border/apart/window/gutter/film | starter books 288/288
+expert | Rush p10/50/90 266/489/1276s, scores 2396/4628/12268 | vols 1–6 med actions 2/2/2/3/2/3; median sec 26/29/26/30/30/33; losses 0/0/0/3/0/40; principal none/none/apart/eyeWindow/coverage/film | starter books 288/288
+```
+
+#### BOBA BREAK
+
+```text
+newbie touch · survival p10/50/90 144.5/162.4/171.6s · score p25/50/75 2562/3168/3357 · served 16 · abandoned 3 · clean 0 · busiest valves · opening shifts completed 64/64
+newbie keyboard · survival p10/50/90 139.1/166.1/172.1s · score p25/50/75 2719/3315/3505 · served 17 · abandoned 3 · clean 0 · busiest valves · opening shifts completed 64/64
+steady touch · survival p10/50/90 238.0/258.7/289.0s · score p25/50/75 7532/7978/8478 · served 40 · abandoned 3 · clean 2 · busiest valves · opening shifts completed 64/64
+steady keyboard · survival p10/50/90 252.7/274.7/313.2s · score p25/50/75 8179/8988/10459 · served 44 · abandoned 3 · clean 3 · busiest valves · opening shifts completed 64/64
+expert touch · survival p10/50/90 478.2/529.7/573.6s · score p25/50/75 29512/30727/33155 · served 143 · abandoned 3 · clean 52 · busiest valves · opening shifts completed 64/64
+expert keyboard · survival p10/50/90 535.2/568.0/603.0s · score p25/50/75 34061/36011/37510 · served 166 · abandoned 3 · clean 68 · busiest valves · opening shifts completed 64/64
+```
+
+#### WINDOW SEAT
+
+```text
+Five cities, 15 authored working nights. Thirty-two service days per night and traveler.
+newbie · night seconds P10/50/90 119/166/269 · score P10/50/90 914/1076/1160 · median full journal 45.7 min · returned with wishes 447/480 · detours 504 · missing return 33
+steady · night seconds P10/50/90 92/134/189 · score P10/50/90 994/1124/1232 · median full journal 34.2 min · returned with wishes 479/480 · detours 114 · missing return 1
+expert · night seconds P10/50/90 86/110/158 · score P10/50/90 1100/1196/1268 · median full journal 29.3 min · returned with wishes 480/480 · detours 15 · missing return 0
+```
