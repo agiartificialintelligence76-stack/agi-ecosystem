@@ -18,6 +18,7 @@ const talkPage = () => {
     const q = query ? `?${query}` : '';
     if (/^\/talk\/?$/.test(path)) req.url = `/${q}`;
     else if (/^\/pfp\/?$/.test(path)) req.url = `/pfp.html${q}`;
+    else if (/^\/ainews\/?$/.test(path)) req.url = `/ainews.html${q}`;
     else if (/^\/games\/rideemagi\/?$/.test(path)) req.url = `/rideemagi.html${q}`;
     else if (/^\/games\/trenchingsimulator\/?$/.test(path)) req.url = `/trenchingsimulator.html${q}`;
     else if (/^\/games\/vladrunner2049\/?$/.test(path)) req.url = `/vladrunner2049.html${q}`;
@@ -76,8 +77,30 @@ const clankPreview = () => {
     configurePreviewServer(server) { server.middlewares.use(serve); } };
 };
 
+const ainewsPreview = () => {
+  const serve = async (req, res, next) => {
+    const url = new URL(req.url || '/', 'http://localhost');
+    const isRss = /^\/ainews\/rss\/?$/.test(url.pathname);
+    const isApi = url.pathname === '/api/health' && url.searchParams.has('ainews');
+    if (!isRss && !isApi) return next();
+    if (isRss) url.searchParams.set('format', 'rss');
+    try {
+      const { handleAiNewsRequest } = await import('./server/ainews.js');
+      const result = await handleAiNewsRequest(new Request(url, { method: req.method }));
+      res.writeHead(result.status, Object.fromEntries(result.headers));
+      res.end(Buffer.from(await result.arrayBuffer()));
+    } catch {
+      res.writeHead(503, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
+      res.end('{"error":"unavailable"}');
+    }
+  };
+  return { name: 'ainews-public-preview',
+    configureServer(server) { server.middlewares.use(serve); },
+    configurePreviewServer(server) { server.middlewares.use(serve); } };
+};
+
 export default defineConfig({
-  plugins: [talkPage(), ownerContent(), clankPreview()],
+  plugins: [talkPage(), ownerContent(), clankPreview(), ainewsPreview()],
   // Preserve the splat decoder's relative worker URLs during local development.
   optimizeDeps: { exclude: ['@viggle/splat-engine'] },
   build: {
@@ -99,7 +122,7 @@ export default defineConfig({
       input: { main: 'index.html', diary: 'diary.html', launch: 'launch.html', live: 'live.html', cloakmesh: 'cloakmesh.html', studio: 'studio.html',
         roadmap: 'roadmap.html', stake: 'stake.html', games: 'games.html', giveaway: 'giveaway.html', rideemagi: 'rideemagi.html',
         trenchingsimulator: 'trenchingsimulator.html', vladrunner2049: 'vladrunner2049.html', skybreak: 'skybreak.html',
-        memes: 'memes.html', pfp: 'pfp.html', vote: 'vote.html', owner: 'owner-command.html', content: 'content.html',
+        memes: 'memes.html', ainews: 'ainews.html', pfp: 'pfp.html', vote: 'vote.html', owner: 'owner-command.html', content: 'content.html',
         // (2026-10-29) her Discord holder roles' page (agi1.app/discord/verify)
         verify: 'verify.html',
         // (2026-11-08) the arcade kit's ten games (agi1.app/games/<id>)

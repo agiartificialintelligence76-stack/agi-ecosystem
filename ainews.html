@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en" data-page="ainews">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AI News World · Live Global AI Models, Open Weights &amp; Tools · AGI</title>
+    <meta name="description" content="A living world of global AI news: Qwen in China, Kimi K3.1 Pro open weights &amp; GitHub repos, Anthropic IPO, Sam Altman &amp; AGI, Meta Muse updates, and @theAIsearch's latest AI tools — updated live with instant alerts." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#fafaf8" />
+    <!-- Link previews (X, Telegram, Discord). __SITE__ becomes the production origin at build time (scripts/share-pages.js) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="AGI" />
+    <meta property="og:title" content="AI News World · Live Global AI Models, Repos &amp; Tools · AGI" />
+    <meta property="og:description" content="Explore global AI news on an interactive world globe: Qwen, Kimi K3.1 Pro open weights, Anthropic IPO, Sam Altman &amp; AGI, Meta Muse, plus @theAIsearch's latest AI tools and GitHub drops." />
+    <meta property="og:image" content="__SITE__/cards/ainews.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="AI News World on agi1.app/ainews — live global AI dispatches, open-weight repos, and @theAIsearch tools." />
+    <meta property="og:url" content="__SITE__/ainews" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="canonical" href="__SITE__/ainews" />
+    <link rel="alternate" type="application/rss+xml" title="AGI AI News World RSS" href="/ainews/rss" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <script src="/theme.js?v=8"></script>
+    <link rel="preload" href="/fonts/Geist-Variable.woff2" as="font" type="font/woff2" crossorigin />
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+
+    <header class="topbar">
+      <div class="wrap topbar-in">
+        <a class="wordmark" href="/">AGI</a>
+        <!-- On phones this list becomes the drop-down menu (src/menu.js) -->
+        <nav class="nav" id="site-nav" aria-label="Sections">
+          <a href="/#evaluations">Evaluations</a>
+          <a href="/#model-card">Model card</a>
+          <a href="/#playground">Playground</a>
+          <a href="/#checker">ClankChecker</a>
+          <a href="/diary">Diary</a>
+          <a href="/memes">Memes</a>
+          <a href="/pfp">PFP</a>
+          <a href="/ainews" aria-current="page">AI News</a>
+          <a class="nav-phone" href="/live">Live</a>
+          <a class="nav-phone" href="/studio">AGI Studio</a>
+          <a class="nav-phone" href="/games">Games</a>
+          <a class="nav-phone" href="/roadmap">Roadmap</a>
+          <a class="nav-phone" href="/#safety">Safety note</a>
+          <a class="nav-x" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">AGI on X ↗</a>
+          <a class="nav-tg" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">AGI on Telegram ↗</a>
+          <button class="nav-pop" type="button" data-skin-toggle aria-pressed="true">Pop mode <span class="nav-pop-state mono" aria-hidden="true">On</span></button>
+        </nav>
+        <div class="topbar-actions">
+          <a class="icon-btn x-btn" href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on X (@agi1dotapp)" title="@agi1dotapp on X"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg></a>
+          <a class="icon-btn tg-btn" href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer" aria-label="AGI on Telegram (@agi2dotapp)" title="@agi2dotapp: the $AGI community group on Telegram"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M21.4 2.6 2.8 10.2l7.7 3.3 3.3 7.7 7.6-18.6ZM21.4 2.6 10.5 13.5" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" stroke-linecap="round"/></svg></a>
+          <button class="icon-btn theme-toggle" type="button" data-theme-toggle aria-label="Switch theme">
+            <svg class="i-moon" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5Z" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></svg>
+            <svg class="i-sun" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="4" stroke="currentColor" stroke-width="1.7"/><path d="M12 2.5v2.2M12 19.3v2.2M4.6 4.6l1.6 1.6M17.8 17.8l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.6 19.4l1.6-1.6M17.8 6.2l1.6-1.6" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+          <button class="icon-btn skin-toggle" type="button" data-skin-toggle aria-pressed="true" aria-label="Pop mode" title="Pop mode: the bold AGI look">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 3.5c.6 4.2 2.3 6.4 6.5 7.3-4.2.9-5.9 3.1-6.5 7.7-.6-4.6-2.3-6.8-6.5-7.7 4.2-.9 5.9-3.1 6.5-7.3Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M18.6 3.8v3M17.1 5.3h3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          </button>
+          <a class="btn btn-primary btn-sm" href="/#playground">Try AGI-1</a>
+          <button class="icon-btn menu-btn" type="button" data-menu aria-expanded="false" aria-controls="site-nav" aria-label="Menu">
+            <svg class="i-menu" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 8h16M4 16h16" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+            <svg class="i-close" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main id="main">
+      <!-- Live global dispatch ticker -->
+      <div class="an-ticker" aria-label="Breaking global AI signals">
+        <div class="an-ticker-badge"><span class="an-pulse" aria-hidden="true"></span> LIVE WIRE</div>
+        <div class="an-ticker-viewport">
+          <div class="an-ticker-track" data-an-ticker></div>
+        </div>
+      </div>
+
+      <!-- Hero: Living Global AI World + Interactive 3D Globe -->
+      <section class="an-hero" aria-labelledby="an-title">
+        <div class="wrap an-hero-in">
+          <div class="an-hero-copy">
+            <p class="an-kicker">
+              <span class="an-live-dot" aria-hidden="true"></span>
+              <span data-an-live-label>Live Global AI World · Connecting feeds…</span>
+            </p>
+            <h1 class="an-title" id="an-title">AI News<br /><span>World.</span></h1>
+            <p class="an-sub">Every frontier model, open-weight GitHub drop, IPO shockwave &amp; <b>@theAIsearch</b> tool — mapped live across the planet.</p>
+
+            <div class="an-hero-actions">
+              <button class="an-btn an-btn-alert" type="button" data-an-open-alerts>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 0 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4Zm-5 0a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-an-alert-cta>Get Live Alerts</span>
+                <span class="an-alert-pill" data-an-unseen hidden>0</span>
+              </button>
+              <button class="an-btn an-btn-secondary" type="button" data-an-jump-tools>
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4l-5 5a1.5 1.5 0 1 0 2.1 2.1l5-5a4 4 0 0 0 5.4-5.4l-2.2 2.2-2.1-2.1 2.2-2.2Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+                <span>@theAIsearch Tools</span>
+              </button>
+              <button class="an-btn an-btn-ghost" type="button" data-an-refresh title="Sync latest global feeds now">
+                <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M20 12a8 8 0 1 1-2.3-5.6M20 4v5h-5" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                <span data-an-updated>Syncing…</span>
+              </button>
+            </div>
+
+            <div class="an-hero-stats" aria-label="Live world telemetry">
+              <div class="an-stat"><b data-an-stat="stories">—</b><span>Live dispatches</span></div>
+              <div class="an-stat"><b data-an-stat="weights">—</b><span>Open weights &amp; repos</span></div>
+              <div class="an-stat"><b data-an-stat="tools">—</b><span>@theAIsearch tools</span></div>
+              <div class="an-stat"><b data-an-stat="hubs">7</b><span>Global AI hubs</span></div>
+            </div>
+
+            <p class="an-say">
+              <img src="/images/landing/agi1-face.webp" alt="" width="36" height="36" />
+              <span><b>AGI-1:</b> china ships 2.8T open weights, wall street rings the bell, and every tool link drops here live. turn on alerts so you never blink 💜</span>
+            </p>
+          </div>
+
+          <!-- Interactive 3D Globe & Regional Hub Telemetry -->
+          <div class="an-globe-panel" aria-label="Interactive global AI world map">
+            <div class="an-globe-top">
+              <span class="an-globe-label mono"><span class="an-live-dot" aria-hidden="true"></span> GLOBAL AI RADAR · DRAG TO SPIN · CLICK ANY HUB</span>
+              <div class="an-globe-controls">
+                <button class="an-mini-btn" type="button" data-an-spin-toggle aria-pressed="true" title="Toggle globe rotation">Pause</button>
+                <button class="an-mini-btn" type="button" data-an-globe-reset title="Reset world filter">All World</button>
+              </div>
+            </div>
+            <div class="an-globe-stage">
+              <canvas class="an-globe-canvas" data-an-globe width="560" height="420" role="img" aria-label="Interactive 3D spinning globe showing active AI hubs in San Francisco, New York, Hangzhou, Beijing, London, Paris, and Tokyo"></canvas>
+              <div class="an-hub-card" data-an-hub-card>
+                <div class="an-hub-card-head">
+                  <span class="an-hub-dot" data-an-hub-dot aria-hidden="true"></span>
+                  <strong data-an-hub-name>Global AI Orbit</strong>
+                  <span class="an-hub-count mono" data-an-hub-count>7 active hubs</span>
+                </div>
+                <p class="an-hub-lead" data-an-hub-lead>Click any glowing city beacon on the globe to focus its frontier labs, open-weight repos, and breaking news.</p>
+                <div class="an-hub-foot">
+                  <span class="an-hub-labs mono" data-an-hub-labs>Qwen · Kimi · OpenAI · Anthropic · Meta Muse · DeepMind</span>
+                  <button class="an-hub-open" type="button" data-an-hub-open hidden>Open lead →</button>
+                </div>
+              </div>
+            </div>
+            <div class="an-hub-chips" role="group" aria-label="Jump to an AI world hub" data-an-hub-chips></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- New updates live notification banner (appears when polling finds fresh stories) -->
+      <div class="wrap">
+        <div class="an-fresh-banner" data-an-fresh-banner hidden role="status" aria-live="polite">
+          <span class="an-pulse" aria-hidden="true"></span>
+          <p data-an-fresh-text>New global AI dispatches just arrived.</p>
+          <button class="an-fresh-btn" type="button" data-an-fresh-apply>Show latest</button>
+          <button class="an-fresh-close" type="button" data-an-fresh-close aria-label="Dismiss">×</button>
+        </div>
+      </div>
+
+      <!-- Sticky World Command Bar: Tabs + Alerts Bell on row 1, Regions + Search on row 2 -->
+      <div class="an-bar">
+        <div class="wrap an-bar-in">
+          <div class="an-tabs" role="tablist" aria-label="AI News World views" data-an-tabs></div>
+          <button class="an-bell-btn" type="button" data-an-open-alerts aria-label="Notification alerts settings" title="Live notifications &amp; keyword watchlist">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M15 17H5l1.4-1.4A2 2 0 0 0 7 14.2V10a5 5 0 0 1 10 0v4.2a2 2 0 0 0 .6 1.4L19 17h-4Zm-5 0a2 2 0 0 0 4 0" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span class="an-bell-text" data-an-bell-state>Alerts</span>
+            <span class="an-bell-dot" data-an-bell-dot hidden></span>
+          </button>
+        </div>
+        <div class="wrap an-subbar">
+          <div class="an-regions" role="group" aria-label="Filter by world region" data-an-regions></div>
+          <div class="an-controls">
+            <div class="an-active-filter" data-an-active-filter hidden>
+              <span data-an-filter-label></span>
+              <button type="button" data-an-clear-filters>Clear</button>
+            </div>
+            <label class="an-search-wrap">
+              <span class="sr-only">Search global AI news, models, repos, and tools</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="6.5" stroke="currentColor" stroke-width="2"/><path d="m16 16 4.5 4.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <input class="an-search" type="search" placeholder="Search Qwen, Kimi, Anthropic, Muse, GitHub…" autocomplete="off" spellcheck="false" data-an-search />
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- Dynamic Stage (World Feed / Models & Weights / @theAIsearch Tools / Videos / Markets / Saved) -->
+      <div class="wrap an-stage" data-an-stage role="tabpanel">
+        <div class="an-loading" data-an-loading>
+          <span class="an-spinner" aria-hidden="true"></span>
+          <p>Syncing live AI dispatches across 7 world hubs &amp; @theAIsearch…</p>
+        </div>
+        <noscript><p class="an-empty">AI News World needs JavaScript to load live global feeds, the 3D world globe, and notifications. You can still subscribe directly via <a href="/ainews/rss">our live RSS feed</a>.</p></noscript>
+      </div>
+    </main>
+
+    <footer class="foot">
+      <div class="wrap diary-foot">
+        <p><b>Live AI intelligence, not financial advice.</b> AI News World aggregates public feeds from global AI labs, GitHub, Hugging Face, major tech publications, and <a href="https://www.youtube.com/@theAIsearch" target="_blank" rel="noopener noreferrer">@theAIsearch ↗</a>. Always verify model licenses and links before running third-party code. AGI-1 is a fictional character; $AGI is an entertainment meme token on Robinhood Chain. Read the full <a href="/#safety">safety note</a>.</p>
+      </div>
+      <div class="foot-bar">
+        <div class="wrap foot-bar-in">
+          <p class="foot-brand">AGI</p>
+          <nav class="foot-nav" aria-label="Footer">
+            <a href="/#evaluations">Evaluations</a>
+            <a href="/#model-card">Model card</a>
+            <a href="/#playground">Playground</a>
+            <a href="/#checker">ClankChecker</a>
+            <a href="/diary">Diary</a>
+            <a href="/live">Live</a>
+            <a href="/studio">AGI Studio</a>
+            <a href="/games">Games</a>
+            <a href="/roadmap">Roadmap</a>
+            <a href="/memes">Memes</a>
+            <a href="/pfp">PFP</a>
+            <a href="/ainews" aria-current="page">AI News</a>
+            <a href="/ainews/rss">RSS Feed</a>
+            <a href="https://x.com/agi1dotapp" target="_blank" rel="noopener noreferrer">X @agi1dotapp ↗</a>
+            <a href="https://t.me/agi2dotapp" target="_blank" rel="noopener noreferrer">Telegram @agi2dotapp ↗</a>
+          </nav>
+          <p class="foot-legal">
+            <span>© 2026 AGI. No labs were harmed.</span>
+            <span>Live Global AI News · Entertainment only · Not financial advice.</span>
+          </p>
+        </div>
+      </div>
+    </footer>
+
+    <script type="module" src="/src/ainews/page.js"></script>
+  </body>
+</html>
