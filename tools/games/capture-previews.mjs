@@ -43,6 +43,7 @@ export const RECIPES = {
   // flying into the market's chips)
   growthstock: kit('growthstock', 7, { poster: 0.5 }),
   goinglive: kit('goinglive', 7, { poster: 0.5 }),
+  finalanswer: kit('finalanswer', 7, { warm: 1400, poster: 0.42 }),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],

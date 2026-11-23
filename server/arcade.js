@@ -364,6 +364,15 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, real streamers or channels, coins, tokens, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  finalanswer: Object.freeze({
+    what: '"FINAL ANSWER", a late-night trivia game show hosted by an anime girl, AGI-1, where you climb fifteen rungs '
+      + 'from 100 to 1,000,000 made-up points (never real money) with a custom second safety net, five lifelines (50:50, '
+      + 'Ask Chat, Ask AGI-1, Double Dip, and an unlockable Switch at rung 10), a speed bonus pot, stage fever streaks, '
+      + 'Walk Away, Daily Show and High Voltage modes: talk about the questions, difficulty, lifelines, safety nets, '
+      + 'streaks, walking away, reaching a million points and AGI-1 hosting is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

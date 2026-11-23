@@ -72,6 +72,8 @@
     { "source": "/games/growthstock/", "destination": "/growthstock" },
     { "source": "/games/goinglive", "destination": "/goinglive" },
     { "source": "/games/goinglive/", "destination": "/goinglive" },
+    { "source": "/games/finalanswer", "destination": "/finalanswer" },
+    { "source": "/games/finalanswer/", "destination": "/finalanswer" },
     { "source": "/vote/owner", "destination": "/vote" },
     { "source": "/vote/owner/", "destination": "/vote" },
     { "source": "/:path*", "has": [{ "type": "host", "value": "studio.agi1.app" }], "destination": "/studio" },
