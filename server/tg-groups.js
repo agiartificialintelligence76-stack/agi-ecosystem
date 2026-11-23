@@ -26,6 +26,7 @@
 import { tgCall, say, chatCode, botIdOf, scrub, MEDIA } from './tg-api.js';
 import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1, TLDS } from './gemini.js';
+import { recallAiNews } from './ainews-recall.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { groupPersonBurst, groupBurst } from './burst.js';
 import {
@@ -287,9 +288,11 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   const repliedTo = toHer && typeof m.reply_to_message.text === 'string' ? m.reply_to_message.text : null;
   let answer;
   try {
-    // no memory of the clank.trade group here (it's about real people), English unless they write in another language
+    // no memory of the clank.trade group here (it's about real people), English unless they write in another language;
+    // live AI News World notes come along only when they ask about AI news / models / open weights / tools
+    const aiNews = await recallAiNews(cfg, ask, repliedTo || '', { now, timeoutMs: 2000 }).catch(() => null);
     answer = await askAgi1(cfg, [], ask, {
-      level: 1, memory: [], telegram: { repliedTo, group: true }, lang: 'en', langSource: 'default',
+      level: 1, memory: [], aiNews, telegram: { repliedTo, group: true }, lang: 'en', langSource: 'default',
       timeoutMs: Math.max(3_000, 19_000 - (Date.now() - started)),      // (a slow database leaves the AI less time, never Vercel's limit)
     });
   } catch (err) {

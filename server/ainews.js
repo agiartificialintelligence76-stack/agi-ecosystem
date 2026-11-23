@@ -21,7 +21,7 @@ const SOURCE_TIMEOUT_MS = 4800;
 const CACHE_TTL_MS = 90 * 1000;
 
 const NEWS_FEEDS = Object.freeze([
-  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+Gemini+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 14, isAggregator: true },
+  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+"Google+Gemini"+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 14, isAggregator: true },
   { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10, isAggregator: true },
   { id: 'decoder', name: 'The Decoder', url: 'https://the-decoder.com/feed/', defaultHub: 'sf', limit: 12 },
   { id: 'tc-ai', name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', defaultHub: 'sf', limit: 10 },
@@ -303,6 +303,7 @@ function extractLinksFromEntry(block) {
 }
 
 const AI_RELEVANCE_RE = /\b(ai\b|artificial intelligence|llm|model|open[- ]weights?|openai|anthropic|claude|gemini|deepmind|grok|xai|qwen|kimi|deepseek|glm|zhipu|minimax|hunyuan|muse|llama|mistral|optimus|robotaxi|fsd|nvidia|gpu|neural|transformer|agent|chatbot|agi\b|robotics|humanoid|sam altman|amodei|coding|benchmark|perplexity)\b/i;
+const NON_AI_NOISE_RE = /\b(zodiac|horoscope|astrology|supermoon|full moon|retrograde|tarot)\b/i;
 
 function cleanPublisherName(raw = '') {
   return stripHtml(raw)
@@ -357,8 +358,8 @@ export function parseRssOrAtom(xml = '', meta = {}) {
     if (meta.isAggregator && summary && normalizeMatchKey(summary).startsWith(normalizeMatchKey(title).slice(0, 32))) {
       summary = '';
     }
-    // Skip non-AI market-chatter spillover from broad aggregator queries
-    if (meta.isAggregator && !AI_RELEVANCE_RE.test(`${title} ${summary}`)) continue;
+    // Skip non-AI market-chatter or astrology ("Gemini Supermoon") spillover from broad aggregator queries
+    if (meta.isAggregator && (NON_AI_NOISE_RE.test(`${title} ${summary}`) || !AI_RELEVANCE_RE.test(`${title} ${summary}`))) continue;
 
     const pubRaw = tagContent(block, 'pubDate') || tagContent(block, 'published') || tagContent(block, 'updated') || tagContent(block, 'dc:date');
     const publishedAt = safeIsoDate(stripHtml(pubRaw), new Date().toISOString());
@@ -779,7 +780,7 @@ function dedupeByKey(items, keyFn) {
   return out;
 }
 
-export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date.now(), cfg = getConfig() } = {}) {
+export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date.now(), cfg = getConfig(), cacheOnlyPulse = false } = {}) {
   const sources = [];
   const tasks = [];
 
@@ -887,7 +888,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
 
   // 8. 30-Minute Shared Gemini Google-Search Web Pulse (catches X-first & breaking drops worldwide)
   tasks.push(
-    getGeminiNewsPulse({ fetchImpl, cfg, now, classifyItem })
+    getGeminiNewsPulse({ fetchImpl, cfg, now, classifyItem, cacheOnly: cacheOnlyPulse })
       .then((pulse) => {
         if (pulse.status !== 'off') {
           sources.push({
@@ -1149,11 +1150,16 @@ export function _resetAiNewsCache() {
   _resetGeminiPulseCache();
 }
 
+// Fast zero-network read of the warm in-memory snapshot (used by AGI-1 chat recall).
+export function peekAiNewsCache(now = Date.now(), maxAgeMs = 10 * 60_000) {
+  return cached && now - cached.at < maxAgeMs ? cached.data : null;
+}
+
 export async function getAiNewsSnapshot(opts = {}) {
   const now = opts.now ?? Date.now();
   if (!opts.bypassCache && cached && now - cached.at < CACHE_TTL_MS) return cached.data;
   if (!opts.bypassCache && inflight) return inflight;
-  const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now, cfg: opts.cfg })
+  const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now, cfg: opts.cfg, cacheOnlyPulse: Boolean(opts.cacheOnlyPulse) })
     .then((data) => {
       cached = { at: now, data };
       // When a fresh 30-min Gemini Web Pulse fires (or every 15m for fresh OpenRouter / @theAIsearch drops),

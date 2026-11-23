@@ -1,5 +1,5 @@
 // Asks Google Gemini for AGI-1's reply. Only the server calls this; the API key never reaches the browser.
-import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, telegramPrompt, discordPrompt, languagePrompt, shotPrompt, livePrompt, scenePrompt, LIVE_SKIPS } from './agi1-prompt.js';
+import { AGI1_PROMPT, OFFICIAL_CA, MOODS, levelPrompt, groupMemoryPrompt, aiNewsPrompt, telegramPrompt, discordPrompt, languagePrompt, shotPrompt, livePrompt, scenePrompt, LIVE_SKIPS } from './agi1-prompt.js';
 import { linesOf } from '../src/i18n/all.js';
 import { isLang, LANGS } from '../src/i18n/langs.js';
 import { canList, PART_IDS, FEEL_IDS } from './live-acts.js';
@@ -158,7 +158,7 @@ export async function askAgi1(cfg, history, message, visitor = { level: 1 }) {
     method: 'POST',
     headers: { 'x-goog-api-key': cfg.geminiKey, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + telegramPrompt(visitor.telegram) + discordPrompt(visitor.discord)
+      systemInstruction: { parts: [{ text: AGI1_PROMPT + levelPrompt(visitor.level, visitor) + groupMemoryPrompt(visitor.memory) + aiNewsPrompt(visitor.aiNews, { telegram: visitor.telegram }) + telegramPrompt(visitor.telegram) + discordPrompt(visitor.discord)
         + languagePrompt(lang, { source: visitor.langSource || (visitor.telegram ? 'telegram' : 'menu') }) + shotPrompt(shot) + livePrompt(live) }] },
       contents,
       safetySettings: SAFETY_SETTINGS,

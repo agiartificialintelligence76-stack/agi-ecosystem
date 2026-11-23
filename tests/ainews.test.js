@@ -52,6 +52,9 @@ import {
 } from '../server/tg-ainews.js';
 import { handleUpdate, commandsFor } from '../server/telegram.js';
 import { forgetGroups, groupCommandsFor } from '../server/tg-groups.js';
+import { asksAboutAiNews, recallAiNews } from '../server/ainews-recall.js';
+import { aiNewsPrompt } from '../server/agi1-prompt.js';
+import { cleanReply } from '../server/gemini.js';
 import { AISEARCH_CHANNEL, WORLD_HUBS, SPOTLIGHT_STORIES } from '../server/ainews-seed.js';
 import { GET as healthApi } from '../api/health.js';
 import { BUILTIN_PAGES } from '../src/owner/catalog.js';
@@ -242,9 +245,16 @@ test('RSS & Atom parser extracts cover images, links, and sanitized text', () =>
     <source url="https://www.investors.com">Investor's Business Daily</source>
     <description>Stock market futures update.</description>
   </item>
+  <item>
+    <title>The Gemini Supermoon Brings Major Plot Twists for Every Zodiac Sign - Grazia</title>
+    <link>https://news.google.com/rss/articles/JKL</link>
+    <pubDate>Mon, 23 Nov 2026 04:10:00 GMT</pubDate>
+    <source url="https://graziamagazine.com">Grazia</source>
+    <description>Astrology forecast for late November.</description>
+  </item>
 </channel></rss>`;
   const gParsed = parseRssOrAtom(gnews, { id: 'gnews-global-ai', name: 'Google News AI', defaultHub: 'sf', isAggregator: true });
-  assert.equal(gParsed.length, 2, 'drops non-AI Dow Jones spillover');
+  assert.equal(gParsed.length, 2, 'drops non-AI Dow Jones and astrology Gemini spillover');
   assert.equal(gParsed[0].title, 'California AG Bonta filed lawsuit against OpenAI over model security');
   assert.equal(gParsed[0].source, 'Reuters');
   assert.equal(gParsed[0].lab, 'OpenAI');
@@ -963,6 +973,126 @@ test('Personal Telegram DM AI News alerts: /start ainews, 1-tap toggle, /stop cl
     // Direct helper checks
     assert.equal((await subscribeAiNewsDm(cfg, -100, { fetchImpl: mockFetch })).ok, false);
     assert.equal(await unsubscribeAiNewsDm(cfg, USER_A, { fetchImpl: mockFetch }), false);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('AGI-1 chat recall injects live AI News World notes on site & Telegram when asked, stays silent on casual chat, and never triggers blocking Gemini search', async () => {
+  forgetGroups();
+  _resetAiNewsCache();
+
+  // Trigger detection: fires on AI news/lab/model questions + follow-ups, NOT on casual chat
+  for (const q of [
+    "what's the latest ai news?",
+    'tell me about agi1.app/ainews',
+    'did glm 5.4 drop?',
+    'any new qwen or kimi open weights?',
+    'whats new with tesla optimus or grok?',
+    'what tools did theaisearch cover?',
+  ]) {
+    assert.equal(asksAboutAiNews(q), true, q);
+  }
+  assert.equal(asksAboutAiNews('tell me more about the weights', "what's the latest ai news?"), true, 'follow-up');
+  for (const q of ['hey cutie', 'are you an ai?', 'good morning', 'how is $AGI doing?']) {
+    assert.equal(asksAboutAiNews(q), false, `casual chat stays untouched: ${q}`);
+  }
+
+  // cleanReply preserves agi1.app/ainews cleanly
+  assert.equal(cleanReply('check agi1.app/ainews for the live globe 💜'), 'check agi1.app/ainews for the live globe 💜');
+
+  const NOW = Date.parse('2026-11-23T11:00:00Z');
+  const TOKEN = `123456789:AA${'c'.repeat(33)}`;
+  const CHAT = 777001;
+  const GROUP = -1007770001;
+  const geminiPrompts = [];
+  let geminiSearchCalls = 0;
+
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = async (url, init = {}) => {
+    const u = String(url);
+    if (u.startsWith('https://api.telegram.org/')) {
+      return Response.json({ ok: true, result: { message_id: 12 } });
+    }
+    if (u.includes('/rest/v1/rpc/feed_state_get')) {
+      return Response.json({
+        ainewsPulse: {
+          v: 2,
+          at: NOW - 40 * 60_000, // stale > 30m: chat recall MUST still use cacheOnly and make 0 Gemini search calls!
+          items: [{
+            id: 'pulse-openai-1',
+            t: 'OpenAI Proposes Perplexity Safety Ceiling for Frontier Models',
+            s: 'OpenAI Chief Scientist published a new pretraining threshold proposal.',
+            u: 'https://openai.com/index/perplexity-and-intelligence/',
+            l: 'OpenAI',
+            p: 'OpenAI',
+            d: new Date(NOW - 30 * 60_000).toISOString(),
+          }],
+        },
+      });
+    }
+    if (u.includes('/rest/v1/rpc/tg_get')) return Response.json({ chat_id: CHAT, adult: true, tz_minutes: 0, seen_id: 0, day: null, sent: 0 });
+    if (u.includes('/rest/v1/rpc/chat_take') || u.includes('/rest/v1/rpc/tg_group_take')) return Response.json('ok');
+    if (u.includes('/rest/v1/rpc/tg_take')) return Response.json(true);
+    if (u.includes('generativelanguage.googleapis.com')) {
+      const body = JSON.parse(init.body);
+      if (body.tools) {
+        geminiSearchCalls += 1;
+        throw new Error('chat recall must never invoke blocking google_search');
+      }
+      geminiPrompts.push(body.systemInstruction?.parts?.[0]?.text || '');
+      return Response.json({
+        candidates: [{ finishReason: 'STOP', content: { parts: [{ text: JSON.stringify({ reply: 'yep glm-5.4 and openai updates are live on agi1.app/ainews 💜', mood: 'happy' }) }] } }],
+      });
+    }
+    throw new Error('offline upstream');
+  };
+
+  try {
+    const cfg = getConfig({
+      GEMINI_API_KEY: 'AIzaSyFAKE_RECALL_KEY_0000000000000',
+      SUPABASE_URL: 'https://proj.supabase.co',
+      SUPABASE_SECRET_KEY: 'sb_secret_test',
+      PASS_SECRET: 'pass-secret-long-enough-for-telegram-tests',
+      TELEGRAM_GROUPS: String(GROUP),
+    });
+
+    // Direct recallAiNews check (prioritizes matching headline, zero Gemini search calls)
+    const brief = await recallAiNews(cfg, 'what happened with openai and glm 5.4?', '', { now: NOW });
+    assert.ok(brief && brief.headlines.length >= 2);
+    assert.ok(brief.headlines.some((h) => /OpenAI Proposes Perplexity/i.test(h)));
+    assert.ok(brief.headlines.some((h) => /GLM-5\.4/i.test(h)));
+    assert.equal(geminiSearchCalls, 0);
+
+    const webPrompt = aiNewsPrompt(brief);
+    assert.match(webPrompt, /AI NEWS WORLD \(LIVE NOTES FROM AGI1\.APP\/AINEWS\)/);
+    assert.match(webPrompt, /agi1\.app\/ainews/);
+    const groupPrompt = aiNewsPrompt(brief, { telegram: { group: true } });
+    assert.match(groupPrompt, /\/ainews/);
+    assert.match(groupPrompt, /friendly and non-flirty/);
+
+    // Telegram DM chat: casual message gets NO AI news block; AI news question DOES get live AI News World notes!
+    await handleUpdate(cfg, TOKEN, {
+      update_id: 201,
+      message: { message_id: 1, from: { id: CHAT, is_bot: false, first_name: 'U' }, chat: { id: CHAT, type: 'private' }, date: 1, text: 'good morning!' },
+    }, NOW);
+    assert.doesNotMatch(geminiPrompts.at(-1), /AI NEWS WORLD/);
+
+    await handleUpdate(cfg, TOKEN, {
+      update_id: 202,
+      message: { message_id: 2, from: { id: CHAT, is_bot: false, first_name: 'U' }, chat: { id: CHAT, type: 'private' }, date: 2, text: 'what is the latest ai news today?' },
+    }, NOW + 5000);
+    assert.match(geminiPrompts.at(-1), /AI NEWS WORLD \(LIVE NOTES FROM AGI1\.APP\/AINEWS\)/);
+    assert.match(geminiPrompts.at(-1), /OpenAI Proposes Perplexity/);
+
+    // Telegram group /ask: gets live AI News World notes too!
+    await handleUpdate(cfg, TOKEN, {
+      update_id: 203,
+      message: { message_id: 3, from: { id: 999, is_bot: false, first_name: 'G' }, chat: { id: GROUP, type: 'supergroup' }, date: 3, text: '/ask tell me about glm 5.4 and the ai news' },
+    }, NOW + 10_000);
+    assert.match(geminiPrompts.at(-1), /AI NEWS WORLD \(LIVE NOTES FROM AGI1\.APP\/AINEWS\)/);
+    assert.match(geminiPrompts.at(-1), /GLM-5\.4/);
+    assert.equal(geminiSearchCalls, 0, 'conversational recall never makes blocking search calls');
   } finally {
     globalThis.fetch = realFetch;
   }

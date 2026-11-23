@@ -23,6 +23,7 @@ import { checkLevel } from '../server/chain.js';
 import { getFriend, addFriendNote, cleanNote } from '../server/friends.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { recallGroup } from '../server/tg-memory.js';
+import { recallAiNews } from '../server/ainews-recall.js';
 import { takeBurned, refundBurned, burnedAgi } from '../server/burn.js';
 import { randomUUID } from 'node:crypto';
 import { isLang } from '../src/i18n/langs.js';
@@ -138,7 +139,9 @@ export async function POST(request) {
   // 5. Gemini. If the visitor asked about the clank.trade Telegram group (or someone/something in it), her notes on
   // it come along; otherwise nothing is added.
   const history = cleanHistory(body.history, cfg.passSecret);
-  const memory = recallGroup(message, history.filter((t) => t.role === 'user').at(-1)?.text);
+  const prevUser = history.filter((t) => t.role === 'user').at(-1)?.text;
+  const memory = recallGroup(message, prevUser);
+  const aiNews = await recallAiNews(cfg, message, prevUser, { now, timeoutMs: Math.min(2000, Math.max(400, REPLY_BY_MS - (Date.now() - started) - 4000)) }).catch(() => null);
   const timeLeft = REPLY_BY_MS - (Date.now() - started);
   if (timeLeft < 3000) {                                               // too slow today: no reply rather than one cut off
     console.error('[chat] no time left for her reply:', Date.now() - started, 'ms before asking');
@@ -148,7 +151,7 @@ export async function POST(request) {
   let answer;
   try {
     answer = await askAgi1(cfg, history, message,
-      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, lang, shot, timeoutMs: Math.min(shot ? 15_000 : 10_000, timeLeft) });
+      { level, name: friend.name, notes: level === 3 ? friend.notes : [], memory, aiNews, lang, shot, timeoutMs: Math.min(shot ? 15_000 : 10_000, timeLeft) });
   } catch (err) {
     console.error('[chat] gemini failed:', err.message);
     if (burned) await giveBack();                                      // a burned message never pays for no reply

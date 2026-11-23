@@ -625,6 +625,7 @@ export async function getGeminiNewsPulse({
   cfg,
   now = Date.now(),
   classifyItem = null,
+  cacheOnly = false,
 } = {}) {
   if (!cfg?.geminiKey || cfg?.ainewsPulse === false) {
     return { status: 'off', items: [], at: 0, nextAt: 0, model: cfg?.geminiModel || 'gemini-3.1-flash-lite', queryCount: 0 };
@@ -641,6 +642,22 @@ export async function getGeminiNewsPulse({
     if (mem.backoffUntil && now < mem.backoffUntil) {
       return formatResult(mem.items?.length ? 'cached' : 'offline', mem, classifyItem);
     }
+    if (cacheOnly && mem.items?.length) {
+      return formatResult('cached', mem, classifyItem);
+    }
+  }
+
+  // Fast read-only path for conversational chat recall: read Supabase cache (~80ms) and NEVER wait on Gemini.
+  if (cacheOnly) {
+    const hasDb = Boolean(cfg.supabaseUrl && cfg.supabaseKey);
+    const sharedState = hasDb ? await readSharedState(fetchImpl, cfg) : null;
+    const rawRemote = sharedState?.ainewsPulse && typeof sharedState.ainewsPulse === 'object' ? sharedState.ainewsPulse : null;
+    if (rawRemote) {
+      const rec = compactPulseRecord(rawRemote);
+      if (rec.items.length) memCache.set(key, rec);
+      return formatResult(rec.items.length ? 'cached' : 'offline', rec, classifyItem);
+    }
+    return formatResult(mem?.items?.length ? 'cached' : 'offline', mem || compactPulseRecord({ model: cfg.geminiModel }), classifyItem);
   }
 
   // 2. Deduplicate concurrent refreshes inside the same container.

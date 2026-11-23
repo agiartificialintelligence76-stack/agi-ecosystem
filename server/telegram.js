@@ -19,6 +19,7 @@ import { ainewsOn, onAiNewsCommand, onAiNewsStart, onAiNewsTap, unsubscribeAiNew
 import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1 } from './gemini.js';
 import { recallGroup } from './tg-memory.js';
+import { recallAiNews } from './ainews-recall.js';
 import { levelInfo } from '../src/lib/levels.js';
 import { telegramBurst } from './burst.js';
 import { tgLinesFor, TEXTS_A_DAY } from './tg-lines.js';
@@ -488,7 +489,8 @@ async function onText(cfg, token, m, chat, text, now, L) {
     // her memory of the clank.trade Telegram group only when they ask about the group: here a bare "telegram" or "tg" is
     // just where they are ("the telegram group", "tg chat" still count)
     const memory = recallGroup(text.replace(/\b(telegram|tg)\b(?!\s+(?:group|chat))/gi, ' '));
-    answer = await askAgi1(cfg, [], text, { level: 1, memory, telegram: { repliedTo }, lang: L.lang, langSource: L.source });
+    const aiNews = await recallAiNews(cfg, text, repliedTo || '', { now, timeoutMs: 2000 }).catch(() => null);
+    answer = await askAgi1(cfg, [], text, { level: 1, memory, aiNews, telegram: { repliedTo }, lang: L.lang, langSource: L.source });
   } catch (err) {
     console.error('[telegram] gemini failed:', err.message);
     await say(token, chat, L.BLANK);
