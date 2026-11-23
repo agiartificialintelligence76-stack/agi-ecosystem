@@ -21,15 +21,17 @@ const SOURCE_TIMEOUT_MS = 4800;
 const CACHE_TTL_MS = 90 * 1000;
 
 const NEWS_FEEDS = Object.freeze([
-  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+"Google+Gemini"+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 14, isAggregator: true },
-  { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10, isAggregator: true },
+  { id: 'nvidia-newsroom', name: 'NVIDIA Newsroom', url: 'https://nvidianews.nvidia.com/releases.xml', defaultHub: 'sf', limit: 6, isLabFeed: true },
+  { id: 'openai', name: 'OpenAI News', url: 'https://openai.com/news/rss.xml', defaultHub: 'sf', limit: 8, isLabFeed: true },
+  { id: 'deepmind', name: 'Google DeepMind', url: 'https://deepmind.google/blog/rss.xml', defaultHub: 'london', limit: 8, isLabFeed: true },
+  { id: 'google-ai', name: 'Google AI Blog', url: 'https://blog.google/innovation-and-ai/rss/', defaultHub: 'sf', limit: 8, isLabFeed: true },
+  { id: 'hf-blog', name: 'Hugging Face Blog', url: 'https://huggingface.co/blog/feed.xml', defaultHub: 'sf', limit: 6, isLabFeed: true },
   { id: 'decoder', name: 'The Decoder', url: 'https://the-decoder.com/feed/', defaultHub: 'sf', limit: 12 },
   { id: 'tc-ai', name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', defaultHub: 'sf', limit: 10 },
   { id: 'verge-ai', name: 'The Verge AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', defaultHub: 'nyc', limit: 10 },
-  { id: 'google-ai', name: 'Google AI Blog', url: 'https://blog.google/innovation-and-ai/rss/', defaultHub: 'sf', limit: 8, isLabFeed: true },
-  { id: 'deepmind', name: 'Google DeepMind', url: 'https://deepmind.google/blog/rss.xml', defaultHub: 'london', limit: 8, isLabFeed: true },
-  { id: 'openai', name: 'OpenAI News', url: 'https://openai.com/news/rss.xml', defaultHub: 'sf', limit: 8, isLabFeed: true },
   { id: 'smol-ai', name: 'Smol AI Digest', url: 'https://news.smol.ai/rss.xml', defaultHub: 'sf', limit: 4 },
+  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+"Google+Gemini"+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+NVIDIA+OR+"Jensen+Huang"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 16, isAggregator: true },
+  { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10, isAggregator: true },
 ]);
 
 const GITHUB_ORGS = Object.freeze([
@@ -156,15 +158,16 @@ const ENTITY_RULES = [
   { re: /\b(kimi|moonshot)\b/i, hub: 'beijing', region: 'china', lab: 'Moonshot AI' },
   { re: /\b(tencent|hunyuan|movieroll|wemm|hy4|baidu|ernie|kling|kuaishou|bytedance|seedream|seedance|longcat|meituan|xiaomi|huawei)\b/i, hub: 'beijing', region: 'china', lab: 'China AI Lab' },
   { re: /\b(anthropic|claude|opus|sonnet|haiku|fable|mythos)\b/i, hub: 'sf', region: 'americas', lab: 'Anthropic' },
-  { re: /\b(ipo|nasdaq|nyse|wall street|sec filing|valuation|funding|billion|trillion)\b/i, hub: 'nyc', region: 'americas', lab: '' },
   { re: /\b(openai|sam altman|altman|chatgpt|gpt-[4567]|sora|codex|astra)\b/i, hub: 'sf', region: 'americas', lab: 'OpenAI' },
   { re: /\b(meta\b|muse\s+(?:ember|wonder|spark|glimmer|code)|llama|fair\b)\b/i, hub: 'sf', region: 'americas', lab: 'Meta Muse' },
   { re: /\b(deepmind|alphagenome|alphafold|genie\s*[234])\b/i, hub: 'london', region: 'europe', lab: 'Google DeepMind' },
   { re: /\b(google|gemini|veo|imagen|gemma|notebooklm)\b/i, hub: 'sf', region: 'americas', lab: 'Google AI' },
   { re: /\b(mistral|black forest labs|flux\b|eu ai act|european|aleph alpha)\b/i, hub: 'paris', region: 'europe', lab: 'Mistral & EU' },
   { re: /\b(xai|grok(?:[-\s]?\d+(?:\.\d+)?)?|colossus)\b/i, hub: 'sf', region: 'americas', lab: 'xAI Grok' },
+  { re: /\b(nvidia|jensen\s+huang|blackwell|rubin\s+gpu|cuda|tensorrt)\b/i, hub: 'sf', region: 'americas', lab: 'NVIDIA' },
   { re: /\b(tesla\s+(?:ai|optimus|fsd|robotaxi|dojo|autopilot|cybercab)|optimus\s+(?:robot|gen|v\d)|full self-driving|cybercab)\b/i, hub: 'sf', region: 'americas', lab: 'Tesla AI' },
-  { re: /\b(apple|nvidia|tesla|perplexity|cursor|luma|runway|ideogram|midjourney|thinking\s?machines|inworld|bria|stanford|berkeley|microsoft|copilot|figure\s?0\d|unitree|boston dynamics)\b/i, hub: 'sf', region: 'americas', lab: '' },
+  { re: /\b(ipo|nasdaq|nyse|wall street|sec filing|valuation|funding|billion|trillion)\b/i, hub: 'nyc', region: 'americas', lab: '' },
+  { re: /\b(apple|tesla|perplexity|cursor|luma|runway|ideogram|midjourney|thinking\s?machines|inworld|bria|stanford|berkeley|microsoft|copilot|figure\s?0\d|unitree|boston dynamics)\b/i, hub: 'sf', region: 'americas', lab: '' },
   { re: /\b(sakana|sony|tokyo|japan|seoul|korea|naver|lg ai|singapore|sea-lion)\b/i, hub: 'tokyo', region: 'asia', lab: 'East Asia AI' },
 ];
 
@@ -191,7 +194,7 @@ export function classifyItem(text = '', defaults = {}) {
 
   let category = defaults.category || 'models';
   if (!defaults.category) {
-    if (/\b(ipo|funding|raises|valuation|billion|lawsuit|regulation|antitrust|acquisition|deal|sam altman|policy|senate|congress|stocks?|nasdaq)\b/i.test(hay)) {
+    if (/\b(ipo|funding|raises|valuation|billion|lawsuit|regulation|antitrust|acquisition|deal|sam altman|jensen huang|reinstat\w*|ceo\b|policy|senate|congress|stocks?|nasdaq)\b/i.test(hay)) {
       category = 'markets';
     } else if (/\b(open[- ]weights?|open[- ]source|github\.com|huggingface\.co|apache[- ]2|mit license|weights released|gguf|vllm|comfyui)\b/i.test(hay)) {
       category = 'opensource';
@@ -211,7 +214,7 @@ export function classifyItem(text = '', defaults = {}) {
 
   const breaking = Boolean(
     defaults.breaking
-    || /\b(launches?|releases?|unveils?|announces?|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|grok|xai|optimus|robotaxi|fsd\s?v?\d|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
+    || /\b(launches?|releases?|unveils?|announces?|reinstates?|returns?\s+as\s+ceo|steps?\s+down|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|grok|xai|nvidia|jensen huang|optimus|robotaxi|fsd\s?v?\d|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
   );
 
   const tags = [];
@@ -220,6 +223,7 @@ export function classifyItem(text = '', defaults = {}) {
     [/\bqwen\b/i, 'Qwen'],
     [/\bkimi\b/i, 'Kimi'],
     [/\bxai|grok\b/i, 'xAI Grok'],
+    [/\bnvidia|jensen\s+huang|blackwell\b/i, 'NVIDIA'],
     [/\btesla|optimus|robotaxi|fsd|cybercab\b/i, 'Tesla AI'],
     [/\banthropic|claude|fable\b/i, 'Anthropic'],
     [/\bopenai|gpt-|altman\b/i, 'OpenAI'],
@@ -302,7 +306,7 @@ function extractLinksFromEntry(block) {
   return { githubUrl, huggingfaceUrl };
 }
 
-const AI_RELEVANCE_RE = /\b(ai\b|artificial intelligence|llm|model|open[- ]weights?|openai|anthropic|claude|gemini|deepmind|grok|xai|qwen|kimi|deepseek|glm|zhipu|minimax|hunyuan|muse|llama|mistral|optimus|robotaxi|fsd|nvidia|gpu|neural|transformer|agent|chatbot|agi\b|robotics|humanoid|sam altman|amodei|coding|benchmark|perplexity)\b/i;
+const AI_RELEVANCE_RE = /\b(ai\b|artificial intelligence|llm|model|open[- ]weights?|openai|anthropic|claude|gemini|deepmind|grok|xai|qwen|kimi|deepseek|glm|zhipu|minimax|hunyuan|muse|llama|mistral|optimus|robotaxi|fsd|nvidia|jensen huang|gpu|neural|transformer|agent|chatbot|agi\b|robotics|humanoid|sam altman|amodei|coding|benchmark|perplexity)\b/i;
 const NON_AI_NOISE_RE = /\b(zodiac|horoscope|astrology|supermoon|full moon|retrograde|tarot)\b/i;
 
 function cleanPublisherName(raw = '') {
@@ -1008,7 +1012,46 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     ...hnStories,
   ];
 
-  const stories = dedupeByKey(rawStories, (s) => `${normalizeMatchKey(s.title).slice(0, 48)}`)
+const DEDUPE_STOP = new Set(['the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'over', 'after', 'about', 'more', 'its', 'new', 'news', 'says', 'amid', 'how', 'why', 'what', 'who', 'will', 'are', 'has', 'have', 'not']);
+
+function storyTokens(title = '') {
+  return [...new Set(
+    normalizeMatchKey(title).split(' ').filter((w) => ((w.length >= 3) || (w.length >= 2 && /\d/.test(w))) && !DEDUPE_STOP.has(w)),
+  )];
+}
+
+function dedupeStories(items) {
+  const seenKeys = new Set();
+  const kept = [];
+  for (const item of items) {
+    const key = normalizeMatchKey(item.title).slice(0, 48);
+    if (!key || seenKeys.has(key)) continue;
+    // Collapse multi-outlet duplicate RSS coverage (e.g. 5 Google News links for the same press release),
+    // while never letting static spotlights suppress live pulse/RSS dispatches.
+    if (item.sourceKind === 'rss') {
+      const toks = storyTokens(item.title);
+      if (toks.length >= 3) {
+        const dup = kept.some((prev) => {
+          if (prev.sourceKind === 'spotlight') return false;
+          const pSet = new Set(prev._toks || []);
+          if (!pSet.size) return false;
+          let hit = 0;
+          for (const t of toks) if (pSet.has(t)) hit += 1;
+          return hit >= 3 && hit / Math.min(toks.length, pSet.size) >= 0.6;
+        });
+        if (dup) continue;
+      }
+      seenKeys.add(key);
+      kept.push({ ...item, _toks: toks });
+      continue;
+    }
+    seenKeys.add(key);
+    kept.push({ ...item, _toks: storyTokens(item.title) });
+  }
+  return kept.map(({ _toks, ...rest }) => rest);
+}
+
+  const stories = dedupeStories(rawStories)
     .sort((a, b) => {
       // Keep fresh live items & curated spotlights nicely interleaved by recency, with spotlights elevated if within 72h
       const ta = Date.parse(a.publishedAt || 0) || 0;

@@ -70,14 +70,15 @@ const MAJOR_ALERT_LABS = new Set([
   'Z.ai GLM',
   'Meta Muse',
   'xAI Grok',
+  'NVIDIA',
   'Tesla AI',
   'Mistral & EU',
   'China AI Lab',
   'East Asia AI',
 ]);
 
-const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|open[- ]?weights?|open[- ]?source|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ship(?:s|ped|ping))\b/i;
-const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order)\b/i;
+const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|reinstat(?:es|ed|ing)|returns?\s+as\s+ceo|steps?\s+down|resign(?:s|ed)|acquir(?:es|ed|ing)|acquisition|open[- ]?weights?|open[- ]?source|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ship(?:s|ped|ping))\b/i;
+const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order|black\s+friday|geforce\s+now|upcoming\s+event\s+for\s+financial\s+community)\b/i;
 
 const TITLE_STOP_WORDS = new Set([
   'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'over', 'after', 'about', 'more',

@@ -1153,21 +1153,24 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
     false,
   );
 
-  // collectAlertCandidates includes fresh high-signal RSS lab launches, blocks NSFW/PG-13 headlines & opinion noise, and dedupes
+  // collectAlertCandidates includes fresh high-signal RSS lab launches & major CEO news, blocks NSFW/PG-13 headlines & opinion/promo noise, and dedupes
   const NOW = Date.parse('2026-11-23T14:00:00Z');
   const candidates = collectAlertCandidates({
     stories: [
+      { title: 'NVIDIA Board Reinstates Jensen Huang as President, CEO and Board Director', sourceKind: 'rss', lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/reinstates-jensen', publishedAt: new Date(NOW - 5 * 60_000).toISOString() },
       { title: 'Z.ai unveils GLM-5.4 model with Loop Transformer design', sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://investing.com/glm-5-4', publishedAt: new Date(NOW - 30 * 60_000).toISOString() },
       { title: "China's Z.ai launches GLM-5.4, a looped 750B model for coding", sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://thenextweb.com/glm-5-4', publishedAt: new Date(NOW - 90 * 60_000).toISOString() },
       { title: 'Claude Code Adds Experimental Code Mode to Orchestrate Tool Calls', sourceKind: 'rss', lab: 'Anthropic', url: 'https://infoq.com/claude-code-mode', publishedAt: new Date(NOW - 60 * 60_000).toISOString() },
+      { title: 'NVIDIA Announces Upcoming Event for Financial Community', sourceKind: 'rss', lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/ir-event', publishedAt: new Date(NOW - 45 * 60_000).toISOString() },
       { title: 'SpaceX sued by Oregon and Virginia over AI deepfake porn, Grok safety claims', sourceKind: 'rss', lab: 'xAI Grok', url: 'https://cnbc.com/grok-porn', publishedAt: new Date(NOW - 40 * 60_000).toISOString() },
       { title: "Pouncing on Anthropic Won't Make You Rich", sourceKind: 'rss', lab: 'Anthropic', url: 'https://wsj.com/anthropic', publishedAt: new Date(NOW - 50 * 60_000).toISOString() },
       { title: 'Fallback Offline Video', sourceKind: 'video', isFallback: true, url: 'https://youtube.com/watch?v=fb1', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
     ],
   }, NOW);
-  assert.equal(candidates.length, 2, 'keeps GLM-5.4 (deduped) + Claude Code Mode, drops NSFW, opinion & fallback video');
-  assert.match(candidates[0].title, /GLM-5\.4/);
-  assert.match(candidates[1].title, /Claude Code/);
+  assert.equal(candidates.length, 3, 'keeps NVIDIA CEO + GLM-5.4 (deduped) + Claude Code Mode, drops IR promo, NSFW, opinion & fallback video');
+  assert.match(candidates[0].title, /Jensen Huang/);
+  assert.match(candidates[1].title, /GLM-5\.4/);
+  assert.match(candidates[2].title, /Claude Code/);
 
   // Group /ainews alerts (including Forum Topic support), cached-pulse broadcast, and admin-only /ainews off
   const TOKEN = `123456789:AA${'d'.repeat(33)}`;
