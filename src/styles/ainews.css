@@ -121,6 +121,12 @@
 .an-btn-ghost {
   background: transparent; color: var(--fg-2); font-size: 13.5px; font-family: var(--mono);
 }
+.an-btn-tg {
+  background: #147ec0; border-color: #147ec0; color: #fff;
+}
+.an-btn-tg:hover {
+  background: #0f6ca6; border-color: #0f6ca6; color: #fff;
+}
 .an-btn-ghost.is-syncing svg { animation: an-spin .85s linear infinite; }
 @keyframes an-spin { to { transform: rotate(360deg); } }
 .an-alert-pill {
@@ -805,6 +811,8 @@
 [data-skin='pop'] .an-btn-alert:hover { background: var(--pop-pink); color: #fff; }
 [data-skin='pop'] .an-btn-alert.is-active { background: var(--pop-mint); color: var(--pop-ink); }
 [data-skin='pop'] .an-btn-secondary { background: var(--pop-honey); color: var(--pop-ink); }
+[data-skin='pop'] .an-btn-tg { background: #147ec0; border-color: var(--edge); color: #fff; }
+[data-skin='pop'] .an-btn-tg:hover { background: var(--pop-mint); border-color: var(--edge); color: var(--pop-ink); }
 [data-skin='pop'] .an-hero-stats,
 [data-skin='pop'] .an-globe-panel,
 [data-skin='pop'] .an-card,

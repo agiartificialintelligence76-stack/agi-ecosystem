@@ -184,6 +184,7 @@ function init() {
   buildModals();
   wireControls();
   syncAlertBadges();
+  syncTelegramLinks();
 
   const hash = location.hash.slice(1).toLowerCase();
   if (TABS.some((t) => t.key === hash)) activeTab = hash;
@@ -290,6 +291,7 @@ function applyWorldData(data, { initial = false, quiet = false } = {}) {
   }
   const updatedEl = document.querySelector('[data-an-updated]');
   if (updatedEl) updatedEl.textContent = `Synced ${relativeTime(data.updatedAt)}`;
+  syncTelegramLinks();
 
   const statMap = {
     stories: s.totalStories ?? 0,
@@ -1496,6 +1498,15 @@ function openAlertsModal() {
   if (!alertsDlg) return;
   renderAlertsModalBody();
   if (!alertsDlg.open) alertsDlg.showModal();
+}
+
+function syncTelegramLinks() {
+  const tgBot = botName(import.meta.env.VITE_TELEGRAM_BOT) || botName(worldData?.telegramBot);
+  if (!tgBot) return;
+  const href = `https://t.me/${tgBot}?start=ainews`;
+  for (const node of document.querySelectorAll('[data-an-tg-bot]')) {
+    node.setAttribute('href', href);
+  }
 }
 
 function syncAlertBadges() {

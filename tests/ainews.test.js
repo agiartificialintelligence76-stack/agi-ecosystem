@@ -332,6 +332,7 @@ test('ainews.html, CSP, routing, assets, and 12-function cap stay intact', () =>
   assert.match(html, /<script type="module" src="\/src\/ainews\/page\.js"><\/script>/);
   assert.match(html, /og:image" content="__SITE__\/cards\/ainews\.jpg"/);
   assert.match(html, /rel="alternate" type="application\/rss\+xml".*href="\/ainews\/rss"/);
+  assert.match(html, /href="https:\/\/t\.me\/agi1_appbot\?start=ainews"[^>]*data-an-tg-bot/);
   assert.ok(!/<script>|style="/.test(html), 'no inline scripts or inline styles (CSP)');
 
   // Exactly 12 serverless functions in api/
