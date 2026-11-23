@@ -15,6 +15,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { tgToken, tgCall, say, chatCode, scrub, siteBase, MEDIA } from './tg-api.js';
 import { onGroup, groupAllowed, groupCommandsFor } from './tg-groups.js';
 import { musicOn, MUSIC_MENU, musicButtons, onMusicTap } from './tg-music.js';
+import { ainewsOn, onAiNewsCommand, onAiNewsTap } from './tg-ainews.js';
 import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1 } from './gemini.js';
 import { recallGroup } from './tg-memory.js';
@@ -69,6 +70,7 @@ export const COMMANDS = [
   { command: 'time', description: 'Tell her your time again' },
   { command: 'help', description: 'What she does' },
   { command: 'music', description: 'Her songs: tap one and she sends it' },
+  { command: 'ainews', description: 'Live global AI news, open weights & AI tools' },
   { command: 'live', description: 'Ask her something on her live show on X' },
   { command: 'launch', description: 'Launch a coin on clank.trade with her (18+)' },
   { command: 'claim', description: 'Claim a prize you won in her quiz (18+)' },
@@ -76,9 +78,10 @@ export const COMMANDS = [
 ];
 // her commands menu: /launch only once launching is open to everyone (set up, and not private: LAUNCH_ONLY_FOR), so nobody
 // finds it before then; /live (2026-10-02) once her live show is set up (LIVE_SECRET); /claim (2026-10-09) while her
-// quizzes have prizes (server/games.js); /music (2026-10-14) unless TELEGRAM_MUSIC=off (server/tg-music.js)
+// quizzes have prizes (server/games.js); /music (2026-10-14) unless TELEGRAM_MUSIC=off (server/tg-music.js);
+// /ainews (2026-11-23) unless TELEGRAM_AINEWS=off (server/tg-ainews.js)
 export const commandsFor = (cfg) => COMMANDS.filter((c) => (c.command !== 'launch' || launchOpen(cfg)) && (c.command !== 'live' || liveReady(cfg))
-  && (c.command !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))) && (c.command !== 'music' || musicOn(cfg)));
+  && (c.command !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))) && (c.command !== 'music' || musicOn(cfg)) && (c.command !== 'ainews' || ainewsOn(cfg)));
 export const UPDATE_TYPES = ['message', 'callback_query', 'poll', 'poll_answer'];
 export const SHORT_DESCRIPTION = 'AGI-1, the AI girlfriend of $AGI. She texts first. 18+ · PG-13 · not financial advice';
 export const DESCRIPTION = "hi, it's AGI-1 💜 i text first when something happens on clank.trade: new egirl coins (i'm not okay about it), "
@@ -152,7 +155,10 @@ export async function handleUpdate(cfg, token, update, now = Date.now()) {
   // person and per group, so a busy group never trips the private chats' one; a group that isn't hers: nothing sent)
   const cb = update?.callback_query;
   const tappedIn = cb?.message?.chat;
-  if (cb && (tappedIn?.type === 'group' || tappedIn?.type === 'supergroup')) return onMusicTap(cfg, token, cb, now, { group: groupAllowed(cfg, tappedIn) });
+  if (cb && (tappedIn?.type === 'group' || tappedIn?.type === 'supergroup')) {
+    if (String(cb.data ?? '').startsWith('ainews:')) return onAiNewsTap(cfg, token, cb, now, { group: groupAllowed(cfg, tappedIn) });
+    return onMusicTap(cfg, token, cb, now, { group: groupAllowed(cfg, tappedIn) });
+  }
   const from = update?.message?.chat?.id ?? update?.callback_query?.message?.chat?.id;
   if (Number.isSafeInteger(from) && !telegramBurst(chatCode(cfg.passSecret, from, 'burst'), now)) return 'too_many';   // a flood: no answer at all
   // her replies in the language of their Telegram app, when it's one of hers (2026-09-29; English otherwise). Nothing is
@@ -238,7 +244,11 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
     await say(token, chat, MUSIC_MENU, buttons(musicButtons()));
     return 'music';
   }
-  await say(token, chat, L.helpFor({ launch: launchAllowed(cfg, from), live: liveReady(cfg), music: musicOn(cfg) }));
+  // (2026-11-23) AI News World: live global AI dispatches, open weights & @theAIsearch tools (server/tg-ainews.js)
+  if ((name === 'ainews' || name === 'news') && ainewsOn(cfg)) {
+    return onAiNewsCommand(cfg, token, { chatId: chat, arg, inGroup: false, now });
+  }
+  await say(token, chat, L.helpFor({ launch: launchAllowed(cfg, from), live: liveReady(cfg), music: musicOn(cfg), ainews: ainewsOn(cfg) }));
   return 'help';
 }
 
@@ -309,6 +319,8 @@ async function onButton(cfg, token, cb, now, L) {
   const data = String(cb.data ?? '');
   // (2026-10-14) one of her songs (server/tg-music.js answers the tap itself, with a little note, and keeps the menu)
   if (data.startsWith('music:')) return onMusicTap(cfg, token, cb, now, { group: false });
+  // (2026-11-23) AI News World interactive category & refresh buttons (server/tg-ainews.js)
+  if (data.startsWith('ainews:')) return onAiNewsTap(cfg, token, cb, now, { group: false });
   // the little spinner on the button stops either way
   await tgCall(token, 'answerCallbackQuery', { callback_query_id: String(cb.id ?? '') }).catch(() => {});
   if (cb.message?.chat?.type !== 'private' || !Number.isSafeInteger(chat) || chat <= 0 || cb.from?.id !== chat) return 'ignored';

@@ -19,6 +19,7 @@ import { botName, startTelegramLink } from '../src/chat/telegram-link.js';
 import { telegramBurst } from '../server/burst.js';
 import { forgetGroups, postToGroups, groupSafe, GROUP_COMMANDS, WELCOME_GAP_S } from '../server/tg-groups.js';
 import { forgetMusic, GROUP_MUSIC } from '../server/tg-music.js';
+import { GROUP_AINEWS } from '../server/tg-ainews.js';
 import { tgLinesFor } from '../server/tg-lines.js';
 import { telegramGroups } from '../server/config.js';
 
@@ -203,7 +204,7 @@ beforeEach(() => {
 });
 const tg = (method) => calls.filter((c) => c.to === 'telegram' && c.method === method);
 // her groups' /help: with her songs' line while they're on (the usual since 2026-10-14; tests/music.test.js)
-const GROUP_HELP_NOW = `${L.GROUP_HELP}\n\n${GROUP_MUSIC}`;
+const GROUP_HELP_NOW = `${L.GROUP_HELP}\n\n${GROUP_MUSIC}\n\n${GROUP_AINEWS}`;
 const texts = () => tg('sendMessage').map((c) => c.body.text);
 const db = (fn) => calls.filter((c) => c.to === 'db' && c.fn === fn);
 const cfg = () => getConfig();
@@ -240,7 +241,7 @@ test('her Telegram lines: PG-13, no pet names (anyone can start the bot), never 
   assert.match(L.HELP, /\/stop/);
   assert.match(L.HELP, /never ask for keys, seed phrases or money/);
   assert.ok(SHORT_DESCRIPTION.length <= 120 && DESCRIPTION.length <= 512, 'Telegram\'s limits for descriptions');
-  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'music', 'live', 'launch', 'claim', 'stop'], '(/music since 2026-10-14)');
+  assert.deepEqual(COMMANDS.map((c) => c.command), ['start', 'time', 'help', 'music', 'ainews', 'live', 'launch', 'claim', 'stop'], '(/music since 2026-10-14, /ainews since 2026-11-23)');
   for (const c of COMMANDS) {
     assert.match(c.command, /^[a-z]{1,32}$/, 'Telegram: 1–32 lowercase letters');
     assert.ok(c.description.length >= 1 && c.description.length <= 256, 'Telegram: 1–256 characters');
@@ -382,8 +383,8 @@ test('/stop forgets them; /help; she only reads text; someone new gets her welco
   friend();
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/help'), NOW), 'help');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/whatever'), NOW), 'help');
-  // (2026-10-14) with /music in it while her songs are on (the usual): tests/music.test.js
-  const HELP = tgLinesFor('en').helpFor({ music: true });
+  // (2026-10-14) with /music while her songs are on, (2026-11-23) and /ainews while AI News World is on
+  const HELP = tgLinesFor('en').helpFor({ music: true, ainews: true });
   assert.deepEqual(texts(), [HELP, HELP]);
   assert.ok(HELP.includes('/music') && HELP.startsWith(L.HELP.split('\n\n')[0]));
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/stop'), NOW), 'stop');
@@ -930,7 +931,7 @@ test('her replies in the language of their Telegram app: /start, the buttons, he
   prompt = calls.filter((c) => c.to === 'gemini').at(-1).body.systemInstruction.parts[0].text;
   assert.match(prompt, /Reply in English by default\./, 'not one of hers: English, and she follows what they write');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/help', from('en-GB')), NOW + 20_000), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true }), 'English as before (with /music since 2026-10-14)');
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true, ainews: true }), 'English as before (with /music since 2026-10-14, /ainews since 2026-11-23)');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('', { ...from('tr'), sticker: { file_id: 'x' } }), NOW + 30_000), 'not_text');
   assert.equal(texts().at(-1), tgLinesFor('tr').ONLY_TEXT);
 });
@@ -1293,7 +1294,7 @@ test('her group prompt and her group lines: never flirty, only $AGI, a safety re
   assert.equal(new Set(L.GROUP_WELCOMES).size, 3, 'three welcomes, taking turns');
   assert.match(L.GROUP_HELP, /tap my name and press Start/);
   assert.match(L.GROUP_FULL, /00:00 UTC/);
-  assert.deepEqual(GROUP_COMMANDS.map((c) => c.command), ['ask', 'ca', 'mc', 'website', 'music', 'help'], '(/ca, /mc and /website since 2026-10-05, /music since 2026-10-14)');
+  assert.deepEqual(GROUP_COMMANDS.map((c) => c.command), ['ask', 'ca', 'mc', 'website', 'music', 'ainews', 'help'], '(/ca, /mc and /website since 2026-10-05, /music since 2026-10-14, /ainews since 2026-11-23)');
   for (const c of GROUP_COMMANDS) assert.ok(/^[a-z]{1,32}$/.test(c.command) && c.description.length <= 256 && !NOT_OK.test(c.description));
 });
 
@@ -1439,7 +1440,7 @@ test('connecting the bot: /ask and /help in groups while group mode is on, her u
   assert.equal(first.groups, true);
   const set = tg('setMyCommands').find((c) => c.body.scope);
   assert.deepEqual(set.body, { commands: GROUP_COMMANDS, scope: { type: 'all_group_chats' } });
-  assert.deepEqual(tg('setMyCommands').find((c) => !c.body.scope).body.commands.map((c) => c.command), ['start', 'time', 'help', 'music', 'stop'], 'her private menu as before (with /music since 2026-10-14)');
+  assert.deepEqual(tg('setMyCommands').find((c) => !c.body.scope).body.commands.map((c) => c.command), ['start', 'time', 'help', 'music', 'ainews', 'stop'], 'her private menu as before (with /music since 2026-10-14, /ainews since 2026-11-23)');
   calls.length = 0;
   assert.equal((await connectBot(cfg())).groups, false, 'then left alone');
   assert.equal(tg('setMyCommands').length + tg('deleteMyCommands').length, 0);

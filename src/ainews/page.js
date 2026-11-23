@@ -703,6 +703,8 @@ function makeCardMedia(item, { isLead = false, onOpen } = {}) {
   const left = el('div', 'an-badge-group');
   if (item.breaking && item.sourceKind === 'spotlight') {
     const b = el('span', 'an-badge an-badge-break'); b.textContent = 'Spotlight'; left.append(b);
+  } else if (item.sourceKind === 'pulse') {
+    const b = el('span', 'an-badge an-badge-break'); b.textContent = 'Live Pulse'; left.append(b);
   }
   if (item.openWeights) {
     const b = el('span', 'an-badge an-badge-open'); b.textContent = 'Open Weights'; left.append(b);
@@ -884,8 +886,8 @@ function renderWorldFeed(stage) {
     return;
   }
 
-  // Prioritize visual / spotlight stories in the top magazine block when unfiltered
-  const spotlights = filtered.filter((s) => s.sourceKind === 'spotlight' || (s.image && s.breaking));
+  // Prioritize visual, live web pulse, and spotlight stories in the top magazine block
+  const spotlights = filtered.filter((s) => s.sourceKind === 'spotlight' || s.sourceKind === 'pulse' || (s.image && s.breaking));
   const topSix = [];
   const usedIds = new Set();
   for (const s of [...spotlights, ...filtered]) {

@@ -1,6 +1,6 @@
-// Live global AI news, open-weight repositories, and @theAIsearch video + tool aggregator.
-// Serves JSON at GET /api/ainews and valid RSS 2.0 XML at GET /api/ainews?format=rss (or /ainews/rss).
-// Zero external dependencies and zero extra API keys required; degrades gracefully if any upstream is slow.
+// Live global AI news, open-weight repositories, @theAIsearch video + tool aggregator,
+// and 30-minute shared Gemini Google-Search web pulse (server/ainews-pulse.js).
+// Serves JSON at GET /api/health?ainews=1 and valid RSS 2.0 XML at GET /api/health?ainews=1&format=rss (or /ainews/rss).
 import {
   AISEARCH_CHANNEL,
   WORLD_HUBS,
@@ -8,6 +8,12 @@ import {
   FALLBACK_AISEARCH_VIDEOS,
   FALLBACK_OPEN_WEIGHTS,
 } from './ainews-seed.js';
+import { getConfig } from './config.js';
+import {
+  getGeminiNewsPulse,
+  _resetGeminiPulseCache,
+  PULSE_INTERVAL_MS,
+} from './ainews-pulse.js';
 
 const USER_AGENT = 'AGI1-AINews/1.0 (+https://agi1.app/ainews)';
 const SOURCE_TIMEOUT_MS = 4800;
@@ -731,7 +737,7 @@ function dedupeByKey(items, keyFn) {
   return out;
 }
 
-export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date.now() } = {}) {
+export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date.now(), cfg = getConfig() } = {}) {
   const sources = [];
   const tasks = [];
 
@@ -837,6 +843,29 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
       })
   );
 
+  // 8. 30-Minute Shared Gemini Google-Search Web Pulse (catches X-first & breaking drops worldwide)
+  tasks.push(
+    getGeminiNewsPulse({ fetchImpl, cfg, now, classifyItem })
+      .then((pulse) => {
+        if (pulse.status !== 'off') {
+          sources.push({
+            id: 'gemini-pulse',
+            name: 'Gemini Web Pulse (30m)',
+            status: (pulse.status === 'live' || pulse.items.length > 0) ? 'live' : 'offline',
+            count: pulse.items.length,
+            ...(pulse.at ? { updatedAt: new Date(pulse.at).toISOString() } : {}),
+          });
+        }
+        return { kind: 'pulse', pulse };
+      })
+      .catch(() => {
+        if (cfg?.geminiKey && cfg?.ainewsPulse !== false) {
+          sources.push({ id: 'gemini-pulse', name: 'Gemini Web Pulse (30m)', status: 'offline', count: 0 });
+        }
+        return { kind: 'pulse', pulse: { status: 'offline', items: [], at: 0, nextAt: 0, queryCount: 0 } };
+      })
+  );
+
   const settled = await Promise.all(tasks);
 
   let videos = [];
@@ -846,6 +875,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
   const openRouterModels = [];
   const githubRepos = [];
   const hfModels = [];
+  let pulseMeta = { status: 'off', items: [], at: 0, nextAt: 0, queryCount: 0 };
 
   for (const r of settled) {
     if (!r) continue;
@@ -856,7 +886,9 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     else if (r.kind === 'openrouter') openRouterModels.push(...r.items);
     else if (r.kind === 'github') githubRepos.push(...r.items);
     else if (r.kind === 'hf-models') hfModels.push(...r.items);
+    else if (r.kind === 'pulse' && r.pulse) pulseMeta = r.pulse;
   }
+  const pulseStories = Array.isArray(pulseMeta.items) ? pulseMeta.items : [];
 
   if (!videos.length) {
     videos = FALLBACK_AISEARCH_VIDEOS.map((v) => ({
@@ -883,8 +915,16 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     (t) => t.url.toLowerCase()
   ).slice(0, 90);
 
+  const pulseOpenWeights = pulseStories
+    .filter((s) => s.githubUrl || s.huggingfaceUrl)
+    .map((s) => ({
+      ...s,
+      name: extractGitHubRepo(s.githubUrl) || s.title,
+      kind: s.githubUrl ? 'github' : 'huggingface',
+    }));
+
   const openWeights = dedupeByKey(
-    [...githubRepos, ...FALLBACK_OPEN_WEIGHTS, ...hfModels, ...openRouterModels.filter((m) => m.huggingfaceUrl)],
+    [...githubRepos, ...pulseOpenWeights, ...FALLBACK_OPEN_WEIGHTS, ...hfModels, ...openRouterModels.filter((m) => m.huggingfaceUrl)],
     (m) => (m.name || m.url || '').toLowerCase()
   )
     .sort((a, b) => Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0))
@@ -915,6 +955,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
 
   const rawStories = [
     ...SPOTLIGHT_STORIES,
+    ...pulseStories,
     ...openRouterModels.slice(0, 6),
     ...videoStories,
     ...rssStories,
@@ -948,10 +989,14 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     };
   });
 
-  const ticker = [
-    ...SPOTLIGHT_STORIES.slice(0, 5),
-    ...stories.filter((s) => s.sourceKind !== 'spotlight').slice(0, 8),
-  ].map((s) => ({
+  const ticker = dedupeByKey(
+    [
+      ...pulseStories.slice(0, 4),
+      ...SPOTLIGHT_STORIES.slice(0, 5),
+      ...stories.filter((s) => s.sourceKind !== 'spotlight' && s.sourceKind !== 'pulse').slice(0, 8),
+    ],
+    (s) => normalizeMatchKey(s.title).slice(0, 48)
+  ).slice(0, 14).map((s) => ({
     id: s.id,
     title: s.title,
     regionLabel: s.regionLabel,
@@ -965,6 +1010,15 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     ok: true,
     updatedAt: new Date(now).toISOString(),
     channel: AISEARCH_CHANNEL,
+    pulse: {
+      enabled: Boolean(cfg?.geminiKey && cfg?.ainewsPulse !== false),
+      status: pulseMeta.status,
+      intervalMinutes: Math.round(PULSE_INTERVAL_MS / 60000),
+      count: pulseStories.length,
+      lastPulseAt: pulseMeta.at ? new Date(pulseMeta.at).toISOString() : null,
+      nextPulseAt: pulseMeta.nextAt ? new Date(pulseMeta.nextAt).toISOString() : null,
+      queryCount: pulseMeta.queryCount || 0,
+    },
     stats: {
       totalStories: stories.length,
       openWeightsCount: openWeights.length,
@@ -1039,15 +1093,33 @@ let inflight = null;
 export function _resetAiNewsCache() {
   cached = null;
   inflight = null;
+  _resetGeminiPulseCache();
 }
 
-async function getSnapshot(opts = {}) {
+export async function getAiNewsSnapshot(opts = {}) {
   const now = opts.now ?? Date.now();
   if (!opts.bypassCache && cached && now - cached.at < CACHE_TTL_MS) return cached.data;
   if (!opts.bypassCache && inflight) return inflight;
-  const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now })
+  const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now, cfg: opts.cfg })
     .then((data) => {
       cached = { at: now, data };
+      // When a fresh 30-minute Gemini Web Pulse catches brand-new breaking AI stories,
+      // automatically broadcast them to AGI-1's configured Telegram group(s) (non-blocking, claim-first deduped).
+      if (!opts.skipTelegramBroadcast && data?.pulse?.status === 'live') {
+        const cfg = opts.cfg || getConfig();
+        if (cfg.tgAiNews !== false && cfg.tgAiNewsPosts !== false && cfg.tgGroupPosts !== false && cfg.tgGroups) {
+          const freshPulse = (data.stories || []).filter((s) => s.sourceKind === 'pulse');
+          if (freshPulse.length) {
+            Promise.all([import('./tg-api.js'), import('./tg-ainews.js')])
+              .then(([{ tgToken }, { broadcastBreakingAiNews }]) => {
+                const token = tgToken();
+                if (!token) return null;
+                return broadcastBreakingAiNews({ cfg, token, items: freshPulse, now, fetchImpl: opts.fetchImpl });
+              })
+              .catch((err) => console.warn(`[ainews-tg] auto-broadcast skipped: ${err?.message || err}`));
+          }
+        }
+      }
       return data;
     })
     .finally(() => {
@@ -1067,7 +1139,7 @@ export async function handleAiNewsRequest(request, opts = {}) {
   }
 
   try {
-    const data = await getSnapshot({ ...opts, bypassCache });
+    const data = await getAiNewsSnapshot({ ...opts, bypassCache });
     if (format === 'rss' || format === 'xml') {
       const xml = buildRssXml(data);
       return new Response(xml, {

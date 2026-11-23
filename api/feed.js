@@ -239,6 +239,19 @@ export async function GET(request) {
   if (token && !out.bot?.error && cfg.tgGroups) {
     out.groups = await postToGroups(cfg, token, added, { deadline: deadline - 4_000 });
     if (out.groups.posted) console.log(`[feed] posted ${out.groups.posted} in her Telegram groups`);
+    // (2026-11-23) AI News World 30-min Gemini Web Pulse wake-up: broadcasts brand-new breaking AI drops to her groups
+    if (cfg.tgGroupPosts && cfg.tgAiNews && cfg.tgAiNewsPosts && cfg.ainewsPulse && cfg.geminiKey && deadline - Date.now() >= 6_000) {
+      try {
+        const { tickTelegramAiNews } = await import('../server/tg-ainews.js');
+        const an = await tickTelegramAiNews(cfg, token, { now, deadline: deadline - 3_000 });
+        if (an.posted) {
+          out.ainews = { posted: an.posted, failed: an.failed };
+          console.log(`[feed] posted ${an.posted} breaking AI news dispatch(es) in her Telegram groups`);
+        }
+      } catch (err) {
+        console.warn(`[feed] AI news group pulse skipped: ${err.message}`);
+      }
+    }
   }
 
   // (2026-10-28) her Discord server (server/discord.js, loaded only when it's set up): her app connected (its endpoint, her

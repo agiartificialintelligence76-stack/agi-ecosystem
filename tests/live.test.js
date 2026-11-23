@@ -895,13 +895,13 @@ test('/live: 18+ first, "not on yet" until her show is set up, her menu and /hel
   delete process.env.LIVE_SECRET;
   assert.equal(await hook('/live hello there?'), 'live_not_yet');
   assert.equal(say().at(-1), LL.NOT_YET);
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'stop'], '(/music since 2026-10-14)');
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'ainews', 'stop'], '(/music since 2026-10-14, /ainews since 2026-11-23)');
   await hook('/help');
   assert.ok(!say().at(-1).includes('/live'));
   process.env.LIVE_SECRET = LIVE_KEY;
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'live', 'stop']);
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'ainews', 'live', 'stop']);
   await hook('/help');
-  assert.ok(say().at(-1).includes(tgLinesFor('en').helpFor({ live: true, music: true }).split('\n\n')[1]));
+  assert.ok(say().at(-1).includes(tgLinesFor('en').helpFor({ live: true, music: true, ainews: true }).split('\n\n')[1]));
   assert.match(say().at(-1), /\/live: ask me something on my live show on X/);
   for (const l of LANGS) {
     const line = linesOf(l.code).tg.helpLive;

@@ -252,6 +252,11 @@ export function getConfig(env = process.env) {
     // ClankChecker (2026-09-26): coins whose picture the owner doesn't want on the site (contract addresses, separated by
     // commas); their letter shows instead. Optional
     checkerHidePictures: new Set(String(env.CHECKER_HIDE_PICTURES || '').toLowerCase().split(/[\s,]+/).filter((a) => /^0x[0-9a-f]{40}$/.test(a))),
+    // AI News World (agi1.app/ainews): 30-minute shared Gemini Google-Search web pulse (server/ainews-pulse.js),
+    // plus /ainews interactive command and automatic breaking group posts in her Telegram bot (server/tg-ainews.js).
+    ainewsPulse: !isOff(env.AINEWS_PULSE),
+    tgAiNews: !isOff(env.TELEGRAM_AINEWS),
+    tgAiNewsPosts: !isOff(env.TELEGRAM_AINEWS_POSTS),
   };
 }
 

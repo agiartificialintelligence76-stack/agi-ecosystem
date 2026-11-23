@@ -41,9 +41,9 @@ function build(code) {
     // (2026-10-01) the same, with /launch among her commands: while launching coins with her is open (server/launch.js)
     HELP_LAUNCH: paras('help').map((p, i) => (i === 1 ? `${p}\n${one('helpLaunch')}` : p)).join('\n\n'),
     // (2026-10-02) with /live too, while her live show is set up (server/live.js), and /launch while it's open; (2026-10-14)
-    // and /music first, while her songs are on (server/tg-music.js)
-    helpFor: ({ launch = false, live = false, music = false } = {}) => paras('help')
-      .map((p, i) => (i === 1 ? [p, music ? one('helpMusic') : null, live ? one('helpLive') : null, launch ? one('helpLaunch') : null]
+    // and /music first, while her songs are on (server/tg-music.js); (2026-11-23) and /ainews while AI News World is on
+    helpFor: ({ launch = false, live = false, music = false, ainews = false } = {}) => paras('help')
+      .map((p, i) => (i === 1 ? [p, music ? one('helpMusic') : null, ainews ? '/ainews: live global AI news, open weights & AI tools' : null, live ? one('helpLive') : null, launch ? one('helpLaunch') : null]
         .filter(Boolean).join('\n') : p)).join('\n\n'),
     STOPPED: one('stopped'),
     NOT_STARTED: one('notStarted'),

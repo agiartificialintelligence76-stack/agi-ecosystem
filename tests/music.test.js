@@ -14,6 +14,7 @@ import {
 } from '../server/tg-music.js';
 import { siteBase } from '../server/tg-api.js';
 import { forgetGroups, GROUP_COMMANDS, groupCommandsFor } from '../server/tg-groups.js';
+import { GROUP_AINEWS } from '../server/tg-ainews.js';
 import { tgLinesFor, GROUP_HELP } from '../server/tg-lines.js';
 import { telegramBurst } from '../server/burst.js';
 import { getConfig } from '../server/config.js';
@@ -302,10 +303,10 @@ test('/music in her private chat: her songs as buttons, right away (no 18+ quest
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/music@agi1_appbot'), NOW + 1000), 'music', 'with her name too');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/Music'), NOW + 2000), 'music');
   assert.deepEqual(notTelegram(), [], 'no database: nothing kept, nobody asked their age for a PG-13 song');
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'stop']);
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'ainews', 'stop']);
   assert.equal(COMMANDS.find((c) => c.command === 'music').description, 'Her songs: tap one and she sends it');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/help'), NOW + 3000), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true }));
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true, ainews: true }));
   assert.ok(texts().at(-1).split('\n\n')[1].includes("\n/music: my songs 🎧 pick one and i'll send it"), 'with her other commands');
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/help', { from: { id: CHAT, is_bot: false, first_name: 'A', language_code: 'es' } }), NOW + 4000), 'help');
   assert.ok(texts().at(-1).includes('/music: mis canciones 🎧 elige una y te la mando'), 'in their app\'s language');
@@ -450,7 +451,7 @@ test('in her groups: /music under their message (once every 30 s there); a tap s
   assert.equal(await handleUpdate(cfg(), TOKEN, gmsg('/music@agi1_appbot', { from: { id: 778, is_bot: false } }), NOW + 31_000), 'group_music');
   assert.equal(await handleUpdate(cfg(), TOKEN, gmsg('/music@another_bot', { from: { id: 779, is_bot: false } }), NOW + 70_000), 'ignored', 'another bot\'s /music');
   assert.equal(await handleUpdate(cfg(), TOKEN, gmsg('/help', { from: { id: 780, is_bot: false } }), NOW + 71_000), 'group_help');
-  assert.equal(texts().at(-1), `${GROUP_HELP}\n\n/music: my songs 🎧 tap one and i'll send it in here`);
+  assert.equal(texts().at(-1), `${GROUP_HELP}\n\n/music: my songs 🎧 tap one and i'll send it in here\n\n${GROUP_AINEWS}`);
   // a tap: the song under her menu (on its own if the menu is gone)
   calls.length = 0;
   assert.equal(await handleUpdate(cfg(), TOKEN, gtap('music:si'), NOW + 40_000), 'music_si');
@@ -535,27 +536,27 @@ test('TELEGRAM_MUSIC=off: no /music anywhere (her menus, both /help, an old menu
   inGroup();
   await connectBot(cfg());
   assert.deepEqual([fake.commands.map((c) => c.command), fake.groupCommands.map((c) => c.command)],
-    [['start', 'time', 'help', 'music', 'stop'], ['ask', 'ca', 'mc', 'website', 'music', 'help']]);
+    [['start', 'time', 'help', 'music', 'ainews', 'stop'], ['ask', 'ca', 'mc', 'website', 'music', 'ainews', 'help']]);
   process.env.TELEGRAM_MUSIC = 'off';
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'stop']);
-  assert.deepEqual(groupCommandsFor(cfg()).map((c) => c.command), ['ask', 'ca', 'mc', 'website', 'help']);
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'ainews', 'stop']);
+  assert.deepEqual(groupCommandsFor(cfg()).map((c) => c.command), ['ask', 'ca', 'mc', 'website', 'ainews', 'help']);
   assert.equal(await handleUpdate(cfg(), TOKEN, msg('/music'), NOW), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').HELP, 'her /help as before');
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ ainews: true }), 'her /help without /music');
   assert.equal(await handleUpdate(cfg(), TOKEN, tap('music:feel'), NOW + 1000), 'music_off');
   assert.equal(toasts().at(-1), 'my songs are taking a little break 🙈');
   assert.equal(await handleUpdate(cfg(), TOKEN, gmsg('/music'), NOW + 2000), 'ignored', 'someone else\'s command then');
   assert.equal(await handleUpdate(cfg(), TOKEN, gtap('music:feel'), NOW + 3000), 'music_off');
   assert.equal(await handleUpdate(cfg(), TOKEN, gmsg('/help'), NOW + 4000), 'group_help');
-  assert.equal(texts().at(-1), GROUP_HELP);
+  assert.equal(texts().at(-1), `${GROUP_HELP}\n\n${GROUP_AINEWS}`);
   assert.equal(sent().length, 0);
   // the next run of /api/feed: both menus without it, then with it again once it's back on
   await connectBot(cfg());
   assert.deepEqual([fake.commands.map((c) => c.command), fake.groupCommands.map((c) => c.command)],
-    [['start', 'time', 'help', 'stop'], ['ask', 'ca', 'mc', 'website', 'help']]);
+    [['start', 'time', 'help', 'ainews', 'stop'], ['ask', 'ca', 'mc', 'website', 'ainews', 'help']]);
   delete process.env.TELEGRAM_MUSIC;
   await connectBot(cfg());
   assert.deepEqual([fake.commands.map((c) => c.command), fake.groupCommands.map((c) => c.command)],
-    [['start', 'time', 'help', 'music', 'stop'], ['ask', 'ca', 'mc', 'website', 'music', 'help']]);
+    [['start', 'time', 'help', 'music', 'ainews', 'stop'], ['ask', 'ca', 'mc', 'website', 'music', 'ainews', 'help']]);
 });
 
 // ---------- her words ----------

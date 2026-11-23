@@ -38,6 +38,7 @@ import { gamesOn, prizesOn } from './games.js';
 import { gamesNote, groupClaim, CLAIM_BUTTON } from './game-lines.js';
 import { secretIn, SECRET_WARNING } from './secrets.js';
 import { musicOn, MUSIC_MENU, musicButtons, GROUP_MUSIC } from './tg-music.js';
+import { ainewsOn, GROUP_AINEWS, onAiNewsCommand, forgetTgAiNews } from './tg-ainews.js';
 
 const MAX_TEXT = 500;                        // characters she reads (the same as the site's chat and her private chat)
 const MINUTE = 60_000, HOUR = 3_600_000, DAY = 86_400_000;
@@ -49,10 +50,11 @@ export const GROUP_COMMANDS = [
   { command: 'mc', description: '$AGI market cap, 24h change and liquidity' },
   { command: 'website', description: 'The official website, agi1.app' },
   { command: 'music', description: "AGI-1's songs: tap one and she sends it" },
+  { command: 'ainews', description: 'Live global AI news, open weights & AI tools' },
   { command: 'help', description: 'How to talk to her in here' },
 ];
-// …as connectBot sets them: /music only while her songs are on (2026-10-14, server/tg-music.js)
-export const groupCommandsFor = (cfg) => GROUP_COMMANDS.filter((c) => c.command !== 'music' || musicOn(cfg));
+// …as connectBot sets them: /music while her songs are on (2026-10-14), /ainews while AI News World is on (2026-11-23)
+export const groupCommandsFor = (cfg) => GROUP_COMMANDS.filter((c) => (c.command !== 'music' || musicOn(cfg)) && (c.command !== 'ainews' || ainewsOn(cfg)));
 // /ca, /website and /mc: what she answers (the contract marked as code: Telegram copies it with a tap; $AGI's numbers read
 // when asked, kept a minute), at most once every 30 s in a group
 export const FIXED_GAP_MS = 30_000;
@@ -74,8 +76,8 @@ const FIXED = {
 };
 // which of them are on: /claim while her quizzes have prizes, /music while her songs are on
 const fixedOn = (cfg, name) => Object.hasOwn(FIXED, name) && (name !== 'claim' || (gamesOn(cfg) && prizesOn(cfg))) && (name !== 'music' || musicOn(cfg));
-// her /help in a group: how to talk to her, then /music (while it's on) and her quizzes (while they're on)
-export const groupHelp = (cfg) => [GROUP_HELP, musicOn(cfg) ? GROUP_MUSIC : null, gamesOn(cfg) ? gamesNote(prizesOn(cfg)) : null].filter(Boolean).join('\n\n');
+// her /help in a group: how to talk to her, then /music (while it's on), /ainews (while it's on), and her quizzes (while they're on)
+export const groupHelp = (cfg) => [GROUP_HELP, musicOn(cfg) ? GROUP_MUSIC : null, ainewsOn(cfg) ? GROUP_AINEWS : null, gamesOn(cfg) ? gamesNote(prizesOn(cfg)) : null].filter(Boolean).join('\n\n');
 // /ask, /ask@her_bot, "/help@her_bot something" → [, name, @name, the rest]
 const COMMAND = /^\/([A-Za-z0-9_]{1,32})(?:@([A-Za-z0-9_]{3,64}))?(?:\s+([\s\S]*))?$/;
 
@@ -112,6 +114,7 @@ export function forgetGroups() {
   notes.clear(); left.clear(); warned.clear();
   known = null; askedAt = -Infinity;
   groupPersonBurst.reset(); groupBurst.reset();
+  forgetTgAiNews();
 }
 
 // ---------- who she is ----------
@@ -192,12 +195,13 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   let me = identity(token);
   if (!me.username && (cmd?.[2] || ents.some((e) => e?.type === 'mention') || body.includes('@'))) me = await botIdentity(token, process.env, now);
 
-  // is it for her? /ask (or her own commands, with her name), /ca, /website, /mc, a reply to her, or a mention of her
-  let ask = '', help = false, fixed = null;
+  // is it for her? /ask (or her own commands, with her name), /ca, /website, /mc, /music, /ainews, a reply to her, or a mention of her
+  let ask = '', help = false, fixed = null, ainewsArg = null;
   if (cmd) {
     if (cmd[2] && me.username && cmd[2].toLowerCase() !== me.username) return 'ignored';   // another bot's command
     const name = cmd[1].toLowerCase();
     if (name === 'ask') ask = withoutHer(cmd[3] || '', [], me);
+    else if (name === 'ainews' && ainewsOn(cfg)) ainewsArg = (cmd[3] || '').trim();
     else if (fixedOn(cfg, name)) fixed = name;                  // /ca, /website, /mc, /music, /claim (plain, or with her name)
     else if (name === 'help' || cmd[2]) help = true;            // /help, or another of her commands sent to her by name
     else return 'ignored';                                       // someone else's plain command (/start, /warn…)
@@ -207,6 +211,18 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
 
   // speed bumps, only for messages meant for her: 4 a minute per person, 15 a minute per group (per server copy)
   if (!groupPersonBurst(chatCode(cfg.passSecret, m.from.id, 'gburst'), now) || !groupBurst(chatCode(cfg.passSecret, chat.id, 'gburst'), now)) return 'too_many';
+
+  // (2026-11-23) /ainews [weights|tools|<topic>]: live global AI news & open weights (server/tg-ainews.js)
+  if (ainewsArg !== null) {
+    return onAiNewsCommand(cfg, token, {
+      chatId: chat.id,
+      messageId: m.message_id,
+      threadId: m.is_topic_message === true && Number.isSafeInteger(m.message_thread_id) ? m.message_thread_id : null,
+      arg: ainewsArg,
+      inGroup: true,
+      now,
+    });
+  }
 
   // /ca, /website, /mc and /music: her answer under their message (on its own if a bot already cleaned their command away),
   // at most once every 30 seconds in a group (asked again sooner: the answer is right above); no AI, nothing counted

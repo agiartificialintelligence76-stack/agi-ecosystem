@@ -1715,7 +1715,7 @@ test('her bot: 18+ first, and "not open yet" until Pinata\'s key and launch.sql 
   assert.equal(await hook(msg({ photo: PHOTO, caption: LL.EXAMPLE })), 'start', 'a stranger to her bot: her welcome first');
   fake.friends.set(CHAT, { chat_id: CHAT, adult: true, tz_minutes: 0, seen_id: 0, day: null, sent: 0 });
   assert.equal(await hook(msg({ text: '/help' })), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ launch: true, music: true }));
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ launch: true, music: true, ainews: true }));
   fake.sqlMissing = true;
   assert.equal(await hook(msg({ photo: PHOTO, caption: LL.EXAMPLE })), 'launch_closed');
   assert.equal(texts().at(-1), LL.NOT_OPEN);
@@ -1725,7 +1725,7 @@ test('her bot: 18+ first, and "not open yet" until Pinata\'s key and launch.sql 
   assert.equal(launchReady(cfg()), false);
   assert.equal(await hook(msg({ text: '/launch' })), 'launch_closed');
   assert.equal(await hook(msg({ text: '/help' })), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true }));
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true, ainews: true }));
   delete process.env.LAUNCH_GAS_KEY;
   process.env.PINATA_JWT = JWT;
   await hook(msg({ text: '/launch' }));
@@ -1743,7 +1743,7 @@ test('her private first launch (LAUNCH_ONLY_FOR): only those Telegram accounts m
   process.env.LAUNCH_ONLY_FOR = '@Owner_Name';
   assert.equal(launchReady(cfg()), true);
   assert.equal(launchOpen(cfg()), false);
-  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'stop'], 'not in her menu while it\'s private');
+  assert.deepEqual(commandsFor(cfg()).map((c) => c.command), ['start', 'time', 'help', 'music', 'ainews', 'stop'], 'not in her menu while it\'s private');
   const owner = { ...from, username: 'OWNER_name' };
   const stranger = { id: 99, is_bot: false, first_name: 'B', username: 'someone', language_code: 'en' };
   assert.deepEqual([launchAllowed(cfg(), owner), launchAllowed(cfg(), stranger), launchAllowed(cfg(), from), launchAllowed(cfg(), null)], [true, false, false, false]);
@@ -1754,12 +1754,12 @@ test('her private first launch (LAUNCH_ONLY_FOR): only those Telegram accounts m
     assert.equal(texts().at(-1), LL.NOT_OPEN);
   }
   assert.equal(await hook(as(stranger, { text: '/help' })), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true }));
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ music: true, ainews: true }));
   assert.equal(await hook(msg({ text: '/launch' })), 'launch_closed', 'no username, not on the list');
   assert.equal(fake.db.drafts.size, 0);
   // the owner (by their username, any case): all of it
   assert.equal(await hook(as(owner, { text: '/help' })), 'help');
-  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ launch: true, music: true }));
+  assert.equal(texts().at(-1), tgLinesFor('en').helpFor({ launch: true, music: true, ainews: true }));
   assert.equal(await hook(as(owner, { text: '/launch' })), 'launch_how');
   assert.equal(await hook(as(owner, { photo: PHOTO, caption: LL.EXAMPLE })), 'launch_ready');
   assert.equal(fake.db.drafts.size, 1);
