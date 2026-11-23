@@ -50,6 +50,7 @@ export const COVERS = {
   // (2026-11-14)
   growthstock: { lines: ['GROWTH', 'STOCK'], bg: '#0f2a1e', bg2: '#1f6a45', accent: '#ffc933', line: 'Plant TSLA. Water NVDA. Sell the spike. Shoo the bear.', tag: 'Stock farm' },
   goinglive: { lines: ['GOING', 'LIVE'], bg: '#1d1238', bg2: '#5a2ca0', accent: '#ff4da6', line: 'Zero followers, one bedroom. Take her to #1 trending.', tag: 'Streamer sim' },
+  finalanswer: { lines: ['FINAL', 'ANSWER'], bg: '#110730', bg2: '#3f177c', accent: '#ffc933', line: 'Fifteen rungs to a million. Plant your safety net and lock it in.', tag: 'Quiz show' },
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');

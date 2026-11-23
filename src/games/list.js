@@ -48,6 +48,8 @@ export const GAMES = {
   // since 2026-11-14 (the owner, about a famous YouTuber's streamer sim: "yes exactly" to an AGI-1 version of our own):
   // AGI-1 streams her way from zero followers to #1 trending (see CLAUDE.md, "GOING LIVE")
   goinglive: { name: "GOING LIVE", path: '/games/goinglive', genre: 'Sim', kit: true },
+  // since 2026-11-23: AGI-1's late-night trivia game show — 15 rungs to 1,000,000, custom safety net & 5 lifelines
+  finalanswer: { name: "FINAL ANSWER", path: '/games/finalanswer', genre: 'Quiz', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

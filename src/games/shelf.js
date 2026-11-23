@@ -32,7 +32,8 @@ export const SORTS = Object.freeze([
 // before the first night's ten)
 export const SHELF = Object.freeze([
   { id: 'trenchingsimulator', genre: 'Trading sim', line: 'Six trading terminals, play money only', tags: ['chill'], added: '2026-10-20', badge: 'Play money' },
-  { id: 'goinglive', genre: 'Streamer sim', line: 'Stream as AGI-1, from zero to #1', tags: ['new', 'chill'], added: '2026-11-14T12:30' },
+  { id: 'finalanswer', genre: 'Quiz show', line: 'Climb 15 rungs to 1,000,000 with AGI-1', tags: ['new', 'puzzle'], added: '2026-11-23' },
+  { id: 'goinglive', genre: 'Streamer sim', line: 'Stream as AGI-1, from zero to #1', tags: ['chill'], added: '2026-11-14T12:30' },
   { id: 'growthstock', genre: 'Stock farm', line: 'Grow stocks as candle charts, sell high', tags: ['chill'], added: '2026-11-14' },
   { id: 'overthinking', genre: 'Lasso arcade', line: 'Draw loops round her 3 a.m. thoughts', tags: ['arcade', 'puzzle'], added: '2026-11-13' },
   { id: 'bubblesort', genre: 'Bubble shooter', line: 'Match three, drop the rest', tags: ['puzzle', 'arcade'], added: '2026-11-09' },

@@ -9,7 +9,7 @@ import { readFileSync, existsSync, readdirSync } from 'node:fs';
 
 const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 const exists = (p) => existsSync(new URL(`../${p}`, import.meta.url));
-const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive'];
+const KIT_IDS = ['mergeagi', 'blockchain', 'heartbeat', 'scamslayer', 'lastmodel', 'singularity', 'jailbreak', 'stacked', 'jaywalk', 'robotaxi', 'realorai', 'notarobot', 'alignment', 'gradient', 'epochs', 'synapse', 'overclock', 'beattheagi', 'hallucination', 'guardrails', 'bubblesort', 'airgap', 'cookies', 'packetloss', 'autocomplete', 'overthinking', 'growthstock', 'goinglive', 'finalanswer'];
 
 test('the kit games (twenty-eight since 2026-11-14) are in the games list, after the first four, with their names and addresses', async () => {
   const { GAMES, isGame } = await import('../src/games/list.js');
