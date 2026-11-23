@@ -14,6 +14,7 @@ import '../styles/ainews.css';
 
 import { startTheme } from '../theme.js';
 import { startMenu } from '../menu.js';
+import { botName } from '../chat/telegram-link.js';
 import { createWorldGlobe } from './globe.js';
 import {
   loadAlertPrefs,
@@ -1582,6 +1583,29 @@ function renderAlertsModalBody() {
   status.append(left, btnGroup);
   sec1.append(status);
   frag.append(sec1);
+
+  // Section 1B: Instant 24/7 Telegram Bot Push Alerts (works when browser is closed!)
+  const tgBot = botName(import.meta.env.VITE_TELEGRAM_BOT) || botName(worldData?.telegramBot);
+  if (tgBot) {
+    const secTg = el('div', 'an-alert-section');
+    const tgRow = el('div', 'an-alert-status');
+    const tgLeft = el('div');
+    const tgTitle = el('strong');
+    tgTitle.textContent = 'Telegram Bot Push Alerts (24/7 Mobile & Desktop)';
+    const tgDesc = el('p');
+    tgDesc.textContent = 'Let AGI-1 DM you automatically on Telegram whenever a new AI model, open-weight drop, @theAIsearch video, or breaking AI news hits — even when this tab is closed.';
+    tgLeft.append(tgTitle, tgDesc);
+
+    const tgLink = el('a', 'an-btn an-btn-alert', {
+      href: `https://t.me/${tgBot}?start=ainews`,
+      target: '_blank',
+      rel: 'noopener noreferrer',
+    });
+    tgLink.textContent = 'Get Alerts on Telegram ↗';
+    tgRow.append(tgLeft, tgLink);
+    secTg.append(tgRow);
+    frag.append(secTg);
+  }
 
   // Section 2: Topic Channels + Cadence
   const sec2 = el('div', 'an-alert-section');

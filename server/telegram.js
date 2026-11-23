@@ -15,7 +15,7 @@ import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { tgToken, tgCall, say, chatCode, scrub, siteBase, MEDIA } from './tg-api.js';
 import { onGroup, groupAllowed, groupCommandsFor } from './tg-groups.js';
 import { musicOn, MUSIC_MENU, musicButtons, onMusicTap } from './tg-music.js';
-import { ainewsOn, onAiNewsCommand, onAiNewsTap } from './tg-ainews.js';
+import { ainewsOn, onAiNewsCommand, onAiNewsStart, onAiNewsTap, unsubscribeAiNewsDm } from './tg-ainews.js';
 import { rpc, takeChatSlot } from './limits.js';
 import { askAgi1 } from './gemini.js';
 import { recallGroup } from './tg-memory.js';
@@ -204,6 +204,10 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
     await say(token, chat, text);
     return 'alerts';
   }
+  // (2026-11-23) "/start ainews" from agi1.app/ainews or group button: instant DM AI News alerts (PG-13, no 18+ check)
+  if (name === 'start' && /^ainews$/i.test(arg) && ainewsOn(cfg)) {
+    return onAiNewsStart(cfg, token, chat, { now });
+  }
   // (2026-10-09) /claim, or "/start claim" from a quiz winner's button in the group: their prize (18+ first)
   if (name === 'claim' || (name === 'start' && /^claim$/i.test(arg))) {
     const row = await db.get(cfg, chat);
@@ -223,9 +227,14 @@ async function onCommand(cfg, token, chat, name, arg, now, L, from) {
   }
   if (name === 'stop') {
     await db.forget(cfg, chat);
-    // (round 4, phase 2) AGI Studio's alerts off too, when this chat had them
+    // (round 4, phase 2) AGI Studio's alerts off too, when this chat had them; (2026-11-23) AI News alerts off too
     const alerts = await (await import('./inf-admin.js')).alertsOff(cfg, chat).catch(() => false);
-    await say(token, chat, alerts ? `${L.STOPPED}\n\nAGI Studio's alerts are off for this chat too.` : L.STOPPED);
+    const aiAlerts = await unsubscribeAiNewsDm(cfg, chat).catch(() => false);
+    const notes = [
+      alerts ? "AGI Studio's alerts are off for this chat too." : null,
+      aiAlerts ? 'AI News alerts are off for this chat too.' : null,
+    ].filter(Boolean);
+    await say(token, chat, notes.length ? `${L.STOPPED}\n\n${notes.join(' ')}` : L.STOPPED);
     return 'stop';
   }
   if (name === 'time') {

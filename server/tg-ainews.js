@@ -1,21 +1,27 @@
 // AI News World in AGI-1's Telegram bot (private chat + allowed Telegram groups).
-//   • /ainews [weights|tools|<topic>]: live global AI dispatches, open-weight GitHub/HF repos,
-//     and @theAIsearch extracted AI tools with interactive inline category tabs.
-//   • Automatic breaking AI drops posted to configured Telegram groups (`TELEGRAM_GROUPS`)
-//     whenever the shared 30-minute Gemini Web Pulse discovers brand-new breaking AI news.
+//   • /ainews [weights|tools|alerts|off|<topic>]: live global AI dispatches, open-weight
+//     GitHub/HF repos, and @theAIsearch extracted AI tools with interactive inline tabs.
+//   • Personal automatic Telegram DM alerts: users tap "Get Alerts" on /ainews, tap the
+//     "Get Alerts on Telegram" button on agi1.app/ainews (/start ainews), or type
+//     /ainews alerts to get notified automatically whenever a new AI model, breaking AI
+//     news drop, or @theAIsearch video lands. /stop or "Pause Alerts" unsubscribes instantly.
+//   • Automatic breaking AI drops posted to configured Telegram groups (`TELEGRAM_GROUPS`).
+//   • Zero extra SQL migration: subscriber chat IDs & dedupe keys live compactly in
+//     `public.agi1_feed_state.state.ainewsTg` (strictly capped under PostgreSQL's 20 KB limit).
 //   • Plain text + validated Telegram `text_link` entities only (no Markdown/HTML parsing,
 //     no link previews, PG-13, no financial advice, no non-$AGI tickers or wallet addresses).
 //   • Switches: `TELEGRAM_AINEWS=off` disables /ainews everywhere; `TELEGRAM_AINEWS_POSTS=off`
-//     disables automatic group broadcasts while keeping on-demand /ainews working.
+//     disables automatic group broadcasts while keeping on-demand /ainews & DM alerts working.
 import { tgCall, say, chatCode, siteBase } from './tg-api.js';
 import { makeBurstLimit } from './burst.js';
 import { getAiNewsSnapshot, classifyItem, safeHttpUrl } from './ainews.js';
 import { getGeminiNewsPulse } from './ainews-pulse.js';
+import { botName } from '../src/chat/telegram-link.js';
 
 export const ainewsOn = (cfg) => cfg?.tgAiNews === true;
 export const aiNewsPostsOn = (cfg) => cfg?.tgAiNews === true && cfg?.tgAiNewsPosts === true && cfg?.tgGroupPosts === true && Boolean(cfg?.tgGroups);
 
-export const HELP_AINEWS = '/ainews: live global AI news, open weights & @theAIsearch tools';
+export const HELP_AINEWS = '/ainews: live global AI news, open weights, AI tools & instant alerts';
 export const GROUP_AINEWS = '/ainews: live global AI news, open weights & @theAIsearch tools (try /ainews weights or /ainews tools)';
 
 export const AINEWS_GAPS = Object.freeze({
@@ -31,26 +37,35 @@ export const AINEWS_TOAST = Object.freeze({
   weights: '🧠 Loading open weights & GitHub repos…',
   tools: '🛠️ Loading @theAIsearch tools…',
   refresh: '🔄 Syncing live AI feeds…',
+  subOn: '🔔 AI News alerts ON! I will DM you when new models or breaking AI news drops 💜',
+  subOff: '🔕 AI News alerts paused. Tap again anytime to turn back on.',
+  subFull: 'AI News alert list is full right now 🙈 try again soon or use /ainews anytime',
+  subUnavailable: "couldn't save your alert preference just now 🙈 try again in a moment",
   wait: 'give it a few seconds before refreshing again 💜',
   off: 'AI news is taking a little break right now 🙈',
   failed: "couldn't load live AI news just now 🙈 try again in a minute",
 });
 
+export const MAX_DM_SUBS = 400;
+const MAX_STATE_BYTES = 18_500;
 const OTHER_COIN_RE = /\$(?!agi\b)[a-z]/i;
 const WALLET_ADDR_RE = /0x[0-9a-f]{6}/i;
-const MAX_SEEN = 24;
+const MAX_SEEN = 32;
 const MAX_BROADCAST_ITEMS = 3;
 const MAX_BROADCAST_AGE_MS = 24 * 60 * 60 * 1000;
 const SUPABASE_TIMEOUT_MS = 3500;
+const PER_SECOND = 25;
 
-// ---------- In-memory spam guards (per server copy) ----------
+// ---------- In-memory spam guards & bot username cache ----------
 
 const stamp = new Map();
 const tapBurst = makeBurstLimit({ max: 6, windowMs: 60_000 });
+let cachedBot = { at: -Infinity, username: null };
 
 export function forgetTgAiNews() {
   stamp.clear();
   tapBurst.reset();
+  cachedBot = { at: -Infinity, username: null };
 }
 
 function recent(key, now, gapMs) {
@@ -66,6 +81,19 @@ function mark(key, now) {
 const topicOf = (m) => (m?.is_topic_message === true && Number.isSafeInteger(m.message_thread_id)
   ? { message_thread_id: m.message_thread_id }
   : {});
+
+export async function resolveBotUsername(token, env = process.env, now = Date.now()) {
+  const fromEnv = botName(env?.VITE_TELEGRAM_BOT);
+  if (fromEnv) return fromEnv;
+  if (!token) return null;
+  if (cachedBot.username || now - cachedBot.at < 10 * 60_000) return cachedBot.username;
+  cachedBot.at = now;
+  try {
+    const me = await tgCall(token, 'getMe', {}, { timeoutMs: 3000 });
+    cachedBot.username = botName(me?.username);
+  } catch { /* ignore */ }
+  return cachedBot.username;
+}
 
 // ---------- Helpers ----------
 
@@ -137,20 +165,28 @@ function buildEntityMessage(parts) {
   return { text, entities };
 }
 
-export function aiNewsButtons(activeTab = 'top', site = 'https://agi1.app') {
+export function aiNewsButtons(activeTab = 'top', site = 'https://agi1.app', { inGroup = false, subscribed = false, bot = null, isAlert = false } = {}) {
   const tab = ['top', 'weights', 'tools'].includes(activeTab) ? activeTab : 'top';
   const base = String(site || 'https://agi1.app').replace(/\/+$/, '');
-  return [
-    [
-      { text: `${tab === 'top' ? '• ' : ''}🌐 Breaking`, callback_data: 'ainews:top' },
-      { text: `${tab === 'weights' ? '• ' : ''}🧠 Weights`, callback_data: 'ainews:weights' },
-      { text: `${tab === 'tools' ? '• ' : ''}🛠️ AI Tools`, callback_data: 'ainews:tools' },
-    ],
-    [
-      { text: '🔄 Refresh', callback_data: `ainews:refresh:${tab}` },
-      { text: '🌍 Open agi1.app/ainews ↗', url: `${base}/ainews` },
-    ],
+  const row1 = [
+    { text: `${tab === 'top' ? '• ' : ''}🌐 Breaking`, callback_data: 'ainews:top' },
+    { text: `${tab === 'weights' ? '• ' : ''}🧠 Weights`, callback_data: 'ainews:weights' },
+    { text: `${tab === 'tools' ? '• ' : ''}🛠️ AI Tools`, callback_data: 'ainews:tools' },
   ];
+  if (inGroup) {
+    const row2 = [{ text: '🔄 Refresh', callback_data: `ainews:refresh:${tab}` }];
+    if (bot) row2.push({ text: '🔔 DM Alerts ↗', url: `https://t.me/${bot}?start=ainews` });
+    row2.push({ text: '🌍 agi1.app/ainews ↗', url: `${base}/ainews` });
+    return [row1, row2];
+  }
+  const row2 = [
+    subscribed
+      ? { text: isAlert ? '🔕 Pause Alerts' : '🔔 Alerts: ON', callback_data: `ainews:unsub:${tab}` }
+      : { text: '🔔 Get Alerts', callback_data: `ainews:sub:${tab}` },
+    { text: '🔄 Refresh', callback_data: `ainews:refresh:${tab}` },
+  ];
+  const row3 = [{ text: '🌍 Open agi1.app/ainews ↗', url: `${base}/ainews` }];
+  return [row1, row2, row3];
 }
 
 export function parseAiNewsArg(raw = '') {
@@ -160,17 +196,117 @@ export function parseAiNewsArg(raw = '') {
   if (/^(?:breaking|top|latest|world|news|pulse)$/.test(low)) return { tab: 'top', query: '' };
   if (/^(?:weights?|models?|repos?|github|open|opensource|hf|huggingface)$/.test(low)) return { tab: 'weights', query: '' };
   if (/^(?:tools?|aisearch|@?theaisearch|videos?|youtube|yt)$/.test(low)) return { tab: 'tools', query: '' };
+  if (/^(?:alerts?|notify|notifications?|sub|subscribe|alerts?\s+on|on)$/.test(low)) return { tab: 'sub', query: '' };
+  if (/^(?:alerts?\s+off|mute|unsub|unsubscribe|off|pause|stop)$/.test(low)) return { tab: 'unsub', query: '' };
   return { tab: 'search', query: clean };
+}
+
+// ---------- Supabase shared subscriber & dedupe storage (agi1_feed_state.ainewsTg) ----------
+
+async function supabaseRpc(fetchImpl, cfg, fn, args) {
+  if (!cfg?.supabaseUrl || !cfg?.supabaseKey) return { ok: false, data: null };
+  try {
+    const res = await fetchImpl(`${cfg.supabaseUrl}/rest/v1/rpc/${fn}`, {
+      method: 'POST',
+      headers: { apikey: cfg.supabaseKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify(args || {}),
+      signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS),
+    });
+    if (!res.ok) return { ok: false, data: null };
+    return { ok: true, data: await res.json() };
+  } catch {
+    return { ok: false, data: null };
+  }
+}
+
+function normalizeTgState(raw) {
+  const s = raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {};
+  const seen = Array.isArray(s.seen) ? [...new Set(s.seen.map(String).filter(Boolean))].slice(0, MAX_SEEN) : [];
+  const subs = Array.isArray(s.subs)
+    ? [...new Set(s.subs.map((x) => Number(x)).filter((n) => Number.isSafeInteger(n) && n > 0))].slice(0, MAX_DM_SUBS)
+    : [];
+  return {
+    seeded: s.seeded === true,
+    lastAt: Number(s.lastAt) || 0,
+    seen,
+    subs,
+  };
+}
+
+export async function isAiNewsDmSubscribed(cfg, chatId, { fetchImpl = globalThis.fetch } = {}) {
+  if (!Number.isSafeInteger(chatId) || chatId <= 0 || !cfg?.supabaseUrl || !cfg?.supabaseKey) return false;
+  const r = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
+  if (!r.ok) return false;
+  const tgState = normalizeTgState(r.data?.ainewsTg);
+  return tgState.subs.includes(chatId);
+}
+
+export async function subscribeAiNewsDm(cfg, chatId, { fetchImpl = globalThis.fetch } = {}) {
+  if (!Number.isSafeInteger(chatId) || chatId <= 0) return { ok: false, why: 'bad_chat' };
+  if (!cfg?.supabaseUrl || !cfg?.supabaseKey) return { ok: false, why: 'no_db' };
+  const r = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
+  if (!r.ok) return { ok: false, why: 'db' };
+  const state = r.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {};
+  const tgState = normalizeTgState(state.ainewsTg);
+  if (tgState.subs.includes(chatId)) return { ok: true, already: true, count: tgState.subs.length };
+  if (tgState.subs.length >= MAX_DM_SUBS) return { ok: false, why: 'full', count: tgState.subs.length };
+
+  const nextState = { ...state, ainewsTg: { ...tgState, subs: [...tgState.subs, chatId] } };
+  if (Buffer.byteLength(JSON.stringify(nextState), 'utf8') > MAX_STATE_BYTES) {
+    return { ok: false, why: 'full', count: tgState.subs.length };
+  }
+  const saved = await supabaseRpc(fetchImpl, cfg, 'feed_state_put', { p_state: nextState });
+  if (!saved.ok || saved.data === false) return { ok: false, why: 'db' };
+  return { ok: true, already: false, count: tgState.subs.length + 1 };
+}
+
+export async function unsubscribeAiNewsDm(cfg, chatId, { fetchImpl = globalThis.fetch } = {}) {
+  if (!Number.isSafeInteger(chatId) || chatId <= 0 || !cfg?.supabaseUrl || !cfg?.supabaseKey) return false;
+  const r = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
+  if (!r.ok) return false;
+  const state = r.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {};
+  const tgState = normalizeTgState(state.ainewsTg);
+  if (!tgState.subs.includes(chatId)) return false;
+  const nextSubs = tgState.subs.filter((id) => id !== chatId);
+  const saved = await supabaseRpc(fetchImpl, cfg, 'feed_state_put', {
+    p_state: { ...state, ainewsTg: { ...tgState, subs: nextSubs } },
+  });
+  return Boolean(saved.ok && saved.data !== false);
+}
+
+async function pruneGoneSubs(cfg, goneIds, { fetchImpl = globalThis.fetch } = {}) {
+  if (!goneIds.length || !cfg?.supabaseUrl || !cfg?.supabaseKey) return;
+  const goneSet = new Set(goneIds);
+  const r = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
+  if (!r.ok) return;
+  const state = r.data && typeof r.data === 'object' && !Array.isArray(r.data) ? r.data : {};
+  const tgState = normalizeTgState(state.ainewsTg);
+  const nextSubs = tgState.subs.filter((id) => !goneSet.has(id));
+  if (nextSubs.length === tgState.subs.length) return;
+  await supabaseRpc(fetchImpl, cfg, 'feed_state_put', {
+    p_state: { ...state, ainewsTg: { ...tgState, subs: nextSubs } },
+  });
 }
 
 // ---------- Formatting live Telegram views ----------
 
-export function formatAiNewsView(data, { tab = 'top', query = '', now = Date.now(), site = 'https://agi1.app' } = {}) {
+export function formatAiNewsView(data, {
+  tab = 'top',
+  query = '',
+  now = Date.now(),
+  site = 'https://agi1.app',
+  inGroup = false,
+  subscribed = false,
+  bot = null,
+  banner = '',
+} = {}) {
   const base = String(site || 'https://agi1.app').replace(/\/+$/, '');
   const stats = data?.stats || {};
   const pulseOn = data?.pulse?.enabled && (data.pulse.status === 'live' || data.pulse.status === 'cached') && data.pulse.count > 0;
   const feedLine = `${stats.sourcesLive || 0}/${stats.sourcesTotal || 20} live feeds${pulseOn ? ' · 30m web pulse active' : ''}`;
   const parts = [];
+
+  if (banner) parts.push(`${banner}\n\n`);
 
   if (tab === 'search' && query) {
     const q = query.toLowerCase();
@@ -262,39 +398,100 @@ export function formatAiNewsView(data, { tab = 'top', query = '', now = Date.now
   return {
     text: text.slice(0, 3900),
     entities: entities.filter((e) => e.offset + e.length <= 3900),
-    markup: { inline_keyboard: aiNewsButtons(markupTab, base) },
+    markup: { inline_keyboard: aiNewsButtons(markupTab, base, { inGroup, subscribed, bot }) },
   };
 }
 
-// ---------- Formatting automatic breaking group broadcasts ----------
+// ---------- Formatting automatic breaking alert pushes (DM & Group) ----------
 
-export function formatBreakingBroadcast(items = [], { now = Date.now(), site = 'https://agi1.app' } = {}) {
+export function formatBreakingBroadcast(items = [], {
+  now = Date.now(),
+  site = 'https://agi1.app',
+  inGroup = true,
+  bot = null,
+} = {}) {
   const base = String(site || 'https://agi1.app').replace(/\/+$/, '');
   const clean = items
     .filter((s) => s && s.title && safeHttpUrl(s.url) && safeForGroupText(`${s.title} ${s.summary || ''} ${s.lab || ''}`))
     .slice(0, MAX_BROADCAST_ITEMS);
   if (!clean.length) return null;
 
-  const parts = ['⚡ Breaking AI News · Live Global Pulse 💜\n\n'];
+  const hasModel = clean.some((s) => s.sourceKind === 'openrouter' || s.openWeights || s.category === 'models');
+  const header = hasModel
+    ? '🚨 New AI Model & Breaking News Alert 💜\n\n'
+    : '⚡ Breaking AI News Alert 💜\n\n';
+  const parts = [header];
   clean.forEach((s, i) => {
-    parts.push(`${i + 1}. [${regionTag(s)}] `, [cleanLine(s.title, 96), s.url], '\n');
+    const kindIcon = s.sourceKind === 'openrouter' ? '🧠 ' : s.sourceKind === 'video' ? '🎬 ' : '⚡ ';
+    parts.push(`${i + 1}. ${kindIcon}[${regionTag(s)}] `, [cleanLine(s.title, 96), s.url], '\n');
     if (s.summary) parts.push(`   ${cleanLine(s.summary, 130)}\n`);
     parts.push(`   ${cleanLine(s.lab || s.source || 'Global AI', 36)} · ${relTime(s.publishedAt, now)}`);
     if (s.githubUrl && s.githubUrl !== s.url) parts.push(' · ', ['GitHub ↗', s.githubUrl]);
     else if (s.huggingfaceUrl && s.huggingfaceUrl !== s.url) parts.push(' · ', ['HF ↗', s.huggingfaceUrl]);
     parts.push('\n\n');
   });
-  parts.push('type /ainews anytime or explore live on ', ['agi1.app/ainews', `${base}/ainews`]);
+  parts.push(
+    inGroup ? 'type /ainews anytime or explore live on ' : 'tap below to browse more or pause alerts · ',
+    ['agi1.app/ainews', `${base}/ainews`],
+  );
 
   const { text, entities } = buildEntityMessage(parts);
   return {
     text: text.slice(0, 3900),
     entities: entities.filter((e) => e.offset + e.length <= 3900),
-    markup: { inline_keyboard: aiNewsButtons('top', base) },
+    markup: { inline_keyboard: aiNewsButtons('top', base, { inGroup, subscribed: !inGroup, bot, isAlert: !inGroup }) },
   };
 }
 
-// ---------- Interactive /ainews command & inline button handlers ----------
+// ---------- High-signal alert candidate collector ----------
+
+export function collectAlertCandidates(snapshot, now = Date.now()) {
+  if (!snapshot) return [];
+  const stories = Array.isArray(snapshot.stories) ? snapshot.stories : [];
+  const out = [];
+  const seen = new Set();
+  for (const s of stories) {
+    if (!s || !s.title || !safeHttpUrl(s.url)) continue;
+    // Only auto-alert on live high-signal drops (30m Gemini Web Pulse, OpenRouter model launches, @theAIsearch videos)
+    if (!['pulse', 'openrouter', 'video'].includes(s.sourceKind)) continue;
+    const ts = Date.parse(s.publishedAt || '');
+    if (Number.isFinite(ts) && now - ts > MAX_BROADCAST_AGE_MS) continue;
+    const key = normTitleKey(s.title);
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    out.push(s);
+  }
+  return out;
+}
+
+// ---------- Interactive /ainews, /start ainews & inline button handlers ----------
+
+export async function onAiNewsStart(cfg, token, chatId, {
+  now = Date.now(),
+  fetchImpl = globalThis.fetch,
+  env = process.env,
+} = {}) {
+  if (!ainewsOn(cfg)) {
+    await say(token, chatId, AINEWS_TOAST.off, {}, { timeoutMs: 4000 }).catch(() => {});
+    return 'ainews_off';
+  }
+  const sub = await subscribeAiNewsDm(cfg, chatId, { fetchImpl });
+  const banner = sub.ok
+    ? "🔔 AI News Alerts are ON for this chat 💜 I'll DM you automatically whenever a new AI model, open-weight drop, @theAIsearch video, or breaking AI news hits. Tap Pause Alerts or /stop anytime."
+    : sub.why === 'full' ? AINEWS_TOAST.subFull : AINEWS_TOAST.subUnavailable;
+  tgCall(token, 'sendChatAction', { chat_id: chatId, action: 'typing' }).catch(() => {});
+  try {
+    const data = await getAiNewsSnapshot({ cfg, now, fetchImpl, skipTelegramBroadcast: true });
+    const site = siteBase(env) || 'https://agi1.app';
+    const view = formatAiNewsView(data, { tab: 'top', now, site, inGroup: false, subscribed: sub.ok, banner });
+    await say(token, chatId, view.text, { entities: view.entities, reply_markup: view.markup }, { timeoutMs: 5000 });
+    return sub.ok ? 'ainews_sub_start' : 'ainews_sub_failed';
+  } catch (err) {
+    console.warn(`[ainews-tg] /start ainews failed: ${err?.message || err}`);
+    await say(token, chatId, banner, {}, { timeoutMs: 4000 }).catch(() => {});
+    return sub.ok ? 'ainews_sub_start' : 'ainews_failed';
+  }
+}
 
 export async function onAiNewsCommand(cfg, token, {
   chatId,
@@ -308,9 +505,28 @@ export async function onAiNewsCommand(cfg, token, {
 } = {}) {
   if (!ainewsOn(cfg)) return 'ainews_off';
   const { tab, query } = parseAiNewsArg(arg);
+
+  // Private DM alert subscription shortcuts: "/ainews alerts" or "/ainews off"
+  if (!inGroup && (tab === 'sub' || tab === 'unsub')) {
+    if (tab === 'sub') return onAiNewsStart(cfg, token, chatId, { now, fetchImpl, env });
+    const had = await unsubscribeAiNewsDm(cfg, chatId, { fetchImpl });
+    const site = siteBase(env) || 'https://agi1.app';
+    await say(
+      token,
+      chatId,
+      had
+        ? '🔕 AI News alerts are paused for this chat 💜 type /ainews alerts anytime to turn them back on.'
+        : 'AI News alerts were already off for this chat 💜 type /ainews alerts anytime to turn them on.',
+      { reply_markup: { inline_keyboard: aiNewsButtons('top', site, { inGroup: false, subscribed: false }) } },
+      { timeoutMs: 4000 },
+    );
+    return 'ainews_unsub';
+  }
+
+  const effectiveTab = inGroup && (tab === 'sub' || tab === 'unsub') ? 'top' : tab;
   if (inGroup) {
     const gap = query ? AINEWS_GAPS.groupSearch : AINEWS_GAPS.groupCmd;
-    const key = query ? `gsearch:${chatId}` : `gcmd:${chatId}:${tab}`;
+    const key = query ? `gsearch:${chatId}` : `gcmd:${chatId}:${effectiveTab}`;
     if (recent(key, now, gap)) return 'group_recent';
     mark(key, now);
   }
@@ -321,15 +537,19 @@ export async function onAiNewsCommand(cfg, token, {
   tgCall(token, 'sendChatAction', { chat_id: chatId, action: 'typing', ...(Number.isSafeInteger(threadId) ? { message_thread_id: threadId } : {}) }).catch(() => {});
 
   try {
-    const data = await getAiNewsSnapshot({ cfg, now, fetchImpl });
+    const [data, subscribed, bot] = await Promise.all([
+      getAiNewsSnapshot({ cfg, now, fetchImpl }),
+      inGroup ? Promise.resolve(false) : isAiNewsDmSubscribed(cfg, chatId, { fetchImpl }),
+      inGroup ? resolveBotUsername(token, env, now) : Promise.resolve(null),
+    ]);
     const site = siteBase(env) || 'https://agi1.app';
-    const view = formatAiNewsView(data, { tab, query, now, site });
+    const view = formatAiNewsView(data, { tab: effectiveTab, query, now, site, inGroup, subscribed, bot });
     await say(token, chatId, view.text, {
       ...extraBase,
       entities: view.entities,
       reply_markup: view.markup,
     }, { timeoutMs: 5000 });
-    return inGroup ? `group_ainews_${tab}` : `ainews_${tab}`;
+    return inGroup ? `group_ainews_${effectiveTab}` : `ainews_${effectiveTab}`;
   } catch (err) {
     console.warn(`[ainews-tg] couldn't answer /ainews: ${err?.message || err}`);
     await say(token, chatId, AINEWS_TOAST.failed, extraBase, { timeoutMs: 4000 }).catch(() => {});
@@ -352,7 +572,7 @@ export async function onAiNewsTap(cfg, token, cb, now = Date.now(), {
   const inGroup = chat?.type === 'group' || chat?.type === 'supergroup';
   const person = cb?.from;
   const data = String(cb?.data ?? '');
-  const parsed = /^ainews:(top|weights|tools|refresh(?::(top|weights|tools))?)$/.exec(data);
+  const parsed = /^ainews:(top|weights|tools|(?:refresh|sub|unsub)(?::(top|weights|tools))?)$/.exec(data);
 
   if (!parsed || !Number.isSafeInteger(chat?.id) || !Number.isSafeInteger(m?.message_id) || !person || person.is_bot
     || !Number.isSafeInteger(person.id)
@@ -366,8 +586,42 @@ export async function onAiNewsTap(cfg, token, cb, now = Date.now(), {
   }
   if (inGroup && !tapBurst(chatCode(cfg.passSecret, person.id, 'anburst'), now)) return 'too_many';
 
-  const isRefresh = parsed[1].startsWith('refresh');
-  const tab = isRefresh ? (parsed[2] || 'top') : parsed[1];
+  const action = parsed[1];
+  const tab = parsed[2] || (['top', 'weights', 'tools'].includes(action) ? action : 'top');
+  const site = siteBase(env) || 'https://agi1.app';
+
+  // Private DM 1-tap alert subscription toggle ("🔔 Get Alerts" <-> "🔔 Alerts: ON")
+  if (action.startsWith('sub') || action.startsWith('unsub')) {
+    if (inGroup) {
+      await answer();
+      return 'ignored';
+    }
+    const wantOn = action.startsWith('sub');
+    if (wantOn) {
+      const r = await subscribeAiNewsDm(cfg, chat.id, { fetchImpl });
+      if (!r.ok) {
+        await answer(r.why === 'full' ? AINEWS_TOAST.subFull : AINEWS_TOAST.subUnavailable);
+        return 'ainews_sub_failed';
+      }
+      await answer(AINEWS_TOAST.subOn);
+      await tgCall(token, 'editMessageReplyMarkup', {
+        chat_id: chat.id,
+        message_id: m.message_id,
+        reply_markup: { inline_keyboard: aiNewsButtons(tab, site, { inGroup: false, subscribed: true }) },
+      }, { timeoutMs: 4000 }).catch(() => {});
+      return 'ainews_sub';
+    }
+    await unsubscribeAiNewsDm(cfg, chat.id, { fetchImpl });
+    await answer(AINEWS_TOAST.subOff);
+    await tgCall(token, 'editMessageReplyMarkup', {
+      chat_id: chat.id,
+      message_id: m.message_id,
+      reply_markup: { inline_keyboard: aiNewsButtons(tab, site, { inGroup: false, subscribed: false }) },
+    }, { timeoutMs: 4000 }).catch(() => {});
+    return 'ainews_unsub';
+  }
+
+  const isRefresh = action.startsWith('refresh');
   const where = String(chat.id);
   if (isRefresh && recent(`refresh:${where}`, now, AINEWS_GAPS.refresh)) {
     await answer(AINEWS_TOAST.wait);
@@ -383,9 +637,12 @@ export async function onAiNewsTap(cfg, token, cb, now = Date.now(), {
   await answer(isRefresh ? AINEWS_TOAST.refresh : (AINEWS_TOAST[tab] || AINEWS_TOAST.top));
 
   try {
-    const snap = await getAiNewsSnapshot({ cfg, now, fetchImpl, bypassCache: isRefresh });
-    const site = siteBase(env) || 'https://agi1.app';
-    const view = formatAiNewsView(snap, { tab, now, site });
+    const [snap, subscribed, bot] = await Promise.all([
+      getAiNewsSnapshot({ cfg, now, fetchImpl, bypassCache: isRefresh }),
+      inGroup ? Promise.resolve(false) : isAiNewsDmSubscribed(cfg, chat.id, { fetchImpl }),
+      inGroup ? resolveBotUsername(token, env, now) : Promise.resolve(null),
+    ]);
+    const view = formatAiNewsView(snap, { tab, now, site, inGroup, subscribed, bot });
     try {
       await tgCall(token, 'editMessageText', {
         chat_id: chat.id,
@@ -396,8 +653,6 @@ export async function onAiNewsTap(cfg, token, cb, now = Date.now(), {
         reply_markup: view.markup,
       }, { timeoutMs: 5000 });
     } catch (editErr) {
-      // Ignore Telegram's harmless "message is not modified" when tapping the already-open tab;
-      // fall back to a fresh reply if the original message is too old to edit.
       if (!/message is not modified/i.test(String(editErr?.description || editErr?.message || ''))) {
         await say(token, chat.id, view.text, {
           ...(inGroup ? topicOf(m) : {}),
@@ -413,25 +668,10 @@ export async function onAiNewsTap(cfg, token, cb, now = Date.now(), {
   }
 }
 
-// ---------- Automatic breaking AI news broadcasts to configured Telegram groups ----------
+// ---------- Automatic breaking AI news & new-model alerts (DM subscribers + Telegram groups) ----------
 
-async function supabaseRpc(fetchImpl, cfg, fn, args) {
-  if (!cfg?.supabaseUrl || !cfg?.supabaseKey) return { ok: false, data: null };
-  try {
-    const res = await fetchImpl(`${cfg.supabaseUrl}/rest/v1/rpc/${fn}`, {
-      method: 'POST',
-      headers: { apikey: cfg.supabaseKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify(args || {}),
-      signal: AbortSignal.timeout(SUPABASE_TIMEOUT_MS),
-    });
-    if (!res.ok) return { ok: false, data: null };
-    return { ok: true, data: await res.json() };
-  } catch {
-    return { ok: false, data: null };
-  }
-}
-
-const groupTargets = (g) => [...[...g.names].map((n) => `@${n}`), ...[...g.ids].map(Number)];
+const groupTargets = (g) => (g ? [...[...g.names].map((n) => `@${n}`), ...[...g.ids].map(Number)] : []);
+const sleep = (ms) => new Promise((resolve) => { setTimeout(resolve, ms); });
 
 export async function broadcastBreakingAiNews({
   cfg,
@@ -442,16 +682,18 @@ export async function broadcastBreakingAiNews({
   env = process.env,
   deadline = Infinity,
 } = {}) {
-  const out = { posted: 0, failed: 0, seeded: false, skipped: 0 };
-  if (!aiNewsPostsOn(cfg) || !token || !Array.isArray(items) || !items.length) return out;
-  const targets = groupTargets(cfg.tgGroups);
-  if (!targets.length) return out;
+  const out = { posted: 0, dmPosted: 0, groupPosted: 0, failed: 0, gone: 0, seeded: false };
+  if (!ainewsOn(cfg) || !token || !Array.isArray(items) || !items.length) return out;
+
+  const sendGroups = aiNewsPostsOn(cfg) ? groupTargets(cfg.tgGroups) : [];
 
   // Read shared state from agi1_feed_state (zero extra SQL tables, preserves all existing keys).
   const stateRes = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
   if (!stateRes.ok) return out;
   const state = stateRes.data && typeof stateRes.data === 'object' && !Array.isArray(stateRes.data) ? stateRes.data : {};
-  const prev = state.ainewsTg && typeof state.ainewsTg === 'object' ? state.ainewsTg : null;
+  const prev = normalizeTgState(state.ainewsTg);
+
+  if (!sendGroups.length && !prev.subs.length) return out;
 
   const eligible = items.filter((s) => {
     if (!s?.title || !safeHttpUrl(s.url)) return false;
@@ -462,20 +704,20 @@ export async function broadcastBreakingAiNews({
   });
   if (!eligible.length) return out;
 
-  // First run ever: seed `seen` so we never dump old news on enable (same rule as server/feed.js).
-  if (!prev || prev.seeded !== true) {
+  // First run ever: seed `seen` (preserving `subs`) so we never dump old backlog news on enable.
+  if (!prev.seeded) {
     const initialSeen = [...new Set(eligible.map((s) => normTitleKey(s.title)).filter(Boolean))].slice(0, MAX_SEEN);
     const saved = await supabaseRpc(fetchImpl, cfg, 'feed_state_put', {
-      p_state: { ...state, ainewsTg: { seeded: true, lastAt: now, seen: initialSeen } },
+      p_state: { ...state, ainewsTg: { ...prev, seeded: true, lastAt: now, seen: initialSeen } },
     });
     if (saved.ok && saved.data !== false) out.seeded = true;
     return out;
   }
 
-  // Respect minimum 25-minute gap between group broadcasts.
-  if (Number(prev.lastAt) && now - Number(prev.lastAt) < AINEWS_GAPS.broadcastMin) return out;
+  // Respect minimum 25-minute gap between alert pushes.
+  if (prev.lastAt && now - prev.lastAt < AINEWS_GAPS.broadcastMin) return out;
 
-  const seenSet = new Set(Array.isArray(prev.seen) ? prev.seen.map(String) : []);
+  const seenSet = new Set(prev.seen);
   const fresh = [];
   for (const s of eligible) {
     const k = normTitleKey(s.title);
@@ -486,48 +728,98 @@ export async function broadcastBreakingAiNews({
   }
   if (!fresh.length) return out;
 
-  const msg = formatBreakingBroadcast(fresh, { now, site: siteBase(env) || 'https://agi1.app' });
-  if (!msg) return out;
+  const site = siteBase(env) || 'https://agi1.app';
+  const bot = sendGroups.length ? await resolveBotUsername(token, env, now) : null;
+  const groupMsg = sendGroups.length ? formatBreakingBroadcast(fresh, { now, site, inGroup: true, bot }) : null;
+  const dmMsg = prev.subs.length ? formatBreakingBroadcast(fresh, { now, site, inGroup: false }) : null;
+  if (!groupMsg && !dmMsg) return out;
 
-  // Claim in Supabase BEFORE sending so concurrent instances never double-post to Telegram groups.
-  const nextSeen = [...fresh.map((s) => normTitleKey(s.title)), ...(Array.isArray(prev.seen) ? prev.seen : [])]
+  // Claim in Supabase BEFORE sending so concurrent serverless containers never double-notify anyone.
+  const nextSeen = [...fresh.map((s) => normTitleKey(s.title)), ...prev.seen]
     .filter(Boolean)
     .filter((k, idx, arr) => arr.indexOf(k) === idx)
     .slice(0, MAX_SEEN);
   const latestRes = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
   const latestState = latestRes.ok && latestRes.data && typeof latestRes.data === 'object' ? latestRes.data : state;
+  const latestTg = normalizeTgState(latestState.ainewsTg);
   const claimed = await supabaseRpc(fetchImpl, cfg, 'feed_state_put', {
-    p_state: { ...latestState, ainewsTg: { seeded: true, lastAt: now, seen: nextSeen } },
+    p_state: { ...latestState, ainewsTg: { ...latestTg, seeded: true, lastAt: now, seen: nextSeen } },
   });
   if (!claimed.ok || claimed.data === false) return out;
 
-  for (const to of targets) {
-    if (Date.now() > deadline) break;
-    try {
-      await say(token, to, msg.text, { entities: msg.entities, reply_markup: msg.markup }, { timeoutMs: 4000 });
-      out.posted += 1;
-    } catch (err) {
-      out.failed += 1;
-      console.warn(`[ainews-tg] couldn't post breaking AI news in ${to}: ${err?.message || err}`);
+  // 1. Broadcast to configured Telegram group(s)
+  if (groupMsg) {
+    for (const to of sendGroups) {
+      if (Date.now() > deadline) break;
+      try {
+        await say(token, to, groupMsg.text, { entities: groupMsg.entities, reply_markup: groupMsg.markup }, { timeoutMs: 4000 });
+        out.posted += 1;
+        out.groupPosted += 1;
+      } catch (err) {
+        out.failed += 1;
+        console.warn(`[ainews-tg] couldn't post breaking AI news in ${to}: ${err?.message || err}`);
+      }
     }
   }
+
+  // 2. Push to subscribed private DM chats (paced <= 25/s; automatically prunes blocked chats)
+  if (dmMsg && latestTg.subs.length) {
+    const goneIds = [];
+    let rateLimited = false;
+    for (let i = 0; i < latestTg.subs.length && !rateLimited; i += PER_SECOND) {
+      if (Date.now() > deadline) break;
+      if (i > 0) await sleep(1000);
+      const batch = latestTg.subs.slice(i, i + PER_SECOND);
+      const results = await Promise.allSettled(
+        batch.map((chatId) => say(token, chatId, dmMsg.text, { entities: dmMsg.entities, reply_markup: dmMsg.markup }, { timeoutMs: 4000 })),
+      );
+      results.forEach((res, idx) => {
+        const chatId = batch[idx];
+        if (res.status === 'fulfilled') {
+          out.posted += 1;
+          out.dmPosted += 1;
+        } else if (res.reason?.gone) {
+          goneIds.push(chatId);
+          out.gone += 1;
+        } else if (res.reason?.status === 429) {
+          rateLimited = true;
+          out.failed += 1;
+        } else {
+          out.failed += 1;
+          console.warn(`[ainews-tg] DM alert failed: ${res.reason?.message || 'error'}`);
+        }
+      });
+    }
+    if (goneIds.length) await pruneGoneSubs(cfg, goneIds, { fetchImpl });
+  }
+
   return out;
 }
 
-// Scheduled wake-up from /api/feed: checks the shared 30-min Gemini Web Pulse (0 extra Gemini calls
-// if already refreshed within 30 min) and broadcasts brand-new breaking AI stories to Telegram groups.
+// Scheduled wake-up from /api/feed: checks the shared 30-min Gemini Web Pulse (plus OpenRouter &
+// @theAIsearch drops when active) and pushes brand-new models/breaking news to subscribed DM users
+// and configured Telegram groups. Does 0 work if neither groups nor DM subscribers exist.
 export async function tickTelegramAiNews(cfg, token, {
   now = Date.now(),
   fetchImpl = globalThis.fetch,
   env = process.env,
   deadline = Infinity,
 } = {}) {
-  if (!aiNewsPostsOn(cfg) || !token || !cfg?.geminiKey || cfg?.ainewsPulse === false) {
-    return { status: 'off', posted: 0, failed: 0, seeded: false };
+  if (!ainewsOn(cfg) || !token || !cfg?.geminiKey || cfg?.ainewsPulse === false) {
+    return { status: 'off', posted: 0, dmPosted: 0, groupPosted: 0, failed: 0, gone: 0, seeded: false };
+  }
+  const hasGroups = aiNewsPostsOn(cfg) && groupTargets(cfg.tgGroups).length > 0;
+  let hasSubs = false;
+  if (!hasGroups) {
+    const stateRes = await supabaseRpc(fetchImpl, cfg, 'feed_state_get', {});
+    hasSubs = stateRes.ok && normalizeTgState(stateRes.data?.ainewsTg).subs.length > 0;
+  }
+  if (!hasGroups && !hasSubs) {
+    return { status: 'idle', posted: 0, dmPosted: 0, groupPosted: 0, failed: 0, gone: 0, seeded: false };
   }
   const pulse = await getGeminiNewsPulse({ fetchImpl, cfg, now, classifyItem });
   if (pulse.status !== 'live' || !pulse.items.length) {
-    return { status: pulse.status, posted: 0, failed: 0, seeded: false };
+    return { status: pulse.status, posted: 0, dmPosted: 0, groupPosted: 0, failed: 0, gone: 0, seeded: false };
   }
   const res = await broadcastBreakingAiNews({ cfg, token, items: pulse.items, now, fetchImpl, env, deadline });
   return { status: pulse.status, ...res };

@@ -14,6 +14,7 @@ import {
   _resetGeminiPulseCache,
   PULSE_INTERVAL_MS,
 } from './ainews-pulse.js';
+import { botName } from '../src/chat/telegram-link.js';
 
 const USER_AGENT = 'AGI1-AINews/1.0 (+https://agi1.app/ainews)';
 const SOURCE_TIMEOUT_MS = 4800;
@@ -1005,11 +1006,20 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
   }));
 
   const liveSourceCount = sources.filter((s) => s.status === 'live').length;
+  let telegramBot = botName(process.env.VITE_TELEGRAM_BOT);
+  if (!telegramBot && cfg?.tgAiNews !== false) {
+    try {
+      const [{ tgToken }, { resolveBotUsername }] = await Promise.all([import('./tg-api.js'), import('./tg-ainews.js')]);
+      const token = tgToken();
+      if (token && fetchImpl === globalThis.fetch) telegramBot = await resolveBotUsername(token, process.env, now);
+    } catch { /* optional */ }
+  }
 
   return {
     ok: true,
     updatedAt: new Date(now).toISOString(),
     channel: AISEARCH_CHANNEL,
+    ...(telegramBot ? { telegramBot } : {}),
     pulse: {
       enabled: Boolean(cfg?.geminiKey && cfg?.ainewsPulse !== false),
       status: pulseMeta.status,
@@ -1089,10 +1099,12 @@ ${items}
 
 let cached = null;
 let inflight = null;
+let lastAutoAlertCheckAt = 0;
 
 export function _resetAiNewsCache() {
   cached = null;
   inflight = null;
+  lastAutoAlertCheckAt = 0;
   _resetGeminiPulseCache();
 }
 
@@ -1103,21 +1115,23 @@ export async function getAiNewsSnapshot(opts = {}) {
   const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now, cfg: opts.cfg })
     .then((data) => {
       cached = { at: now, data };
-      // When a fresh 30-minute Gemini Web Pulse catches brand-new breaking AI stories,
-      // automatically broadcast them to AGI-1's configured Telegram group(s) (non-blocking, claim-first deduped).
-      if (!opts.skipTelegramBroadcast && data?.pulse?.status === 'live') {
+      // When a fresh 30-min Gemini Web Pulse fires (or every 15m for fresh OpenRouter / @theAIsearch drops),
+      // push brand-new models/breaking news to subscribed Telegram DM users & configured groups (non-blocking, claim-first).
+      const pulseLive = data?.pulse?.status === 'live';
+      const periodicDue = now - lastAutoAlertCheckAt >= 15 * 60_000;
+      if (!opts.skipTelegramBroadcast && (pulseLive || periodicDue)) {
         const cfg = opts.cfg || getConfig();
-        if (cfg.tgAiNews !== false && cfg.tgAiNewsPosts !== false && cfg.tgGroupPosts !== false && cfg.tgGroups) {
-          const freshPulse = (data.stories || []).filter((s) => s.sourceKind === 'pulse');
-          if (freshPulse.length) {
-            Promise.all([import('./tg-api.js'), import('./tg-ainews.js')])
-              .then(([{ tgToken }, { broadcastBreakingAiNews }]) => {
-                const token = tgToken();
-                if (!token) return null;
-                return broadcastBreakingAiNews({ cfg, token, items: freshPulse, now, fetchImpl: opts.fetchImpl });
-              })
-              .catch((err) => console.warn(`[ainews-tg] auto-broadcast skipped: ${err?.message || err}`));
-          }
+        if (cfg.tgAiNews !== false) {
+          lastAutoAlertCheckAt = now;
+          Promise.all([import('./tg-api.js'), import('./tg-ainews.js')])
+            .then(([{ tgToken }, { broadcastBreakingAiNews, collectAlertCandidates }]) => {
+              const token = tgToken();
+              if (!token) return null;
+              const candidates = collectAlertCandidates(data, now);
+              if (!candidates.length) return null;
+              return broadcastBreakingAiNews({ cfg, token, items: candidates, now, fetchImpl: opts.fetchImpl });
+            })
+            .catch((err) => console.warn(`[ainews-tg] auto-alert push skipped: ${err?.message || err}`));
         }
       }
       return data;

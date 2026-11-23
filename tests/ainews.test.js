@@ -38,6 +38,10 @@ import {
   parseAiNewsArg,
   formatAiNewsView,
   formatBreakingBroadcast,
+  collectAlertCandidates,
+  subscribeAiNewsDm,
+  unsubscribeAiNewsDm,
+  isAiNewsDmSubscribed,
   onAiNewsCommand,
   onAiNewsTap,
   broadcastBreakingAiNews,
@@ -722,6 +726,163 @@ test('Telegram bot /ainews command, inline tabs, search, switches, and automatic
     assert.ok(formatAiNewsView({ stories: SPOTLIGHT_STORIES, openWeights: [], aiSearchTools: [], videos: [], stats: {} }).text.includes('AI News World'));
     assert.equal((await broadcastBreakingAiNews({ cfg: { ...cfg, tgAiNewsPosts: false }, token: TOKEN, items: SPOTLIGHT_STORIES })).posted, 0);
     assert.equal(await onAiNewsCommand({ ...cfg, tgAiNews: false }, TOKEN, { chatId: CHAT }), 'ainews_off');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('Personal Telegram DM AI News alerts: /start ainews, 1-tap toggle, /stop cleanup, automatic model/news pushes & blocked-user pruning', async () => {
+  forgetGroups();
+  forgetTgAiNews();
+  _resetAiNewsCache();
+
+  assert.deepEqual(parseAiNewsArg('alerts'), { tab: 'sub', query: '' });
+  assert.deepEqual(parseAiNewsArg('off'), { tab: 'unsub', query: '' });
+
+  const TOKEN = `123456789:AA${'b'.repeat(33)}`;
+  const USER_A = 888001;
+  const USER_B = 888002;
+  const NOW = Date.parse('2026-11-23T10:00:00Z');
+  const tgCalls = [];
+  const blocked = new Set();
+  let dbState = { since: 1795400000000, diary: '2026-11-23' };
+  let pulseHeadline = 'DeepSeek R2 open weights drop with Apache 2.0 license';
+
+  const realFetch = globalThis.fetch;
+  const mockFetch = async (url, init = {}) => {
+    const u = String(url);
+    if (u.startsWith('https://api.telegram.org/')) {
+      const method = u.split('/').pop();
+      const body = init.body ? JSON.parse(init.body) : {};
+      tgCalls.push({ method, body });
+      if (method === 'sendMessage' && blocked.has(body.chat_id)) {
+        return Response.json({ ok: false, description: 'Forbidden: bot was blocked by the user' }, { status: 403 });
+      }
+      if (method === 'getMe') return Response.json({ ok: true, result: { id: 123456789, username: 'agi1_appbot' } });
+      return Response.json({ ok: true, result: { message_id: 77 } });
+    }
+    if (u.includes('/rest/v1/rpc/feed_state_get')) return Response.json(structuredClone(dbState));
+    if (u.includes('/rest/v1/rpc/feed_state_put')) {
+      dbState = structuredClone(JSON.parse(init.body).p_state);
+      return Response.json(true);
+    }
+    if (u.includes('/rest/v1/rpc/tg_forget') || u.includes('/rest/v1/rpc/inf_alert_off')) return Response.json(false);
+    if (u.includes('generativelanguage.googleapis.com')) {
+      return Response.json({
+        candidates: [{
+          content: {
+            parts: [{
+              text: JSON.stringify([{
+                title: pulseHeadline,
+                summary: 'Full weights and inference code published globally.',
+                url: 'https://github.com/deepseek-ai/DeepSeek-R2',
+                githubUrl: 'https://github.com/deepseek-ai/DeepSeek-R2',
+                lab: 'DeepSeek',
+                source: 'github.com',
+                publishedAt: new Date(NOW - 5 * 60_000).toISOString(),
+              }]),
+            }],
+          },
+          groundingMetadata: {
+            webSearchQueries: ['DeepSeek R2 release'],
+            groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/DS', title: 'github.com' } }],
+          },
+        }],
+      });
+    }
+    throw new Error('offline upstream');
+  };
+
+  globalThis.fetch = mockFetch;
+  try {
+    // Config WITHOUT TELEGRAM_GROUPS (DM-only alerts!)
+    const cfg = getConfig({
+      GEMINI_API_KEY: 'AIzaSyFAKE_DM_KEY_00000000000000000',
+      SUPABASE_URL: 'https://proj.supabase.co',
+      SUPABASE_SECRET_KEY: 'sb_secret_test',
+      PASS_SECRET: 'pass-secret-long-enough-for-telegram-tests',
+    });
+
+    // 0. With 0 subscribers and no groups, tickTelegramAiNews exits idle with 0 Gemini/Telegram calls!
+    const idle = await tickTelegramAiNews(cfg, TOKEN, { now: NOW, fetchImpl: mockFetch });
+    assert.equal(idle.status, 'idle');
+    assert.equal(tgCalls.length, 0);
+
+    // 1. User A taps "Get Alerts on Telegram" on agi1.app/ainews -> /start ainews subscribes immediately (no 18+ gate)
+    const rStart = await handleUpdate(cfg, TOKEN, {
+      update_id: 101,
+      message: { message_id: 1, from: { id: USER_A, is_bot: false, first_name: 'A' }, chat: { id: USER_A, type: 'private' }, date: 1, text: '/start ainews' },
+    }, NOW);
+    assert.equal(rStart, 'ainews_sub_start');
+    assert.equal(await isAiNewsDmSubscribed(cfg, USER_A, { fetchImpl: mockFetch }), true);
+    const startMsg = tgCalls.find((c) => c.method === 'sendMessage');
+    assert.match(startMsg.body.text, /AI News Alerts are ON/);
+    assert.equal(startMsg.body.reply_markup.inline_keyboard[1][0].callback_data, 'ainews:unsub:top');
+    assert.equal(dbState.since, 1795400000000, 'preserves /api/feed keys');
+
+    // 2. User B subscribes with 1-tap inline button "ainews:sub:top"
+    tgCalls.length = 0;
+    const rSubB = await handleUpdate(cfg, TOKEN, {
+      update_id: 102,
+      callback_query: {
+        id: 'cb-sub',
+        from: { id: USER_B, is_bot: false, first_name: 'B' },
+        message: { message_id: 42, chat: { id: USER_B, type: 'private' } },
+        data: 'ainews:sub:top',
+      },
+    }, NOW + 2000);
+    assert.equal(rSubB, 'ainews_sub');
+    assert.equal(await isAiNewsDmSubscribed(cfg, USER_B, { fetchImpl: mockFetch }), true);
+    assert.ok(tgCalls.some((c) => c.method === 'editMessageReplyMarkup' && c.body.reply_markup.inline_keyboard[1][0].callback_data === 'ainews:unsub:top'));
+
+    // 3. First live pulse after 30m seeds `seen` cleanly without dumping backlog, preserving BOTH DM subscribers!
+    tgCalls.length = 0;
+    _resetAiNewsCache();
+    const T1 = NOW + PULSE_INTERVAL_MS + 5000;
+    const seeded = await tickTelegramAiNews(cfg, TOKEN, { now: T1, fetchImpl: mockFetch });
+    assert.equal(seeded.seeded, true);
+    assert.equal(seeded.dmPosted, 0);
+    assert.deepEqual(dbState.ainewsTg.subs, [USER_A, USER_B]);
+
+    // 4. Another 31 min later, a new model drops! User B blocked the bot -> User A gets DM alert with "🔕 Pause Alerts", User B is pruned!
+    blocked.add(USER_B);
+    tgCalls.length = 0;
+    _resetAiNewsCache();
+    pulseHeadline = 'OpenAI launches GPT-6.5 Pro with real-time coding agents';
+    const T2 = T1 + PULSE_INTERVAL_MS + 60_000;
+    const pushed = await tickTelegramAiNews(cfg, TOKEN, { now: T2, fetchImpl: mockFetch });
+    assert.equal(pushed.dmPosted, 1);
+    assert.equal(pushed.gone, 1);
+    assert.deepEqual(dbState.ainewsTg.subs, [USER_A], 'blocked user automatically pruned');
+    const dmAlert = tgCalls.find((c) => c.method === 'sendMessage' && c.body.chat_id === USER_A);
+    assert.ok(dmAlert);
+    assert.match(dmAlert.body.text, /GPT-6\.5 Pro/);
+    assert.equal(dmAlert.body.reply_markup.inline_keyboard[1][0].text, '🔕 Pause Alerts');
+
+    // 5. OpenRouter model launches & @theAIsearch videos qualify as high-signal alert candidates (spotlights & old items do not)
+    const candidates = collectAlertCandidates({
+      stories: [
+        { title: 'New Model Launch: Z.ai GLM-5.4', sourceKind: 'openrouter', url: 'https://openrouter.ai/z-ai/glm-5.4', publishedAt: new Date(NOW - 30 * 60_000).toISOString() },
+        { title: '10 Insane New Open-Source AI Tools', sourceKind: 'video', url: 'https://www.youtube.com/watch?v=abc', publishedAt: new Date(NOW - 60 * 60_000).toISOString() },
+        { title: 'Static Spotlight', sourceKind: 'spotlight', url: 'https://agi1.app/ainews', publishedAt: new Date(NOW).toISOString() },
+        { title: 'Old OpenRouter Drop', sourceKind: 'openrouter', url: 'https://openrouter.ai/old/model', publishedAt: new Date(NOW - 48 * 3600_000).toISOString() },
+      ],
+    }, NOW);
+    assert.equal(candidates.length, 2);
+
+    // 6. /stop turns off AI News DM alerts too and says so
+    tgCalls.length = 0;
+    const rStop = await handleUpdate(cfg, TOKEN, {
+      update_id: 103,
+      message: { message_id: 2, from: { id: USER_A, is_bot: false, first_name: 'A' }, chat: { id: USER_A, type: 'private' }, date: 3, text: '/stop' },
+    }, T2 + 60_000);
+    assert.equal(rStop, 'stop');
+    assert.equal(await isAiNewsDmSubscribed(cfg, USER_A, { fetchImpl: mockFetch }), false);
+    assert.match(tgCalls.find((c) => c.method === 'sendMessage').body.text, /AI News alerts are off for this chat too/);
+
+    // Direct helper checks
+    assert.equal((await subscribeAiNewsDm(cfg, -100, { fetchImpl: mockFetch })).ok, false);
+    assert.equal(await unsubscribeAiNewsDm(cfg, USER_A, { fetchImpl: mockFetch }), false);
   } finally {
     globalThis.fetch = realFetch;
   }
