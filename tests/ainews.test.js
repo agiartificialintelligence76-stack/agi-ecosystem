@@ -77,6 +77,11 @@ test('entity classifier maps Qwen, Kimi, Anthropic IPO, Sam Altman AGI, Meta Mus
   assert.equal(muse.hub, 'sf');
   assert.equal(muse.lab, 'Meta Muse');
 
+  const glm = classifyItem('Z.ai rolls out GLM-5.4 with new vision and coding capabilities');
+  assert.equal(glm.hub, 'beijing');
+  assert.equal(glm.region, 'china');
+  assert.equal(glm.lab, 'Z.ai GLM');
+
   const dm = classifyItem('Google DeepMind unveils Genie 4 and AlphaGenome 2');
   assert.equal(dm.hub, 'london');
   assert.equal(dm.region, 'europe');

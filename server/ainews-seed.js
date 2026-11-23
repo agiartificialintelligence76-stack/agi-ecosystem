@@ -59,8 +59,8 @@ export const WORLD_HUBS = Object.freeze([
     lat: 39.9,
     lon: 116.41,
     color: '#6b3bff',
-    labs: ['Moonshot Kimi', 'Tencent Hunyuan', 'Baidu ERNIE', 'Kling', 'Zhipu GLM'],
-    tagline: 'Kimi K3.1 Pro, open-weight giants & video models',
+    labs: ['Z.ai GLM', 'Moonshot Kimi', 'Tencent Hunyuan', 'Baidu ERNIE', 'Kling'],
+    tagline: 'GLM-5.4, Kimi K3.1 Pro, open-weight giants & video models',
   },
   {
     id: 'london',
@@ -101,6 +101,28 @@ export const WORLD_HUBS = Object.freeze([
 ]);
 
 export const SPOTLIGHT_STORIES = Object.freeze([
+  {
+    id: 'spotlight-zai-glm-5-4-launch',
+    title: 'Z.ai Rolls Out GLM-5.4 with New Vision Capabilities, Stronger Coding & +50% Weekly Quota',
+    summary: 'Z.ai (Zhipu AI) announced GLM-5.4 is now available to all GLM Coding Plan users — bringing native vision upgrades, stronger all-round software engineering performance, and 50% more weekly quota compared to GLM-5.3.',
+    source: 'Z.ai · Breaking Drop',
+    sourceKind: 'spotlight',
+    category: 'models',
+    hub: 'beijing',
+    region: 'china',
+    regionLabel: 'China & Asia',
+    lab: 'Z.ai GLM',
+    url: 'https://docs.z.ai/',
+    githubUrl: 'https://github.com/zai-org',
+    huggingfaceUrl: 'https://huggingface.co/zai-org',
+    image: '/images/ainews/kimi-k3.webp',
+    publishedAt: '2026-11-23T04:18:00Z',
+    openWeights: false,
+    breaking: true,
+    featured: true,
+    tags: ['GLM-5.4', 'Z.ai', 'China', 'Coding & Vision'],
+    agiNote: 'beijing woke up and shipped glm-5.4 with vision and 50% more quota before lunch.',
+  },
   {
     id: 'spotlight-kimi-k3-open-weights',
     title: 'Moonshot AI Open-Weights Kimi K3 & K3.1 Pro: 2.8T MoE Multimodal Frontier Model',

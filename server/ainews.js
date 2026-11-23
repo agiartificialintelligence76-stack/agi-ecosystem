@@ -11,18 +11,22 @@ import {
 
 const USER_AGENT = 'AGI1-AINews/1.0 (+https://agi1.app/ainews)';
 const SOURCE_TIMEOUT_MS = 4800;
-const CACHE_TTL_MS = 3 * 60 * 1000;
+const CACHE_TTL_MS = 90 * 1000;
 
 const NEWS_FEEDS = Object.freeze([
+  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(AI+model+OR+LLM+OR+OpenAI+OR+Anthropic+OR+Gemini+OR+Claude+OR+Muse)+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 12 },
+  { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10 },
   { id: 'decoder', name: 'The Decoder', url: 'https://the-decoder.com/feed/', defaultHub: 'sf', limit: 12 },
   { id: 'tc-ai', name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', defaultHub: 'sf', limit: 10 },
   { id: 'verge-ai', name: 'The Verge AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', defaultHub: 'nyc', limit: 10 },
   { id: 'google-ai', name: 'Google AI Blog', url: 'https://blog.google/innovation-and-ai/rss/', defaultHub: 'sf', limit: 8 },
   { id: 'deepmind', name: 'Google DeepMind', url: 'https://deepmind.google/blog/rss.xml', defaultHub: 'london', limit: 8 },
   { id: 'openai', name: 'OpenAI News', url: 'https://openai.com/news/rss.xml', defaultHub: 'sf', limit: 8 },
+  { id: 'smol-ai', name: 'Smol AI Digest', url: 'https://news.smol.ai/rss.xml', defaultHub: 'sf', limit: 4 },
 ]);
 
 const GITHUB_ORGS = Object.freeze([
+  { org: 'zai-org', lab: 'Z.ai GLM', hub: 'beijing', region: 'china', limit: 4 },
   { org: 'MoonshotAI', lab: 'Moonshot AI', hub: 'beijing', region: 'china', limit: 4 },
   { org: 'QwenLM', lab: 'Alibaba Qwen', hub: 'hangzhou', region: 'china', limit: 5 },
   { org: 'deepseek-ai', lab: 'DeepSeek', hub: 'hangzhou', region: 'china', limit: 4 },
@@ -30,9 +34,10 @@ const GITHUB_ORGS = Object.freeze([
   { org: 'SakanaAI', lab: 'Sakana AI', hub: 'tokyo', region: 'asia', limit: 3 },
 ]);
 
+const OPENROUTER_MODELS_URL = 'https://openrouter.ai/api/v1/models';
 const HF_MODELS_URL = 'https://huggingface.co/api/models?sort=trendingScore&direction=-1&limit=18';
 const HF_PAPERS_URL = 'https://huggingface.co/api/daily_papers?limit=10';
-const HN_AI_URL = 'https://hn.algolia.com/api/v1/search_by_date?query=AI&tags=story&numericFilters=points%3E65&hitsPerPage=12';
+const HN_AI_URL = 'https://hn.algolia.com/api/v1/search_by_date?query=AI&tags=story&numericFilters=points%3E40&hitsPerPage=12';
 
 const REGION_LABEL = Object.freeze({
   americas: 'Americas',
@@ -140,8 +145,9 @@ const ENTITY_RULES = [
   { re: /\b(qwen|alibaba|tongyi|wan\s?2|zju3dv|internlm|sage\s?s2)\b/i, hub: 'hangzhou', region: 'china', lab: 'Alibaba Qwen' },
   { re: /\b(deepseek)\b/i, hub: 'hangzhou', region: 'china', lab: 'DeepSeek' },
   { re: /\b(minimax|hailuo|sensenova|sensetime)\b/i, hub: 'hangzhou', region: 'china', lab: 'China AI Lab' },
+  { re: /\b(zhipu|z\.ai|zai-org|glm[-\s]?\d)\b/i, hub: 'beijing', region: 'china', lab: 'Z.ai GLM' },
   { re: /\b(kimi|moonshot)\b/i, hub: 'beijing', region: 'china', lab: 'Moonshot AI' },
-  { re: /\b(tencent|hunyuan|movieroll|wemm|hy4|baidu|ernie|kling|kuaishou|bytedance|seedream|seedance|zhipu|glm-|longcat|meituan|xiaomi|huawei)\b/i, hub: 'beijing', region: 'china', lab: 'China AI Lab' },
+  { re: /\b(tencent|hunyuan|movieroll|wemm|hy4|baidu|ernie|kling|kuaishou|bytedance|seedream|seedance|longcat|meituan|xiaomi|huawei)\b/i, hub: 'beijing', region: 'china', lab: 'China AI Lab' },
   { re: /\b(anthropic|claude|opus|sonnet|haiku|fable|mythos)\b/i, hub: 'sf', region: 'americas', lab: 'Anthropic' },
   { re: /\b(ipo|nasdaq|nyse|wall street|sec filing|valuation|funding|billion|trillion)\b/i, hub: 'nyc', region: 'americas', lab: '' },
   { re: /\b(openai|sam altman|altman|chatgpt|gpt-[4567]|sora|codex|astra)\b/i, hub: 'sf', region: 'americas', lab: 'OpenAI' },
@@ -196,11 +202,12 @@ export function classifyItem(text = '', defaults = {}) {
 
   const breaking = Boolean(
     defaults.breaking
-    || /\b(launches?|releases?|unveils?|announces?|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
+    || /\b(launches?|releases?|unveils?|announces?|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
   );
 
   const tags = [];
   const tagChecks = [
+    [/\bglm\b|zhipu|z\.ai/i, 'GLM'],
     [/\bqwen\b/i, 'Qwen'],
     [/\bkimi\b/i, 'Kimi'],
     [/\banthropic|claude|fable\b/i, 'Anthropic'],
@@ -295,7 +302,7 @@ export function parseRssOrAtom(xml = '', meta = {}) {
   while ((match = re.exec(text)) && items.length < limit) {
     const block = match[1];
     const title = stripHtml(tagContent(block, 'title'));
-    if (!title || title.length < 4) continue;
+    if (!title || title.length < 4 || /^not much happened today$/i.test(title)) continue;
 
     let link = '';
     if (isAtom) {
@@ -541,9 +548,10 @@ function normalizeGitHubRepos(repos, orgMeta) {
         githubUrl: url,
         huggingfaceUrl: orgMeta.org === 'QwenLM' ? 'https://huggingface.co/Qwen'
           : orgMeta.org === 'MoonshotAI' ? 'https://huggingface.co/moonshotai'
-            : orgMeta.org === 'deepseek-ai' ? 'https://huggingface.co/deepseek-ai'
-              : orgMeta.org === 'mistralai' ? 'https://huggingface.co/mistralai'
-                : orgMeta.org === 'SakanaAI' ? 'https://huggingface.co/SakanaAI' : null,
+            : orgMeta.org === 'zai-org' ? 'https://huggingface.co/zai-org'
+              : orgMeta.org === 'deepseek-ai' ? 'https://huggingface.co/deepseek-ai'
+                : orgMeta.org === 'mistralai' ? 'https://huggingface.co/mistralai'
+                  : orgMeta.org === 'SakanaAI' ? 'https://huggingface.co/SakanaAI' : null,
         url,
         image: orgMeta.org === 'QwenLM' ? '/images/ainews/qwen-china.webp'
           : orgMeta.org === 'MoonshotAI' ? '/images/ainews/kimi-k3.webp' : null,
@@ -624,6 +632,41 @@ function normalizeHfPapers(papers) {
         ...info,
         category: 'research',
         openWeights: Boolean(githubUrl) || info.openWeights,
+      };
+    });
+}
+
+function normalizeOpenRouterModels(payload) {
+  const list = Array.isArray(payload?.data) ? payload.data : [];
+  return list
+    .filter((m) => m?.id && m?.name && !/:free$|:beta$|:batch$|:extended$/i.test(m.id) && Number(m.created) > 0)
+    .sort((a, b) => Number(b.created) - Number(a.created))
+    .slice(0, 10)
+    .map((m) => {
+      const id = String(m.id);
+      const name = String(m.name);
+      const publishedAt = new Date(Number(m.created) * 1000).toISOString();
+      const ctx = m.context_length ? `${Math.round(Number(m.context_length) / 1000)}K context` : '';
+      const rawDesc = stripHtml(m.description || '');
+      const summary = truncate(rawDesc || `New frontier model ${name} launched live on OpenRouter${ctx ? ` (${ctx})` : ''}.`, 210);
+      const info = classifyItem(`${id} ${name} ${summary}`, { hub: 'sf', source: 'OpenRouter Models', category: 'models', breaking: true });
+      const url = `https://openrouter.ai/${encodeURI(id)}`;
+      return {
+        id: slugId('or', id),
+        name: id,
+        title: `New Model Launch: ${name}`,
+        summary,
+        source: 'OpenRouter Live Models',
+        sourceKind: 'openrouter',
+        url,
+        githubUrl: null,
+        huggingfaceUrl: m.hugging_face_id ? `https://huggingface.co/${encodeURI(m.hugging_face_id)}` : null,
+        image: null,
+        publishedAt,
+        kind: 'openrouter',
+        ...info,
+        category: 'models',
+        breaking: true,
       };
     });
 }
@@ -766,7 +809,21 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     );
   }
 
-  // 6. Hacker News AI
+  // 6. OpenRouter Live Frontier Model Launches (zero-key minute-level launch radar)
+  tasks.push(
+    fetchJson(fetchImpl, OPENROUTER_MODELS_URL)
+      .then((data) => {
+        const models = normalizeOpenRouterModels(data);
+        sources.push({ id: 'openrouter', name: 'OpenRouter Model Drops', status: models.length ? 'live' : 'empty', count: models.length });
+        return { kind: 'openrouter', items: models };
+      })
+      .catch(() => {
+        sources.push({ id: 'openrouter', name: 'OpenRouter Model Drops', status: 'offline', count: 0 });
+        return { kind: 'openrouter', items: [] };
+      })
+  );
+
+  // 7. Hacker News AI
   tasks.push(
     fetchJson(fetchImpl, HN_AI_URL)
       .then((data) => {
@@ -786,6 +843,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
   const rssStories = [];
   const paperStories = [];
   const hnStories = [];
+  const openRouterModels = [];
   const githubRepos = [];
   const hfModels = [];
 
@@ -795,6 +853,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     else if (r.kind === 'rss') rssStories.push(...r.items);
     else if (r.kind === 'papers') paperStories.push(...r.items);
     else if (r.kind === 'hn') hnStories.push(...r.items);
+    else if (r.kind === 'openrouter') openRouterModels.push(...r.items);
     else if (r.kind === 'github') githubRepos.push(...r.items);
     else if (r.kind === 'hf-models') hfModels.push(...r.items);
   }
@@ -825,11 +884,11 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
   ).slice(0, 90);
 
   const openWeights = dedupeByKey(
-    [...githubRepos, ...FALLBACK_OPEN_WEIGHTS, ...hfModels],
+    [...githubRepos, ...FALLBACK_OPEN_WEIGHTS, ...hfModels, ...openRouterModels.filter((m) => m.huggingfaceUrl)],
     (m) => (m.name || m.url || '').toLowerCase()
   )
     .sort((a, b) => Date.parse(b.publishedAt || 0) - Date.parse(a.publishedAt || 0))
-    .slice(0, 32);
+    .slice(0, 36);
 
   // Convert latest 4 @theAIsearch videos into playable video dispatch stories too
   const videoStories = videos.slice(0, 4).map((v) => ({
@@ -856,6 +915,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
 
   const rawStories = [
     ...SPOTLIGHT_STORIES,
+    ...openRouterModels.slice(0, 6),
     ...videoStories,
     ...rssStories,
     ...paperStories,
@@ -1014,7 +1074,7 @@ export async function handleAiNewsRequest(request, opts = {}) {
         status: 200,
         headers: {
           'Content-Type': 'application/rss+xml; charset=utf-8',
-          'Cache-Control': 'public, max-age=60, s-maxage=240, stale-while-revalidate=600',
+          'Cache-Control': 'public, max-age=60, s-maxage=120, stale-while-revalidate=300',
         },
       });
     }
@@ -1023,7 +1083,7 @@ export async function handleAiNewsRequest(request, opts = {}) {
       headers: {
         'Cache-Control': bypassCache
           ? 'no-store'
-          : 'public, max-age=60, s-maxage=240, stale-while-revalidate=600',
+          : 'public, max-age=60, s-maxage=120, stale-while-revalidate=300',
       },
     });
   } catch (err) {
