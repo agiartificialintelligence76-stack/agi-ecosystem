@@ -213,10 +213,12 @@ export async function onGroup(cfg, token, m, now = Date.now()) {
   // speed bumps, only for messages meant for her: 4 a minute per person, 15 a minute per group (per server copy)
   if (!groupPersonBurst(chatCode(cfg.passSecret, m.from.id, 'gburst'), now) || !groupBurst(chatCode(cfg.passSecret, chat.id, 'gburst'), now)) return 'too_many';
 
-  // (2026-11-23) /ainews [weights|tools|<topic>]: live global AI news & open weights (server/tg-ainews.js)
+  // (2026-11-23) /ainews [weights|tools|alerts|off|<topic>]: live global AI news & open weights (server/tg-ainews.js)
   if (ainewsArg !== null) {
     return onAiNewsCommand(cfg, token, {
       chatId: chat.id,
+      chatUsername: chat.username || null,
+      fromId: m.from?.id || null,
       messageId: m.message_id,
       threadId: m.is_topic_message === true && Number.isSafeInteger(m.message_thread_id) ? m.message_thread_id : null,
       arg: ainewsArg,

@@ -41,6 +41,8 @@ import {
   formatAiNewsView,
   formatBreakingBroadcast,
   collectAlertCandidates,
+  similarHeadline,
+  resolveGroupTargets,
   subscribeAiNewsDm,
   unsubscribeAiNewsDm,
   isAiNewsDmSubscribed,
@@ -1127,6 +1129,154 @@ test('AGI-1 chat recall injects live AI News World notes on site & Telegram when
     assert.match(geminiPrompts.at(-1), /AI NEWS WORLD \(LIVE NOTES FROM AGI1\.APP\/AINEWS\)/);
     assert.match(geminiPrompts.at(-1), /GLM-5\.4/);
     assert.equal(geminiSearchCalls, 0, 'conversational recall never makes blocking search calls');
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+});
+
+test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-pulse broadcast, /ainews alerts in groups & admin-only /ainews off', async () => {
+  forgetGroups();
+  forgetTgAiNews();
+  _resetAiNewsCache();
+
+  // Group AI News alerts remain ON even when TELEGRAM_GROUP_POSTS=off (only TELEGRAM_AINEWS_POSTS=off or TELEGRAM_AINEWS=off disables them)
+  assert.equal(aiNewsPostsOn(getConfig({ TELEGRAM_GROUPS: '@agi2dotapp', TELEGRAM_GROUP_POSTS: 'off' })), true);
+  assert.equal(aiNewsPostsOn(getConfig({ TELEGRAM_GROUPS: '@agi2dotapp', TELEGRAM_AINEWS_POSTS: 'off' })), false);
+
+  // Similar headline dedupe collapses two outlets covering the same launch, while distinct versions remain separate
+  assert.equal(
+    similarHeadline('Z.ai unveils GLM-5.4 model with Loop Transformer design', "China's Z.ai launches GLM-5.4, a looped 750B model for coding"),
+    true,
+  );
+  assert.equal(
+    similarHeadline('DeepSeek R2 open weights drop with Apache 2.0 license', 'DeepSeek R2 Pro launches with real-time coding agents'),
+    false,
+  );
+
+  // collectAlertCandidates includes fresh high-signal RSS lab launches, blocks NSFW/PG-13 headlines & opinion noise, and dedupes
+  const NOW = Date.parse('2026-11-23T14:00:00Z');
+  const candidates = collectAlertCandidates({
+    stories: [
+      { title: 'Z.ai unveils GLM-5.4 model with Loop Transformer design', sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://investing.com/glm-5-4', publishedAt: new Date(NOW - 30 * 60_000).toISOString() },
+      { title: "China's Z.ai launches GLM-5.4, a looped 750B model for coding", sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://thenextweb.com/glm-5-4', publishedAt: new Date(NOW - 90 * 60_000).toISOString() },
+      { title: 'Claude Code Adds Experimental Code Mode to Orchestrate Tool Calls', sourceKind: 'rss', lab: 'Anthropic', url: 'https://infoq.com/claude-code-mode', publishedAt: new Date(NOW - 60 * 60_000).toISOString() },
+      { title: 'SpaceX sued by Oregon and Virginia over AI deepfake porn, Grok safety claims', sourceKind: 'rss', lab: 'xAI Grok', url: 'https://cnbc.com/grok-porn', publishedAt: new Date(NOW - 40 * 60_000).toISOString() },
+      { title: "Pouncing on Anthropic Won't Make You Rich", sourceKind: 'rss', lab: 'Anthropic', url: 'https://wsj.com/anthropic', publishedAt: new Date(NOW - 50 * 60_000).toISOString() },
+      { title: 'Fallback Offline Video', sourceKind: 'video', isFallback: true, url: 'https://youtube.com/watch?v=fb1', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
+    ],
+  }, NOW);
+  assert.equal(candidates.length, 2, 'keeps GLM-5.4 (deduped) + Claude Code Mode, drops NSFW, opinion & fallback video');
+  assert.match(candidates[0].title, /GLM-5\.4/);
+  assert.match(candidates[1].title, /Claude Code/);
+
+  // Group /ainews alerts (including Forum Topic support), cached-pulse broadcast, and admin-only /ainews off
+  const TOKEN = `123456789:AA${'d'.repeat(33)}`;
+  const GROUP_ID = -1001112223334;
+  const TOPIC_ID = 42;
+  const ADMIN_ID = 5001;
+  const MEMBER_ID = 5002;
+  const tgCalls = [];
+  let dbState = {
+    since: 1795400000000,
+    ainewsPulse: {
+      v: 2,
+      at: NOW - 5 * 60_000, // fresh 5-min-old cached pulse (must STILL broadcast on cron!)
+      items: [{
+        t: 'Anthropic releases Claude 4.7 Opus with native computer agents',
+        s: 'Available today across API and Claude Code.',
+        u: 'https://www.anthropic.com/news/claude-4-7-opus',
+        l: 'Anthropic',
+        p: 'Anthropic',
+        d: new Date(NOW - 10 * 60_000).toISOString(),
+      }],
+    },
+    ainewsTg: { seeded: true, lastAt: NOW - 40 * 60_000, checkedAt: NOW - 20 * 60_000, seen: ['older headline'], subs: [] },
+  };
+
+  const realFetch = globalThis.fetch;
+  const mockFetch = async (url, init = {}) => {
+    const u = String(url);
+    if (u.startsWith('https://api.telegram.org/')) {
+      const method = u.split('/').pop();
+      const body = init.body ? JSON.parse(init.body) : {};
+      tgCalls.push({ method, body });
+      if (method === 'getMe') return Response.json({ ok: true, result: { id: 123456789, username: 'agi1_appbot' } });
+      if (method === 'getChatMember') {
+        return Response.json({ ok: true, result: { status: body.user_id === ADMIN_ID ? 'administrator' : 'member' } });
+      }
+      return Response.json({ ok: true, result: { message_id: 300 } });
+    }
+    if (u.includes('/rest/v1/rpc/feed_state_get')) return Response.json(structuredClone(dbState));
+    if (u.includes('/rest/v1/rpc/feed_state_put')) {
+      dbState = structuredClone(JSON.parse(init.body).p_state);
+      return Response.json(true);
+    }
+    throw new Error('offline upstream');
+  };
+
+  globalThis.fetch = mockFetch;
+  try {
+    const cfg = getConfig({
+      GEMINI_API_KEY: 'AIzaSyFAKE_GROUP_KEY_000000000000',
+      SUPABASE_URL: 'https://proj.supabase.co',
+      SUPABASE_SECRET_KEY: 'sb_secret_test',
+      PASS_SECRET: 'pass-secret-long-enough-for-telegram-tests',
+      TELEGRAM_GROUPS: '@agi2dotapp',
+      TELEGRAM_GROUP_POSTS: 'off',
+    });
+
+    // 1. Even when Gemini Pulse is 'cached' (refreshed 5m ago by web visitor), tickTelegramAiNews STILL broadcasts to @agi2dotapp!
+    const ticked = await tickTelegramAiNews(cfg, TOKEN, { now: NOW, fetchImpl: mockFetch });
+    assert.equal(ticked.groupPosted, 1, 'cached pulse story still broadcasts to configured Telegram group');
+    assert.ok(tgCalls.some((c) => c.method === 'sendMessage' && c.body.chat_id === '@agi2dotapp' && /Claude 4\.7 Opus/.test(c.body.text)));
+
+    // 2. Typing "/ainews alerts" inside a Forum Topic pins that group's numeric chat_id + threadId (replacing @agi2dotapp with 0 duplicates!)
+    tgCalls.length = 0;
+    const rOn = await handleUpdate(cfg, TOKEN, {
+      update_id: 301,
+      message: {
+        message_id: 10,
+        from: { id: ADMIN_ID, is_bot: false, first_name: 'Owner' },
+        chat: { id: GROUP_ID, type: 'supergroup', username: 'agi2dotapp' },
+        is_topic_message: true,
+        message_thread_id: TOPIC_ID,
+        date: 1,
+        text: '/ainews alerts',
+      },
+    }, NOW + 5000);
+    assert.equal(rOn, 'group_ainews_alerts_on');
+    assert.ok(tgCalls.some((c) => c.method === 'sendMessage' && c.body.chat_id === GROUP_ID && c.body.message_thread_id === TOPIC_ID && /Group AI News Alerts are ON/.test(c.body.text)));
+    assert.deepEqual(resolveGroupTargets(cfg, dbState.ainewsTg), [{ to: GROUP_ID, threadId: TOPIC_ID, key: String(GROUP_ID), name: 'agi2dotapp' }]);
+
+    // 3. Non-admin cannot pause group alerts via "/ainews off"
+    tgCalls.length = 0;
+    const rDenied = await handleUpdate(cfg, TOKEN, {
+      update_id: 302,
+      message: {
+        message_id: 11,
+        from: { id: MEMBER_ID, is_bot: false, first_name: 'Member' },
+        chat: { id: GROUP_ID, type: 'supergroup', username: 'agi2dotapp' },
+        date: 2,
+        text: '/ainews off',
+      },
+    }, NOW + 10_000);
+    assert.equal(rDenied, 'group_ainews_admin_only');
+    assert.equal(resolveGroupTargets(cfg, dbState.ainewsTg).length, 1, 'still active after non-admin attempt');
+
+    // 4. Admin CAN pause group alerts via "/ainews off"
+    tgCalls.length = 0;
+    const rOff = await handleUpdate(cfg, TOKEN, {
+      update_id: 303,
+      message: {
+        message_id: 12,
+        from: { id: ADMIN_ID, is_bot: false, first_name: 'Owner' },
+        chat: { id: GROUP_ID, type: 'supergroup', username: 'agi2dotapp' },
+        date: 3,
+        text: '/ainews off',
+      },
+    }, NOW + 15_000);
+    assert.equal(rOff, 'group_ainews_alerts_off');
+    assert.deepEqual(resolveGroupTargets(cfg, dbState.ainewsTg), [], 'group muted cleanly by admin');
   } finally {
     globalThis.fetch = realFetch;
   }

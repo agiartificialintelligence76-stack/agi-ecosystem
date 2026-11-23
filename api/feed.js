@@ -86,6 +86,20 @@ async function gamesCheck(request) {
   const now = Date.now();
   try {
     const out = await gamesTick(cfg, token, { now, deadline: now + 19_000 });
+    // (2026-11-23) Wake up 30-min AI News Telegram alerts (groups + DM subs) on the 2-minute Supabase clock
+    // whenever time remains (in-memory 5m gate + Supabase 15m/25m cooldown; zero extra calls when GEMINI_API_KEY is unset).
+    if (cfg.tgAiNews && cfg.ainewsPulse && cfg.geminiKey && now - lastGamesAiNewsAt >= 5 * 60_000 && now + 19_000 - Date.now() >= 7_000) {
+      lastGamesAiNewsAt = now;
+      try {
+        const { tickTelegramAiNews } = await import('../server/tg-ainews.js');
+        const an = await tickTelegramAiNews(cfg, token, { now: Date.now(), deadline: now + 18_000 });
+        if (an.posted) {
+          console.log(`[games] sent ${an.posted} breaking AI news alert(s) on Telegram (${an.dmPosted} DM, ${an.groupPosted} group)`);
+        }
+      } catch (err) {
+        console.warn(`[games] AI news Telegram alert tick skipped: ${err.message}`);
+      }
+    }
     return answer({ ok: true, ...out });
   } catch (err) {
     console.warn(`[games] her quizzes' check stopped: ${err.message}`);
@@ -174,7 +188,7 @@ async function studioCheck(request) {
   }
   return answer(out);
 }
-let warnedApps = false, warnedAlerts = false;
+let warnedApps = false, warnedAlerts = false, lastGamesAiNewsAt = 0;
 
 // (round 4) the 5-minute clock: her Discord server's 👤 Stranger role, and nothing else (no Supabase, no Telegram)
 async function strangersCheck() {
@@ -240,9 +254,9 @@ export async function GET(request) {
     out.groups = await postToGroups(cfg, token, added, { deadline: deadline - 4_000 });
     if (out.groups.posted) console.log(`[feed] posted ${out.groups.posted} in her Telegram groups`);
   }
-  // (2026-11-23) AI News World 30-min Gemini Web Pulse wake-up: notifies subscribed Telegram DM users & her groups
-  // when brand-new models/breaking AI news drops (skips immediately with 0 Gemini calls if neither groups nor DM subs exist)
-  if (token && !out.bot?.error && cfg.tgAiNews && cfg.ainewsPulse && cfg.geminiKey && deadline - Date.now() >= 6_000) {
+  // (2026-11-23) AI News World alert wake-up: notifies subscribed Telegram DM users & her groups
+  // when brand-new models/breaking AI news drops (skips immediately if neither groups nor DM subs exist)
+  if (token && !out.bot?.error && cfg.tgAiNews && deadline - Date.now() >= 6_000) {
     try {
       const { tickTelegramAiNews } = await import('../server/tg-ainews.js');
       const an = await tickTelegramAiNews(cfg, token, { now, deadline: deadline - 3_000 });

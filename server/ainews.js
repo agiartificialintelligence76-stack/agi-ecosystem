@@ -936,6 +936,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
   if (!videos.length) {
     videos = FALLBACK_AISEARCH_VIDEOS.map((v) => ({
       ...v,
+      isFallback: true,
       chapters: v.tools.map((t) => ({ label: t.name, sec: t.sec, clock: t.clock })),
       tools: v.tools.map((t) => ({
         id: slugId('tool', `${v.videoId}-${t.name}`),
@@ -991,6 +992,7 @@ export async function aggregateAiNews({ fetchImpl = globalThis.fetch, now = Date
     toolCount: (v.tools || []).length,
     image: v.thumbnail,
     publishedAt: v.publishedAt,
+    ...(v.isFallback ? { isFallback: true } : {}),
     openWeights: false,
     breaking: true,
     tags: ['@theAIsearch', `${(v.tools || []).length} AI Tools`, 'Video Briefing'],
@@ -1160,25 +1162,36 @@ export async function getAiNewsSnapshot(opts = {}) {
   if (!opts.bypassCache && cached && now - cached.at < CACHE_TTL_MS) return cached.data;
   if (!opts.bypassCache && inflight) return inflight;
   const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now, cfg: opts.cfg, cacheOnlyPulse: Boolean(opts.cacheOnlyPulse) })
-    .then((data) => {
+    .then(async (data) => {
       cached = { at: now, data };
-      // When a fresh 30-min Gemini Web Pulse fires (or every 15m for fresh OpenRouter / @theAIsearch drops),
-      // push brand-new models/breaking news to subscribed Telegram DM users & configured groups (non-blocking, claim-first).
+      // When a fresh 30-min Gemini Web Pulse fires (or every 15m for fresh OpenRouter / @theAIsearch / breaking lab drops),
+      // push brand-new models/breaking news to subscribed Telegram DM users & configured groups.
+      // Awaited with a tight 3.5s budget so Vercel Serverless finishes delivering before freezing the container.
       const pulseLive = data?.pulse?.status === 'live';
       const periodicDue = now - lastAutoAlertCheckAt >= 15 * 60_000;
       if (!opts.skipTelegramBroadcast && (pulseLive || periodicDue)) {
         const cfg = opts.cfg || getConfig();
         if (cfg.tgAiNews !== false) {
           lastAutoAlertCheckAt = now;
-          Promise.all([import('./tg-api.js'), import('./tg-ainews.js')])
-            .then(([{ tgToken }, { broadcastBreakingAiNews, collectAlertCandidates }]) => {
-              const token = tgToken();
-              if (!token) return null;
+          try {
+            const [{ tgToken }, { broadcastBreakingAiNews, collectAlertCandidates }] = await Promise.all([
+              import('./tg-api.js'),
+              import('./tg-ainews.js'),
+            ]);
+            const token = tgToken();
+            if (token) {
               const candidates = collectAlertCandidates(data, now);
-              if (!candidates.length) return null;
-              return broadcastBreakingAiNews({ cfg, token, items: candidates, now, fetchImpl: opts.fetchImpl });
-            })
-            .catch((err) => console.warn(`[ainews-tg] auto-alert push skipped: ${err?.message || err}`));
+              if (candidates.length) {
+                let timer;
+                await Promise.race([
+                  broadcastBreakingAiNews({ cfg, token, items: candidates, now, fetchImpl: opts.fetchImpl, deadline: Date.now() + 3000 }),
+                  new Promise((resolve) => { timer = setTimeout(resolve, 3500); }),
+                ]).finally(() => clearTimeout(timer));
+              }
+            }
+          } catch (err) {
+            console.warn(`[ainews-tg] auto-alert push skipped: ${err?.message || err}`);
+          }
         }
       }
       return data;
