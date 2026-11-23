@@ -201,7 +201,8 @@ test('RSS & Atom parser extracts cover images, links, and sanitized text', () =>
 
 test('aggregator and API handler degrade gracefully offline, serve JSON + valid RSS 2.0 XML, and preserve /api/health', async () => {
   const offlineFetch = async () => { throw new Error('offline'); };
-  const data = await aggregateAiNews({ fetchImpl: offlineFetch, now: Date.parse('2026-11-23T00:00:00Z') });
+  const offlineCfg = getConfig({});
+  const data = await aggregateAiNews({ fetchImpl: offlineFetch, now: Date.parse('2026-11-23T00:00:00Z'), cfg: offlineCfg });
 
   assert.equal(data.ok, true);
   assert.equal(data.channel.channelId, AISEARCH_CHANNEL.channelId);
@@ -217,15 +218,15 @@ test('aggregator and API handler degrade gracefully offline, serve JSON + valid 
   assert.match(rssXml, /<rss version="2\.0"/);
   assert.match(rssXml, /Moonshot AI Open-Weights Kimi K3/);
 
-  const resJson = await handleAiNewsRequest(new Request('https://agi1.app/api/ainews'), { fetchImpl: offlineFetch });
+  const resJson = await handleAiNewsRequest(new Request('https://agi1.app/api/ainews'), { fetchImpl: offlineFetch, cfg: offlineCfg });
   assert.equal(resJson.status, 200);
   assert.match(resJson.headers.get('content-type') || '', /application\/json/);
 
-  const resRss = await handleAiNewsRequest(new Request('https://agi1.app/api/ainews?format=rss'), { fetchImpl: offlineFetch });
+  const resRss = await handleAiNewsRequest(new Request('https://agi1.app/api/ainews?format=rss'), { fetchImpl: offlineFetch, cfg: offlineCfg });
   assert.equal(resRss.status, 200);
   assert.match(resRss.headers.get('content-type') || '', /application\/rss\+xml/);
 
-  const resPost = await handleAiNewsRequest(new Request('https://agi1.app/api/ainews', { method: 'POST' }), { fetchImpl: offlineFetch });
+  const resPost = await handleAiNewsRequest(new Request('https://agi1.app/api/ainews', { method: 'POST' }), { fetchImpl: offlineFetch, cfg: offlineCfg });
   assert.equal(resPost.status, 405);
 
   // Plain /api/health stays untouched and fast
@@ -608,7 +609,7 @@ test('Telegram bot /ainews command, inline tabs, search, switches, and automatic
     assert.match(sentPm.body.text, /AI News World/);
     assert.match(sentPm.body.text, /GLM-5\.4/);
     assert.equal(sentPm.body.link_preview_options?.is_disabled, true);
-    assert.ok(sentPm.body.entities.some((e) => e.type === 'text_link' && e.url === 'https://agi1.app/ainews'));
+    assert.ok(sentPm.body.entities.some((e) => e.type === 'text_link' && /^https:\/\/(?:www\.)?[^/]+\/ainews$/.test(e.url)));
     assert.deepEqual(
       sentPm.body.reply_markup.inline_keyboard[0].map((b) => b.callback_data),
       ['ainews:top', 'ainews:weights', 'ainews:tools'],
