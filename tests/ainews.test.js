@@ -361,6 +361,39 @@ test('ainews.html, CSP, routing, assets, and 12-function cap stay intact', () =>
   assert.ok(read('index.html').includes('href="/ainews"'));
 });
 
+test('AI News stays available in every built page with the shared header and footer navigation', async () => {
+  const { default: config } = await import('../vite.config.js');
+  const failures = [];
+  const checked = [];
+  const attribute = (attributes, name) => new RegExp(`(?:^|\\s)${name}=(['"])(.*?)\\1`, 'i').exec(attributes)?.[2];
+  for (const file of new Set(Object.values(config.build.rollupOptions.input))) {
+    if (!file.endsWith('.html')) continue;
+    const navs = [...read(file).matchAll(/<nav\b([^>]*)>([\s\S]*?)<\/nav>/gi)];
+    const header = navs.filter((nav) => attribute(nav[1], 'id') === 'site-nav');
+    if (!header.length) continue;
+    checked.push(file);
+    const footer = navs.filter((nav) => (attribute(nav[1], 'class') || '').split(/\s+/).includes('foot-nav'));
+    for (const [label, groups] of [['header', header], ['footer', footer]]) {
+      if (groups.length !== 1) { failures.push(`${file}: expected one shared ${label}`); continue; }
+      const links = [...groups[0][2].matchAll(/<a\b([^>]*)>([\s\S]*?)<\/a>/gi)]
+        .filter((link) => attribute(link[1], 'href') === '/ainews');
+      if (links.length !== 1) { failures.push(`${file}: ${label} has ${links.length} AI News links, expected one`); continue; }
+      const attrs = links[0][1];
+      const classes = (attribute(attrs, 'class') || '').split(/\s+/);
+      if (classes.includes('nav-phone') || classes.includes('hidden') || /(?:^|\s)hidden(?:\s|=|$)/i.test(attrs) || attribute(attrs, 'aria-hidden') === 'true') {
+        failures.push(`${file}: ${label} AI News link must remain available in desktop and phone navigation`);
+      }
+      if (file === 'ainews.html' && attribute(attrs, 'aria-current') !== 'page') {
+        failures.push(`${file}: ${label} must identify AI News as the current page`);
+      }
+    }
+  }
+  for (const file of ['index.html', 'diary.html', 'memes.html', 'pfp.html', 'ainews.html', 'games.html', 'roadmap.html']) {
+    assert.ok(checked.includes(file), `${file} uses the shared navigation under test`);
+  }
+  assert.deepEqual(failures, [], failures.join('\n'));
+});
+
 test('Gemini web pulse parses grounded JSON safely, resolves grounding chunks, filters stale/unsafe URLs, and stays within Supabase size cap', async () => {
   const now = Date.parse('2026-11-23T06:00:00Z');
   assert.deepEqual(extractJsonArray('```json\n[{"title":"Hello"}]\n```'), [{ title: 'Hello' }]);
