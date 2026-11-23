@@ -13,7 +13,7 @@ export const DEFAULT_ALERT_PREFS = Object.freeze({
     aisearch: true,
     markets: true,
   },
-  keywords: ['GLM', 'Qwen', 'Kimi', 'Anthropic', 'Muse', 'Sam Altman'],
+  keywords: ['GLM', 'Qwen', 'Kimi', 'Grok', 'Tesla AI', 'Anthropic', 'Muse', 'Sam Altman'],
   intervalMin: 5,
   sound: true,
 });

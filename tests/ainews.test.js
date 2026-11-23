@@ -111,6 +111,19 @@ test('entity classifier maps Qwen, Kimi, Anthropic IPO, Sam Altman AGI, Meta Mus
   assert.equal(glm.region, 'china');
   assert.equal(glm.lab, 'Z.ai GLM');
 
+  const grok = classifyItem('xAI unveils Grok 4.5 with faster reasoning and coding benchmarks');
+  assert.equal(grok.hub, 'sf');
+  assert.equal(grok.lab, 'xAI Grok');
+  assert.equal(grok.breaking, true);
+  assert.ok(grok.tags.includes('xAI Grok'));
+
+  const tesla = classifyItem('Tesla Optimus Gen 3 humanoid and Tesla FSD v15 Robotaxi update rolls out');
+  assert.equal(tesla.hub, 'sf');
+  assert.equal(tesla.lab, 'Tesla AI');
+  assert.equal(tesla.breaking, true);
+  assert.ok(tesla.tags.includes('Tesla AI'));
+  assert.ok(tesla.tags.includes('Robotics'));
+
   const dm = classifyItem('Google DeepMind unveils Genie 4 and AlphaGenome 2');
   assert.equal(dm.hub, 'london');
   assert.equal(dm.region, 'europe');

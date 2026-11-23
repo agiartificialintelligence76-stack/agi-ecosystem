@@ -21,7 +21,7 @@ const SOURCE_TIMEOUT_MS = 4800;
 const CACHE_TTL_MS = 90 * 1000;
 
 const NEWS_FEEDS = Object.freeze([
-  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(AI+model+OR+LLM+OR+OpenAI+OR+Anthropic+OR+Gemini+OR+Claude+OR+Muse)+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 12 },
+  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+Gemini+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 14 },
   { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10 },
   { id: 'decoder', name: 'The Decoder', url: 'https://the-decoder.com/feed/', defaultHub: 'sf', limit: 12 },
   { id: 'tc-ai', name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', defaultHub: 'sf', limit: 10 },
@@ -162,7 +162,9 @@ const ENTITY_RULES = [
   { re: /\b(deepmind|alphagenome|alphafold|genie\s*[234])\b/i, hub: 'london', region: 'europe', lab: 'Google DeepMind' },
   { re: /\b(google|gemini|veo|imagen|gemma|notebooklm)\b/i, hub: 'sf', region: 'americas', lab: 'Google AI' },
   { re: /\b(mistral|black forest labs|flux\b|eu ai act|european|aleph alpha)\b/i, hub: 'paris', region: 'europe', lab: 'Mistral & EU' },
-  { re: /\b(apple|nvidia|xai|grok|perplexity|cursor|luma|runway|ideogram|midjourney|thinking\s?machines|inworld|bria|stanford|berkeley|microsoft|copilot)\b/i, hub: 'sf', region: 'americas', lab: '' },
+  { re: /\b(xai|grok(?:[-\s]?\d+(?:\.\d+)?)?|colossus)\b/i, hub: 'sf', region: 'americas', lab: 'xAI Grok' },
+  { re: /\b(tesla\s+(?:ai|optimus|fsd|robotaxi|dojo|autopilot|cybercab)|optimus\s+(?:robot|gen|v\d)|full self-driving|cybercab)\b/i, hub: 'sf', region: 'americas', lab: 'Tesla AI' },
+  { re: /\b(apple|nvidia|tesla|perplexity|cursor|luma|runway|ideogram|midjourney|thinking\s?machines|inworld|bria|stanford|berkeley|microsoft|copilot|figure\s?0\d|unitree|boston dynamics)\b/i, hub: 'sf', region: 'americas', lab: '' },
   { re: /\b(sakana|sony|tokyo|japan|seoul|korea|naver|lg ai|singapore|sea-lion)\b/i, hub: 'tokyo', region: 'asia', lab: 'East Asia AI' },
 ];
 
@@ -209,7 +211,7 @@ export function classifyItem(text = '', defaults = {}) {
 
   const breaking = Boolean(
     defaults.breaking
-    || /\b(launches?|releases?|unveils?|announces?|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
+    || /\b(launches?|releases?|unveils?|announces?|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|grok|xai|optimus|robotaxi|fsd\s?v?\d|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
   );
 
   const tags = [];
@@ -217,6 +219,8 @@ export function classifyItem(text = '', defaults = {}) {
     [/\bglm\b|zhipu|z\.ai/i, 'GLM'],
     [/\bqwen\b/i, 'Qwen'],
     [/\bkimi\b/i, 'Kimi'],
+    [/\bxai|grok\b/i, 'xAI Grok'],
+    [/\btesla|optimus|robotaxi|fsd|cybercab\b/i, 'Tesla AI'],
     [/\banthropic|claude|fable\b/i, 'Anthropic'],
     [/\bopenai|gpt-|altman\b/i, 'OpenAI'],
     [/\bmuse\b/i, 'Meta Muse'],
@@ -227,7 +231,7 @@ export function classifyItem(text = '', defaults = {}) {
     [/\bvideo|avatar|movieroll|kling|sora|veo\b/i, 'Video AI'],
     [/\btts|voice|audio|music\b/i, 'Audio & Voice'],
     [/\b3d|splat|depth|world model|genie\b/i, '3D & Worlds'],
-    [/\brobot|physical agent\b/i, 'Robotics'],
+    [/\brobot|optimus|humanoid|robotaxi|fsd|physical agent|unitree|boston dynamics\b/i, 'Robotics'],
   ];
   for (const [re, label] of tagChecks) if (re.test(hay) && tags.length < 4) tags.push(label);
   if (openWeights && !tags.includes('Open Weights')) tags.unshift('Open Weights');

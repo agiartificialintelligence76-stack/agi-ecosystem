@@ -102,7 +102,7 @@ export function buildPulsePrompt(now = Date.now()) {
     `Current UTC time: ${todayIso}.`,
     'You are the breaking-news scout for a live global AI tracker.',
     'Run 1 or 2 concise Google searches for the biggest breaking AI model releases, open-weight drops, lab announcements, funding/IPO moves, and viral X/official AI launches from the LAST 24 HOURS worldwide.',
-    'Prioritize direct model launches, coding/vision/agent releases, and open-weight drops from both China labs (Z.ai / Zhipu GLM, Alibaba Qwen, Moonshot Kimi, DeepSeek, MiniMax, Tencent Hunyuan, ByteDance Seed) and US/EU labs (OpenAI, Anthropic, Meta Muse, Google DeepMind, xAI, Mistral, NVIDIA).',
+    'Prioritize direct model launches, coding/vision/agent releases, robotics/autonomy milestones, and open-weight drops from both China labs (Z.ai / Zhipu GLM, Alibaba Qwen, Moonshot Kimi, DeepSeek, MiniMax, Tencent Hunyuan, ByteDance Seed) and US/EU labs (OpenAI, Anthropic, Meta Muse, Google DeepMind, xAI Grok, Tesla AI / Optimus / FSD / Robotaxi, Mistral, NVIDIA).',
     `Return ONLY a raw JSON array of up to ${MAX_PULSE_ITEMS} items (newest first, no prose, no markdown).`,
     'Each object must have keys:',
     '{"title":"concise factual headline <= 110 chars","summary":"1-2 sentence concrete summary <= 190 chars","url":"exact https URL from search results or null","githubUrl":"https://github.com/owner/repo if directly relevant else null","huggingfaceUrl":"https://huggingface.co/... if directly relevant else null","lab":"lab or company name","source":"publisher or domain name","publishedAt":"ISO-8601 UTC timestamp"}',
