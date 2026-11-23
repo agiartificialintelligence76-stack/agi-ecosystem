@@ -21,14 +21,14 @@ const SOURCE_TIMEOUT_MS = 4800;
 const CACHE_TTL_MS = 90 * 1000;
 
 const NEWS_FEEDS = Object.freeze([
-  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+Gemini+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 14 },
-  { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10 },
+  { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+Gemini+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 14, isAggregator: true },
+  { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan)+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 10, isAggregator: true },
   { id: 'decoder', name: 'The Decoder', url: 'https://the-decoder.com/feed/', defaultHub: 'sf', limit: 12 },
   { id: 'tc-ai', name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', defaultHub: 'sf', limit: 10 },
   { id: 'verge-ai', name: 'The Verge AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', defaultHub: 'nyc', limit: 10 },
-  { id: 'google-ai', name: 'Google AI Blog', url: 'https://blog.google/innovation-and-ai/rss/', defaultHub: 'sf', limit: 8 },
-  { id: 'deepmind', name: 'Google DeepMind', url: 'https://deepmind.google/blog/rss.xml', defaultHub: 'london', limit: 8 },
-  { id: 'openai', name: 'OpenAI News', url: 'https://openai.com/news/rss.xml', defaultHub: 'sf', limit: 8 },
+  { id: 'google-ai', name: 'Google AI Blog', url: 'https://blog.google/innovation-and-ai/rss/', defaultHub: 'sf', limit: 8, isLabFeed: true },
+  { id: 'deepmind', name: 'Google DeepMind', url: 'https://deepmind.google/blog/rss.xml', defaultHub: 'london', limit: 8, isLabFeed: true },
+  { id: 'openai', name: 'OpenAI News', url: 'https://openai.com/news/rss.xml', defaultHub: 'sf', limit: 8, isLabFeed: true },
   { id: 'smol-ai', name: 'Smol AI Digest', url: 'https://news.smol.ai/rss.xml', defaultHub: 'sf', limit: 4 },
 ]);
 
@@ -302,6 +302,16 @@ function extractLinksFromEntry(block) {
   return { githubUrl, huggingfaceUrl };
 }
 
+const AI_RELEVANCE_RE = /\b(ai\b|artificial intelligence|llm|model|open[- ]weights?|openai|anthropic|claude|gemini|deepmind|grok|xai|qwen|kimi|deepseek|glm|zhipu|minimax|hunyuan|muse|llama|mistral|optimus|robotaxi|fsd|nvidia|gpu|neural|transformer|agent|chatbot|agi\b|robotics|humanoid|sam altman|amodei|coding|benchmark|perplexity)\b/i;
+
+function cleanPublisherName(raw = '') {
+  return stripHtml(raw)
+    .replace(/\.(?:com|org|net|co\.uk)$/i, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 48);
+}
+
 export function parseRssOrAtom(xml = '', meta = {}) {
   const text = String(xml ?? '');
   const isAtom = /<entry[\s>]/i.test(text) && !/<item[\s>]/i.test(text);
@@ -312,8 +322,24 @@ export function parseRssOrAtom(xml = '', meta = {}) {
 
   while ((match = re.exec(text)) && items.length < limit) {
     const block = match[1];
-    const title = stripHtml(tagContent(block, 'title'));
+    let title = stripHtml(tagContent(block, 'title'));
     if (!title || title.length < 4 || /^not much happened today$/i.test(title)) continue;
+
+    // Extract actual publisher from RSS <source> (e.g. Google News RSS carries <source>Reuters</source>)
+    // and strip redundant trailing " - Publisher" from Google News titles.
+    const rawSourceTag = stripHtml(tagContent(block, 'source'));
+    let publisher = rawSourceTag ? cleanPublisherName(rawSourceTag) : '';
+    if (meta.isAggregator && !publisher) {
+      const mTrail = /\s+-\s+([^|-]{2,48})$/.exec(title);
+      if (mTrail) publisher = cleanPublisherName(mTrail[1]);
+    }
+    if (rawSourceTag) {
+      const esc = rawSourceTag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      title = title.replace(new RegExp(`\\s+[-–—|]\\s+${esc}$`, 'i'), '').trim() || title;
+    } else if (meta.isAggregator && publisher) {
+      const esc = publisher.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      title = title.replace(new RegExp(`\\s+[-–—|]\\s+${esc}(?:\\.(?:com|org|net))?$`, 'i'), '').trim() || title;
+    }
 
     let link = '';
     if (isAtom) {
@@ -326,18 +352,29 @@ export function parseRssOrAtom(xml = '', meta = {}) {
     if (!url) continue;
 
     const rawDesc = tagContent(block, 'description') || tagContent(block, 'summary') || tagContent(block, 'content:encoded') || tagContent(block, 'content');
-    const summary = truncate(stripHtml(rawDesc), 230);
+    let summary = truncate(stripHtml(rawDesc), 230);
+    // Google News <description> often just repeats the title + publisher; drop duplicate boilerplate
+    if (meta.isAggregator && summary && normalizeMatchKey(summary).startsWith(normalizeMatchKey(title).slice(0, 32))) {
+      summary = '';
+    }
+    // Skip non-AI market-chatter spillover from broad aggregator queries
+    if (meta.isAggregator && !AI_RELEVANCE_RE.test(`${title} ${summary}`)) continue;
+
     const pubRaw = tagContent(block, 'pubDate') || tagContent(block, 'published') || tagContent(block, 'updated') || tagContent(block, 'dc:date');
     const publishedAt = safeIsoDate(stripHtml(pubRaw), new Date().toISOString());
     const image = extractImageFromEntry(block);
     const { githubUrl, huggingfaceUrl } = extractLinksFromEntry(block);
-    const info = classifyItem(`${title} ${summary} ${meta.name || ''}`, { hub: meta.defaultHub, source: meta.name });
+    const sourceLabel = publisher || meta.name || 'Global AI Wire';
+    // Only feed `meta.name` into entity classification for official lab blogs (OpenAI, Google AI, DeepMind) —
+    // NEVER for aggregators like "Google News AI" (whose name contains "Google" and would mislabel every article!).
+    const classifyText = meta.isLabFeed ? `${title} ${summary} ${meta.name || ''}` : `${title} ${summary}`;
+    const info = classifyItem(classifyText, { hub: meta.defaultHub, source: sourceLabel });
 
     items.push({
       id: slugId(meta.id || 'rss', `${title}-${publishedAt.slice(0, 10)}`),
       title,
-      summary: summary || `Live AI news dispatch from ${meta.name || 'Global AI Wire'}.`,
-      source: meta.name || 'Global AI Wire',
+      summary: summary || `Live AI news dispatch from ${sourceLabel}.`,
+      source: sourceLabel,
       sourceKind: 'rss',
       url,
       githubUrl,

@@ -20,13 +20,70 @@ export const PULSE_INTERVAL_MS = 30 * 60 * 1000;
 export const PULSE_LEASE_MS = 45 * 1000;
 export const PULSE_BACKOFF_MS = 5 * 60 * 1000;
 export const PULSE_TIMEOUT_MS = 12000;
+export const PULSE_SCHEMA_VERSION = 2;
 export const MAX_PULSE_ITEMS = 8;
 export const MAX_PULSE_BYTES = 7500;
 
 const SUPABASE_TIMEOUT_MS = 3500;
+const REDIRECT_TIMEOUT_MS = 3500;
 const MAX_AGE_MS = 14 * 24 * 60 * 60 * 1000;
 const MAX_FUTURE_SKEW_MS = 12 * 60 * 60 * 1000;
-const BLOCKED_HOSTS_RE = /^(?:localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[::1\]|example\.com|www\.example\.com)$/i;
+const BLOCKED_HOSTS_RE = /^(?:localhost|127(?:\.\d+){3}|0\.0\.0\.0|\[::1\]|10(?:\.\d+){3}|192\.168(?:\.\d+){2}|172\.(?:1[6-9]|2\d|3[01])(?:\.\d+){2}|example\.com|www\.example\.com)$/i;
+const GROUNDING_REDIRECT_HOST = 'vertexaisearch.cloud.google.com';
+
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'over', 'after', 'amid', 'more', 'most',
+  'new', 'news', 'blog', 'post', 'posts', 'article', 'articles', 'index', 'insights', 'story', 'stories',
+  'tech', 'technology', 'model', 'models', 'launches', 'launch', 'releases', 'release', 'unveils', 'unveil',
+  'announces', 'announce', 'adds', 'says', 'reports', 'report', 'update', 'updates', 'global', 'world',
+  'today', 'now', 'all', 'its', 'are', 'has', 'have', 'will', 'can', 'how', 'why', 'what', 'who', 'com',
+  'org', 'net', 'www', 'http', 'https', 'html', 'php', 'asp', 'aspx', 'en', 'us', 'uk', 'ai',
+]);
+
+const KNOWN_PUBLISHERS = Object.freeze({
+  'openai.com': 'OpenAI',
+  'anthropic.com': 'Anthropic',
+  'claude.ai': 'Anthropic',
+  'deepmind.google': 'Google DeepMind',
+  'blog.google': 'Google AI',
+  'ai.meta.com': 'Meta AI',
+  'about.fb.com': 'Meta',
+  'x.ai': 'xAI',
+  'grok.com': 'xAI Grok',
+  'tesla.com': 'Tesla',
+  'z.ai': 'Z.ai',
+  'zhipuai.cn': 'Z.ai GLM',
+  'qwenlm.github.io': 'Alibaba Qwen',
+  'qwen.ai': 'Alibaba Qwen',
+  'moonshot.cn': 'Moonshot AI',
+  'kimi.ai': 'Moonshot Kimi',
+  'deepseek.com': 'DeepSeek',
+  'mistral.ai': 'Mistral AI',
+  'nvidia.com': 'NVIDIA',
+  'blogs.nvidia.com': 'NVIDIA',
+  'github.com': 'GitHub',
+  'huggingface.co': 'Hugging Face',
+  'arxiv.org': 'arXiv',
+  'x.com': 'X',
+  'twitter.com': 'X',
+  'reuters.com': 'Reuters',
+  'bloomberg.com': 'Bloomberg',
+  'wsj.com': 'WSJ',
+  'ft.com': 'Financial Times',
+  'cnbc.com': 'CNBC',
+  'techcrunch.com': 'TechCrunch',
+  'theverge.com': 'The Verge',
+  'the-decoder.com': 'The Decoder',
+  'wired.com': 'WIRED',
+  'theinformation.com': 'The Information',
+  'semafor.com': 'Semafor',
+  'venturebeat.com': 'VentureBeat',
+  'arstechnica.com': 'Ars Technica',
+  'futurumgroup.com': 'The Futurum Group',
+  'openrouter.ai': 'OpenRouter',
+});
+
+const PRIMARY_PLATFORMS = new Set(['x.com', 'twitter.com', 'github.com', 'huggingface.co', 'arxiv.org', 'openrouter.ai']);
 
 // ---------- Self-contained sanitizers (no circular imports with server/ainews.js) ----------
 
@@ -131,12 +188,83 @@ export function extractJsonArray(text = '') {
   return [];
 }
 
-function matchGroundingChunk(item, chunks) {
+function meaningfulTokens(text = '') {
+  return [...new Set(
+    normKey(text)
+      .split(' ')
+      .filter((w) => w.length >= 3 && !STOP_WORDS.has(w) && !/^\d{4}$/.test(w)),
+  )];
+}
+
+export function publisherFromHost(host = '', fallback = '') {
+  const h = String(host || '').replace(/^www\./i, '').toLowerCase();
+  if (!h || h === GROUNDING_REDIRECT_HOST) return cleanText(fallback, 42);
+  if (KNOWN_PUBLISHERS[h]) return KNOWN_PUBLISHERS[h];
+  for (const [domain, label] of Object.entries(KNOWN_PUBLISHERS)) {
+    if (h.endsWith(`.${domain}`)) return label;
+  }
+  const cleanFallback = cleanText(fallback, 42);
+  if (cleanFallback && normKey(h).includes(normKey(cleanFallback).split(' ')[0] || '___')) {
+    return cleanFallback;
+  }
+  // Convert "techtimes.com" or "news.ycombinator.com" cleanly into readable host
+  return h.slice(0, 42);
+}
+
+// Verify that a resolved article URL genuinely corresponds to the story headline/lab so mismatched
+// grounding redirects (e.g. an Asia stocks roundup attached to a Sarvam AI headline) are rejected.
+export function urlMatchesStory(url, item) {
+  const safe = safePulseUrl(url);
+  if (!safe) return false;
+  const host = hostOf(safe);
+  if (!host || host === GROUNDING_REDIRECT_HOST) return false;
+  if (PRIMARY_PLATFORMS.has(host)) return true;
+
+  let pathAndQuery = '';
+  try {
+    const u = new URL(safe);
+    pathAndQuery = decodeURIComponent(`${u.pathname} ${u.search}`);
+  } catch {
+    pathAndQuery = safe;
+  }
+
+  const storyTokens = meaningfulTokens(`${item?.t || item?.title || ''} ${item?.l || item?.lab || ''}`);
+  if (!storyTokens.length) return false;
+  const urlHay = ` ${normKey(`${host.replace(/\./g, ' ')} ${pathAndQuery}`)} `;
+  const urlTokens = new Set(normKey(`${host.replace(/\./g, ' ')} ${pathAndQuery}`).split(' ').filter((w) => w.length >= 2));
+
+  for (const tok of storyTokens) {
+    if (urlTokens.has(tok)) return true;
+    // Match concatenated lab/product tokens like "qwen4" in "qwen4max", "openai" in "openai", "deepseek" in "deepseekr2"
+    if (tok.length >= 4 && urlHay.includes(tok)) return true;
+  }
+  return false;
+}
+
+function matchGroundingChunk(item, chunks, supports = []) {
   if (!chunks.length) return null;
-  const hay = normKey(`${item.title || ''} ${item.lab || ''} ${item.source || ''}`);
-  const words = new Set(hay.split(' ').filter((w) => w.length > 2));
+
+  // 1. Prefer exact groundingSupports span match (Gemini tells us which chunk index backed this headline).
+  const titleNorm = normKey(item.title || '');
+  const titleTokens = meaningfulTokens(item.title || '');
+  if (supports.length && titleTokens.length) {
+    for (const sup of supports) {
+      const segNorm = normKey(sup?.segment?.text || '');
+      if (!segNorm) continue;
+      const hit = (titleNorm.length >= 12 && segNorm.includes(titleNorm.slice(0, 24)))
+        || titleTokens.filter((w) => segNorm.includes(w)).length >= Math.min(3, titleTokens.length);
+      if (hit && Array.isArray(sup.groundingChunkIndices)) {
+        for (const idx of sup.groundingChunkIndices) {
+          if (chunks[idx]) return chunks[idx];
+        }
+      }
+    }
+  }
+
+  // 2. Otherwise require a strong host/publisher match (score >= 3), never a weak generic-word overlap.
   const itemHost = hostOf(item.url || '');
   const srcNorm = normKey(item.source || '');
+  const srcTokens = meaningfulTokens(item.source || '');
 
   let best = null;
   let bestScore = 0;
@@ -147,18 +275,21 @@ function matchGroundingChunk(item, chunks) {
     if (itemHost && chHost && (itemHost === chHost || itemHost.endsWith(`.${chHost}`) || chHost.endsWith(`.${itemHost}`))) {
       score += 5;
     }
-    if (srcNorm && chTitle && (chTitle.includes(srcNorm) || srcNorm.includes(chTitle))) {
-      score += 3;
+    if (srcNorm && chTitle && srcNorm.length >= 3 && (chTitle === srcNorm || chTitle.includes(srcNorm) || srcNorm.includes(chTitle))) {
+      score += 4;
     }
-    for (const w of chTitle.split(' ')) {
-      if (w.length > 2 && words.has(w)) score += 1;
+    if (srcTokens.length && chHost) {
+      const hostNorm = normKey(chHost.replace(/\./g, ' '));
+      for (const w of srcTokens) {
+        if (w.length >= 4 && hostNorm.includes(w)) score += 3;
+      }
     }
     if (score > bestScore) {
       bestScore = score;
       best = ch;
     }
   }
-  return bestScore >= 1 ? best : null;
+  return bestScore >= 3 ? best : null;
 }
 
 export function parsePulseResponse(payload, { now = Date.now() } = {}) {
@@ -170,6 +301,7 @@ export function parsePulseResponse(payload, { now = Date.now() } = {}) {
 
   const meta = candidate?.groundingMetadata || {};
   const webSearchQueries = Array.isArray(meta.webSearchQueries) ? meta.webSearchQueries.filter(Boolean) : [];
+  const supports = Array.isArray(meta.groundingSupports) ? meta.groundingSupports : [];
   const chunks = (Array.isArray(meta.groundingChunks) ? meta.groundingChunks : [])
     .map((c) => {
       const uri = safePulseUrl(c?.web?.uri);
@@ -204,17 +336,20 @@ export function parsePulseResponse(payload, { now = Date.now() } = {}) {
     const publishedAt = new Date(pubTs).toISOString();
 
     const directUrl = safePulseUrl(entry.url);
-    const matchedChunk = matchGroundingChunk(entry, chunks);
+    const matchedChunk = matchGroundingChunk(entry, chunks, supports);
     let url = directUrl;
     if (!url && matchedChunk) url = matchedChunk.uri;
-    // If Gemini emitted a direct URL whose domain never appeared in grounding chunks while a matching
-    // verified grounding chunk exists, prefer the verified grounding link so we never serve 404s.
-    if (url && chunks.length && !url.includes('vertexaisearch.cloud.google.com')) {
+    // If Gemini emitted a direct URL whose domain never appeared in grounding chunks while a strong
+    // verified grounding chunk matches this item, prefer the verified grounding link so we never serve 404s.
+    if (url && chunks.length && hostOf(url) !== GROUNDING_REDIRECT_HOST) {
       const uHost = hostOf(url);
       const hostGrounded = chunks.some((c) => c.host && (uHost === c.host || uHost.endsWith(`.${c.host}`) || c.host.endsWith(`.${uHost}`)));
       if (!hostGrounded && matchedChunk) url = matchedChunk.uri;
     }
     if (!url || seenUrls.has(url)) continue;
+
+    // Reject obvious direct-URL mismatches synchronously; vertexaisearch redirects are unwrapped & verified next.
+    if (hostOf(url) !== GROUNDING_REDIRECT_HOST && !urlMatchesStory(url, { title, lab: entry.lab })) continue;
 
     const ghRaw = safePulseUrl(entry.githubUrl);
     const githubUrl = isGitHubRepoUrl(ghRaw) ? ghRaw : (isGitHubRepoUrl(url) ? url : null);
@@ -223,7 +358,7 @@ export function parsePulseResponse(payload, { now = Date.now() } = {}) {
 
     const summary = cleanText(entry.summary || '', 200) || `${title} — verified via Gemini live web search.`;
     const lab = cleanText(entry.lab || '', 42);
-    const publisher = cleanText(entry.source || matchedChunk?.title || hostOf(url) || '', 42);
+    const publisher = publisherFromHost(hostOf(url), entry.source || matchedChunk?.title || '');
 
     seenTitles.add(titleKey);
     seenUrls.add(url);
@@ -250,11 +385,50 @@ export function parsePulseResponse(payload, { now = Date.now() } = {}) {
   };
 }
 
+// Unwrap opaque `vertexaisearch.cloud.google.com/grounding-api-redirect/...` URLs via fast `HEAD` +
+// `redirect: 'manual'` (reading the 302 Location without downloading the target site), then cross-check
+// that the real canonical URL matches the story and align the displayed publisher name to the true host.
+export async function verifyPulseItems(items = [], { fetchImpl = globalThis.fetch } = {}) {
+  if (!Array.isArray(items) || !items.length) return [];
+  const checked = await Promise.all(items.map(async (it) => {
+    if (!it?.u) return null;
+    const h = hostOf(it.u);
+    if (h !== GROUNDING_REDIRECT_HOST) {
+      if (!urlMatchesStory(it.u, it)) return null;
+      return { ...it, p: publisherFromHost(h, it.p || '') };
+    }
+    try {
+      const res = await fetchImpl(it.u, { method: 'HEAD', redirect: 'manual', signal: AbortSignal.timeout(REDIRECT_TIMEOUT_MS) });
+      const loc = safePulseUrl(res?.headers?.get?.('location'));
+      if (!loc || hostOf(loc) === GROUNDING_REDIRECT_HOST) return null;
+      if (!urlMatchesStory(loc, it)) return null;
+      const finalHost = hostOf(loc);
+      const next = {
+        ...it,
+        u: loc.slice(0, 420),
+        p: publisherFromHost(finalHost, it.p || ''),
+      };
+      if (!next.g && isGitHubRepoUrl(loc)) next.g = loc.slice(0, 220);
+      if (!next.h && isHuggingFaceUrl(loc)) next.h = loc.slice(0, 220);
+      return next;
+    } catch {
+      return null;
+    }
+  }));
+
+  const seenUrls = new Set();
+  return checked.filter((it) => {
+    if (!it || seenUrls.has(it.u)) return false;
+    seenUrls.add(it.u);
+    return true;
+  });
+}
+
 // ---------- Compact storage & hydration ----------
 
 export function compactPulseRecord(record) {
   const out = {
-    v: 1,
+    v: Number(record?.v) || PULSE_SCHEMA_VERSION,
     at: Number(record?.at) || 0,
     claimedAt: Number(record?.claimedAt) || 0,
     backoffUntil: Number(record?.backoffUntil) || 0,
@@ -379,7 +553,9 @@ export async function runGeminiSearchPulse({ fetchImpl = globalThis.fetch, cfg, 
     throw err;
   }
   const payload = await res.json();
-  return parsePulseResponse(payload, { now });
+  const parsed = parsePulseResponse(payload, { now });
+  const verified = await verifyPulseItems(parsed.items, { fetchImpl });
+  return { items: verified, queryCount: parsed.queryCount };
 }
 
 async function supabaseRpc(fetchImpl, cfg, fn, args) {
@@ -476,14 +652,17 @@ export async function getGeminiNewsPulse({
   const task = (async () => {
     const hasDb = Boolean(cfg.supabaseUrl && cfg.supabaseKey);
     const sharedState = hasDb ? await readSharedState(fetchImpl, cfg) : null;
-    const remote = sharedState?.ainewsPulse && typeof sharedState.ainewsPulse === 'object'
-      ? compactPulseRecord(sharedState.ainewsPulse)
+    const rawRemote = sharedState?.ainewsPulse && typeof sharedState.ainewsPulse === 'object'
+      ? sharedState.ainewsPulse
       : null;
+    const remote = rawRemote ? compactPulseRecord(rawRemote) : null;
+    const remoteFreshSchema = Boolean(rawRemote && Number(rawRemote.v) >= PULSE_SCHEMA_VERSION);
 
     const baseline = remote || mem || compactPulseRecord({ model: cfg.geminiModel });
 
     // 3. Shared Supabase cooldown / backoff / active-lease check across all serverless containers.
-    if (remote) {
+    // Older schema versions (v < PULSE_SCHEMA_VERSION) are refreshed once cleanly to replace unverified links.
+    if (remote && remoteFreshSchema) {
       if (remote.at && now - remote.at < PULSE_INTERVAL_MS) {
         memCache.set(key, remote);
         return { status: 'cached', record: remote };
@@ -499,7 +678,7 @@ export async function getGeminiNewsPulse({
 
     // 4. Claim a short lease in Supabase before hitting Gemini so concurrent cold starts back off.
     if (hasDb && sharedState !== null) {
-      await writeSharedPulse(fetchImpl, cfg, { ...baseline, claimedAt: now }, sharedState);
+      await writeSharedPulse(fetchImpl, cfg, { ...baseline, v: PULSE_SCHEMA_VERSION, claimedAt: now }, sharedState);
     }
 
     // 5. Run the single 30-minute Gemini Google-Search web pulse.
@@ -507,6 +686,7 @@ export async function getGeminiNewsPulse({
       const { items, queryCount } = await runGeminiSearchPulse({ fetchImpl, cfg, now });
       if (items.length > 0) {
         const fresh = compactPulseRecord({
+          v: PULSE_SCHEMA_VERSION,
           at: now,
           claimedAt: 0,
           backoffUntil: 0,

@@ -27,6 +27,8 @@ import {
   MAX_PULSE_BYTES,
   extractJsonArray,
   parsePulseResponse,
+  verifyPulseItems,
+  urlMatchesStory,
   compactPulseRecord,
   getGeminiNewsPulse,
   _resetGeminiPulseCache,
@@ -214,6 +216,40 @@ test('RSS & Atom parser extracts cover images, links, and sanitized text', () =>
   assert.equal(parsed[0].image, 'https://the-decoder.com/wp-content/uploads/2026/11/qwen.jpg');
   assert.equal(parsed[0].githubUrl, 'https://github.com/QwenLM/qwen-code');
   assert.equal(parsed[0].hub, 'hangzhou');
+
+  // Google News aggregator extracts true <source> publisher, strips trailing " - Publisher",
+  // never mislabels non-Google stories as "Google AI", and drops non-AI stock-market spillover.
+  const gnews = `<?xml version="1.0"?>
+<rss version="2.0"><channel>
+  <item>
+    <title>California AG Bonta filed lawsuit against OpenAI over model security - Reuters</title>
+    <link>https://news.google.com/rss/articles/ABC</link>
+    <pubDate>Mon, 23 Nov 2026 04:26:00 GMT</pubDate>
+    <source url="https://www.reuters.com">Reuters</source>
+    <description>California AG Bonta filed lawsuit against OpenAI over model security Reuters</description>
+  </item>
+  <item>
+    <title>Thinking Machines unveils 26.4B open-weights coding model - Tech Times</title>
+    <link>https://news.google.com/rss/articles/DEF</link>
+    <pubDate>Mon, 23 Nov 2026 05:00:00 GMT</pubDate>
+    <source url="https://www.techtimes.com">Tech Times</source>
+    <description>New open-weights release.</description>
+  </item>
+  <item>
+    <title>Dow Jones Futures Jump As Oracle Tries To Ease Market Fears - Investor's Business Daily</title>
+    <link>https://news.google.com/rss/articles/GHI</link>
+    <pubDate>Mon, 23 Nov 2026 04:15:00 GMT</pubDate>
+    <source url="https://www.investors.com">Investor's Business Daily</source>
+    <description>Stock market futures update.</description>
+  </item>
+</channel></rss>`;
+  const gParsed = parseRssOrAtom(gnews, { id: 'gnews-global-ai', name: 'Google News AI', defaultHub: 'sf', isAggregator: true });
+  assert.equal(gParsed.length, 2, 'drops non-AI Dow Jones spillover');
+  assert.equal(gParsed[0].title, 'California AG Bonta filed lawsuit against OpenAI over model security');
+  assert.equal(gParsed[0].source, 'Reuters');
+  assert.equal(gParsed[0].lab, 'OpenAI');
+  assert.equal(gParsed[1].source, 'Tech Times');
+  assert.notEqual(gParsed[1].lab, 'Google AI', 'aggregator name "Google News AI" must never mislabel articles as Google AI');
 });
 
 test('aggregator and API handler degrade gracefully offline, serve JSON + valid RSS 2.0 XML, and preserve /api/health', async () => {
@@ -314,7 +350,7 @@ test('ainews.html, CSP, routing, assets, and 12-function cap stay intact', () =>
   assert.ok(read('index.html').includes('href="/ainews"'));
 });
 
-test('Gemini web pulse parses grounded JSON safely, resolves grounding chunks, filters stale/unsafe URLs, and stays within Supabase size cap', () => {
+test('Gemini web pulse parses grounded JSON safely, resolves grounding chunks, filters stale/unsafe URLs, and stays within Supabase size cap', async () => {
   const now = Date.parse('2026-11-23T06:00:00Z');
   assert.deepEqual(extractJsonArray('```json\n[{"title":"Hello"}]\n```'), [{ title: 'Hello' }]);
   assert.deepEqual(extractJsonArray('not json'), []);
@@ -378,6 +414,29 @@ test('Gemini web pulse parses grounded JSON safely, resolves grounding chunks, f
   assert.equal(parsed.items[0].g, 'https://github.com/zai-org/GLM-5');
   assert.equal(parsed.items[1].u, 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/BBB', 'falls back to verified grounding chunk URL');
 
+  // verifyPulseItems unwraps grounding redirects via 302 Location, rejects mismatched articles, and aligns publisher names
+  assert.equal(urlMatchesStory('https://emergent.sh/news/asia-stocks-slide-ai-rout-deepens', { t: 'Sarvam AI Unveils 105B Parameter Model', l: 'Sarvam AI' }), false);
+  assert.equal(urlMatchesStory('https://english.cw.com.tw/article/article.action?id=5144', { t: 'Anthropic Claude Helps Prove Riemann Hypothesis', l: 'Anthropic' }), false);
+  assert.equal(urlMatchesStory('https://openai.com/index/perplexity-and-intelligence/', { t: 'OpenAI Chief Scientist Proposes Pretraining Ceiling', l: 'OpenAI' }), true);
+  assert.equal(urlMatchesStory('https://futurumgroup.com/insights/together-ai-brings-qwen4-max-to-serverless/', { t: 'Together AI Adds Alibaba Qwen4 Max', l: 'Alibaba' }), true);
+
+  const verified = await verifyPulseItems([
+    { id: 'p1', t: 'Sarvam AI Unveils 105B Parameter Model', l: 'Sarvam AI', p: 'Emergent', u: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/BAD1', d: new Date(now).toISOString() },
+    { id: 'p2', t: 'OpenAI Chief Scientist Proposes Perplexity Ceiling', l: 'OpenAI', p: 'WrongBlog', u: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/GOOD1', d: new Date(now).toISOString() },
+  ], {
+    fetchImpl: async (u) => new Response(null, {
+      status: 302,
+      headers: {
+        location: String(u).endsWith('BAD1')
+          ? 'https://emergent.sh/news/asia-stocks-slide-ai-rout-deepens'
+          : 'https://openai.com/index/perplexity-and-intelligence/',
+      },
+    }),
+  });
+  assert.equal(verified.length, 1, 'drops mismatched grounding redirect');
+  assert.equal(verified[0].u, 'https://openai.com/index/perplexity-and-intelligence/', 'unwraps to canonical URL');
+  assert.equal(verified[0].p, 'OpenAI', 'aligns displayed publisher to verified host');
+
   // Oversized pulse record is strictly trimmed to <= MAX_PULSE_BYTES (safely below agi1_feed_state 20KB cap)
   const huge = compactPulseRecord({
     at: now,
@@ -415,6 +474,8 @@ test('30-minute Gemini web pulse enforces shared Supabase cooldown, preserves /a
   let geminiCalls = 0;
   let geminiShouldFail = false;
   let geminiTitle = 'Z.ai unveils GLM-5.4 coding & vision upgrade';
+  let geminiUrl = 'https://z.ai/blog/glm-5-4';
+  let geminiHost = 'z.ai';
 
   const mockFetch = async (url, init = {}) => {
     const u = String(url);
@@ -446,16 +507,16 @@ test('30-minute Gemini web pulse enforces shared Supabase cooldown, preserves /a
               text: JSON.stringify([{
                 title: geminiTitle,
                 summary: 'New vision capabilities and 50% higher weekly coding quotas live for GLM Coding Plan users.',
-                url: 'https://z.ai/blog/glm-5-4',
+                url: geminiUrl,
                 lab: 'Z.ai GLM',
-                source: 'z.ai',
+                source: geminiHost,
                 publishedAt: '2026-11-23T04:18:00Z',
               }]),
             }],
           },
           groundingMetadata: {
             webSearchQueries: ['GLM-5.4 Z.ai release'],
-            groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/GLM', title: 'z.ai' } }],
+            groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/GLM', title: geminiHost } }],
           },
         }],
       });
@@ -510,6 +571,8 @@ test('30-minute Gemini web pulse enforces shared Supabase cooldown, preserves /a
   dbState.ainewsPulse.claimedAt = 0;
   dbState.ainewsPulse.at = T0;
   geminiTitle = 'Alibaba Qwen3.9 launches worldwide with open Apache weights';
+  geminiUrl = 'https://qwenlm.github.io/blog/qwen3-9/';
+  geminiHost = 'qwenlm.github.io';
   const refreshed = await getGeminiNewsPulse({ fetchImpl: mockFetch, cfg: baseCfg, now: T0 + PULSE_INTERVAL_MS + 1000, classifyItem });
   assert.equal(geminiCalls, 2);
   assert.equal(refreshed.status, 'live');
@@ -552,6 +615,8 @@ test('Telegram bot /ainews command, inline tabs, search, switches, and automatic
   const tgCalls = [];
   let dbState = { since: 1795400000000, diary: '2026-11-23' };
   let pulseHeadline = 'Z.ai unveils GLM-5.4 with vision & 50% higher weekly quota';
+  let pulseUrl = 'https://z.ai/blog/glm-5-4';
+  let pulseHost = 'z.ai';
 
   const realFetch = globalThis.fetch;
   const mockFetch = async (url, init = {}) => {
@@ -578,16 +643,16 @@ test('Telegram bot /ainews command, inline tabs, search, switches, and automatic
                 {
                   title: pulseHeadline,
                   summary: 'Vision capabilities and stronger coding rollout across GLM Coding Plan.',
-                  url: 'https://z.ai/blog/glm-5-4',
+                  url: pulseUrl,
                   githubUrl: 'https://github.com/zai-org/GLM-5',
                   lab: 'Z.ai GLM',
-                  source: 'z.ai',
+                  source: pulseHost,
                   publishedAt: new Date(NOW - 10 * 60_000).toISOString(),
                 },
                 {
                   title: 'Shill $OTHERCOIN 100x moon contract 0xabcdef123456',
                   summary: 'Must be filtered out from group broadcasts.',
-                  url: 'https://spam.example.org/coin',
+                  url: 'https://spam.example.org/othercoin-moon',
                   lab: 'Spam',
                   source: 'spam.org',
                   publishedAt: new Date(NOW - 5 * 60_000).toISOString(),
@@ -597,7 +662,7 @@ test('Telegram bot /ainews command, inline tabs, search, switches, and automatic
           },
           groundingMetadata: {
             webSearchQueries: ['GLM-5.4 Z.ai'],
-            groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/GLM', title: 'z.ai' } }],
+            groundingChunks: [{ web: { uri: 'https://vertexaisearch.cloud.google.com/grounding-api-redirect/GLM', title: pulseHost } }],
           },
         }],
       });
@@ -721,6 +786,8 @@ test('Telegram bot /ainews command, inline tabs, search, switches, and automatic
     // 31 minutes later: brand-new breaking headline drops -> broadcasts to both configured groups, skips $OTHERCOIN spam!
     _resetAiNewsCache();
     pulseHeadline = 'Alibaba Qwen4-Ultra open-weights released globally';
+    pulseUrl = 'https://qwenlm.github.io/blog/qwen4-ultra/';
+    pulseHost = 'qwenlm.github.io';
     const tLive = await tickTelegramAiNews(cfg, TOKEN, { now: NOW + PULSE_INTERVAL_MS + 60_000, fetchImpl: mockFetch });
     assert.equal(tLive.posted, 2, 'broadcasts once to @agi_group and numeric GROUP');
     const bMsgs = tgCalls.filter((c) => c.method === 'sendMessage');
@@ -861,7 +928,7 @@ test('Personal Telegram DM AI News alerts: /start ainews, 1-tap toggle, /stop cl
     blocked.add(USER_B);
     tgCalls.length = 0;
     _resetAiNewsCache();
-    pulseHeadline = 'OpenAI launches GPT-6.5 Pro with real-time coding agents';
+    pulseHeadline = 'DeepSeek R2 Pro launches with real-time coding agents';
     const T2 = T1 + PULSE_INTERVAL_MS + 60_000;
     const pushed = await tickTelegramAiNews(cfg, TOKEN, { now: T2, fetchImpl: mockFetch });
     assert.equal(pushed.dmPosted, 1);
@@ -869,7 +936,7 @@ test('Personal Telegram DM AI News alerts: /start ainews, 1-tap toggle, /stop cl
     assert.deepEqual(dbState.ainewsTg.subs, [USER_A], 'blocked user automatically pruned');
     const dmAlert = tgCalls.find((c) => c.method === 'sendMessage' && c.body.chat_id === USER_A);
     assert.ok(dmAlert);
-    assert.match(dmAlert.body.text, /GPT-6\.5 Pro/);
+    assert.match(dmAlert.body.text, /DeepSeek R2 Pro/);
     assert.equal(dmAlert.body.reply_markup.inline_keyboard[1][0].text, '🔕 Pause Alerts');
 
     // 5. OpenRouter model launches & @theAIsearch videos qualify as high-signal alert candidates (spotlights & old items do not)
