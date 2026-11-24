@@ -86,9 +86,9 @@ async function gamesCheck(request) {
   const now = Date.now();
   try {
     const out = await gamesTick(cfg, token, { now, deadline: now + 19_000 });
-    // (2026-11-23) Wake up 30-min AI News Telegram alerts (groups + DM subs) on the 2-minute Supabase clock
-    // whenever time remains (in-memory 5m gate + Supabase 15m/25m cooldown; zero extra calls when GEMINI_API_KEY is unset).
-    if (cfg.tgAiNews && cfg.ainewsPulse && cfg.geminiKey && now - lastGamesAiNewsAt >= 5 * 60_000 && now + 19_000 - Date.now() >= 7_000) {
+    // (2026-11-23) Wake up AI News Telegram alerts (groups + DM subs) on the 2-minute Supabase clock
+    // whenever time remains (2m in-memory gate + 3m/5m Supabase cooldown; Gemini Pulse still strictly 30m).
+    if (cfg.tgAiNews && cfg.ainewsPulse && cfg.geminiKey && now - lastGamesAiNewsAt >= 2 * 60_000 && now + 19_000 - Date.now() >= 7_000) {
       lastGamesAiNewsAt = now;
       try {
         const { tickTelegramAiNews } = await import('../server/tg-ainews.js');

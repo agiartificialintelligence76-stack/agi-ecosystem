@@ -381,6 +381,7 @@ export function parseRssOrAtom(xml = '', meta = {}) {
       summary: summary || `Live AI news dispatch from ${sourceLabel}.`,
       source: sourceLabel,
       sourceKind: 'rss',
+      ...(meta.isLabFeed ? { isLabFeed: true } : {}),
       url,
       githubUrl,
       huggingfaceUrl,
@@ -1207,11 +1208,11 @@ export async function getAiNewsSnapshot(opts = {}) {
   const run = aggregateAiNews({ fetchImpl: opts.fetchImpl, now, cfg: opts.cfg, cacheOnlyPulse: Boolean(opts.cacheOnlyPulse) })
     .then(async (data) => {
       cached = { at: now, data };
-      // When a fresh 30-min Gemini Web Pulse fires (or every 15m for fresh OpenRouter / @theAIsearch / breaking lab drops),
+      // When a fresh 30-min Gemini Web Pulse fires (or every 3m for fresh OpenRouter / @theAIsearch / breaking lab drops),
       // push brand-new models/breaking news to subscribed Telegram DM users & configured groups.
       // Awaited with a tight 3.5s budget so Vercel Serverless finishes delivering before freezing the container.
       const pulseLive = data?.pulse?.status === 'live';
-      const periodicDue = now - lastAutoAlertCheckAt >= 15 * 60_000;
+      const periodicDue = now - lastAutoAlertCheckAt >= 3 * 60_000;
       if (!opts.skipTelegramBroadcast && (pulseLive || periodicDue)) {
         const cfg = opts.cfg || getConfig();
         if (cfg.tgAiNews !== false) {

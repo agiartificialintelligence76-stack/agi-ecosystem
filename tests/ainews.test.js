@@ -1153,24 +1153,27 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
     false,
   );
 
-  // collectAlertCandidates includes fresh high-signal RSS lab launches & major CEO news, blocks NSFW/PG-13 headlines & opinion/promo noise, and dedupes
+  // collectAlertCandidates includes fresh high-signal RSS lab launches & official lab posts, blocks tutorials, NSFW/PG-13 & opinion/promo noise, and dedupes
   const NOW = Date.parse('2026-11-23T14:00:00Z');
   const candidates = collectAlertCandidates({
     stories: [
-      { title: 'NVIDIA Board Reinstates Jensen Huang as President, CEO and Board Director', sourceKind: 'rss', lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/reinstates-jensen', publishedAt: new Date(NOW - 5 * 60_000).toISOString() },
+      { title: 'NVIDIA Board Reinstates Jensen Huang as President, CEO and Board Director', sourceKind: 'rss', isLabFeed: true, lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/reinstates-jensen', publishedAt: new Date(NOW - 5 * 60_000).toISOString() },
+      { title: 'OpenAI Publishes Internal AI Scores and Calls for Industry Limits', sourceKind: 'rss', isLabFeed: true, lab: 'OpenAI', url: 'https://openai.com/index/internal-scores', publishedAt: new Date(NOW - 15 * 60_000).toISOString() },
+      { title: 'How to build and maintain an agentic evaluation', sourceKind: 'rss', isLabFeed: true, lab: 'Hugging Face', url: 'https://huggingface.co/blog/agentic-eval', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
       { title: 'Z.ai unveils GLM-5.4 model with Loop Transformer design', sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://investing.com/glm-5-4', publishedAt: new Date(NOW - 30 * 60_000).toISOString() },
       { title: "China's Z.ai launches GLM-5.4, a looped 750B model for coding", sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://thenextweb.com/glm-5-4', publishedAt: new Date(NOW - 90 * 60_000).toISOString() },
       { title: 'Claude Code Adds Experimental Code Mode to Orchestrate Tool Calls', sourceKind: 'rss', lab: 'Anthropic', url: 'https://infoq.com/claude-code-mode', publishedAt: new Date(NOW - 60 * 60_000).toISOString() },
-      { title: 'NVIDIA Announces Upcoming Event for Financial Community', sourceKind: 'rss', lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/ir-event', publishedAt: new Date(NOW - 45 * 60_000).toISOString() },
+      { title: 'NVIDIA Announces Upcoming Event for Financial Community', sourceKind: 'rss', isLabFeed: true, lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/ir-event', publishedAt: new Date(NOW - 45 * 60_000).toISOString() },
       { title: 'SpaceX sued by Oregon and Virginia over AI deepfake porn, Grok safety claims', sourceKind: 'rss', lab: 'xAI Grok', url: 'https://cnbc.com/grok-porn', publishedAt: new Date(NOW - 40 * 60_000).toISOString() },
       { title: "Pouncing on Anthropic Won't Make You Rich", sourceKind: 'rss', lab: 'Anthropic', url: 'https://wsj.com/anthropic', publishedAt: new Date(NOW - 50 * 60_000).toISOString() },
       { title: 'Fallback Offline Video', sourceKind: 'video', isFallback: true, url: 'https://youtube.com/watch?v=fb1', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
     ],
   }, NOW);
-  assert.equal(candidates.length, 3, 'keeps NVIDIA CEO + GLM-5.4 (deduped) + Claude Code Mode, drops IR promo, NSFW, opinion & fallback video');
+  assert.equal(candidates.length, 4, 'keeps NVIDIA CEO + OpenAI official post + GLM-5.4 (deduped) + Claude Code Mode, drops HF tutorial, IR promo, NSFW, opinion & fallback video');
   assert.match(candidates[0].title, /Jensen Huang/);
-  assert.match(candidates[1].title, /GLM-5\.4/);
-  assert.match(candidates[2].title, /Claude Code/);
+  assert.match(candidates[1].title, /Internal AI Scores/);
+  assert.match(candidates[2].title, /GLM-5\.4/);
+  assert.match(candidates[3].title, /Claude Code/);
 
   // Group /ainews alerts (including Forum Topic support), cached-pulse broadcast, and admin-only /ainews off
   const TOKEN = `123456789:AA${'d'.repeat(33)}`;
@@ -1197,6 +1200,7 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
   };
 
   const realFetch = globalThis.fetch;
+  let openAiRssXml = null;
   const mockFetch = async (url, init = {}) => {
     const u = String(url);
     if (u.startsWith('https://api.telegram.org/')) {
@@ -1213,6 +1217,9 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
     if (u.includes('/rest/v1/rpc/feed_state_put')) {
       dbState = structuredClone(JSON.parse(init.body).p_state);
       return Response.json(true);
+    }
+    if (openAiRssXml && u === 'https://openai.com/news/rss.xml') {
+      return new Response(openAiRssXml, { status: 200, headers: { 'content-type': 'application/rss+xml' } });
     }
     throw new Error('offline upstream');
   };
@@ -1232,6 +1239,19 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
     const ticked = await tickTelegramAiNews(cfg, TOKEN, { now: NOW, fetchImpl: mockFetch });
     assert.equal(ticked.groupPosted, 1, 'cached pulse story still broadcasts to configured Telegram group');
     assert.ok(tgCalls.some((c) => c.method === 'sendMessage' && c.body.chat_id === '@agi2dotapp' && /Claude 4\.7 Opus/.test(c.body.text)));
+
+    // 1B. Fast near-real-time cadence: a brand-new official lab RSS drop 6 minutes later broadcasts immediately (no 25-min delay, 0 extra Gemini calls!)
+    tgCalls.length = 0;
+    openAiRssXml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><item>
+      <title>OpenAI unveils GPT-6.5 coding agent preview</title>
+      <link>https://openai.com/index/gpt-6-5</link>
+      <pubDate>${new Date(NOW + 5 * 60_000).toUTCString()}</pubDate>
+      <description>Live in API and Codex today.</description>
+    </item></channel></rss>`;
+    const fastTick = await tickTelegramAiNews(cfg, TOKEN, { now: NOW + 6 * 60_000, fetchImpl: mockFetch });
+    assert.equal(fastTick.groupPosted, 1, 'second breaking story from official lab RSS broadcasts after 6m without 25m delay');
+    assert.ok(tgCalls.some((c) => c.method === 'sendMessage' && /GPT-6\.5/.test(c.body.text)));
+    openAiRssXml = null;
 
     // 2. Typing "/ainews alerts" inside a Forum Topic pins that group's numeric chat_id + threadId (replacing @agi2dotapp with 0 duplicates!)
     tgCalls.length = 0;

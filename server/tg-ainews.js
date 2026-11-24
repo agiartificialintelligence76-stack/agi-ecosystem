@@ -28,8 +28,8 @@ export const AINEWS_GAPS = Object.freeze({
   groupSearch: 10_000,
   refresh: 15_000,
   privateTap: 1_500,
-  broadcastMin: 25 * 60_000,
-  tickCheckMin: 15 * 60_000,
+  broadcastMin: 5 * 60_000,
+  tickCheckMin: 3 * 60_000,
 });
 
 export const AINEWS_TOAST = Object.freeze({
@@ -77,8 +77,8 @@ const MAJOR_ALERT_LABS = new Set([
   'East Asia AI',
 ]);
 
-const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|reinstat(?:es|ed|ing)|returns?\s+as\s+ceo|steps?\s+down|resign(?:s|ed)|acquir(?:es|ed|ing)|acquisition|open[- ]?weights?|open[- ]?source|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ship(?:s|ped|ping))\b/i;
-const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order|black\s+friday|geforce\s+now|upcoming\s+event\s+for\s+financial\s+community)\b/i;
+const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|publish(?:es|ed|ing)|reveal(?:s|ed|ing)|reinstat(?:es|ed|ing)|returns?\s+as\s+ceo|brings?\s+[^.]{0,30}\bback\s+as\s+ceo|reverses?\s+course|steps?\s+down|resign(?:s|ed)|acquir(?:es|ed|ing)|acquisition|open[- ]?weights?|open[- ]?sourc(?:e|es|ed|ing)|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ship(?:s|ped|ping)|solv(?:es|ed)|outperforms?|beats?)\b/i;
+const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to\b|guide:|tutorial|explained\b|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order|black\s+friday|geforce\s+now|upcoming\s+event\s+for\s+financial\s+community|key\s+questions|what\s+is\s+)\b/i;
 
 const TITLE_STOP_WORDS = new Set([
   'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'over', 'after', 'about', 'more',
@@ -634,9 +634,14 @@ export function collectAlertCandidates(snapshot, now = Date.now()) {
     }
     if (s.sourceKind === 'rss') {
       if (!Number.isFinite(ts) || now - ts > MAX_RSS_ALERT_AGE_MS) continue;
+      if (RSS_NOISE_RE.test(s.title)) continue;
+      if (s.isLabFeed) {
+        raw.push(s);
+        continue;
+      }
       const majorLab = MAJOR_ALERT_LABS.has(s.lab) || Boolean(s.openWeights || s.githubUrl || s.huggingfaceUrl);
       if (!majorLab) continue;
-      if (!RSS_LAUNCH_SIGNAL_RE.test(s.title) || RSS_NOISE_RE.test(s.title)) continue;
+      if (!RSS_LAUNCH_SIGNAL_RE.test(s.title)) continue;
       raw.push(s);
     }
   }
@@ -974,7 +979,7 @@ export async function broadcastBreakingAiNews({
     return out;
   }
 
-  // Respect minimum 25-minute gap between alert pushes.
+  // Respect minimum 5-minute gap between alert pushes (prevents rapid bursts while staying near real-time).
   if (prev.lastAt && now - prev.lastAt < AINEWS_GAPS.broadcastMin) return out;
 
   const fresh = [];
@@ -1084,7 +1089,7 @@ export async function tickTelegramAiNews(cfg, token, {
     if (tgState.checkedAt && now - tgState.checkedAt < AINEWS_GAPS.tickCheckMin) return { status: 'cooldown', ...empty };
   }
 
-  const snap = await getAiNewsSnapshot({ cfg, now, fetchImpl, skipTelegramBroadcast: true });
+  const snap = await getAiNewsSnapshot({ cfg, now, fetchImpl, bypassCache: true, skipTelegramBroadcast: true });
   const candidates = collectAlertCandidates(snap, now);
   if (!candidates.length) {
     if (state) {
