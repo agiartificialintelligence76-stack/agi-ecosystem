@@ -1,5 +1,7 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **RACE TO AGI in Telegram music (2026-11-24):** added the owner's new track from `Downloads/VTuber_Project/25_race_to_agi/out/song/RACE TO AGI - AGI-1.mp3` to `/music` as **RACE TO AGI**, 4:02 (242 s), emoji `🏁`, id `racetoagi`. `public/music/race-to-agi.mp3` keeps the original 320 kbps MP3 audio frames byte-for-byte with the official 1400 px cover from `25_race_to_agi/out/art/RACE_TO_AGI_cover_1400.jpg`; tags follow the bot format (title, AGI-1, front cover only, stripping encoder/date/comment tags). Originals, the seven existing songs, and `MUSIC_V` remain unchanged; both Telegram (private and group) and Discord `/music` menus read the eight-song catalog after deployment.
+
 > **Five more games on the arcade kit (2026-11-24):** the owner: "add 5 more original new addictive, fun games to
 > agi1.app/games after ur done publish it directly to production". **CONTEXT WINDOW** (a snake whose tail is her context:
 > hold three of a color, commit with another), **TOO MANY TABS** (triple tile match: her tabs in layers, a 7-slot

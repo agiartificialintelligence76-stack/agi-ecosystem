@@ -492,7 +492,7 @@ test('/music: her songs as buttons; a tap sends that song as a file, with the sa
   assert.equal(menu.data.content, MUSIC_MENU);
   assert.equal(menu.data.flags, 4);
   const rows = menu.data.components;
-  assert.deepEqual(rows.map((r) => r.components.length), [5, 2], '5 to a row');
+  assert.deepEqual(rows.map((r) => r.components.length), [5, 3], '5 to a row');
   assert.deepEqual(rows.flatMap((r) => r.components.map((b) => b.custom_id)), SONGS.map((s) => `music:${s.id}`));
   for (const b of rows.flatMap((r) => r.components)) {
     assert.equal(b.type, 2);
