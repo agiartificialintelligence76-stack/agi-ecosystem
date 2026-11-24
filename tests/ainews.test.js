@@ -1164,16 +1164,31 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
       { title: "China's Z.ai launches GLM-5.4, a looped 750B model for coding", sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://thenextweb.com/glm-5-4', publishedAt: new Date(NOW - 90 * 60_000).toISOString() },
       { title: 'Claude Code Adds Experimental Code Mode to Orchestrate Tool Calls', sourceKind: 'rss', lab: 'Anthropic', url: 'https://infoq.com/claude-code-mode', publishedAt: new Date(NOW - 60 * 60_000).toISOString() },
       { title: 'NVIDIA Announces Upcoming Event for Financial Community', sourceKind: 'rss', isLabFeed: true, lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/ir-event', publishedAt: new Date(NOW - 45 * 60_000).toISOString() },
+      { title: 'GLM 5.5: Why It Never Shipped and What Comes Next', sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://felloai.com/glm-5-5', publishedAt: new Date(NOW - 10 * 60_000).toISOString() },
+      { title: 'Z.ai releases older model update from 8 hours ago', sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://example.org/old-glm', publishedAt: new Date(NOW - 8 * 3600_000).toISOString() },
+      { title: 'Merry Making: Play, Build and Create With NVIDIA Technologies This Holiday Season', sourceKind: 'rss', isLabFeed: true, lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/holiday', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
       { title: 'SpaceX sued by Oregon and Virginia over AI deepfake porn, Grok safety claims', sourceKind: 'rss', lab: 'xAI Grok', url: 'https://cnbc.com/grok-porn', publishedAt: new Date(NOW - 40 * 60_000).toISOString() },
       { title: "Pouncing on Anthropic Won't Make You Rich", sourceKind: 'rss', lab: 'Anthropic', url: 'https://wsj.com/anthropic', publishedAt: new Date(NOW - 50 * 60_000).toISOString() },
       { title: 'Fallback Offline Video', sourceKind: 'video', isFallback: true, url: 'https://youtube.com/watch?v=fb1', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
     ],
   }, NOW);
-  assert.equal(candidates.length, 4, 'keeps NVIDIA CEO + OpenAI official post + GLM-5.4 (deduped) + Claude Code Mode, drops HF tutorial, IR promo, NSFW, opinion & fallback video');
+  assert.equal(candidates.length, 4, 'keeps fresh NVIDIA CEO + OpenAI official post + GLM-5.4 + Claude Code Mode, drops 8h stale RSS, "Why It Never Shipped" explainers, holiday promos, HF tutorials, NSFW & fallback video');
   assert.match(candidates[0].title, /Jensen Huang/);
   assert.match(candidates[1].title, /Internal AI Scores/);
   assert.match(candidates[2].title, /GLM-5\.4/);
   assert.match(candidates[3].title, /Claude Code/);
+
+  // formatBreakingBroadcast drops robotic "Live AI news dispatch from ..." placeholder summaries
+  const fmt = formatBreakingBroadcast([{
+    title: 'OpenAI launches GPT-6.5',
+    summary: 'Live AI news dispatch from Reuters.',
+    lab: 'OpenAI',
+    source: 'Reuters',
+    url: 'https://reuters.com/openai-gpt-6-5',
+    publishedAt: new Date(NOW - 2 * 60_000).toISOString(),
+  }], { now: NOW });
+  assert.doesNotMatch(fmt.text, /Live AI news dispatch from/i);
+  assert.match(fmt.text, /OpenAI · Reuters · 2m ago/);
 
   // Group /ainews alerts (including Forum Topic support), cached-pulse broadcast, and admin-only /ainews off
   const TOKEN = `123456789:AA${'d'.repeat(33)}`;

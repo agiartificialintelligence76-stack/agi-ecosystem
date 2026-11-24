@@ -52,10 +52,11 @@ const MAX_STATE_BYTES = 18_500;
 const OTHER_COIN_RE = /\$(?!agi\b)[a-z]/i;
 const WALLET_ADDR_RE = /0x[0-9a-f]{6}/i;
 const NSFW_RE = /\b(?:porn\w*|nsfw|nude\w*|naked|sex(?:ual(?:ly)?)?|csam|child\s+(?:sex\w*|abuse|exploit\w*)|rape|pedophil\w*|deepfake\s+porn|explicit\s+deepfake|erotic\w*|onlyfans|hentai|suicide|self[- ]harm)\b/i;
-const MAX_SEEN = 32;
+const MAX_SEEN = 64;
 const MAX_BROADCAST_ITEMS = 3;
-const MAX_BROADCAST_AGE_MS = 24 * 60 * 60 * 1000;
-const MAX_RSS_ALERT_AGE_MS = 12 * 60 * 60 * 1000;
+const MAX_BROADCAST_AGE_MS = 6 * 60 * 60 * 1000;
+const MAX_PULSE_ALERT_AGE_MS = 4 * 60 * 60 * 1000;
+const MAX_RSS_ALERT_AGE_MS = 2 * 60 * 60 * 1000;
 const SUPABASE_TIMEOUT_MS = 3500;
 const PER_SECOND = 25;
 
@@ -77,8 +78,8 @@ const MAJOR_ALERT_LABS = new Set([
   'East Asia AI',
 ]);
 
-const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|publish(?:es|ed|ing)|reveal(?:s|ed|ing)|reinstat(?:es|ed|ing)|returns?\s+as\s+ceo|brings?\s+[^.]{0,30}\bback\s+as\s+ceo|reverses?\s+course|steps?\s+down|resign(?:s|ed)|acquir(?:es|ed|ing)|acquisition|open[- ]?weights?|open[- ]?sourc(?:e|es|ed|ing)|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ship(?:s|ped|ping)|solv(?:es|ed)|outperforms?|beats?)\b/i;
-const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to\b|guide:|tutorial|explained\b|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order|black\s+friday|geforce\s+now|upcoming\s+event\s+for\s+financial\s+community|key\s+questions|what\s+is\s+)\b/i;
+const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|publish(?:es|ed|ing)|reveal(?:s|ed|ing)|reinstat(?:es|ed|ing)|returns?\s+as\s+ceo|brings?\s+[^.]{0,30}\bback\s+as\s+ceo|reverses?\s+course|steps?\s+down|resign(?:s|ed)|acquir(?:es|ed|ing)|acquisition|open[- ]?weights?|open[- ]?sourc(?:e|es|ed|ing)|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ships|solv(?:es|ed)|outperforms?|beats?)\b/i;
+const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to\b|guide:|tutorial|explained\b|never\s+shipped|what\s+comes\s+next|what\s+we\s+know|everything\s+you\s+need\s+to\s+know|here'?s\s+(?:why|what|how)\b|deep\s+dive|worth\s+it|merry\s+making|holiday\s+season|compared\b|why\s+(?:it|the|this|they|we|ai|everyone)\b|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order|black\s+friday|geforce\s+now|upcoming\s+event\s+for\s+financial\s+community|key\s+questions|what\s+is\s+)\b/i;
 
 const TITLE_STOP_WORDS = new Set([
   'the', 'and', 'for', 'with', 'from', 'that', 'this', 'into', 'over', 'after', 'about', 'more',
@@ -597,8 +598,12 @@ export function formatBreakingBroadcast(items = [], {
   clean.forEach((s, i) => {
     const kindIcon = s.sourceKind === 'openrouter' ? '🧠 ' : s.sourceKind === 'video' ? '🎬 ' : '⚡ ';
     parts.push(`${i + 1}. ${kindIcon}[${regionTag(s)}] `, [cleanLine(s.title, 96), s.url], '\n');
-    if (s.summary) parts.push(`   ${cleanLine(s.summary, 130)}\n`);
-    parts.push(`   ${cleanLine(s.lab || s.source || 'Global AI', 36)} · ${relTime(s.publishedAt, now)}`);
+    if (s.summary && !/^Live AI news dispatch from /i.test(String(s.summary).trim())) {
+      parts.push(`   ${cleanLine(s.summary, 130)}\n`);
+    }
+    const lab = cleanLine(s.lab || s.source || 'Global AI', 36);
+    const src = s.source && !String(s.source).toLowerCase().includes(lab.toLowerCase()) ? ` · ${cleanLine(s.source, 28)}` : '';
+    parts.push(`   ${lab}${src} · ${relTime(s.publishedAt, now)}`);
     if (s.githubUrl && s.githubUrl !== s.url) parts.push(' · ', ['GitHub ↗', s.githubUrl]);
     else if (s.huggingfaceUrl && s.huggingfaceUrl !== s.url) parts.push(' · ', ['HF ↗', s.huggingfaceUrl]);
     parts.push('\n\n');
@@ -627,13 +632,19 @@ export function collectAlertCandidates(snapshot, now = Date.now()) {
     if (!s || !s.title || !safeHttpUrl(s.url) || s.isFallback) continue;
     if (!safeForGroupText(`${s.title} ${s.summary || ''} ${s.lab || ''}`)) continue;
     const ts = Date.parse(s.publishedAt || '');
-    if (s.sourceKind === 'pulse' || s.sourceKind === 'openrouter' || s.sourceKind === 'video') {
-      if (Number.isFinite(ts) && now - ts > MAX_BROADCAST_AGE_MS) continue;
+    if (!Number.isFinite(ts)) continue;
+    if (s.sourceKind === 'pulse') {
+      if (now - ts > MAX_PULSE_ALERT_AGE_MS || RSS_NOISE_RE.test(s.title)) continue;
+      raw.push(s);
+      continue;
+    }
+    if (s.sourceKind === 'openrouter' || s.sourceKind === 'video') {
+      if (now - ts > MAX_BROADCAST_AGE_MS) continue;
       raw.push(s);
       continue;
     }
     if (s.sourceKind === 'rss') {
-      if (!Number.isFinite(ts) || now - ts > MAX_RSS_ALERT_AGE_MS) continue;
+      if (now - ts > MAX_RSS_ALERT_AGE_MS) continue;
       if (RSS_NOISE_RE.test(s.title)) continue;
       if (s.isLabFeed) {
         raw.push(s);
@@ -645,11 +656,16 @@ export function collectAlertCandidates(snapshot, now = Date.now()) {
       raw.push(s);
     }
   }
+  // Sort newest first so "just now" breaking announcements always outrank older stories;
+  // break close ties (within 15 min) by source signal strength (pulse / official lab / openrouter / video).
   raw.sort((a, b) => {
-    const pa = priority[a.sourceKind] ?? 9;
-    const pb = priority[b.sourceKind] ?? 9;
+    const ta = Date.parse(a.publishedAt || 0) || 0;
+    const tb = Date.parse(b.publishedAt || 0) || 0;
+    if (Math.abs(tb - ta) > 15 * 60_000) return tb - ta;
+    const pa = a.isLabFeed ? 0 : (priority[a.sourceKind] ?? 9);
+    const pb = b.isLabFeed ? 0 : (priority[b.sourceKind] ?? 9);
     if (pa !== pb) return pa - pb;
-    return (Date.parse(b.publishedAt || 0) || 0) - (Date.parse(a.publishedAt || 0) || 0);
+    return tb - ta;
   });
   const out = [];
   for (const s of raw) {
