@@ -8,7 +8,15 @@
 > for combos that squash bugs, floor by floor, with patches and bosses). Each with its own rules, player, picture, sound,
 > AGI-1's lines, modes, saves, tests and balance tool; the kit gains `her.js` (AGI-1 beside a game). /games: 38 games,
 > the five New right after TRENCHING SIMULATOR. **No new setting, SQL, function or service.** See "Five more on the kit,
-> 2026-11-24" under "AGI games".
+> 2026-11-24" under "AGI games". **Published as `74d2e5f` to `main` on 2026-11-24** (straight to production, the owner's
+> wish; through the branch `five-more-games`), after the full build passed the way Vercel runs it in a clean copy (UTC:
+> 2,221 tests: 2,217 passed, 4 skipped, 0 failed; Vite, the share pages and the secret check) and the built pages passed
+> under the site's real CSP on a phone and a computer (each game's title, a run started with real input, no violations
+> or errors; /games: 38 tiles, the five first and New). Vercel: the branch's preview `agi-ecosystem-e8as8kuf9`, then
+> production `agi-ecosystem-nzv63tx1s`, both Ready. Live: agi1.app/games lists the 38 games, the five New after TRENCHING
+> SIMULATOR. **Not checked:** the five live game pages themselves (reading them needed an approval nobody was there to
+> give), their sound by ear, real phones. **Not done:** the owner's Desktop folder (behind `main`, with uncommitted work)
+> was left as it was.
 
 ## Twenty games withdrawn from the arcade
 

@@ -8,8 +8,9 @@ seeded rules module, its own AI player (demo, attract, tests, `tools/games/<id>/
 sound and music, 50–90 of AGI-1's lines, two or three modes, local progress (trails, wallpapers and stars, upgrades, a
 scrapbook and rims, a bug log), phone-both-ways and computer layouts. The kit gains `src/games/kit/her.js`. /games has
 38 tiles, the five New after TRENCHING SIMULATOR. Built from GitHub `main` in a clean clone (the owner's Desktop folder
-is behind `main` and has uncommitted work: it was not touched). See the top of `CLAUDE.md` and "Five more on the kit,
-2026-11-24" under "AGI games".
+is behind `main` and has uncommitted work: it was not touched). **Published as `74d2e5f`** (production
+`agi-ecosystem-nzv63tx1s`, Ready); agi1.app/games lists 38 games with the five New. See the top of `CLAUDE.md` and "Five
+more on the kit, 2026-11-24" under "AGI games".
 
 ## Twenty games withdrawn from the arcade
 
