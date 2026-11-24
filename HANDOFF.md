@@ -1,5 +1,17 @@
 # HANDOFF: AGI games, TRENCHING SIMULATOR and VLAD RUNNER 2049 (2026-10-23)
 
+## Five more AGI games — 2026-11-24
+
+The owner: "add 5 more original new addictive, fun games to agi1.app/games after ur done publish it directly to
+production". CONTEXT WINDOW, TOO MANY TABS, SCALING LAWS, WEB SCRAPER and HOTFIX, on the arcade kit, each with a pure
+seeded rules module, its own AI player (demo, attract, tests, `tools/games/<id>/balance.mjs`), canvas picture, Web Audio
+sound and music, 50–90 of AGI-1's lines, two or three modes, local progress (trails, wallpapers and stars, upgrades, a
+scrapbook and rims, a bug log), phone-both-ways and computer layouts. The kit gains `src/games/kit/her.js`. /games has
+38 tiles, the five New after TRENCHING SIMULATOR. Built from GitHub `main` in a clean clone (the owner's Desktop folder
+is behind `main` and has uncommitted work: it was not touched). **Published as `74d2e5f`** (production
+`agi-ecosystem-nzv63tx1s`, Ready); agi1.app/games lists 38 games with the five New. See the top of `CLAUDE.md` and "Five
+more on the kit, 2026-11-24" under "AGI games".
+
 ## Twenty games withdrawn from the arcade
 
 The owner requested removal of the twenty November 18 games. The public arcade returns to the 32 games in commit 359856a, including its catalog, game URLs, ratings list, gameplay previews and gallery share image. The complete twenty-game release is recoverable at commit 3d8f9d7. Historical player records are retained.

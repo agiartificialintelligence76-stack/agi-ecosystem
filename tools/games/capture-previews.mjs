@@ -44,6 +44,12 @@ export const RECIPES = {
   growthstock: kit('growthstock', 7, { poster: 0.5 }),
   goinglive: kit('goinglive', 7, { poster: 0.5 }),
   finalanswer: kit('finalanswer', 7, { warm: 1400, poster: 0.42 }),
+  // (2026-11-24) five more: each plays itself from the page's first frame
+  contextwindow: kit('contextwindow', 7, { poster: 0.5 }),
+  toomanytabs: kit('toomanytabs', 7, { poster: 0.5 }),
+  scalinglaws: kit('scalinglaws', 7, { poster: 0.5 }),
+  webscraper: kit('webscraper', 7, { poster: 0.5 }),
+  hotfix: kit('hotfix', 7, { poster: 0.5 }),
   // its own QA autopilot plays a real run (the menu's Play, then the bot)
   rideemagi: {
     url: '/games/rideemagi', init: 'window.__auto = true;', warm: 2400, dur: 6000, poster: 0.5, vp: [768, 480], crop: [30, 0, 480, 480],

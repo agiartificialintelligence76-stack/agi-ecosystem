@@ -1,0 +1,31 @@
+/* SCALING LAWS (2026-11-24): its own styles on top of the arcade kit (../kit/kit.css). Every rule an sl- class or the
+   game's root. The track is one canvas; AGI-1 (the kit's ak-her) bottom left; upgrades on the end card and the title. */
+.ak[data-ak-game='scalinglaws'] { --ak-bg: #0d0626; --ak-accent: var(--ak-mint); }
+.sl-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: ew-resize; }
+.sl-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: var(--ak-safe-t) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l); }
+.sl-tip {
+  position: absolute; z-index: 7; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 10px); transform: translateX(-50%);
+  width: max-content; max-width: min(92%, 440px); margin: 0; padding: 9px 15px 10px; border-radius: 16px; pointer-events: none;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2.5px solid var(--ak-mint); box-shadow: 0 4px 0 rgba(10, 4, 24, .55);
+  font-family: var(--ak-sans); font-weight: 650; font-size: 14.5px; line-height: 1.25; text-align: center; text-wrap: balance;
+}
+.sl-tip.is-in { animation: sl-tip-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes sl-tip-in { from { opacity: 0; transform: translate(-50%, -8px) scale(.94); } }
+
+/* upgrades */
+.sl-shop { display: grid; gap: 8px; margin-top: 12px; color: var(--ak-ink); }
+.sl-shop-head { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin: 0; font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 13px; text-transform: uppercase; letter-spacing: .06em; }
+.sl-shop-head b { font-family: var(--ak-mono); font-size: 13px; letter-spacing: 0; color: #7a5a00; }
+.sl-up {
+  display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name cost' 'what cost'; align-items: center; gap: 1px 10px; min-height: 48px; padding: 7px 12px;
+  border-radius: 14px; background: var(--ak-lav); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink); text-align: left;
+}
+.sl-up:active:not([aria-disabled='true']) { transform: translateY(2px); box-shadow: 0 1px 0 var(--ak-ink); }
+.sl-up[aria-disabled='true'] { opacity: .6; }
+.sl-up-name { grid-area: name; font-family: var(--ak-display); font-weight: 900; font-stretch: 110%; font-size: 14px; }
+.sl-up-name small { margin-left: 6px; font-family: var(--ak-mono); font-weight: 700; font-size: 11px; opacity: .7; }
+.sl-up-what { grid-area: what; font-size: 12.5px; color: var(--ak-ink2); }
+.sl-up-cost { grid-area: cost; padding: 4px 10px; border-radius: 999px; background: var(--ak-honey); border: 2px solid var(--ak-ink); font-family: var(--ak-mono); font-weight: 800; font-size: 13px; }
+.sl-title-extra { display: grid; justify-items: center; gap: 8px; }
+.sl-open-shop { font-family: var(--ak-mono); font-weight: 700; }
+@media (max-height: 520px) and (orientation: landscape) { .sl-her .ak-her-main { display: none; } .sl-her { padding: 4px; } }

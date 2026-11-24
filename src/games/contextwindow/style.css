@@ -1,0 +1,32 @@
+/* CONTEXT WINDOW (2026-11-24): its own styles on top of the arcade kit (../kit/kit.css). Every rule a cw- class or the
+   game's root. The playfield is one canvas; AGI-1 sits bottom left (the kit's ak-her), her tips under the top bar. */
+.ak[data-ak-game='contextwindow'] { --ak-bg: #0f0826; --ak-accent: var(--ak-honey); }
+.cw-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.cw-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: var(--ak-safe-t) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l); }
+
+.cw-tip {
+  position: absolute; z-index: 7; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 34px); transform: translateX(-50%);
+  width: max-content; max-width: min(92%, 440px); margin: 0; padding: 9px 15px 10px; border-radius: 16px; pointer-events: none;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2.5px solid var(--ak-honey); box-shadow: 0 4px 0 rgba(10, 4, 24, .55);
+  font-family: var(--ak-sans); font-weight: 650; font-size: 14.5px; line-height: 1.25; text-align: center; text-wrap: balance;
+}
+.cw-tip.is-in { animation: cw-tip-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes cw-tip-in { from { opacity: 0; transform: translate(-50%, -8px) scale(.94); } }
+
+/* her trails on the title */
+.cw-trails { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; max-width: 100%; }
+.cw-trails-label { font-family: var(--ak-mono); font-weight: 700; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; opacity: .8; margin-right: 2px; }
+.cw-trail {
+  min-height: 34px; padding: 5px 11px; border-radius: 999px; background: rgba(255, 250, 240, .1); color: var(--ak-paper);
+  border: 2px solid rgba(255, 250, 240, .35); font-family: var(--ak-display); font-weight: 800; font-stretch: 108%; font-size: 12px; letter-spacing: .02em;
+}
+.cw-trail[aria-pressed='true'] { background: var(--ak-honey); color: var(--ak-ink); border-color: var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink); }
+.cw-trail[aria-disabled='true'] { opacity: .55; }
+.cw-unlock { margin: 10px 0 0; padding: 8px 12px; border-radius: 12px; background: var(--ak-honey); color: var(--ak-ink); border: 2px solid var(--ak-ink); font-weight: 650; font-size: 14px; text-align: center; }
+
+/* a phone held sideways: just her face (her words still pop up) */
+@media (max-height: 520px) and (orientation: landscape) {
+  .cw-her .ak-her-main { display: none; }
+  .cw-her { padding: 4px; }
+  .cw-tip { top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 4px); }
+}

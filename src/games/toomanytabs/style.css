@@ -1,0 +1,69 @@
+/* TOO MANY TABS (2026-11-24): its own styles on top of the arcade kit (../kit/kit.css). Every rule a tt- class or the
+   game's root. The pile and the taskbar are one canvas; under them a row: AGI-1 (the kit's ak-her) and three helpers. */
+.ak[data-ak-game='toomanytabs'] { --ak-bg: #120a2a; --ak-accent: var(--ak-pink); --ak-accent-ink: var(--ak-ink); }
+.tt-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tt-canvas.is-hot { cursor: pointer; }
+.tt-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: var(--ak-safe-t) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l); }
+
+/* AGI-1 and the helpers, under the taskbar */
+.tt-row {
+  position: absolute; z-index: 6; left: calc(10px + var(--ak-safe-l)); right: calc(10px + var(--ak-safe-r)); bottom: calc(8px + var(--ak-safe-b));
+  display: flex; align-items: center; justify-content: center; gap: 8px; pointer-events: none;
+}
+.tt-row > * { pointer-events: auto; }
+.tt-row .ak-her { position: relative; left: auto; bottom: auto; flex: 0 1 auto; min-width: 0; margin-right: auto; pointer-events: none; }
+.tt-help {
+  position: relative; flex: none; display: inline-flex; align-items: center; gap: 6px; min-height: 48px; padding: 6px 14px 6px 10px; border-radius: 999px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  font-family: var(--ak-display); font-weight: 850; font-stretch: 108%; font-size: 13px; letter-spacing: .02em; text-transform: uppercase;
+  transition: transform .08s ease, box-shadow .08s ease;
+}
+.tt-help:active:not(:disabled) { transform: translateY(3px); box-shadow: 0 1px 0 var(--ak-ink); }
+.tt-help:disabled { opacity: .45; cursor: default; }
+.tt-glyph { font-size: 19px; line-height: 1; font-family: var(--ak-sans); font-weight: 800; }
+.tt-count {
+  position: absolute; top: -8px; right: -6px; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; display: grid; place-items: center;
+  background: var(--ak-pink); color: var(--ak-ink); border: 2px solid var(--ak-ink); font-family: var(--ak-mono); font-size: 12px; font-weight: 800;
+}
+.tt-help[data-help='shuffle'] .tt-count { background: var(--ak-honey); }
+.tt-help[data-help='out'] .tt-count { background: var(--ak-mint); }
+@media (max-width: 720px) {
+  .tt-row { justify-content: space-between; gap: 6px; }
+  .tt-row .ak-her { padding: 3px; margin-right: 0; }
+  .tt-row .ak-her-main { display: none; }
+  .tt-row .ak-her-ava { width: 42px; height: 42px; }
+}
+@media (max-width: 420px) {
+  .tt-help { padding: 6px 10px 6px 8px; font-size: 11.5px; gap: 4px; }
+}
+@media (max-width: 359px) { .tt-label { display: none; } .tt-help { min-width: 48px; justify-content: center; } }
+
+.tt-tip {
+  position: absolute; z-index: 7; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 40px); transform: translateX(-50%);
+  width: max-content; max-width: min(92%, 440px); margin: 0; padding: 9px 15px 10px; border-radius: 16px; pointer-events: none;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2.5px solid var(--ak-pink); box-shadow: 0 4px 0 rgba(10, 4, 24, .55);
+  font-family: var(--ak-sans); font-weight: 650; font-size: 14.5px; line-height: 1.25; text-align: center; text-wrap: balance;
+}
+.tt-tip.is-in { animation: tt-tip-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes tt-tip-in { from { opacity: 0; transform: translate(-50%, -8px) scale(.94); } }
+
+/* the title's extras: back to level 1, her wallpapers */
+.tt-title-extra { display: grid; justify-items: center; gap: 10px; }
+.tt-walls { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.tt-walls-label { font-family: var(--ak-mono); font-weight: 700; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; opacity: .85; margin-right: 2px; }
+.tt-wall {
+  min-height: 34px; padding: 5px 11px; border-radius: 999px; background: rgba(255, 250, 240, .1); color: var(--ak-paper);
+  border: 2px solid rgba(255, 250, 240, .35); font-family: var(--ak-display); font-weight: 800; font-stretch: 108%; font-size: 12px;
+}
+.tt-wall[aria-pressed='true'] { background: var(--ak-pink); color: var(--ak-ink); border-color: var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink); }
+.tt-wall[aria-disabled='true'] { opacity: .55; }
+.tt-stars { margin: 6px 0 0; text-align: center; font-size: 30px; letter-spacing: .12em; color: #ffb800; -webkit-text-stroke: 1.5px var(--ak-ink); }
+.tt-revive { width: 100%; margin-top: 10px; background: var(--ak-mint); }
+/* a phone held sideways: AGI-1 and the helpers under the taskbar, on the right */
+@media (orientation: landscape) and (max-height: 600px) {
+  .tt-row { left: 58%; justify-content: center; }
+  .tt-row .ak-her-main { display: none; }
+  .tt-row .ak-her { padding: 3px; margin-right: 0; }
+  .tt-help { padding: 6px 10px 6px 8px; font-size: 11px; min-height: 44px; }
+  .tt-label { display: none; }
+}
