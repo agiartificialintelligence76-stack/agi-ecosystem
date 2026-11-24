@@ -50,6 +50,13 @@ export const GAMES = {
   goinglive: { name: "GOING LIVE", path: '/games/goinglive', genre: 'Sim', kit: true },
   // since 2026-11-23: AGI-1's late-night trivia game show — 15 rungs to 1,000,000, custom safety net & 5 lifelines
   finalanswer: { name: "FINAL ANSWER", path: '/games/finalanswer', genre: 'Quiz', kit: true },
+  // since 2026-11-24 (the owner: "add 5 more original new addictive, fun games"): five more on the arcade kit (see
+  // CLAUDE.md, "Five more on the kit, 2026-11-24")
+  contextwindow: { name: "CONTEXT WINDOW", path: '/games/contextwindow', genre: 'Arcade', kit: true },
+  toomanytabs: { name: "TOO MANY TABS", path: '/games/toomanytabs', genre: 'Puzzle', kit: true },
+  scalinglaws: { name: "SCALING LAWS", path: '/games/scalinglaws', genre: 'Arcade', kit: true },
+  webscraper: { name: "WEB SCRAPER", path: '/games/webscraper', genre: 'Action', kit: true },
+  hotfix: { name: "HOTFIX", path: '/games/hotfix', genre: 'Puzzle', kit: true },
 };
 
 export const isGame = (id) => typeof id === 'string' && Object.prototype.hasOwnProperty.call(GAMES, id);

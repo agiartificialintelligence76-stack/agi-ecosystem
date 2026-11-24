@@ -51,6 +51,12 @@ export const COVERS = {
   growthstock: { lines: ['GROWTH', 'STOCK'], bg: '#0f2a1e', bg2: '#1f6a45', accent: '#ffc933', line: 'Plant TSLA. Water NVDA. Sell the spike. Shoo the bear.', tag: 'Stock farm' },
   goinglive: { lines: ['GOING', 'LIVE'], bg: '#1d1238', bg2: '#5a2ca0', accent: '#ff4da6', line: 'Zero followers, one bedroom. Take her to #1 trending.', tag: 'Streamer sim' },
   finalanswer: { lines: ['FINAL', 'ANSWER'], bg: '#110730', bg2: '#3f177c', accent: '#ffc933', line: 'Fifteen rungs to a million. Plant your safety net and lock it in.', tag: 'Quiz show' },
+  // (2026-11-24) five more
+  contextwindow: { lines: ['CONTEXT', 'WINDOW'], bg: '#0f0826', bg2: '#2a1660', accent: '#ffc933', line: 'Eat tokens. Hold the thought. Commit it before she forgets.', tag: 'Snake puzzle', small: true },
+  toomanytabs: { lines: ['TOO MANY', 'TABS'], bg: '#160b33', bg2: '#4a1a6b', accent: '#ff4da6', line: 'Close her tabs in threes before the browser freezes.', tag: 'Tile match', small: true },
+  scalinglaws: { lines: ['SCALING', 'LAWS'], bg: '#0d0626', bg2: '#5a1f7a', accent: '#3ff0c3', line: 'Pick the gates. Grow her model. Top the benchmark.', tag: 'Crowd runner', small: true },
+  webscraper: { lines: ['WEB', 'SCRAPER'], bg: '#1b1040', bg2: '#2f5a4a', accent: '#3ff0c3', line: 'Swallow the city, one cone at a time. Then the towers.', tag: 'Swallow arena' },
+  hotfix: { lines: ['HOT', 'FIX'], bg: '#120a2e', bg2: '#4a1056', accent: '#ff4da6', line: 'Drag one chip. Chain the combos. Squash her bugs.', tag: 'Combo puzzle' },
 };
 
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;');

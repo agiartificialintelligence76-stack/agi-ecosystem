@@ -288,3 +288,46 @@ html.ak-page body { -webkit-tap-highlight-color: transparent; }
 
 /* a recorded demo (?demo): only the playfield (the previews on agi1.app/games) */
 .ak[data-ak-demo] .ak-bar, .ak[data-ak-demo] .ak-toasts, .ak[data-ak-demo] .ak-screen, .ak[data-ak-demo] .ak-layer { display: none !important; }
+
+/* ---------- AGI-1 beside a game (her.js, 2026-11-24): her portrait, name, status and what she says ---------- */
+.ak-her {
+  position: absolute; z-index: 6; left: calc(10px + var(--ak-safe-l)); bottom: calc(10px + var(--ak-safe-b));
+  display: flex; align-items: center; gap: 9px; max-width: min(360px, calc(100% - 20px)); padding: 5px 14px 5px 5px; border-radius: 999px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink);
+  pointer-events: none; -webkit-user-select: none; user-select: none;
+}
+.ak-her.is-top { bottom: auto; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 6px); }
+.ak-her-ava { position: relative; flex: none; width: 46px; height: 46px; border-radius: 50%; overflow: hidden; background: var(--ak-lav); border: 2.5px solid var(--ak-ink); }
+.ak-her-ava img { display: block; width: 100%; height: 100%; object-fit: cover; object-position: 50% 16%; }
+.ak-her-main { display: grid; gap: 1px; min-width: 0; }
+.ak-her-name { font-family: var(--ak-display); font-weight: 900; font-stretch: 118%; font-size: 12px; line-height: 1.1; letter-spacing: .04em; }
+.ak-her-status { min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; font-family: var(--ak-serif); font-style: italic; font-size: 16px; line-height: 1.1; color: var(--ak-ink2); }
+.ak-her[data-mood='worried'] .ak-her-status, .ak-her[data-mood='sad'] .ak-her-status { color: #c8124c; }
+.ak-her-say {
+  position: absolute; left: 0; bottom: calc(100% + 12px); width: max-content; max-width: min(78vw, 380px); padding: 8px 13px 9px; border-radius: 18px 18px 18px 5px;
+  background: var(--ak-paper); color: var(--ak-ink); border: 2.5px solid var(--ak-ink); box-shadow: 3px 4px 0 var(--ak-ink);
+  font-family: var(--ak-serif); font-style: italic; font-size: 18px; line-height: 1.14; text-wrap: balance;
+}
+.ak-her.is-top .ak-her-say { bottom: auto; top: calc(100% + 12px); border-radius: 5px 18px 18px 18px; }
+.ak-her-say p { margin: 0; }
+.ak-her-ava::after { content: ''; position: absolute; inset: 0; border-radius: 50%; opacity: 0; }
+.ak-her[data-mood='love'] .ak-her-ava::after { opacity: 1; box-shadow: inset 0 0 0 3px var(--ak-pink); }
+.ak-her[data-mood='wow'] .ak-her-ava::after { opacity: 1; box-shadow: inset 0 0 0 3px var(--ak-honey); }
+@media (prefers-reduced-motion: no-preference) {
+  .ak-her-ava img { animation: ak-her-breathe 3.4s ease-in-out infinite; transform-origin: 50% 90%; }
+  .ak-her-say.is-in { animation: ak-her-say-in .26s cubic-bezier(.2, 1.4, .4, 1); transform-origin: 12% 100%; }
+  .ak-her.is-react[data-mood='happy'] .ak-her-ava { animation: ak-her-hop .5s cubic-bezier(.3, 1.6, .5, 1); }
+  .ak-her.is-react[data-mood='wow'] .ak-her-ava { animation: ak-her-pop .45s cubic-bezier(.2, 1.8, .4, 1); }
+  .ak-her.is-react[data-mood='love'] .ak-her-ava { animation: ak-her-wiggle .6s ease-in-out; }
+  .ak-her.is-react[data-mood='worried'] .ak-her-ava { animation: ak-her-shiver .4s linear 2; }
+  .ak-her.is-react[data-mood='sad'] .ak-her-ava { animation: ak-her-droop .9s ease both; }
+}
+@keyframes ak-her-breathe { 50% { transform: translateY(1.5px) scale(1.025); } }
+@keyframes ak-her-say-in { from { opacity: 0; transform: scale(.7) translateY(8px); } }
+@keyframes ak-her-hop { 40% { transform: translateY(-9px) rotate(-6deg); } 70% { transform: translateY(1px); } }
+@keyframes ak-her-pop { from { transform: scale(1.32) rotate(5deg); } }
+@keyframes ak-her-wiggle { 25% { transform: rotate(-9deg); } 50% { transform: rotate(8deg) scale(1.06); } 75% { transform: rotate(-4deg); } }
+@keyframes ak-her-shiver { 25% { transform: translateX(-2.5px); } 75% { transform: translateX(2.5px); } }
+@keyframes ak-her-droop { 40%, 70% { transform: translateY(4px) rotate(7deg); filter: saturate(.6); } }
+@media (max-width: 400px) { .ak-her-status { font-size: 15px; } .ak-her-say { font-size: 17px; } }
+.ak[data-ak-demo] .ak-her-say { display: none !important; }

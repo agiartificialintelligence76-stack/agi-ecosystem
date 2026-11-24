@@ -1,5 +1,15 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Five more games on the arcade kit (2026-11-24):** the owner: "add 5 more original new addictive, fun games to
+> agi1.app/games after ur done publish it directly to production". **CONTEXT WINDOW** (a snake whose tail is her context:
+> hold three of a color, commit with another), **TOO MANY TABS** (triple tile match: her tabs in layers, a 7-slot
+> taskbar; every board solvable by construction), **SCALING LAWS** (a crowd runner through math gates to a benchmark
+> staircase), **WEB SCRAPER** (a portal swallowing a city against three rival scrapers) and **HOTFIX** (drag one chip
+> for combos that squash bugs, floor by floor, with patches and bosses). Each with its own rules, player, picture, sound,
+> AGI-1's lines, modes, saves, tests and balance tool; the kit gains `her.js` (AGI-1 beside a game). /games: 38 games,
+> the five New right after TRENCHING SIMULATOR. **No new setting, SQL, function or service.** See "Five more on the kit,
+> 2026-11-24" under "AGI games".
+
 ## Twenty games withdrawn from the arcade
 
 The owner requested removal of the twenty November 18 games. The public arcade returns to the 32 games in commit 359856a, including its catalog, game URLs, ratings list, gameplay previews and gallery share image. The complete twenty-game release is recoverable at commit 3d8f9d7. Historical player records are retained.
@@ -10795,6 +10805,101 @@ computer's grey bar with arrows. **Published** as in the entry at the top (`53e7
 Vercel runs it (Node 24, UTC, all 81 documented settings as fakes): 1,978 tests, 1,974 passed, 4 skipped, 0 failed; Vite, the
 share pages and the secret check (274 files); the built page with the site's real headers on a computer and a phone: no CSP
 reports or errors, the picker opened and a pick made.
+
+### Five more on the kit, 2026-11-24 (CONTEXT WINDOW, TOO MANY TABS, SCALING LAWS, WEB SCRAPER, HOTFIX)
+
+The owner: "add 5 more original new addictive, fun games to agi1.app/games after ur done publish it directly to
+production". Made with the remaster brief's bar in mind (the twenty games of 2026-11-18 were withdrawn as thin: see the
+top of this file): each one has its own rules module (pure, seeded, no DOM), its own player (`ai.js`, three skill
+levels: the demo, the title's attract mode, the tests and its balance tool), its own picture (`render.js`, drawn in code
+in the kit's Pop sticker look, no painted playfields), its own `sound.js` (an effect for every action and a looping
+soundtrack, all Web Audio), AGI-1's lines (`lines.js`, 50 to 90 each), at least two modes, something kept to come back
+for, a layout for phones both ways and computers, touch, mouse and keys, and `tools/games/<id>/balance.mjs`. All five
+on the arcade kit (`createShell`, local saves `agi_arcade:<id>`, `?demo` self-play, the AGI GAMES intro, the play
+counter, reviews' context in `server/arcade.js`). **No new setting, SQL, function or service**; never money; nothing
+asked of a wallet. /games: 38 games, the five right after TRENCHING SIMULATOR and New (FINAL ANSWER was New until then).
+
+**The kit's new piece: `src/games/kit/her.js`** (`createHer(parent, { cls, status, top })`): AGI-1 beside a game, her 2D
+portrait (`/images/agi1-portrait-2d.webp`) in a sticker circle that breathes and reacts (`mood('happy' | 'wow' |
+'worried' | 'sad' | 'love')`: a hop, a pop, a shiver, a droop, a wiggle; nothing with "reduce motion"), her name, a
+status and a speech bubble (`say(text, ms, { force })`, at most one every 1.6 s). Its styles are `ak-her` classes at the
+end of `kit.css` (scoped like the rest; the bubble hidden in `?demo`). Each game places it with its own class.
+
+**CONTEXT WINDOW** (`contextwindow`, Snake puzzle). AGI-1's cursor (her face) runs round a grid eating colored tokens;
+each joins her tail right behind her, so the tail is her context, newest first (the strip over the board shows it, 24
+slots). Three or more of one color at the front is a thought she's holding (outlined, breathing); eating a token of a
+**different** color commits it: the run is compressed out for **10 × n × n** (six in a row = four times three), the tail
+slides up. Commits within 8 s chain (×2 … ×5). Grey **spam** never matches; committing a thought right in front of it
+shatters it (+25 × chain each) and the two sides **join** (often into a new held thought). Past 24 she **forgets** her
+oldest token and loses a heart (three). The edges, red **firewalls** (from level 4) and her own tail end a run. Specials:
+wild (copies her thought), /clr (drops the 4 oldest), ×2, coffee (slow-mo), a heart. A level every 5 commits (faster;
+a 4th color at 3, a 5th at 6). The grid fits the screen's shape (13 × 21, 13 × 19, 17 × 15 or 21 × 13). Modes: Classic,
+Daily (`dailySeed`), Zen (wraps round, no hearts, biting her tail lets the rest go). Kept: bests per mode and day, total
+commits opening six trails (Sticker, Honey glow 25, Neon 75, Pastel 150, Rainbow 300, Galaxy 600), first-time tips.
+Controls: swipe or drag with the finger down (re-anchors every 18 px), arrows / WASD; up to three turns queued.
+Balance (`tools/games/contextwindow/balance.mjs`, 20 runs): steady 159–185–265 s (10/50/90%), expert median 348 s,
+newbie median 193 s (newbies crash into walls and themselves, the others overflow).
+
+**TOO MANY TABS** (`toomanytabs`, Tile match). Her tabs are piled in layers on a browser window (7 × 8, each layer half
+a tab off the one under it, mirrored); a tab is free when nothing above overlaps it (covered ones dimmed; from level 8,
+those under two or more are face down). Tap a free tab: it flies into her **taskbar** (7 slots) next to its kind; three
+alike close (+30 × streak, streak within 4 s up to ×5); seven with no three **freezes** the browser. Helpers, one each a
+board: **Undo**, **Shuffle**, **Tab out** (three taskbar tabs parked on a shelf, tappable later); one **Force quit**
+revive a board (three out to the shelf) on the end card. **Every board is solvable by construction**: a removal order is
+drawn first and kinds are dealt along it in shuffled windows of at most three kinds, so that order clears it never
+holding more than six (`tests/toomanytabs.test.js` replays it on levels 1–60; the balance tool on 1–80). Levels: 27
+tabs/4 kinds/2 layers at 1, 69/8/5 at 10, 117/12/8 at 20, 165/14/9 from 30. Stars by time against par (1.5 s a tab).
+Modes: endless Levels (saved), Daily (level 16, `dailySeed`), Rush (150 s, boards back to back, +40 s each). Kept:
+level, stars per level, six wallpapers opened by stars (12/30/60/100/160), tips. Keys: arrows + Enter, U/S/O. A phone
+held sideways: the pile left, the taskbar and helpers right. Balance: the careful bot clears every level 1–40, the
+careless one starts failing at 12.
+
+**SCALING LAWS** (`scalinglaws`, Crowd runner). A neon synthwave track in perspective (drawn on a 2D canvas). Her model is
+a crowd of little parameters in a sunflower (never wider than the road allows: it runs as a column instead); drag to
+steer. **Gate pairs** do maths (+, ×, −, ÷; the side the crowd is on is the one it takes); **overfit saws**, **walls**
+with a gap, **404 holes** and the **edges** knock parameters off; **rival models** (red crowds) block the road and trade
+one for one; **compute crystals** pay for upgrades. At the end, the **benchmark** staircase: each step takes `cost`
+parameters (sized from the level's par crowd), the highest reached multiplies the score (×1.2 … ×5). Levels 118–190 m,
+about 20–35 s each. Modes: Campaign (saved level), Endless (the track keeps building, harder further on), Daily (level 12).
+Upgrades: Pretraining (+4 start, 12 levels), Clean data (+20% compute, 8), Robustness (−8% hazard losses, 6). Sizes shown
+as params ("128B", "1.5T"). Balance: expert passes 99% of levels 1–30, steady about 90%, newbie fades from level 5;
+Endless steady median 109 s.
+
+**WEB SCRAPER** (`webscraper`, Swallow arena). A 96 × 96 m city seen from above at a slant (streets and blocks drawn once,
+1,400+ things drawn as extruded stickers: cones, boba cups, benches, trees, cars, buses, food trucks, houses, shops,
+billboards, offices, glass towers, server farms, a big statue). Her **portal** swallows anything smaller than 0.9 × its
+size that it passes over (they tip in and spin down) and grows by what it eats; the camera zooms out as it grows. Three
+rival scrapers (CLANKY, GLITCH, BYTE: made-up, 10% slower) do the same; a portal 1.14 × bigger swallows a smaller one
+whole (it's back, half size, 2.6 s later). Two-minute rounds; standings top right; arrows at the edge point at rivals.
+Modes: Battle, Scrape it all (no rivals: share of the city, stars at 40/60/80%), Daily (one city). Kept: a scrapbook of
+23 kinds of thing, rims opened by wins (Pink 1, Honey 3, Violet 6, Rainbow 12). Controls: a joystick wherever the finger
+goes down, arrows / WASD. Balance: against steady rivals, expert wins 5/10, steady 2/10, newbie 0/10.
+
+**HOTFIX** (`hotfix`, Combo puzzle). Bugs crawl through her code. A 6 × 5 board of glossy chips: Logic, Memory, Vision,
+Voice (they hit) and Debug (heals her uptime). A turn: pick up a chip and **drag it round for 4 seconds** (diagonals too;
+it swaps with every chip it passes; never through a locked one). Let go: lines of 3+ clear in groups (each a combo),
+chips fall, new ones drop, cascades. Each group hits the targeted bug (tap to target) with its kind: ×2 where it's weak,
+½ where it resists, more for bigger groups and +25% for each combo; leftover carries to the next bug. Bugs' countdowns
+tick each turn; at zero they bite (and: heal, corrupt three chips into junk, lock three, shield, grow, slow her next
+drag). 12 bugs (Off-by-One, Null Pointer, Race Condition, Memory Leak, Spaghetti Code, Merge Conflict, Infinite Loop,
+Heisenbug, Stack Overflow, Deadlock, Flaky Test, Segfault) and a boss every fifth floor (Legacy Monolith, Prod Fire, The
+Big Refactor). Clear a floor: pick one of three **patches** (12: Overclock, kind boosts, Combo engine, Big matches, Hot
+patch, Better debugging, Rubber duck, Linter, Garbage collector). A turn is resolved at once into a timeline
+(`turn()` → drag, match, fall …, hits, bites) that the page plays back. Modes: Run, Daily, Combo lab (no bugs, 10 moves).
+Kept: best, deepest floor, a bug log. Keys: arrows + Space, 1–3 to target. A phone held sideways: the board right, the
+bugs left. Balance: floors reached (median) newbie 10, steady 15, expert 20 (the bosses are the walls).
+
+**Files.** `<id>.html`, `src/games/<id>/` (`page.js`, `game.js`, `rules.js`, `ai.js`, `render.js`, `sound.js`,
+`lines.js`, `style.css`; TOO MANY TABS also `art.js`), `tests/<id>.test.js` (+ `tests/helpers/agi1-lines.js`, her
+lines' checks), `tools/games/<id>/balance.mjs`, `public/images/games/<id>.{mp4,webp}`, `public/cards/games/<id>.jpg`,
+`public/cards/games-all.jpg` (38). Wired like FINAL ANSWER: `src/games/list.js`, `src/games/shelf.js`, `games.html`,
+`vercel.json`, `vite.config.js`, `scripts/share-pages.js`, `src/owner/catalog.js`, `server/arcade.js`, `package.json`,
+`tests/{arcade,arcade-kit,clips,page}.test.js`, `tools/games/{capture-previews,covers}.mjs`,
+`tools/cards/games-all-card.html`. `?qa` (and `?qa&auto` for SCALING LAWS, WEB SCRAPER and HOTFIX) expose the state for
+browser checks and save nothing.
+
+**Not checked:** the sound by ear (made and scheduled, never listened to by its author), and real phones (checked in
+Chromium at 360 × 640, 390 × 844, 844 × 390, 480 × 480 and 1440 × 900 with touch emulation).
 
 ### OVERTHINKING (2026-11-13)
 

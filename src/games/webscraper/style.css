@@ -1,0 +1,36 @@
+/* WEB SCRAPER (2026-11-24): its own styles on top of the arcade kit (../kit/kit.css). Every rule a ws- class or the
+   game's root. The city is one canvas; the round's standings top right; AGI-1 (the kit's ak-her) bottom left. */
+.ak[data-ak-game='webscraper'] { --ak-bg: #1b1040; --ak-accent: var(--ak-mint); }
+.ws-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.ws-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: var(--ak-safe-t) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l); }
+.ws-board {
+  position: absolute; z-index: 5; right: calc(10px + var(--ak-safe-r)); top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 4px);
+  margin: 0; padding: 6px 8px; list-style: none; display: grid; gap: 2px; min-width: 132px; border-radius: 14px; pointer-events: none;
+  background: rgba(23, 10, 54, .78); border: 2px solid rgba(255, 250, 240, .25); font-family: var(--ak-display); font-weight: 850; font-stretch: 105%; font-size: 12px;
+}
+.ws-row { display: grid; grid-template-columns: 12px 10px minmax(0, 1fr) auto; align-items: center; gap: 6px; padding: 2px 4px; border-radius: 8px; color: var(--ak-paper); }
+.ws-row.is-you { background: rgba(63, 240, 195, .22); }
+.ws-rank { font-family: var(--ak-mono); font-size: 11px; opacity: .8; }
+.ws-dot { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--ak-ink); }
+.ws-name { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.ws-score { font-family: var(--ak-mono); font-size: 12px; }
+.ws-tip {
+  position: absolute; z-index: 7; left: 50%; bottom: calc(86px + var(--ak-safe-b)); transform: translateX(-50%);
+  width: max-content; max-width: min(92%, 440px); margin: 0; padding: 9px 15px 10px; border-radius: 16px; pointer-events: none;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2.5px solid var(--ak-mint); box-shadow: 0 4px 0 rgba(10, 4, 24, .55);
+  font-family: var(--ak-sans); font-weight: 650; font-size: 14.5px; line-height: 1.25; text-align: center; text-wrap: balance;
+}
+.ws-tip.is-in { animation: ws-tip-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes ws-tip-in { from { opacity: 0; transform: translate(-50%, 8px) scale(.94); } }
+.ws-rims { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px; }
+.ws-rims-label { font-family: var(--ak-mono); font-weight: 700; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; opacity: .85; margin-right: 2px; }
+.ws-rim { min-height: 34px; padding: 5px 11px; border-radius: 999px; background: rgba(255, 250, 240, .1); color: var(--ak-paper); border: 2px solid rgba(255, 250, 240, .35); font-family: var(--ak-display); font-weight: 800; font-stretch: 108%; font-size: 12px; }
+.ws-rim[aria-pressed='true'] { background: var(--ak-mint); color: var(--ak-ink); border-color: var(--ak-ink); box-shadow: 0 3px 0 var(--ak-ink); }
+.ws-rim[aria-disabled='true'] { opacity: .55; }
+.ws-over-extra { display: grid; gap: 8px; }
+.ws-final { margin: 6px 0 0; padding: 0; list-style: none; display: grid; gap: 4px; }
+.ws-final-row { display: flex; justify-content: space-between; padding: 5px 10px; border-radius: 10px; background: var(--ak-lav); color: var(--ak-ink); font-weight: 700; font-size: 14px; }
+.ws-final-row.is-you { background: var(--ak-mint); border: 2px solid var(--ak-ink); }
+.ws-unlock { margin: 0; padding: 8px 12px; border-radius: 12px; background: var(--ak-honey); color: var(--ak-ink); border: 2px solid var(--ak-ink); font-weight: 650; font-size: 14px; text-align: center; }
+@media (max-width: 420px) { .ws-board { min-width: 112px; font-size: 11px; } }
+@media (max-height: 520px) and (orientation: landscape) { .ws-her .ak-her-main { display: none; } .ws-her { padding: 4px; } .ws-tip { bottom: calc(14px + var(--ak-safe-b)); } }

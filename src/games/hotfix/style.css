@@ -1,0 +1,33 @@
+/* HOTFIX (2026-11-24): its own styles on top of the arcade kit (../kit/kit.css). Every rule an hf- class or the game's
+   root. The bugs, her uptime and the board are one canvas; AGI-1 (the kit's ak-her) sits beside her uptime bar. */
+.ak[data-ak-game='hotfix'] { --ak-bg: #120a2e; --ak-accent: var(--ak-pink); }
+.hf-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.hf-safe { position: absolute; inset: 0; visibility: hidden; pointer-events: none; padding: var(--ak-safe-t) var(--ak-safe-r) var(--ak-safe-b) var(--ak-safe-l); }
+.ak-her.hf-her { bottom: auto; padding: 3px; }
+.hf-her .ak-her-ava { width: 40px; height: 40px; }
+.hf-her .ak-her-main { display: none; }
+.hf-her .ak-her-say { bottom: auto; top: calc(100% + 10px); border-radius: 5px 18px 18px 18px; z-index: 8; }
+.ak-her.hf-her.is-up .ak-her-say { top: auto; bottom: calc(100% + 10px); border-radius: 18px 18px 18px 5px; }
+.hf-tip {
+  position: absolute; z-index: 7; left: 50%; top: calc(var(--ak-bar-h) + var(--ak-safe-t) + 8px); transform: translateX(-50%);
+  width: max-content; max-width: min(92%, 440px); margin: 0; padding: 9px 15px 10px; border-radius: 16px; pointer-events: none;
+  background: var(--ak-ink); color: var(--ak-paper); border: 2.5px solid var(--ak-pink); box-shadow: 0 4px 0 rgba(10, 4, 24, .55);
+  font-family: var(--ak-sans); font-weight: 650; font-size: 14.5px; line-height: 1.25; text-align: center; text-wrap: balance;
+}
+.hf-tip.is-in { animation: hf-tip-in .3s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes hf-tip-in { from { opacity: 0; transform: translate(-50%, -8px) scale(.94); } }
+.hf-patches { display: grid; gap: 10px; }
+.hf-patch {
+  display: grid; gap: 2px; padding: 12px 14px; border-radius: 16px; text-align: left; background: var(--ak-lav); color: var(--ak-ink);
+  border: 2.5px solid var(--ak-ink); box-shadow: 0 4px 0 var(--ak-ink); transition: transform .08s ease, box-shadow .08s ease;
+}
+.hf-patch:hover { background: #fff; }
+.hf-patch:active { transform: translateY(3px); box-shadow: 0 1px 0 var(--ak-ink); }
+.hf-patch b { font-family: var(--ak-display); font-weight: 900; font-stretch: 112%; font-size: 17px; }
+.hf-patch span { font-size: 14px; }
+.hf-patch small { font-family: var(--ak-mono); font-size: 11px; font-weight: 700; color: var(--ak-violet); text-transform: uppercase; letter-spacing: .06em; }
+.hf-log { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; max-height: min(52vh, 420px); overflow: auto; }
+.hf-log-row { display: grid; gap: 1px; padding: 8px 10px; border-radius: 12px; background: var(--ak-lav); color: var(--ak-ink); font-size: 13.5px; }
+.hf-log-row b { font-family: var(--ak-display); font-weight: 900; font-size: 14px; }
+.hf-log-row.is-locked { opacity: .55; }
+.hf-taken { margin: 8px 0 0; font-size: 13.5px; color: var(--ak-ink); text-align: center; }

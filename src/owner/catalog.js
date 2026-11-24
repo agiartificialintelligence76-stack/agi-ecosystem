@@ -46,6 +46,11 @@ export const BUILTIN_PAGES = Object.freeze([
   { path: '/games/growthstock', title: "GROWTH STOCK" },
   { path: '/games/goinglive', title: "GOING LIVE" },
   { path: '/games/finalanswer', title: "FINAL ANSWER" },
+  { path: '/games/contextwindow', title: "CONTEXT WINDOW" },
+  { path: '/games/toomanytabs', title: "TOO MANY TABS" },
+  { path: '/games/scalinglaws', title: "SCALING LAWS" },
+  { path: '/games/webscraper', title: "WEB SCRAPER" },
+  { path: '/games/hotfix', title: "HOTFIX" },
   { path: '/cloakmesh', title: 'CloakMesh' },
   { path: '/studio', title: 'AGI Studio' },
   { path: '/studio/explore', title: 'Studio · Explore' },
@@ -89,6 +94,11 @@ const ALIASES = Object.freeze({
   '/growthstock': '/games/growthstock',
   '/goinglive': '/games/goinglive',
   '/finalanswer': '/games/finalanswer',
+  '/contextwindow': '/games/contextwindow',
+  '/toomanytabs': '/games/toomanytabs',
+  '/scalinglaws': '/games/scalinglaws',
+  '/webscraper': '/games/webscraper',
+  '/hotfix': '/games/hotfix',
 });
 
 export function normalizePath(value = '/') {

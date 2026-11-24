@@ -61,6 +61,8 @@ shell.demo / shell.touch    // the page is a recorded demo / a touchscreen
 - `audio.js` `createAudio()` (the shell makes one), `createLoopMusic(pattern)` for a small looping soundtrack.
 - `env.js` `DEMO` (`?demo`), `SEED` (`?seed=n`), `REDUCED` ("reduce motion"), `TOUCH`, `IOS`.
 - `site.js` the play counter (the shell calls it). `share.js` X's post box (the player posts; never us).
+- `her.js` (2026-11-24) `createHer(parent, { cls, status, top })`: AGI-1 beside a game (her 2D portrait that breathes and
+  reacts: `mood('happy' | 'wow' | 'worried' | 'sad' | 'love')`, `say(text, ms)`, `status(text)`); styles `ak-her` in kit.css.
 
 ## Rules every game keeps
 

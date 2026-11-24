@@ -373,6 +373,31 @@ export const LOOK_GAMES = Object.freeze({
     promo: 'other games, coins, tokens, channels, groups, services',
     advice: 'financial advice or price talk (buy, sell, pump, moon)',
   }),
+  contextwindow: Object.freeze({
+    what: '"CONTEXT WINDOW", a snake-like arcade puzzle where an anime girl, AGI-1, steers her cursor round a grid eating colored tokens that join her tail (her context window): three or more of one color in a row are held as a thought and committed for points by eating a different color, with chains, spam tokens that shatter, firewalls, hearts lost when her context overflows, a Daily board and Zen: talk about steering, matching, committing, chains, speed, difficulty, the trails and AGI-1 is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  toomanytabs: Object.freeze({
+    what: '"TOO MANY TABS", a triple tile-matching puzzle where an anime girl, AGI-1, has too many browser tabs open: tap free tabs off a layered pile into a seven-slot taskbar, three alike close, seven without a triple freezes the browser, with Undo, Shuffle and Tab out helpers, endless levels with stars, a Daily, Rush mode and wallpapers: talk about the levels, the layers, the helpers, difficulty, speed and AGI-1 is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  scalinglaws: Object.freeze({
+    what: '"SCALING LAWS", a crowd-runner arcade game where you steer an anime girl\'s (AGI-1\'s) crowd of little "parameters" down a neon track through math gates (+, ×, −, ÷), past saws, walls and holes, into rival crowds, and up a benchmark staircase for a multiplier, with made-up compute crystals for upgrades, Endless and a Daily track: talk about the gates, steering, rivals, the benchmark, upgrades, difficulty and AGI-1 is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  webscraper: Object.freeze({
+    what: '"WEB SCRAPER", a swallow-the-city arena game where an anime girl\'s (AGI-1\'s) portal grows by swallowing everything smaller than it in a little cartoon city, from cones to towers, against three made-up rival portals in two-minute rounds, with a Scrape it all mode, a Daily city, a scrapbook and portal rims: talk about steering, growing, the rivals, the city, rounds and AGI-1 is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
+  hotfix: Object.freeze({
+    what: '"HOTFIX", a combo puzzle battler where you drag one chip around a 6 by 5 board to line up matches and cascades that hit cartoon software bugs (Off-by-One, Memory Leak, Merge Conflict and bosses) attacking an anime girl\'s (AGI-1\'s) uptime, with weaknesses, patches between floors, a Daily run and a Combo lab: talk about dragging, combos, the bugs, bosses, patches, difficulty and AGI-1 is part of reviewing it',
+    promo: 'other games, coins, tokens, channels, groups, services',
+    advice: 'financial advice or price talk (buy, sell, pump, moon)',
+  }),
 });
 export function lookSystem(game) {
   const g = LOOK_GAMES[isGame(game) && Object.hasOwn(LOOK_GAMES, game) ? game : 'rideemagi'];

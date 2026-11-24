@@ -24,7 +24,9 @@ export const SORTS = Object.freeze([
   { id: 'rated', label: 'Top rated' },
 ]);
 
-// "Featured": the order of the tiles when the page opens. New: GOING LIVE (2026-11-14, the owner: "yes exactly" to an
+// "Featured": the order of the tiles when the page opens. (2026-11-24) New: the five of that day (the owner: "add 5 more
+// original new addictive, fun games"), right after TRENCHING SIMULATOR, then FINAL ANSWER (2026-11-23, New until then).
+// Before that: GOING LIVE (2026-11-14, the owner: "yes exactly" to an
 // AGI-1 streamer sim of our own), right after TRENCHING SIMULATOR, then GROWTH STOCK (earlier the same day, the owner:
 // "can u add/create a game like these just 1", a farming sim where the crops are stocks; New until GOING LIVE, `added`
 // without an hour so Newest puts it after), then OVERTHINKING (2026-11-13, New until then); the five of 2026-11-09 (the owner: "create 5 more new games"), every other tile after them,
@@ -32,7 +34,12 @@ export const SORTS = Object.freeze([
 // before the first night's ten)
 export const SHELF = Object.freeze([
   { id: 'trenchingsimulator', genre: 'Trading sim', line: 'Six trading terminals, play money only', tags: ['chill'], added: '2026-10-20', badge: 'Play money' },
-  { id: 'finalanswer', genre: 'Quiz show', line: 'Climb 15 rungs to 1,000,000 with AGI-1', tags: ['new', 'puzzle'], added: '2026-11-23' },
+  { id: 'contextwindow', genre: 'Snake puzzle', line: 'Eat tokens, match three, commit the thought', tags: ['new', 'arcade', 'puzzle'], added: '2026-11-24T10:05' },
+  { id: 'toomanytabs', genre: 'Tile match', line: 'Close her tabs in threes before it freezes', tags: ['new', 'puzzle'], added: '2026-11-24T10:04' },
+  { id: 'scalinglaws', genre: 'Crowd runner', line: 'Steer her crowd through the math gates', tags: ['new', 'arcade', 'action'], added: '2026-11-24T10:03' },
+  { id: 'webscraper', genre: 'Swallow arena', line: 'Swallow the city before the rivals do', tags: ['new', 'action', 'arcade'], added: '2026-11-24T10:02' },
+  { id: 'hotfix', genre: 'Combo puzzle', line: 'Drag one chip, chain combos, squash bugs', tags: ['new', 'puzzle'], added: '2026-11-24T10:01' },
+  { id: 'finalanswer', genre: 'Quiz show', line: 'Climb 15 rungs to 1,000,000 with AGI-1', tags: ['puzzle'], added: '2026-11-23' },
   { id: 'goinglive', genre: 'Streamer sim', line: 'Stream as AGI-1, from zero to #1', tags: ['chill'], added: '2026-11-14T12:30' },
   { id: 'growthstock', genre: 'Stock farm', line: 'Grow stocks as candle charts, sell high', tags: ['chill'], added: '2026-11-14' },
   { id: 'overthinking', genre: 'Lasso arcade', line: 'Draw loops round her 3 a.m. thoughts', tags: ['arcade', 'puzzle'], added: '2026-11-13' },
