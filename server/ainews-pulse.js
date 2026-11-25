@@ -20,7 +20,7 @@ export const PULSE_INTERVAL_MS = 30 * 60 * 1000;
 export const PULSE_LEASE_MS = 45 * 1000;
 export const PULSE_BACKOFF_MS = 5 * 60 * 1000;
 export const PULSE_TIMEOUT_MS = 12000;
-export const PULSE_SCHEMA_VERSION = 2;
+export const PULSE_SCHEMA_VERSION = 3;
 export const MAX_PULSE_ITEMS = 8;
 export const MAX_PULSE_BYTES = 7500;
 
@@ -61,6 +61,16 @@ const KNOWN_PUBLISHERS = Object.freeze({
   'mistral.ai': 'Mistral AI',
   'nvidia.com': 'NVIDIA',
   'blogs.nvidia.com': 'NVIDIA',
+  'nvidianews.nvidia.com': 'NVIDIA Newsroom',
+  'higgsfield.ai': 'Higgsfield AI',
+  'sand.ai': 'Sand.ai',
+  'pandaily.com': 'Pandaily',
+  'suno.com': 'Suno',
+  'runwayml.com': 'Runway',
+  'klingai.com': 'Kling AI',
+  'lumalabs.ai': 'Luma AI',
+  'elevenlabs.io': 'ElevenLabs',
+  'bfl.ai': 'Black Forest Labs',
   'github.com': 'GitHub',
   'huggingface.co': 'Hugging Face',
   'arxiv.org': 'arXiv',
@@ -158,12 +168,13 @@ export function buildPulsePrompt(now = Date.now()) {
   return [
     `Current UTC time: ${todayIso}.`,
     'You are the breaking-news scout for a live global AI tracker.',
-    'Run 1 or 2 concise Google searches for the biggest breaking AI model releases, open-weight drops, major AI lab/CEO/board shockwaves, funding/IPO moves, and viral X/official AI announcements from the LAST 24 HOURS worldwide.',
-    'Prioritize direct model launches, coding/vision/agent releases, robotics/autonomy milestones, major executive/company breaking news (e.g. NVIDIA / Jensen Huang, OpenAI, Anthropic, xAI, Tesla), and open-weight drops from both China labs (Z.ai / Zhipu GLM, Alibaba Qwen, Moonshot Kimi, DeepSeek, MiniMax, Tencent Hunyuan, ByteDance Seed) and US/EU labs (OpenAI, Anthropic, Meta Muse, Google DeepMind, xAI Grok, Tesla AI / Optimus / FSD / Robotaxi, Mistral, NVIDIA).',
+    'Run 2 targeted Google searches covering the LAST 24–48 HOURS worldwide:',
+    '1) New AI model releases, open-weight drops, coding/agent tools, and major lab/CEO announcements (OpenAI, Anthropic, Google DeepMind, Meta Muse, xAI Grok, NVIDIA, Z.ai GLM, Alibaba Qwen, Moonshot Kimi, DeepSeek, Mistral, startups).',
+    '2) New AI video, image, audio, 3D, and robotics model launches (Sand.ai MAGI, Higgsfield, Kling AI, ByteDance Seedance, Runway, Sora, Veo, Luma, Black Forest Labs Flux, Midjourney, Suno, ElevenLabs, Tesla Optimus/FSD).',
     `Return ONLY a raw JSON array of up to ${MAX_PULSE_ITEMS} items (newest first, no prose, no markdown).`,
     'Each object must have keys:',
     '{"title":"concise factual headline <= 110 chars","summary":"1-2 sentence concrete summary <= 190 chars","url":"exact https URL from search results or null","githubUrl":"https://github.com/owner/repo if directly relevant else null","huggingfaceUrl":"https://huggingface.co/... if directly relevant else null","lab":"lab or company name","source":"publisher or domain name","publishedAt":"ISO-8601 UTC timestamp"}',
-    'Rules: only real verified announcements from your search results, never invent URLs or rumors, skip generic evergreen listicles or unrelated stock-market chatter.',
+    'Rules: ONLY real verified model launches, open-weight releases, product/API drops, or major executive announcements from your search results. SKIP opinion essays, safety warning commentary, sustainability debates, generic listicles, and stock-market chatter. Never invent URLs.',
   ].join('\n');
 }
 

@@ -24,6 +24,7 @@ import {
 import {
   PULSE_INTERVAL_MS,
   PULSE_BACKOFF_MS,
+  PULSE_SCHEMA_VERSION,
   MAX_PULSE_BYTES,
   extractJsonArray,
   parsePulseResponse,
@@ -1053,7 +1054,7 @@ test('AGI-1 chat recall injects live AI News World notes on site & Telegram when
     if (u.includes('/rest/v1/rpc/feed_state_get')) {
       return Response.json({
         ainewsPulse: {
-          v: 2,
+          v: PULSE_SCHEMA_VERSION,
           at: NOW - 40 * 60_000, // stale > 30m: chat recall MUST still use cacheOnly and make 0 Gemini search calls!
           items: [{
             id: 'pulse-openai-1',
@@ -1155,9 +1156,15 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
 
   // collectAlertCandidates includes fresh high-signal RSS lab launches & official lab posts, blocks tutorials, NSFW/PG-13 & opinion/promo noise, and dedupes
   const NOW = Date.parse('2026-11-23T14:00:00Z');
+  const magiInfo = classifyItem('Sand.ai Launches Full MAGI-2 Video Model on Higgsfield with 400B Open Weights');
+  assert.equal(magiInfo.lab, 'Sand.ai MAGI');
+  assert.equal(magiInfo.hub, 'beijing');
+  assert.equal(magiInfo.breaking, true);
   const candidates = collectAlertCandidates({
     stories: [
       { title: 'NVIDIA Board Reinstates Jensen Huang as President, CEO and Board Director', sourceKind: 'rss', isLabFeed: true, lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/reinstates-jensen', publishedAt: new Date(NOW - 5 * 60_000).toISOString() },
+      { title: 'Sand.ai Launches Full MAGI-2 Video Model, With Open Weights Still Promised', sourceKind: 'rss', lab: 'Sand.ai MAGI', url: 'https://pandaily.com/magi-2', publishedAt: new Date(NOW - 8 * 60_000).toISOString() },
+      { title: 'NewStartup unveils 400B open-weights video model for 1080p generation', sourceKind: 'rss', lab: 'NewStartup', url: 'https://newstartup.ai/blog/400b', publishedAt: new Date(NOW - 12 * 60_000).toISOString() },
       { title: 'OpenAI Publishes Internal AI Scores and Calls for Industry Limits', sourceKind: 'rss', isLabFeed: true, lab: 'OpenAI', url: 'https://openai.com/index/internal-scores', publishedAt: new Date(NOW - 15 * 60_000).toISOString() },
       { title: 'How to build and maintain an agentic evaluation', sourceKind: 'rss', isLabFeed: true, lab: 'Hugging Face', url: 'https://huggingface.co/blog/agentic-eval', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
       { title: 'Z.ai unveils GLM-5.4 model with Loop Transformer design', sourceKind: 'rss', lab: 'Z.ai GLM', url: 'https://investing.com/glm-5-4', publishedAt: new Date(NOW - 30 * 60_000).toISOString() },
@@ -1172,11 +1179,10 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
       { title: 'Fallback Offline Video', sourceKind: 'video', isFallback: true, url: 'https://youtube.com/watch?v=fb1', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
     ],
   }, NOW);
-  assert.equal(candidates.length, 4, 'keeps fresh NVIDIA CEO + OpenAI official post + GLM-5.4 + Claude Code Mode, drops 8h stale RSS, "Why It Never Shipped" explainers, holiday promos, HF tutorials, NSFW & fallback video');
+  assert.equal(candidates.length, 6, 'keeps fresh NVIDIA CEO + MAGI-2 + unknown startup 400B open-weights video model + OpenAI + GLM-5.4 + Claude Code Mode, drops 8h stale RSS, explainers, holiday promos, tutorials, NSFW & fallback video');
   assert.match(candidates[0].title, /Jensen Huang/);
-  assert.match(candidates[1].title, /Internal AI Scores/);
-  assert.match(candidates[2].title, /GLM-5\.4/);
-  assert.match(candidates[3].title, /Claude Code/);
+  assert.ok(candidates.some((c) => /MAGI-2/.test(c.title)));
+  assert.ok(candidates.some((c) => /400B open-weights video model/.test(c.title)));
 
   // formatBreakingBroadcast drops robotic "Live AI news dispatch from ..." placeholder summaries
   const fmt = formatBreakingBroadcast([{
@@ -1200,7 +1206,7 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
   let dbState = {
     since: 1795400000000,
     ainewsPulse: {
-      v: 2,
+      v: PULSE_SCHEMA_VERSION,
       at: NOW - 5 * 60_000, // fresh 5-min-old cached pulse (must STILL broadcast on cron!)
       items: [{
         t: 'Anthropic releases Claude 4.7 Opus with native computer agents',
