@@ -64,6 +64,8 @@ const KNOWN_PUBLISHERS = Object.freeze({
   'nvidianews.nvidia.com': 'NVIDIA Newsroom',
   'higgsfield.ai': 'Higgsfield AI',
   'sand.ai': 'Sand.ai',
+  'midjourney.com': 'Midjourney',
+  'ascii.jp': 'ASCII.jp',
   'pandaily.com': 'Pandaily',
   'suno.com': 'Suno',
   'runwayml.com': 'Runway',
@@ -249,6 +251,10 @@ export function urlMatchesStory(url, item) {
     // Match concatenated lab/product tokens like "qwen4" in "qwen4max", "openai" in "openai", "deepseek" in "deepseekr2"
     if (tok.length >= 4 && urlHay.includes(tok)) return true;
   }
+  // If the URL uses a purely numeric/opaque article ID (e.g. ascii.jp/elem/000/004/234567/) with no descriptive
+  // English slug words to compare against, trust it when backed by grounding rather than falsely rejecting it.
+  const pathWords = normKey(pathAndQuery).split(' ').filter((w) => /^[a-z]{4,}$/.test(w) && !STOP_WORDS.has(w) && !/^(?:elem|item|view|page|show|detail|content|entry|record|archive|html)$/.test(w));
+  if (pathWords.length === 0 && /\d{4,}/.test(pathAndQuery)) return true;
   return false;
 }
 

@@ -30,8 +30,9 @@ const NEWS_FEEDS = Object.freeze([
   { id: 'tc-ai', name: 'TechCrunch AI', url: 'https://techcrunch.com/category/artificial-intelligence/feed/', defaultHub: 'sf', limit: 10 },
   { id: 'verge-ai', name: 'The Verge AI', url: 'https://www.theverge.com/rss/ai-artificial-intelligence/index.xml', defaultHub: 'nyc', limit: 10 },
   { id: 'smol-ai', name: 'Smol AI Digest', url: 'https://news.smol.ai/rss.xml', defaultHub: 'sf', limit: 4 },
-  { id: 'gnews-model-launches', name: 'Global AI Model Launches', url: 'https://news.google.com/rss/search?q=("AI+model"+OR+"video+model"+OR+"image+model"+OR+"open+weights"+OR+"open-weights")+(launches+OR+released+OR+unveils+OR+introduces)+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 12, isAggregator: true, maxAgeDays: 4 },
-  { id: 'gnews-video-creative-ai', name: 'AI Video & Creative Models', url: 'https://news.google.com/rss/search?q=(Higgsfield+OR+"MAGI-2"+OR+"Sand.ai"+OR+"Kling+AI"+OR+"Seedance"+OR+"Runway+AI"+OR+"Sora+2"+OR+"Veo+3"+OR+"Veo+4"+OR+"Hailuo"+OR+"Black+Forest+Labs"+OR+Midjourney+OR+Suno+OR+ElevenLabs)+AI+(launches+OR+unveils+OR+releases+OR+introduces+OR+model)+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 10, isAggregator: true, maxAgeDays: 5 },
+  { id: 'gnews-model-launches', name: 'Global AI Model Launches', url: 'https://news.google.com/rss/search?q=("AI+model"+OR+"video+model"+OR+"image+model"+OR+"open+weights"+OR+"open-weights")+(launches+OR+released+OR+unveils+OR+introduces)+-lawsuit+-copyright+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 12, isAggregator: true, maxAgeDays: 4 },
+  { id: 'gnews-video-creative-ai', name: 'AI Video & Image Models', url: 'https://news.google.com/rss/search?q=(Midjourney+OR+"Niji"+OR+"Black+Forest+Labs"+OR+"Flux"+AI+OR+Ideogram+OR+Higgsfield+OR+"MAGI-2"+OR+"Sand.ai"+OR+"Kling+AI"+OR+Seedance+OR+"Runway+AI"+OR+"Luma+AI"+OR+Hailuo)+(launches+OR+unveils+OR+releases+OR+introduces+OR+live+OR+model)+-lawsuit+-sued+-copyright+-deals+-promo+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 12, isAggregator: true, maxAgeDays: 5 },
+  { id: 'gnews-audio-ai', name: 'AI Audio & Music Models', url: 'https://news.google.com/rss/search?q=("Suno+AI"+OR+ElevenLabs)+(launches+OR+unveils+OR+releases+OR+introduces+OR+model)+-lawsuit+-sued+-copyright+-NAIA+when:3d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 6, isAggregator: true, maxAgeDays: 5 },
   { id: 'gnews-global-ai', name: 'Google News AI', url: 'https://news.google.com/rss/search?q=(OpenAI+OR+Anthropic+OR+"Google+DeepMind"+OR+"Google+Gemini"+OR+Claude+OR+Grok+OR+xAI+OR+"Meta+Muse"+OR+NVIDIA+OR+"Jensen+Huang"+OR+"Tesla+Optimus"+OR+"Tesla+FSD"+OR+"Tesla+Robotaxi")+when:1d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'sf', limit: 16, isAggregator: true, maxAgeDays: 4 },
   { id: 'gnews-china-ai', name: 'Google News China AI', url: 'https://news.google.com/rss/search?q=(Zhipu+OR+GLM+OR+Qwen+OR+Kimi+OR+DeepSeek+OR+MiniMax+OR+Hunyuan+OR+"Sand.ai"+OR+"MAGI-2")+AI+when:2d&hl=en-US&gl=US&ceid=US:en', defaultHub: 'beijing', limit: 12, isAggregator: true, maxAgeDays: 4 },
 ]);
@@ -171,7 +172,8 @@ const ENTITY_RULES = [
   { re: /\b(nvidia|jensen\s+huang|blackwell|rubin\s+gpu|cuda|tensorrt)\b/i, hub: 'sf', region: 'americas', lab: 'NVIDIA' },
   { re: /\b(tesla\s+(?:ai|optimus|fsd|robotaxi|dojo|autopilot|cybercab)|optimus\s+(?:robot|gen|v\d)|full self-driving|cybercab)\b/i, hub: 'sf', region: 'americas', lab: 'Tesla AI' },
   { re: /\b(higgsfield)\b/i, hub: 'sf', region: 'americas', lab: 'Higgsfield AI' },
-  { re: /\b(suno\b|elevenlabs|runway\s+ai|runwayml|luma\s+ai|midjourney|ideogram)\b/i, hub: 'sf', region: 'americas', lab: 'Creative AI' },
+  { re: /\b(midjourney|niji[-\s]?v?\d)\b/i, hub: 'sf', region: 'americas', lab: 'Midjourney' },
+  { re: /\b(suno\b|elevenlabs|runway\s+ai|runwayml|luma\s+ai|ideogram)\b/i, hub: 'sf', region: 'americas', lab: 'Creative AI' },
   { re: /\b(ipo|nasdaq|nyse|wall street|sec filing|valuation|funding|billion|trillion)\b/i, hub: 'nyc', region: 'americas', lab: '' },
   { re: /\b(apple|tesla|perplexity|cursor|luma|runway|ideogram|midjourney|thinking\s?machines|inworld|bria|stanford|berkeley|microsoft|copilot|figure\s?0\d|unitree|boston dynamics)\b/i, hub: 'sf', region: 'americas', lab: '' },
   { re: /\b(sakana|sony|tokyo|japan|seoul|korea|naver|lg ai|singapore|sea-lion)\b/i, hub: 'tokyo', region: 'asia', lab: 'East Asia AI' },
@@ -220,13 +222,14 @@ export function classifyItem(text = '', defaults = {}) {
 
   const breaking = Boolean(
     defaults.breaking
-    || /\b(launches?|releases?|unveils?|announces?|reinstates?|returns?\s+as\s+ceo|steps?\s+down|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|magi[-\s]?2|higgsfield|kling\s*4|seedance|grok|xai|nvidia|jensen huang|optimus|robotaxi|fsd\s?v?\d|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
+    || /\b(launches?|releases?|unveils?|announces?|reinstates?|returns?\s+as\s+ceo|steps?\s+down|ipo|agi\b|gpt-6|gemini 4|claude|fable|kimi k3|qwen|glm[-\s]?5|magi[-\s]?2|higgsfield|midjourney|niji[-\s]?v?\d|kling\s*4|seedance|grok|xai|nvidia|jensen huang|optimus|robotaxi|fsd\s?v?\d|muse ember|muse wonder|genie 4|solved)\b/i.test(hay)
   );
 
   const tags = [];
   const tagChecks = [
     [/\bglm\b|zhipu|z\.ai/i, 'GLM'],
     [/\bmagi[-\s]?\d|sand\.ai|higgsfield\b/i, 'MAGI / Video AI'],
+    [/\bmidjourney|niji[-\s]?v?\d\b/i, 'Midjourney'],
     [/\bqwen\b/i, 'Qwen'],
     [/\bkimi\b/i, 'Kimi'],
     [/\bxai|grok\b/i, 'xAI Grok'],
@@ -313,8 +316,8 @@ function extractLinksFromEntry(block) {
   return { githubUrl, huggingfaceUrl };
 }
 
-const AI_RELEVANCE_RE = /\b(ai\b|artificial intelligence|llm|model|open[- ]weights?|openai|anthropic|claude|gemini|deepmind|grok|xai|qwen|kimi|deepseek|glm|zhipu|minimax|hunyuan|muse|llama|mistral|optimus|robotaxi|fsd|nvidia|jensen huang|gpu|neural|transformer|agent|chatbot|agi\b|robotics|humanoid|sam altman|amodei|coding|benchmark|perplexity|magi[-\s]?\d|sand\.ai|higgsfield|kling|seedance|sora|veo|hailuo|suno|elevenlabs|runway|midjourney|flux)\b/i;
-const NON_AI_NOISE_RE = /\b(zodiac|horoscope|astrology|supermoon|full moon|retrograde|tarot)\b/i;
+const AI_RELEVANCE_RE = /\b(ai\b|artificial intelligence|llm|model|open[- ]weights?|openai|anthropic|claude|gemini|deepmind|grok|xai|qwen|kimi|deepseek|glm|zhipu|minimax|hunyuan|muse|llama|mistral|optimus|robotaxi|fsd|nvidia|jensen huang|gpu|neural|transformer|agent|chatbot|agi\b|robotics|humanoid|sam altman|amodei|coding|benchmark|perplexity|magi[-\s]?\d|sand\.ai|higgsfield|kling|seedance|sora|veo|hailuo|suno|elevenlabs|runway|midjourney|niji[-\s]?v?\d|flux)\b/i;
+const NON_AI_NOISE_RE = /\b(zodiac|horoscope|astrology|supermoon|full moon|retrograde|tarot|live\s+price,\s+news,\s+chart|promo\s+code|black\s+friday.*%\s*off)\b/i;
 
 function cleanPublisherName(raw = '') {
   return stripHtml(raw)

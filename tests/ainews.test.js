@@ -1160,9 +1160,13 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
   assert.equal(magiInfo.lab, 'Sand.ai MAGI');
   assert.equal(magiInfo.hub, 'beijing');
   assert.equal(magiInfo.breaking, true);
+  const nijiInfo = classifyItem("Midjourney Unveils 'Niji V8' Anime Image Generation AI");
+  assert.equal(nijiInfo.lab, 'Midjourney');
+  assert.equal(nijiInfo.breaking, true);
   const candidates = collectAlertCandidates({
     stories: [
       { title: 'NVIDIA Board Reinstates Jensen Huang as President, CEO and Board Director', sourceKind: 'rss', isLabFeed: true, lab: 'NVIDIA', url: 'https://nvidianews.nvidia.com/news/reinstates-jensen', publishedAt: new Date(NOW - 5 * 60_000).toISOString() },
+      { title: "Midjourney Unveils 'Niji V8' Anime Image Generation AI [with Examples]", sourceKind: 'rss', lab: 'Midjourney', url: 'https://ascii.jp/elem/000/004/123456/', publishedAt: new Date(NOW - 6 * 60_000).toISOString() },
       { title: 'Sand.ai Launches Full MAGI-2 Video Model, With Open Weights Still Promised', sourceKind: 'rss', lab: 'Sand.ai MAGI', url: 'https://pandaily.com/magi-2', publishedAt: new Date(NOW - 8 * 60_000).toISOString() },
       { title: 'NewStartup unveils 400B open-weights video model for 1080p generation', sourceKind: 'rss', lab: 'NewStartup', url: 'https://newstartup.ai/blog/400b', publishedAt: new Date(NOW - 12 * 60_000).toISOString() },
       { title: 'OpenAI Publishes Internal AI Scores and Calls for Industry Limits', sourceKind: 'rss', isLabFeed: true, lab: 'OpenAI', url: 'https://openai.com/index/internal-scores', publishedAt: new Date(NOW - 15 * 60_000).toISOString() },
@@ -1179,8 +1183,9 @@ test('Telegram group alerts: high-signal RSS launches, PG-13 filter, cached-puls
       { title: 'Fallback Offline Video', sourceKind: 'video', isFallback: true, url: 'https://youtube.com/watch?v=fb1', publishedAt: new Date(NOW - 20 * 60_000).toISOString() },
     ],
   }, NOW);
-  assert.equal(candidates.length, 6, 'keeps fresh NVIDIA CEO + MAGI-2 + unknown startup 400B open-weights video model + OpenAI + GLM-5.4 + Claude Code Mode, drops 8h stale RSS, explainers, holiday promos, tutorials, NSFW & fallback video');
+  assert.equal(candidates.length, 7, 'keeps fresh NVIDIA CEO + Midjourney Niji V8 + MAGI-2 + unknown startup 400B open-weights video model + OpenAI + GLM-5.4 + Claude Code Mode, drops 8h stale RSS, explainers, holiday promos, tutorials, NSFW & fallback video');
   assert.match(candidates[0].title, /Jensen Huang/);
+  assert.ok(candidates.some((c) => /Niji V8/.test(c.title)));
   assert.ok(candidates.some((c) => /MAGI-2/.test(c.title)));
   assert.ok(candidates.some((c) => /400B open-weights video model/.test(c.title)));
 

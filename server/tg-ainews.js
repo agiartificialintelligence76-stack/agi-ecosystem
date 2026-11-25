@@ -71,6 +71,7 @@ const MAJOR_ALERT_LABS = new Set([
   'Z.ai GLM',
   'Sand.ai MAGI',
   'Higgsfield AI',
+  'Midjourney',
   'Creative AI',
   'Meta Muse',
   'xAI Grok',
@@ -81,7 +82,7 @@ const MAJOR_ALERT_LABS = new Set([
   'East Asia AI',
 ]);
 
-const FRONTIER_MODEL_RE = /\b(?:open[- ]?weights?|video\s+model|image\s+model|audio\s+model|world\s+model|\d{2,4}b\s+(?:param|model|open)|magi[-\s]?\d|higgsfield|kling\s*\d|seedance\s*\d|sora\s*\d|veo\s*\d|flux\s*\d|gpt[-\s]?\d|claude\s+[a-z0-9]|gemini\s*\d|qwen\s*\d|kimi\s*[a-z0-9]|glm[-\s]?\d|deepseek\s*[a-z0-9]|grok\s*\d)\b/i;
+const FRONTIER_MODEL_RE = /\b(?:open[- ]?weights?|video\s+model|image\s+model|audio\s+model|world\s+model|\d{2,4}b\s+(?:param|model|open)|magi[-\s]?\d|higgsfield|midjourney|niji[-\s]?v?\d|kling\s*\d|seedance\s*\d|sora\s*\d|veo\s*\d|flux\s*\d|gpt[-\s]?\d|claude\s+[a-z0-9]|gemini\s*\d|qwen\s*\d|kimi\s*[a-z0-9]|glm[-\s]?\d|deepseek\s*[a-z0-9]|grok\s*\d)\b/i;
 
 const RSS_LAUNCH_SIGNAL_RE = /\b(?:launch(?:es|ed|ing)?|unveil(?:s|ed|ing)?|releas(?:es|ed|ing)|announc(?:es|ed|ing)|introduc(?:es|ed|ing)|publish(?:es|ed|ing)|reveal(?:s|ed|ing)|reinstat(?:es|ed|ing)|returns?\s+as\s+ceo|brings?\s+[^.]{0,30}\bback\s+as\s+ceo|reverses?\s+course|steps?\s+down|resign(?:s|ed)|acquir(?:es|ed|ing)|acquisition|open[- ]?weights?|open[- ]?sourc(?:e|es|ed|ing)|new\s+model|drops?|rolls?\s+out|rollout|adds?\s+[^.]{0,30}mode|breakthrough|frontier|preview|available\s+now|live\s+now|debuts?|ships|solv(?:es|ed)|outperforms?|beats?)\b/i;
 const RSS_NOISE_RE = /\b(?:recap:|won'?t\s+make\s+you\s+rich|opinion|editorial|podcast|review:|how\s+to\b|guide:|tutorial|explained\b|never\s+shipped|what\s+comes\s+next|what\s+we\s+know|everything\s+you\s+need\s+to\s+know|here'?s\s+(?:why|what|how)\b|deep\s+dive|worth\s+it|merry\s+making|holiday\s+season|compared\b|why\s+(?:it|the|this|they|we|ai|everyone)\b|why\s+[^.]{0,45}\bmay\s+mean|stock\s+market|futures|wall\s+street|for\s+stock|investors?\s+after|lawsuit|sue[ds]?|suing|sued\s+by|antitrust|senate|congress|court\s+order|black\s+friday|geforce\s+now|upcoming\s+event\s+for\s+financial\s+community|key\s+questions|what\s+is\s+)\b/i;
