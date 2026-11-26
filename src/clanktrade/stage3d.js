@@ -1,16 +1,24 @@
-// Live Broadcast 3D Avatar Stage for Clank Tank (agi1.app/clanktrade).
-// Reuses the unmodified CC BY-SA 4.0 Vladcat VRM model in /games/trenchingsimulator/clank/vladcat.vrm
-// with broadcast studio rim lighting, subtle speaking animation, and automatic pause when offscreen/hidden.
+// The 3D pitcher on Clank Tank's stage (agi1.app/clanktrade).
+// Reuses the unmodified CC BY-SA 4.0 Vladcat VRM model in /games/trenchingsimulator/clank/vladcat.vrm with studio
+// lighting, a talking animation while the pitcher speaks, and no rendering while it is off screen or the tab is hidden.
+// The page mounts it once and moves the same host element between renders, so the model loads and parses once.
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// What the camera keeps in frame, in metres around the VRM head bone (which sits at the top of the neck):
+// from the ear tips down to the upper chest, centred a little above the bone so the lower-third caption sits on the chest.
+const FRAME_HEIGHT = 0.66;
+const FRAME_WIDTH = 0.5;
+const FRAME_CENTER_UP = 0.06;
 
 export async function mountTankAvatarStage(host) {
   let dead = false;
   let visible = true;
   let raf = 0;
   let last = 0;
-  let speaking = true;
+  let speaking = false;
   let model = null;
+  let point = null;
 
   const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
@@ -22,7 +30,7 @@ export async function mountTankAvatarStage(host) {
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(28, 16 / 9, 0.01, 30);
 
-  // Studio broadcast 3-point lighting: cool key, Clank lavender rim, electric cyan fill
+  // Studio three-point lighting: cool key, Clank lavender rim, soft cyan fill
   scene.add(new THREE.AmbientLight('#f4f1ff', 1.15));
   const key = new THREE.DirectionalLight('#ffffff', 2.0);
   key.position.set(-2.5, 4.5, 4.2);
@@ -30,7 +38,7 @@ export async function mountTankAvatarStage(host) {
   const rimLav = new THREE.DirectionalLight('#c4b5fd', 1.9);
   rimLav.position.set(2.8, 3.2, -2.5);
   scene.add(rimLav);
-  const fillCyan = new THREE.DirectionalLight('#17a5f8', 0.95);
+  const fillCyan = new THREE.DirectionalLight('#17a5f8', 0.85);
   fillCyan.position.set(3.2, 1.5, 2.0);
   scene.add(fillCyan);
 
@@ -38,12 +46,25 @@ export async function mountTankAvatarStage(host) {
   const smooth = new THREE.Vector2();
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
 
+  function frame() {
+    if (!point) return;
+    const half = THREE.MathUtils.degToRad(camera.fov) / 2;
+    const byHeight = FRAME_HEIGHT / 2 / Math.tan(half);
+    const byWidth = FRAME_WIDTH / 2 / (Math.tan(half) * Math.max(0.2, camera.aspect));
+    const dist = Math.max(byHeight, byWidth);
+    const cy = point.y + FRAME_CENTER_UP;
+    camera.position.set(point.x, cy + 0.03, point.z + dist);
+    camera.lookAt(point.x, cy, point.z);
+    camera.updateMatrixWorld();
+  }
+
   const resize = new ResizeObserver(() => {
     const { width, height } = host.getBoundingClientRect();
     if (!width || !height) return;
     renderer.setSize(width, height, false);
     camera.aspect = width / height;
     camera.updateProjectionMatrix();
+    frame();
     if (model) renderer.render(scene, camera);
   });
   resize.observe(host);
@@ -67,6 +88,7 @@ export async function mountTankAvatarStage(host) {
   const mouth = [];
   const rotation = new THREE.Quaternion();
   const euler = new THREE.Euler();
+  let talk = 0;
 
   function draw(now) {
     raf = 0;
@@ -75,10 +97,11 @@ export async function mountTankAvatarStage(host) {
       const delta = Math.min((now - last) / 1000, 0.1);
       last = now;
       smooth.lerp(pointer, 1 - Math.exp(-delta / 0.08));
+      talk += ((speaking ? 1 : 0) - talk) * (1 - Math.exp(-delta / 0.15));
       const t = now / 1000;
       if (!reduced.matches) {
-        const talkNod = speaking ? Math.sin(t * 5.2) * 0.025 : 0;
-        const talkTurn = speaking ? Math.sin(t * 2.1) * 0.045 : 0;
+        const talkNod = Math.sin(t * 5.2) * 0.025 * talk;
+        const talkTurn = Math.sin(t * 2.1) * 0.045 * talk;
         if (head && headRest) {
           head.quaternion.copy(headRest).multiply(
             rotation.setFromEuler(euler.set(smooth.y * 0.12 + talkNod, smooth.x * 0.22 + talkTurn, 0)),
@@ -95,7 +118,7 @@ export async function mountTankAvatarStage(host) {
         const phase = (t % 4.1) - 2;
         const blinkVal = phase >= 0 && phase < 0.16 ? Math.sin((phase / 0.16) * Math.PI) : 0;
         for (const b of blink) b.node.morphTargetInfluences[b.index] = blinkVal * b.weight;
-        const talkVal = speaking ? Math.max(0, Math.sin(t * 11.5) * 0.45 + Math.sin(t * 7.3) * 0.35) : 0;
+        const talkVal = Math.max(0, Math.sin(t * 11.5) * 0.45 + Math.sin(t * 7.3) * 0.35) * talk;
         for (const m of mouth) m.node.morphTargetInfluences[m.index] = talkVal * m.weight;
       }
       renderer.render(scene, camera);
@@ -117,6 +140,7 @@ export async function mountTankAvatarStage(host) {
   document.addEventListener('visibilitychange', resume);
 
   const api = {
+    get ready() { return Boolean(model); },
     setSpeaking(active) {
       speaking = Boolean(active);
     },
@@ -136,6 +160,7 @@ export async function mountTankAvatarStage(host) {
         }
       });
       renderer.dispose();
+      renderer.forceContextLoss();
       renderer.domElement.remove();
     },
   };
@@ -167,7 +192,7 @@ export async function mountTankAvatarStage(host) {
       const node = await gltf.parser.getDependency('node', b.node);
       if (node?.morphTargetInfluences) mouth.push({ ...b, node });
     }
-    const point = head?.getWorldPosition(new THREE.Vector3()) || new THREE.Vector3(0, 1.45, 0);
+    point = head?.getWorldPosition(new THREE.Vector3()) || new THREE.Vector3(0, 1.45, 0);
     for (const name of ['leftUpperArm', 'rightUpperArm']) {
       const arm = await bone(name);
       if (!arm) continue;
@@ -176,9 +201,7 @@ export async function mountTankAvatarStage(host) {
       const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -sign * 1.15);
       arm.quaternion.premultiply(parent.clone().invert().multiply(turn).multiply(parent));
     }
-    camera.position.set(point.x, point.y + 0.04, point.z + 1.08);
-    camera.lookAt(point.x, point.y + 0.02, point.z);
-    camera.updateMatrixWorld();
+    frame();
     host.dataset.ready = 'true';
     resume();
   } catch {
