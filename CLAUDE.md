@@ -1,5 +1,43 @@
 # $AGI — Artificial Girlfriend Intelligence (AGI-1, live at agi1.app)
 
+> **Clank Tank, fixed and redesigned (2026-11-26):** the owner: "can you improve agi1.app/clanktrade and the design
+> also", then "publish it". agi1.app/clanktrade (added 2026-11-25 as `96ec328`, not noted here until now) is a concept
+> demo of clank.trade as "the Shark Tank of crypto on Robinhood Chain": pitches that clear at one price or refund
+> everyone (Deal or No Deal), an AI shark panel, an AI shark desk that reviews real clank.trade coins, Markets, Records,
+> Studio and Thesis; play ETH only, nothing sent onchain. Its live parts read `/api/checker?terminal=clank` (coins,
+> stocks, trades, the ETH price; candles with `&a=…&interval=5m`, pictures with `&image=…`) and ClankChecker's scan
+> (`/api/checker?a=…`); everything else is labelled Simulated. Code: `clanktrade.html`, `src/clanktrade/` (`page.js`,
+> `data.js`, `stage3d.js` (Vladcat in 3D), `chart.js`, `wallet.js`), `src/styles/clanktrade.css`,
+> `tests/clanktrade.test.js` (9). **Fixed:** a commitment is checked by the round (its anti-sniper cap, its minimum)
+> before any play ETH is spent, and only what it takes is spent; a round settles by itself when its clock runs out and
+> says what happened; practice sells only sell what was bought; the fee split always totals 100%; typing in Markets' and
+> Records' search keeps focus; Markets' status no longer reads "[object HTMLSpanElement]"; live coins show only the
+> feed's data (no made-up X proof), and a simulated pitch stays Simulated on the desk; due diligence reads the real scan
+> (its level, flags, facts and links); the clearing uses the feed's ETH price. **Redesigned:** sentence case, the stage
+> as the hero, one motion (the verdict stamp), the clock in fixed-width digits; under 1100 px one column (the pitch,
+> the stage, the shark flash, the scoreboard, due diligence, the panel, the chat), a taller stage on phones, nothing
+> sideways, "reduce motion"; axe finds 0 issues (57 before). **Faster:** three.js loads only when the 3D stage shows
+> (154 KB of script at the start, 803 KB before), and the avatar is made once and reused. **No new setting, SQL,
+> function or service.** **Published as `c63c649` to `main` on 2026-11-26** (through the branch `clanktrade-redesign`),
+> after the full build passed the way Vercel runs it (Node 24, UTC, all 79 settings as stand-ins: 2,230 tests: 2,226
+> passed, 4 skipped, 0 failed; Vite, the share pages and the secret check), `tests/clanktrade.test.js` on Node 20, 22
+> and 24 and with the clock moved (midnight UTC, a Monday, a week on, a year's end, six months on; UTC and Manila), and
+> the built page under the site's real CSP at 1440 × 900, 390 × 844 and 360 × 640 (every view, the cams, a commitment
+> and the cap, a shark followed, a round closed, the desk's review with its scan, Markets' search and a chart, Records,
+> the fee split, a Studio launch, the back button: no violations, errors or failed requests, nothing sideways, the
+> avatar's model loaded once). Vercel: the branch's preview `4DaJgdDPLHm4MXXSdMFTC676WARd`, Ready (its live feed
+> answers 401 there: previews sit behind Vercel's sign-in and the page asks with `credentials: 'omit'`, like Trenching
+> Simulator's Clank feed), then production `DwQBHkzCcwE7Wos2rnuQnsuztLXS`, Ready. Live in the owner's Chrome: the new
+> files (`clanktrade-DrGMbux4.js`, the build's), 8 live coins, ETH at $1,692 marked Live, real trades in the tape,
+> Markets (60 coins) with $AGI's chart and scan, Records, Studio, Thesis, the three cams, the desk's review of $AGI with
+> its live scan, the model loaded once, no console errors; nothing was committed, traded or launched there. The owner's
+> 23 site-content edits don't touch /clanktrade (checked before the push). **Not checked:** real phones (phone sizes
+> only on the built copy). **Open:** the demo's made-up records and followers still name real people and accounts
+> (@elonmusk, @pmarca, @vladtenev, @cobie, @balajis, @a16z, @baoskee) and real coins ($AGI, $CABO), labelled
+> Simulated, and its link preview `public/cards/clanktrade.jpg` says "followed by @elonmusk": the owner was offered
+> made-up names. **Not done:** the owner's Desktop worktree `output/clanktrade-release` (branch `clanktrade`) holds the
+> same seven files, uncommitted, behind `main`.
+
 > **RACE TO AGI in Telegram music (2026-11-24):** added the owner's new track from `Downloads/VTuber_Project/25_race_to_agi/out/song/RACE TO AGI - AGI-1.mp3` to `/music` as **RACE TO AGI**, 4:02 (242 s), emoji `🏁`, id `racetoagi`. `public/music/race-to-agi.mp3` keeps the original 320 kbps MP3 audio frames byte-for-byte with the official 1400 px cover from `25_race_to_agi/out/art/RACE_TO_AGI_cover_1400.jpg`; tags follow the bot format (title, AGI-1, front cover only, stripping encoder/date/comment tags). Originals, the seven existing songs, and `MUSIC_V` remain unchanged; both Telegram (private and group) and Discord `/music` menus read the eight-song catalog after deployment.
 
 > **Five more games on the arcade kit (2026-11-24):** the owner: "add 5 more original new addictive, fun games to
